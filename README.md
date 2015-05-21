@@ -1,6 +1,8 @@
 Cliquetis
 =========
 
+[![Build Status](https://travis-ci.org/mozilla-services/cliquetis.svg?branch=master)](https://travis-ci.org/mozilla-services/cliquetis)
+
 A JavaScript client for [Cliquet](https://github.com/mozilla-services/cliquet/).
 
 Installation
