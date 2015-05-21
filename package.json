@@ -6,8 +6,8 @@
   "scripts": {
     "dist": "browserify -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js",
     "watch": "watchify -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v",
-    "test": "mocha --compilers js:babel/register src/test/*_test.js",
-    "tdd": "mocha -w --compilers js:babel/register src/test/*_test.js"
+    "test": "mocha --compilers js:babel/register test/*_test.js",
+    "tdd": "mocha -w --compilers js:babel/register test/*_test.js"
   },
   "repository": {
     "type": "git",
