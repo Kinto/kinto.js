@@ -48,6 +48,34 @@ describe("Cliquetis", function() {
           return articles.save(article);
         }).should.eventually.have.property("permissions");
       });
+
+      it("should assign an id to the saved record", function() {
+        var article = {title: "foo", url: "http://foo"};
+
+        return testCollection().then(function(articles) {
+          return articles.save(article)
+            .then(result => result.data.id);
+        })
+        .should.eventually.be.a("string");
+      });
+
+      it("should not alter original record", function() {
+        var article = {title: "foo", url: "http://foo"};
+
+        return testCollection().then(function(articles) {
+          return articles.save(article);
+        })
+        .should.eventually.not.eql(article);
+      });
+
+      it("should serve errors in catch", function() {
+        var article = {title: "foo", url: "http://foo"};
+
+        return testCollection().then(function(articles) {
+          return articles.save(42);
+        })
+        .should.be.rejectedWith(Error, /is not an object/);
+      });
     });
   });
 });

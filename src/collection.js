@@ -35,10 +35,6 @@ export default class Collection {
   }
 
   save(record) {
-    // XXX handle update case
-    if (!record.id) {
-      record = Object.assign({}, record, {id: uuid4()});
-    }
     return new Promise((resolve, reject) => {
       var transaction = this._db.transaction([this._collName], "readwrite");
       transaction.oncomplete = function(event) {
@@ -49,8 +45,19 @@ export default class Collection {
       };
       transaction.onerror = function(event) {
         // XXX reject with proper error
-        reject(event);
+        let err = new Error();
+        reject(err);
       };
+
+      if (typeof(record) !== 'object') {
+        let err = new Error('Record is not an object.');
+        return reject(err);
+      }
+
+      // XXX handle update case
+      if (!record.id) {
+        record = Object.assign({}, record, {id: uuid4()});
+      }
       transaction.objectStore(this._collName).add(record);
     });
   }
