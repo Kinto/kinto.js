@@ -10,6 +10,12 @@ chai.should();
 const TEST_DB_NAME = "cliquetis-test";
 
 describe("Cliquetis", function() {
+
+  beforeEach(function (done) {
+    var req = indexedDB.deleteDatabase(TEST_DB_NAME);
+    req.onsuccess = event => done();
+  });
+
   describe("#collection()", function() {
     it("should reject on missing collection name", function() {
       return new Cliquetis({dbName: TEST_DB_NAME})
@@ -68,13 +74,24 @@ describe("Cliquetis", function() {
         .should.eventually.not.eql(article);
       });
 
-      it("should serve errors in catch", function() {
+      it("should fail if record is not an object", function() {
         var article = {title: "foo", url: "http://foo"};
 
         return testCollection().then(function(articles) {
           return articles.save(42);
         })
         .should.be.rejectedWith(Error, /is not an object/);
+      });
+    });
+
+    describe("#update", function() {
+      it("should update a record and return saved record data", function() {
+        var existing = {id: "3.14", title: "foo", url: "http://foo"};
+
+        return testCollection().then(function(articles) {
+          return articles.save(existing)
+            .then(result => result.data.id);
+        }).should.eventually.eql("3.14");
       });
     });
   });

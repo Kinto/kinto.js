@@ -45,7 +45,8 @@ export default class Collection {
       };
       transaction.onerror = function(event) {
         // XXX reject with proper error
-        let err = new Error();
+        let err = new Error('Transaction error: ' + event.target.error);
+        console.log(event)
         reject(err);
       };
 
@@ -54,11 +55,14 @@ export default class Collection {
         return reject(err);
       }
 
-      // XXX handle update case
+      let store = transaction.objectStore(this._collName);
       if (!record.id) {
         record = Object.assign({}, record, {id: uuid4()});
+        store.add(record);
       }
-      transaction.objectStore(this._collName).add(record);
+      else {
+        store.put(record);
+      }
     });
   }
 }
