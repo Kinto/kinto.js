@@ -38,10 +38,12 @@ var db = new Cliquetis(options);
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
 
 ```js
-var articles = db.collection("articles");
+db.collection("articles").then(function(articles) {
+  // you can now use the articles collection object
+});
 ```
 
-This collection object has the following attributes:
+The re collection object has the following attributes:
 
 * **lastModified**: last synchronization timestamp, ``null`` if never sync'ed.
 
@@ -53,6 +55,14 @@ All operations are asynchronous and rely on [Promises](https://developer.mozilla
 
 ```js
 articles.save({title: "foo"}).then(console.log.bind(console));
+```
+
+or:
+
+```js
+db.collection("articles").then(function(articles) {
+  return articles.save({title: "foo"});
+}).then(console.log.bind(console));
 ```
 
 Result is:

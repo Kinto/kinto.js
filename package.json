@@ -30,9 +30,11 @@
     "babelify": "^6.1.1",
     "browserify": "^10.2.1",
     "chai": "^2.3.0",
+    "chai-as-promised": "^5.0.0",
     "fake-indexeddb": "^1.0.3",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",
+    "uuid": "^2.0.1",
     "watchify": "^3.2.1"
   }
 }
