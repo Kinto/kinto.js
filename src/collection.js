@@ -44,15 +44,11 @@ export default class Collection {
         });
       };
       transaction.onerror = function(event) {
-        // XXX reject with proper error
-        let err = new Error('Transaction error: ' + event.target.error);
-        console.log(event)
-        reject(err);
+        reject(new Error(event.target.error));
       };
 
-      if (typeof(record) !== 'object') {
-        let err = new Error('Record is not an object.');
-        return reject(err);
+      if (typeof(record) !== "object") {
+        return reject(new Error('Record is not an object.'));
       }
 
       let store = transaction.objectStore(this._collName);
@@ -63,6 +59,26 @@ export default class Collection {
       else {
         store.put(record);
       }
+    });
+  }
+
+  get(id) {
+    return new Promise((resolve, reject) => {
+      var request = this._db
+        .transaction([this._collName])
+        .objectStore(this._collName)
+        .get(id);
+      request.onsuccess = function(event) {
+        if (!request.result)
+          return reject(new Error(`Record with id=${id} not found.`));
+        resolve({
+          data: request.result,
+          permissions: {}
+        });
+      };
+      request.onerror = function(event) {
+        reject(new Error(event.target.error));
+      };
     });
   }
 }

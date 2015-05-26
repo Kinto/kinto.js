@@ -43,7 +43,7 @@ db.collection("articles").then(function(articles) {
 });
 ```
 
-The re collection object has the following attributes:
+The collection object has the following attributes:
 
 * **lastModified**: last synchronization timestamp, ``null`` if never sync'ed.
 
@@ -83,7 +83,8 @@ Result is:
 
 ```js
 articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
 Result:
@@ -98,6 +99,8 @@ Result:
   ]
 }
 ```
+
+**Note:** The promise will be rejected if no record is found for that id.
 
 ### Updating a record
 
