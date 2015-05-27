@@ -5,11 +5,6 @@ import { attachFakeIDBSymbolsTo } from "./utils";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
-// TODO:  To determine if a transaction has completed successfully,
-// listen to the transaction’s complete event rather than the
-// IDBObjectStore.add request’s success event, because the transaction
-// may still fail after the success event fires.
-
 export default class Collection {
   constructor(name) {
     this._name = name;
@@ -39,22 +34,33 @@ export default class Collection {
     });
   }
 
-  getStore(mode) {
-    return this._db
-      .transaction([this.name], mode)
-      .objectStore(this.name);
+  /**
+   * Returns a transaction and a store objects for this collection.
+   *
+   * To determine if a transaction has completed successfully, we should rather
+   * listen to the transaction’s complete event rather than the IDBObjectStore
+   * request’s success event, because the transaction may still fail after the
+   * success event fires.
+   *
+   * @param {String} mode  Transaction mode ("readwrite" or undefined)
+   */
+  prepare(mode) {
+    const transaction = this._db.transaction([this.name], mode);
+    const store = transaction.objectStore(this.name);
+    return {transaction, store};
   }
 
   clear() {
     return new Promise((resolve, reject) => {
-      var request = this.getStore("readwrite").clear();
-      request.onsuccess = function(event) {
+      const {transaction, store} = this.prepare("readwrite");
+      store.clear();
+      transaction.oncomplete = function(event) {
         resolve({
           data: [],
           permissions: {}
         });
       };
-      request.onerror = function(event) {
+      transaction.onerror = function(event) {
         reject(new Error(event.target.error));
       };
     });
@@ -62,16 +68,16 @@ export default class Collection {
 
   _create(record) {
     return new Promise((resolve, reject) => {
-      var transaction = this.getStore("readwrite");
+      var {transaction, store} = this.prepare("readwrite");
       var newRecord = Object.assign({}, record, {id: uuid4()});
-      var request = transaction.add(newRecord);
-      request.onsuccess = function(event) {
+      store.add(newRecord);
+      transaction.oncomplete = function(event) {
         resolve({
           data: newRecord,
           permissions: {}
         });
       };
-      request.onerror = function(event) {
+      transaction.onerror = function(event) {
         reject(new Error(event.target.error));
       };
     });
@@ -80,15 +86,15 @@ export default class Collection {
   _update(record) {
     return this.get(record.id).then(_ => {
       return new Promise((resolve, reject) => {
-        var transaction = this.getStore("readwrite");
-        var request = transaction.put(record);
-        request.onsuccess = function(event) {
+        var {transaction, store} = this.prepare("readwrite");
+        var request = store.put(record);
+        transaction.oncomplete = function(event) {
           resolve({
-            data: Object.assign({}, record, {id: event.target.result}),
+            data: Object.assign({}, record, {id: request.result}),
             permissions: {}
           });
         };
-        request.onerror = function(event) {
+        transaction.onerror = function(event) {
           reject(new Error(event.target.error));
         };
       });
@@ -103,8 +109,9 @@ export default class Collection {
 
   get(id) {
     return new Promise((resolve, reject) => {
-      var request = this.getStore().get(id);
-      request.onsuccess = function(event) {
+      var {transaction, store} = this.prepare();
+      var request = store.get(id);
+      transaction.oncomplete = function(event) {
         if (!request.result)
           return reject(new Error(`Record with id=${id} not found.`));
         resolve({
@@ -112,7 +119,7 @@ export default class Collection {
           permissions: {}
         });
       };
-      request.onerror = function(event) {
+      transaction.onerror = function(event) {
         reject(new Error(event.target.error));
       };
     });
@@ -122,14 +129,15 @@ export default class Collection {
     // Ensure the record actually exists.
     return this.get(id).then(result => {
       return new Promise((resolve, reject) => {
-        var request = this.getStore("readwrite").delete(id);
-        request.onsuccess = function(event) {
+        const {transaction, store} = this.prepare("readwrite");
+        store.delete(id);
+        transaction.oncomplete = function(event) {
           resolve({
             data: { id: id, deleted: true },
             permissions: {}
           });
         };
-        request.onerror = function(event) {
+        transaction.onerror = function(event) {
           reject(new Error(event.target.error));
         };
       })
@@ -139,20 +147,22 @@ export default class Collection {
   list() {
     return new Promise((resolve, reject) => {
       var results = [];
-      var request = this.getStore().openCursor();
+      const {transaction, store} = this.prepare();
+      var request = store.openCursor();
       request.onsuccess = function(event) {
         var cursor = event.target.result;
         if (cursor) {
           results.push(cursor.value);
           cursor.continue();
-        } else {
-          resolve({
-            data: results,
-            permissions: {}
-          });
         }
       };
-      request.onerror = function(event) {
+      transaction.oncomplete = function(event) {
+        resolve({
+          data: results,
+          permissions: {}
+        });
+      };
+      transaction.onerror = function(event) {
         reject(new Error(event.target.error));
       };
     });

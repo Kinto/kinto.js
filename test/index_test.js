@@ -122,7 +122,7 @@ describe("Cliquetis", function() {
 
       it("should reject in case of record not found", function() {
         return testCollection().then(articles => {
-          return articles.get("nope").then(res => res.data);
+          return articles.get("non-existent").then(res => res.data);
         }).should.be.rejectedWith(Error, /not found/);
       });
     });
