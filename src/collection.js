@@ -15,7 +15,7 @@ export default class Collection {
     return this._name;
   }
 
-  init() {
+  open() {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
@@ -53,7 +53,7 @@ export default class Collection {
   }
 
   clear() {
-    return this.init().then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
@@ -71,7 +71,7 @@ export default class Collection {
   }
 
   _create(record) {
-    return this.init().then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         var {transaction, store} = this.prepare("readwrite");
         var newRecord = Object.assign({}, record, {id: uuid4()});
@@ -90,7 +90,7 @@ export default class Collection {
   }
 
   _update(record) {
-    return this.init().then(() => {
+    return this.open().then(() => {
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
           var {transaction, store} = this.prepare("readwrite");
@@ -112,13 +112,13 @@ export default class Collection {
   save(record) {
     if (typeof(record) !== "object")
       return Promise.reject(new Error('Record is not an object.'));
-    return this.init().then(() => {
+    return this.open().then(() => {
       return record.id ? this._update(record) : this._create(record);
     });
   }
 
   get(id) {
-    return this.init().then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         var {transaction, store} = this.prepare();
         var request = store.get(id);
@@ -138,7 +138,7 @@ export default class Collection {
   }
 
   delete(id) {
-    return this.init().then(() => {
+    return this.open().then(() => {
       // Ensure the record actually exists.
       return this.get(id).then(result => {
         return new Promise((resolve, reject) => {
@@ -159,7 +159,7 @@ export default class Collection {
   }
 
   list() {
-    return this.init().then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         var results = [];
         const {transaction, store} = this.prepare();
