@@ -120,5 +120,28 @@ describe("Cliquetis", function() {
         }).should.be.rejectedWith(Error, /not found/);
       });
     });
+
+    describe("#delete", function() {
+      var uuid;
+
+      beforeEach(function() {
+        return testCollection().then(articles => {
+          return articles.save(article)
+            .then(result => uuid = result.data.id);
+        });
+      });
+
+      it("should delete a record", function() {
+        return testCollection().then(articles => {
+          return articles.delete(uuid).then(res => res.data);
+        }).should.eventually.eql({id: uuid, deleted: true});
+      });
+
+      it("should reject on non-existent record", function() {
+        return testCollection().then(articles => {
+          return articles.delete("non-existent").then(res => res.data);
+        }).should.eventually.be.rejectedWith(Error, /not found/);
+      });
+    });
   });
 });

@@ -81,4 +81,25 @@ export default class Collection {
       };
     });
   }
+
+  delete(id) {
+    // Ensure the record actually exists.
+    return this.get(id).then(result => {
+      return new Promise((resolve, reject) => {
+        var request = this._db
+          .transaction([this._collName], "readwrite")
+          .objectStore(this._collName)
+          .delete(id);
+        request.onsuccess = function(event) {
+          resolve({
+            data: { id: id, deleted: true },
+            permissions: {}
+          });
+        };
+        request.onerror = function(event) {
+          reject(new Error(event.target.error));
+        };
+      })
+    });
+  }
 }
