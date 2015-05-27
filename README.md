@@ -54,12 +54,6 @@ All operations are asynchronous and rely on [Promises](https://developer.mozilla
 ### Creating a record
 
 ```js
-articles.save({title: "foo"}).then(console.log.bind(console));
-```
-
-or:
-
-```js
 db.collection("articles").then(function(articles) {
   return articles.save({title: "foo"});
 }).then(console.log.bind(console));
@@ -82,7 +76,9 @@ Result is:
 ### Retrieving a single record
 
 ```js
-articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
+db.collection("articles").then(function(articles) {
+  return articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+})
   .then(console.log.bind(console))
   .catch(console.error.bind(console));
 ```
@@ -114,7 +110,9 @@ var updated = Object.assign(existing, {
   title: "baz"
 });
 
-articles.save(updated).then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  articles.save(updated);
+}).then(console.log.bind(console));
 ```
 
 Result is:
@@ -134,8 +132,9 @@ Result is:
 #### Single unique record passing its `id`:
 
 ```js
-articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+}).then(console.log.bind(console));
 ```
 
 Result:
@@ -154,17 +153,21 @@ Result:
 #### Multiple deletions using a query
 
 ```js
-articles.delete({
-  filter: {
-    age: { $gte: 42 }
-  }
-}).then(console.log.bind(console))
+db.collection("articles").then(function(articles) {
+  return articles.delete({
+    filter: {
+      age: { $gte: 42 }
+    }
+  });
+}).then(console.log.bind(console));
 ```
 
 ### Listing records
 
 ```js
-articles.list().then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.list();
+})..then(console.log.bind(console));
 ```
 
 Result is:
@@ -190,32 +193,42 @@ Result is:
 #### Filtering
 
 ```js
-articles.list({
-  filter: { unread: { $eq: true } }
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    filter: { unread: { $eq: true } }
+  });
 }).then(console.log.bind(console));
 ```
 
 #### Sorting
 
 ```js
-articles.list({
-  sort: ["-unread", "-added_on"]
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    sort: ["-unread", "-added_on"]
+  });
 }).then(console.log.bind(console));
 ```
 
 #### Combining `sort` and `filter`
 
 ```js
-articles.list({
-  filter: { unread: { $eq: true } },
-  sort: ["-added_on"]
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    filter: { unread: { $eq: true } },
+    sort: ["-added_on"]
+  });
 }).then(console.log.bind(console));
 ```
 
 ### Clearing the collection
 
+This will remove all existing records from the collection:
+
 ```js
-articles.clear().then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.clear();
+}).then(console.log.bind(console));
 ```
 
 Result:
@@ -232,15 +245,17 @@ Result:
 Synchronizing local data with remote ones is performed by calling the `.sync()` method:
 
 ```js
-articles.sync()
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.sync();
+}).then(console.log.bind(console));
 ```
 
 Note that you can override default options by passing it a new options object, Cliquetis will merge these new values with the default ones:
 
 ```js
-articles.sync({mode: Cliquet.FORCE})
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.sync({mode: Cliquet.FORCE});
+}).then(console.log.bind(console));
 ```
 
 Result:
