@@ -1,3 +1,10 @@
+"use strict";
+
+/**
+ * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
+ * This piece of code will register them with the same names as native API,
+ * only if indexedDB is not already available.
+ */
 export function attachFakeIDBSymbolsTo(obj) {
   if (typeof obj.indexedDB === "object") {
     return;

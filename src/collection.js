@@ -11,20 +11,20 @@ attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 // may still fail after the success event fires.
 
 export default class Collection {
-  constructor(collName) {
-    this._collName = collName;
+  constructor(name) {
+    this._name = name;
     this._db;
   }
 
   get name() {
-    return this._collName;
+    return this._name;
   }
 
   init() {
     return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this._collName, 1);
+      var request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
-        var store = event.target.result.createObjectStore(this._collName, {
+        var store = event.target.result.createObjectStore(this.name, {
           keyPath: "id"
         });
         store.createIndex("id", "id", { unique: true });
@@ -39,15 +39,15 @@ export default class Collection {
     });
   }
 
-  transaction(mode) {
+  getStore(mode) {
     return this._db
-      .transaction([this._collName], mode)
-      .objectStore(this._collName);
+      .transaction([this.name], mode)
+      .objectStore(this.name);
   }
 
   clear() {
     return new Promise((resolve, reject) => {
-      var request = this.transaction("readwrite").clear();
+      var request = this.getStore("readwrite").clear();
       request.onsuccess = function(event) {
         resolve({
           data: [],
@@ -62,7 +62,7 @@ export default class Collection {
 
   _create(record) {
     return new Promise((resolve, reject) => {
-      var transaction = this.transaction("readwrite");
+      var transaction = this.getStore("readwrite");
       var newRecord = Object.assign({}, record, {id: uuid4()});
       var request = transaction.add(newRecord);
       request.onsuccess = function(event) {
@@ -80,7 +80,7 @@ export default class Collection {
   _update(record) {
     return this.get(record.id).then(_ => {
       return new Promise((resolve, reject) => {
-        var transaction = this.transaction("readwrite");
+        var transaction = this.getStore("readwrite");
         var request = transaction.put(record);
         request.onsuccess = function(event) {
           resolve({
@@ -103,7 +103,7 @@ export default class Collection {
 
   get(id) {
     return new Promise((resolve, reject) => {
-      var request = this.transaction().get(id);
+      var request = this.getStore().get(id);
       request.onsuccess = function(event) {
         if (!request.result)
           return reject(new Error(`Record with id=${id} not found.`));
@@ -122,7 +122,7 @@ export default class Collection {
     // Ensure the record actually exists.
     return this.get(id).then(result => {
       return new Promise((resolve, reject) => {
-        var request = this.transaction("readwrite").delete(id);
+        var request = this.getStore("readwrite").delete(id);
         request.onsuccess = function(event) {
           resolve({
             data: { id: id, deleted: true },
@@ -139,7 +139,7 @@ export default class Collection {
   list() {
     return new Promise((resolve, reject) => {
       var results = [];
-      var request = this.transaction().openCursor();
+      var request = this.getStore().openCursor();
       request.onsuccess = function(event) {
         var cursor = event.target.result;
         if (cursor) {
