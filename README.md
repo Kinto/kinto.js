@@ -164,7 +164,7 @@ articles.delete({
 ### Listing records
 
 ```js
-articles.all().then(console.log.bind(console));
+articles.list().then(console.log.bind(console));
 ```
 
 Result is:
@@ -190,7 +190,7 @@ Result is:
 #### Filtering
 
 ```js
-articles.all({
+articles.list({
   filter: { unread: { $eq: true } }
 }).then(console.log.bind(console));
 ```
@@ -198,7 +198,7 @@ articles.all({
 #### Sorting
 
 ```js
-articles.all({
+articles.list({
   sort: ["-unread", "-added_on"]
 }).then(console.log.bind(console));
 ```
@@ -206,10 +206,25 @@ articles.all({
 #### Combining `sort` and `filter`
 
 ```js
-articles.all({
+articles.list({
   filter: { unread: { $eq: true } },
   sort: ["-added_on"]
 }).then(console.log.bind(console));
+```
+
+### Clearing the collection
+
+```js
+articles.clear().then(console.log.bind(console));
+```
+
+Result:
+
+```js
+{
+  data: [],
+  permissions: {}
+}
 ```
 
 ### Fetching and publishing changes

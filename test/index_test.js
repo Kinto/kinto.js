@@ -6,38 +6,36 @@ import Cliquetis from "../src";
 chai.use(chaiAsPromised);
 chai.should();
 
-const TEST_DB_NAME = "cliquetis-test";
+const TEST_COLLECTION_NAME = "cliquetis-test";
 
 describe("Cliquetis", function() {
 
-  beforeEach(function (done) {
-    const req = indexedDB.deleteDatabase(TEST_DB_NAME);
-    req.onsuccess = event => done();
+  function testCollection() {
+    return new Cliquetis().collection(TEST_COLLECTION_NAME);
+  }
+
+  beforeEach(function() {
+    return testCollection().then(articles => articles.clear());
   });
 
   describe("#collection()", function() {
-    it("should reject on missing collection name", function() {
-      return new Cliquetis({dbName: TEST_DB_NAME})
-        .collection().should.be.rejected;
-    });
-
     it("should return a Promise", function() {
-      return new Cliquetis({dbName: TEST_DB_NAME})
-        .collection("bar").should.be.fulfilled;
+      return testCollection().should.be.fulfilled;
     });
 
     it("should resolve to a named collection instance", function() {
-      return new Cliquetis({dbName: TEST_DB_NAME})
-        .collection("bar").should.eventually.have.property("name").eql("bar");
+      return testCollection()
+        .should.eventually.have.property("name").eql(TEST_COLLECTION_NAME);
+    });
+
+    it("should reject on missing collection name", function() {
+      return new Cliquetis().collection()
+        .should.be.rejected;
     });
   });
 
   describe("Collection", function() {
     const article = {title: "foo", url: "http://foo"};
-
-    function testCollection() {
-      return new Cliquetis({dbName: TEST_DB_NAME}).collection("articles");
-    }
 
     describe("#add", function() {
       it("should save a record and return saved record data", function() {
@@ -141,6 +139,23 @@ describe("Cliquetis", function() {
         return testCollection().then(articles => {
           return articles.delete("non-existent").then(res => res.data);
         }).should.eventually.be.rejectedWith(Error, /not found/);
+      });
+    });
+
+    describe("#list", function() {
+      beforeEach(function() {
+        return testCollection().then(articles => {
+          return Promise.all([
+            articles.save(article),
+            articles.save({title: "bar", url: "http://bar"})
+          ]);
+        });
+      });
+
+      it("should retrieve the list of records", function() {
+        return testCollection().then(articles => {
+          return articles.list().then(res => res.data);
+        }).should.eventually.have.length.of(2);
       });
     });
   });
