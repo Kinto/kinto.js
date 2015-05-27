@@ -37,7 +37,7 @@ describe("Cliquetis", function() {
   describe("Collection", function() {
     const article = {title: "foo", url: "http://foo"};
 
-    describe("#add", function() {
+    describe("#save", function() {
       it("should save a record and return saved record data", function() {
         return testCollection().then(function(articles) {
           return articles.save(article);
@@ -54,43 +54,51 @@ describe("Cliquetis", function() {
         return testCollection().then(function(articles) {
           return articles.save(article)
             .then(result => result.data.id);
-        })
-        .should.eventually.be.a("string");
+        }).should.eventually.be.a("string");
       });
 
       it("should not alter original record", function() {
         return testCollection().then(function(articles) {
           return articles.save(article);
-        })
-        .should.eventually.not.eql(article);
+        }).should.eventually.not.eql(article);
       });
 
-      it("should fail if record is not an object", function() {
+      it("should reject if passed argument is not an object", function() {
         return testCollection().then(function(articles) {
           return articles.save(42);
-        })
-        .should.eventually.be.rejectedWith(Error, /is not an object/);
+        }).should.eventually.be.rejectedWith(Error, /is not an object/);
       });
 
-      it("should actually persist the record in the db", function() {
+      it("should actually persist the record into the collection", function() {
         var articles;
         return testCollection().then(function(collection) {
           articles = collection;
           return articles.save(article);
         }).then(result => {
-          return articles.get(result.data.id);
-        }).should.eventually.be.fulfilled;
+          return articles.get(result.data.id).then(res => res.data.title);
+        }).should.become(article.title);
       });
-    });
 
-    describe("#update", function() {
-      it("should update a record and return saved record data", function() {
-        const existing = {id: "3.14", title: "foo", url: "http://foo"};
+      it("should update a record", function() {
+        var articles;
+        return testCollection().then(function(collection) {
+          articles = collection;
+          return articles.save(article).then(res => res.data.id);
+        }).then(id => {
+          return articles.get(id).then(res => res.data);
+        }).then(existingArticle => {
+          return articles.save(Object.assign({}, existingArticle, {
+            title: "new title"
+          })).then(res => res.data.id);
+        }).then(id => {
+          return articles.get(id).then(res => res.data.title);
+        }).should.become("new title");
+      });
 
+      it("should reject updates on a non-existent record", function() {
         return testCollection().then(function(articles) {
-          return articles.save(existing)
-            .then(result => result.data.id);
-        }).should.eventually.eql("3.14");
+          return articles.save({id: "non-existent"});
+        }).should.be.rejectedWith(Error, /not found/);
       });
     });
 

@@ -5,6 +5,11 @@ import { attachFakeIDBSymbolsTo } from "./utils";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
+// TODO:  To determine if a transaction has completed successfully,
+// listen to the transaction’s complete event rather than the
+// IDBObjectStore.add request’s success event, because the transaction
+// may still fail after the success event fires.
+
 export default class Collection {
   constructor(collName) {
     this._collName = collName;
@@ -55,21 +60,14 @@ export default class Collection {
     });
   }
 
-  save(record) {
+  _create(record) {
     return new Promise((resolve, reject) => {
       var transaction = this.transaction("readwrite");
-      if (typeof(record) !== "object") {
-        return reject(new Error('Record is not an object.'));
-      }
-      var request;
-      if (!record.id) {
-        request = transaction.add(Object.assign({}, record, {id: uuid4()}));
-      } else {
-        request = transaction.put(record);
-      }
+      var newRecord = Object.assign({}, record, {id: uuid4()});
+      var request = transaction.add(newRecord);
       request.onsuccess = function(event) {
         resolve({
-          data: Object.assign({}, record, {id: event.target.result}),
+          data: newRecord,
           permissions: {}
         });
       };
@@ -77,6 +75,30 @@ export default class Collection {
         reject(new Error(event.target.error));
       };
     });
+  }
+
+  _update(record) {
+    return this.get(record.id).then(_ => {
+      return new Promise((resolve, reject) => {
+        var transaction = this.transaction("readwrite");
+        var request = transaction.put(record);
+        request.onsuccess = function(event) {
+          resolve({
+            data: Object.assign({}, record, {id: event.target.result}),
+            permissions: {}
+          });
+        };
+        request.onerror = function(event) {
+          reject(new Error(event.target.error));
+        };
+      });
+    });
+  }
+
+  save(record) {
+    if (typeof(record) !== "object")
+      return Promise.reject(new Error('Record is not an object.'));
+    return record.id ? this._update(record) : this._create(record);
   }
 
   get(id) {
