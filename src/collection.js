@@ -16,6 +16,8 @@ export default class Collection {
   }
 
   init() {
+    if (this._db)
+      return Promise.resolve(this);
     return new Promise((resolve, reject) => {
       var request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
@@ -51,46 +53,13 @@ export default class Collection {
   }
 
   clear() {
-    return new Promise((resolve, reject) => {
-      const {transaction, store} = this.prepare("readwrite");
-      store.clear();
-      transaction.oncomplete = function(event) {
-        resolve({
-          data: [],
-          permissions: {}
-        });
-      };
-      transaction.onerror = function(event) {
-        reject(new Error(event.target.error));
-      };
-    });
-  }
-
-  _create(record) {
-    return new Promise((resolve, reject) => {
-      var {transaction, store} = this.prepare("readwrite");
-      var newRecord = Object.assign({}, record, {id: uuid4()});
-      store.add(newRecord);
-      transaction.oncomplete = function(event) {
-        resolve({
-          data: newRecord,
-          permissions: {}
-        });
-      };
-      transaction.onerror = function(event) {
-        reject(new Error(event.target.error));
-      };
-    });
-  }
-
-  _update(record) {
-    return this.get(record.id).then(_ => {
+    return this.init().then(() => {
       return new Promise((resolve, reject) => {
-        var {transaction, store} = this.prepare("readwrite");
-        var request = store.put(record);
+        const {transaction, store} = this.prepare("readwrite");
+        store.clear();
         transaction.oncomplete = function(event) {
           resolve({
-            data: Object.assign({}, record, {id: request.result}),
+            data: [],
             permissions: {}
           });
         };
@@ -101,70 +70,117 @@ export default class Collection {
     });
   }
 
-  save(record) {
-    if (typeof(record) !== "object")
-      return Promise.reject(new Error('Record is not an object.'));
-    return record.id ? this._update(record) : this._create(record);
-  }
-
-  get(id) {
-    return new Promise((resolve, reject) => {
-      var {transaction, store} = this.prepare();
-      var request = store.get(id);
-      transaction.oncomplete = function(event) {
-        if (!request.result)
-          return reject(new Error(`Record with id=${id} not found.`));
-        resolve({
-          data: request.result,
-          permissions: {}
-        });
-      };
-      transaction.onerror = function(event) {
-        reject(new Error(event.target.error));
-      };
-    });
-  }
-
-  delete(id) {
-    // Ensure the record actually exists.
-    return this.get(id).then(result => {
+  _create(record) {
+    return this.init().then(() => {
       return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.delete(id);
+        var {transaction, store} = this.prepare("readwrite");
+        var newRecord = Object.assign({}, record, {id: uuid4()});
+        store.add(newRecord);
         transaction.oncomplete = function(event) {
           resolve({
-            data: { id: id, deleted: true },
+            data: newRecord,
             permissions: {}
           });
         };
         transaction.onerror = function(event) {
           reject(new Error(event.target.error));
         };
-      })
+      });
+    });
+  }
+
+  _update(record) {
+    return this.init().then(() => {
+      return this.get(record.id).then(_ => {
+        return new Promise((resolve, reject) => {
+          var {transaction, store} = this.prepare("readwrite");
+          var request = store.put(record);
+          transaction.oncomplete = function(event) {
+            resolve({
+              data: Object.assign({}, record, {id: request.result}),
+              permissions: {}
+            });
+          };
+          transaction.onerror = function(event) {
+            reject(new Error(event.target.error));
+          };
+        });
+      });
+    });
+  }
+
+  save(record) {
+    if (typeof(record) !== "object")
+      return Promise.reject(new Error('Record is not an object.'));
+    return this.init().then(() => {
+      return record.id ? this._update(record) : this._create(record);
+    });
+  }
+
+  get(id) {
+    return this.init().then(() => {
+      return new Promise((resolve, reject) => {
+        var {transaction, store} = this.prepare();
+        var request = store.get(id);
+        transaction.oncomplete = function(event) {
+          if (!request.result)
+            return reject(new Error(`Record with id=${id} not found.`));
+          resolve({
+            data: request.result,
+            permissions: {}
+          });
+        };
+        transaction.onerror = function(event) {
+          reject(new Error(event.target.error));
+        };
+      });
+    });
+  }
+
+  delete(id) {
+    return this.init().then(() => {
+      // Ensure the record actually exists.
+      return this.get(id).then(result => {
+        return new Promise((resolve, reject) => {
+          const {transaction, store} = this.prepare("readwrite");
+          store.delete(id);
+          transaction.oncomplete = function(event) {
+            resolve({
+              data: { id: id, deleted: true },
+              permissions: {}
+            });
+          };
+          transaction.onerror = function(event) {
+            reject(new Error(event.target.error));
+          };
+        });
+      });
     });
   }
 
   list() {
-    return new Promise((resolve, reject) => {
-      var results = [];
-      const {transaction, store} = this.prepare();
-      var request = store.openCursor();
-      request.onsuccess = function(event) {
-        var cursor = event.target.result;
-        if (cursor) {
-          results.push(cursor.value);
-          cursor.continue();
-        }
-      };
-      transaction.oncomplete = function(event) {
-        resolve({
-          data: results,
-          permissions: {}
-        });
-      };
-      transaction.onerror = function(event) {
-        reject(new Error(event.target.error));
-      };
+    return this.init().then(() => {
+      return new Promise((resolve, reject) => {
+        var results = [];
+        const {transaction, store} = this.prepare();
+        var request = store.openCursor();
+        request.onsuccess = function(event) {
+          var cursor = event.target.result;
+          if (cursor) {
+            results.push(cursor.value);
+            cursor.continue();
+          }
+        };
+        transaction.oncomplete = function(event) {
+          resolve({
+            data: results,
+            permissions: {}
+          });
+        };
+        transaction.onerror = function(event) {
+          reject(new Error(event.target.error));
+        };
+      });
     });
   }
 }

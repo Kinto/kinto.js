@@ -10,10 +10,7 @@ export default class Cliquetis {
 
   collection(collName) {
     if (!collName)
-      return Promise.reject(new Error("missing collection name"));
-    return new Promise((resolve, reject) => {
-      // if collection collName is missing, reject
-      resolve(new Collection(collName).init());
-    });
+      throw new Error("missing collection name");
+    return new Collection(collName);
   }
 }
