@@ -38,10 +38,12 @@ var db = new Cliquetis(options);
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
 
 ```js
-var articles = db.collection("articles");
+db.collection("articles").then(function(articles) {
+  // you can now use the articles collection object
+});
 ```
 
-This collection object has the following attributes:
+The collection object has the following attributes:
 
 * **lastModified**: last synchronization timestamp, ``null`` if never sync'ed.
 
@@ -52,7 +54,9 @@ All operations are asynchronous and rely on [Promises](https://developer.mozilla
 ### Creating a record
 
 ```js
-articles.save({title: "foo"}).then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.save({title: "foo"});
+}).then(console.log.bind(console));
 ```
 
 Result is:
@@ -72,8 +76,11 @@ Result is:
 ### Retrieving a single record
 
 ```js
-articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+})
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
 Result:
@@ -89,6 +96,8 @@ Result:
 }
 ```
 
+**Note:** The promise will be rejected if no record is found for that id.
+
 ### Updating a record
 
 ```js
@@ -101,7 +110,9 @@ var updated = Object.assign(existing, {
   title: "baz"
 });
 
-articles.save(updated).then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  articles.save(updated);
+}).then(console.log.bind(console));
 ```
 
 Result is:
@@ -121,8 +132,9 @@ Result is:
 #### Single unique record passing its `id`:
 
 ```js
-articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+}).then(console.log.bind(console));
 ```
 
 Result:
@@ -141,17 +153,21 @@ Result:
 #### Multiple deletions using a query
 
 ```js
-articles.delete({
-  filter: {
-    age: { $gte: 42 }
-  }
-}).then(console.log.bind(console))
+db.collection("articles").then(function(articles) {
+  return articles.delete({
+    filter: {
+      age: { $gte: 42 }
+    }
+  });
+}).then(console.log.bind(console));
 ```
 
 ### Listing records
 
 ```js
-articles.all().then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.list();
+})..then(console.log.bind(console));
 ```
 
 Result is:
@@ -177,26 +193,51 @@ Result is:
 #### Filtering
 
 ```js
-articles.all({
-  filter: { unread: { $eq: true } }
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    filter: { unread: { $eq: true } }
+  });
 }).then(console.log.bind(console));
 ```
 
 #### Sorting
 
 ```js
-articles.all({
-  sort: ["-unread", "-added_on"]
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    sort: ["-unread", "-added_on"]
+  });
 }).then(console.log.bind(console));
 ```
 
 #### Combining `sort` and `filter`
 
 ```js
-articles.all({
-  filter: { unread: { $eq: true } },
-  sort: ["-added_on"]
+db.collection("articles").then(function(articles) {
+  return articles.list({
+    filter: { unread: { $eq: true } },
+    sort: ["-added_on"]
+  });
 }).then(console.log.bind(console));
+```
+
+### Clearing the collection
+
+This will remove all existing records from the collection:
+
+```js
+db.collection("articles").then(function(articles) {
+  return articles.clear();
+}).then(console.log.bind(console));
+```
+
+Result:
+
+```js
+{
+  data: [],
+  permissions: {}
+}
 ```
 
 ### Fetching and publishing changes
@@ -204,15 +245,17 @@ articles.all({
 Synchronizing local data with remote ones is performed by calling the `.sync()` method:
 
 ```js
-articles.sync()
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.sync();
+}).then(console.log.bind(console));
 ```
 
 Note that you can override default options by passing it a new options object, Cliquetis will merge these new values with the default ones:
 
 ```js
-articles.sync({mode: Cliquet.FORCE})
-  .then(console.log.bind(console));
+db.collection("articles").then(function(articles) {
+  return articles.sync({mode: Cliquet.FORCE});
+}).then(console.log.bind(console));
 ```
 
 Result:

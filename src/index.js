@@ -1,15 +1,19 @@
-export class Collection {
-  constructor(name) {
-    this._name = name;
-  }
-}
+"use strict";
 
-export class Cliquet {
-  constructor(bucket) {
-    this._bucket = bucket;
+import Collection from "./collection";
+
+export default class Cliquetis {
+  constructor(options = {}) {
+    this._options = options;
+    this._collections = {};
   }
 
-  collection(name) {
-    return new Collection(name);
+  collection(collName) {
+    if (!collName)
+      return Promise.reject(new Error("missing collection name"));
+    return new Promise((resolve, reject) => {
+      // if collection collName is missing, reject
+      resolve(new Collection(collName).init());
+    });
   }
 }
