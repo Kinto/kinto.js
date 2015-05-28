@@ -1,5 +1,9 @@
 "use strict";
 
+import "babel/polyfill";
+import "isomorphic-fetch";
+
+import Api from "./api";
 import Collection from "./collection";
 
 export default class Cliquetis {
@@ -11,6 +15,9 @@ export default class Cliquetis {
   collection(collName) {
     if (!collName)
       throw new Error("missing collection name");
-    return new Collection(collName);
+
+    if (!this._collections.hasOwnProperty(collName))
+      this._collections[collName] = new Collection(collName, new Api());
+    return this._collections[collName];
   }
 }

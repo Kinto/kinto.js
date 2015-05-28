@@ -36,6 +36,7 @@
     "chai-as-promised": "^5.0.0",
     "coveralls": "^2.11.2",
     "fake-indexeddb": "^1.0.3",
+    "isomorphic-fetch": "^2.1.0",
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",

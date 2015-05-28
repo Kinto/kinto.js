@@ -6,9 +6,10 @@ import { attachFakeIDBSymbolsTo } from "./utils";
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 export default class Collection {
-  constructor(name) {
+  constructor(name, api) {
     this._name = name;
     this._db;
+    this.api = api;
   }
 
   get name() {
@@ -182,5 +183,9 @@ export default class Collection {
         };
       });
     });
+  }
+
+  sync() {
+    return this.api.request();
   }
 }

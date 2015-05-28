@@ -1,12 +1,17 @@
+"use strict";
+
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
+import sinon from "sinon";
 
 import Cliquetis from "../src";
+import Api from "../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();
 
 const TEST_COLLECTION_NAME = "cliquetis-test";
+const root = typeof window === "object" ? window : global;
 
 describe("Cliquetis", function() {
 
@@ -25,6 +30,11 @@ describe("Cliquetis", function() {
 
     it("should resolve to a named collection instance", function() {
       expect(testCollection().name).eql(TEST_COLLECTION_NAME);
+    });
+
+    it("should cache collection instance", function() {
+      var db = new Cliquetis();
+      expect(db.collection("a") == db.collection("a")).eql(true);
     });
 
     it("should reject on missing collection name", function() {
@@ -145,6 +155,39 @@ describe("Cliquetis", function() {
         return testCollection().list()
           .then(res => res.data)
           .should.eventually.have.length.of(2);
+      });
+    });
+
+    describe("#sync", function() {
+      const fixtures = [
+        {title: "art1"},
+        {title: "art2"},
+        {title: "art3"},
+      ];
+      var sandbox, articles;
+
+      beforeEach(function() {
+        sandbox = sinon.sandbox.create();
+        articles = testCollection();
+        return Promise.all(fixtures.map(articles.save.bind(articles)));
+      });
+
+      afterEach(function() {
+        sandbox.restore();
+      });
+
+      it("should load fixtures", function() {
+        return articles.list()
+          .then(res => res.data)
+          .should.eventually.have.length.of(3);
+      });
+
+      it("should request the server for latest collection data", function() {
+        var request = sandbox.stub(Api.prototype, "request")
+          .returns(Promise.resolve());
+        return articles.sync().then(res => {
+          sinon.assert.calledOnce(request);
+        });
       });
     });
   });
