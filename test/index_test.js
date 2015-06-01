@@ -14,13 +14,19 @@ const TEST_COLLECTION_NAME = "cliquetis-test";
 const root = typeof window === "object" ? window : global;
 
 describe("Cliquetis", () => {
+  var sandbox;
 
   function testCollection() {
     return new Cliquetis().collection(TEST_COLLECTION_NAME);
   }
 
   beforeEach(function() {
+    sandbox = sinon.sandbox.create();
     return testCollection().clear();
+  });
+
+  afterEach(function() {
+    sandbox.restore();
   });
 
   describe("#collection()", () => {
@@ -229,16 +235,11 @@ describe("Cliquetis", () => {
         {title: "art2"},
         {title: "art3"},
       ];
-      var sandbox, articles;
+      var articles;
 
       beforeEach(function() {
-        sandbox = sinon.sandbox.create();
         articles = testCollection();
         return Promise.all(fixtures.map(articles.save.bind(articles)));
-      });
-
-      afterEach(function() {
-        sandbox.restore();
       });
 
       it("should load fixtures", () => {
@@ -247,11 +248,81 @@ describe("Cliquetis", () => {
           .should.eventually.have.length.of(3);
       });
 
-      it("should request the server for latest collection data", () => {
-        var request = sandbox.stub(Api.prototype, "request")
+      it("should batch send local unsynced data to the server", () => {
+        var batch = sandbox.stub(Api.prototype, "batch")
           .returns(Promise.resolve());
         return articles.sync().then(res => {
-          sinon.assert.calledOnce(request);
+          sinon.assert.calledThrice(batch);
+          sinon.assert.calledWith(batch, "create");
+          sinon.assert.calledWith(batch, "update");
+          sinon.assert.calledWith(batch, "delete");
+        });
+      });
+    });
+  });
+
+  describe("Api", function() {
+    describe("#batch", function() {
+      const operations = [
+        {id: 1, title: "foo"},
+        {id: 2, title: "bar"},
+      ];
+      var api;
+
+      beforeEach(() => {
+        sandbox.stub(global, "fetch");
+        api = new Api("http://test/v0/articles");
+      });
+
+      it("should call the batch endpoint", function() {
+        api.batch("create", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        sinon.assert.calledWithMatch(fetch, "http://test/v0/articles/batch");
+      });
+
+      it("should define default batch create request method", function() {
+        api.batch("create", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.defaults.method).eql("POST");
+      });
+
+      it("should define default batch update request method", function() {
+        api.batch("update", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.defaults.method).eql("PATCH");
+      });
+
+      it("should define default batch delete request method", function() {
+        api.batch("delete", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.defaults.method).eql("DELETE");
+      });
+
+      it("should define default batch request headers", function() {
+        api.batch("create", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.defaults.headers).eql({});
+      });
+
+      it("should send the expected number of request bodies", function() {
+        api.batch("create", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.requests).to.have.length.of(2);
+      });
+
+      it("should map created records to batch request bodies", function() {
+        api.batch("create", operations);
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(requestOptions.body.requests[0]).eql({
+          path: "http://test/v0/articles/1",
+          body: { id: 1, title: "foo" },
         });
       });
     });

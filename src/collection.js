@@ -189,7 +189,29 @@ export default class Collection {
     });
   }
 
+  _groupByStatus() {
+    return this.list().then(res => {
+      return res.data.reduce((acc, record) => {
+        acc[record._status].push(record);
+        return acc;
+      }, {synced: [], created: [], updated: [], deleted: []});
+    });
+  }
+
+  /**
+   * 1. retrieve local modifications made since latest call to sync()
+   * 2. upload new records
+   * 3. upload modified records
+   * 4. upload deletions
+   * 5. fetch remote changes since last last_modified
+   * 6. merge them (using a given strategy)
+   */
   sync() {
-    return this.api.request();
+    return this._groupByStatus().then(groups => {
+      const {synced, created, updated, deleted} = groups;
+      return this.api.batch("create", created)
+        .then(_ => this.api.batch("update", updated))
+        .then(_ => this.api.batch("delete", deleted));
+    });
   }
 }
