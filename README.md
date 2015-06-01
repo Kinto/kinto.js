@@ -123,6 +123,10 @@ Result is:
 
 ### Deleting records
 
+By default, local deletion is performed *virtually*, until the collection is actually synced to the remote server.
+
+Virtual deletions aren't retrieved when calling `#get()` and `#list()`.
+
 #### Single unique record passing its `id`:
 
 ```js
@@ -137,7 +141,8 @@ Result:
   data: [
     {
       id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
-      deleted: true,
+      title: "foo",
+      _status: "deleted"
     }
   ]
 }
@@ -264,7 +269,7 @@ TODO
 **Notes**
 
 > During synchronization, records created locally are published on the server
-> using ``PUT`` and the ``If-None-Match: *`` request header to prevent overwriting.
+> using `PUT` and the `If-None-Match: *` request header to prevent overwriting.
 
 > Since fetching changes is paginated, it should be performed using `If-None-Match`
 > header to prevent race-conditions.

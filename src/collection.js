@@ -20,12 +20,15 @@ export default class Collection {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this.name, 1);
+      var request = indexedDB.open(this.name, 2);
       request.onupgradeneeded = event => {
-        var store = event.target.result.createObjectStore(this.name, {
+        const store = event.target.result.createObjectStore(this.name, {
           keyPath: "id"
         });
+        // Primary key (UUID)
         store.createIndex("id", "id", { unique: true });
+        // Local record status ("synced", "created", "updated", "deleted")
+        store.createIndex("_status", "_status");
       };
       request.onerror = event => {
         reject(event.error);
@@ -58,14 +61,12 @@ export default class Collection {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: [],
             permissions: {}
           });
-        };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
         };
       });
     });
@@ -74,17 +75,18 @@ export default class Collection {
   _create(record) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        var {transaction, store} = this.prepare("readwrite");
-        var newRecord = Object.assign({}, record, {id: uuid4()});
+        const {transaction, store} = this.prepare("readwrite");
+        const newRecord = Object.assign({}, record, {
+          id: uuid4(),
+          _status: "created"
+        });
         store.add(newRecord);
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: newRecord,
             permissions: {}
           });
-        };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
         };
       });
     });
@@ -94,16 +96,17 @@ export default class Collection {
     return this.open().then(() => {
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
-          var {transaction, store} = this.prepare("readwrite");
-          var request = store.put(record);
-          transaction.oncomplete = function(event) {
+          const {transaction, store} = this.prepare("readwrite");
+          const updatedRecord = Object.assign({}, record, {
+            _status: record._status === "deleted" ? "deleted" : "updated"
+          });
+          const request = store.put(updatedRecord);
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => {
             resolve({
-              data: Object.assign({}, record, {id: request.result}),
+              data: Object.assign({}, updatedRecord, {id: request.result}),
               permissions: {}
             });
-          };
-          transaction.onerror = function(event) {
-            reject(new Error(event.target.error));
           };
         });
       });
@@ -118,41 +121,43 @@ export default class Collection {
     });
   }
 
-  get(id) {
+  get(id, options={includeVirtual: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        var {transaction, store} = this.prepare();
-        var request = store.get(id);
-        transaction.oncomplete = function(event) {
-          if (!request.result)
+        const {transaction, store} = this.prepare();
+        const request = store.get(id);
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
+          if (!request.result ||
+             (!options.includeVirtual && request.result._status === "deleted"))
             return reject(new Error(`Record with id=${id} not found.`));
           resolve({
             data: request.result,
             permissions: {}
           });
         };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
-        };
       });
     });
   }
 
-  delete(id) {
+  delete(id, options={virtual: true}) {
     return this.open().then(() => {
       // Ensure the record actually exists.
       return this.get(id).then(result => {
+        if (options.virtual) {
+          return this._update(Object.assign({}, result.data, {
+            _status: "deleted"
+          }));
+        }
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");
           store.delete(id);
-          transaction.oncomplete = function(event) {
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => {
             resolve({
-              data: { id: id, deleted: true },
+              data: { id: id },
               permissions: {}
             });
-          };
-          transaction.onerror = function(event) {
-            reject(new Error(event.target.error));
           };
         });
       });
@@ -162,24 +167,23 @@ export default class Collection {
   list() {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        var results = [];
+        const results = [];
         const {transaction, store} = this.prepare();
-        var request = store.openCursor();
+        const request = store.openCursor();
         request.onsuccess = function(event) {
           var cursor = event.target.result;
           if (cursor) {
-            results.push(cursor.value);
+            if (cursor.value._status !== "deleted")
+              results.push(cursor.value);
             cursor.continue();
           }
         };
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: results,
             permissions: {}
           });
-        };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
         };
       });
     });
