@@ -121,7 +121,7 @@ export default class Collection {
     });
   }
 
-  get(id, options={includeVirtual: false}) {
+  get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
@@ -129,7 +129,7 @@ export default class Collection {
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => {
           if (!request.result ||
-             (!options.includeVirtual && request.result._status === "deleted"))
+             (!options.includeDeleted && request.result._status === "deleted"))
             return reject(new Error(`Record with id=${id} not found.`));
           resolve({
             data: request.result,
@@ -164,7 +164,7 @@ export default class Collection {
     });
   }
 
-  list() {
+  list(params={}, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const results = [];
@@ -173,7 +173,7 @@ export default class Collection {
         request.onsuccess = function(event) {
           var cursor = event.target.result;
           if (cursor) {
-            if (cursor.value._status !== "deleted")
+            if (options.includeDeleted || cursor.value._status !== "deleted")
               results.push(cursor.value);
             cursor.continue();
           }

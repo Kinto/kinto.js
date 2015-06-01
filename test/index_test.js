@@ -142,7 +142,7 @@ describe("Cliquetis", () => {
           .should.be.rejectedWith(Error, /not found/);
       });
 
-      it("should reject on virtually deleted record", function() {
+      it("should reject on virtually deleted record", () => {
         const articles = testCollection();
         return articles.delete(uuid)
           .then(res => articles.get(uuid))
@@ -162,7 +162,7 @@ describe("Cliquetis", () => {
         it("should virtually delete a record", () => {
           var articles = testCollection();
           return articles.delete(uuid, {virtual: true})
-            .then(res => articles.get(res.data.id, {includeVirtual: true}))
+            .then(res => articles.get(res.data.id, {includeDeleted: true}))
             .then(res => res.data._status)
             .should.eventually.eql("deleted");
         });
@@ -204,13 +204,22 @@ describe("Cliquetis", () => {
           .should.eventually.have.length.of(2);
       });
 
-      it("shouldn't list virtually deleted records", function() {
+      it("shouldn't list virtually deleted records", () => {
         const articles = testCollection();
         return articles.save({title: "yay"})
           .then(res => articles.delete(res.data.id))
           .then(_ => articles.list())
           .then(res => res.data)
           .should.eventually.have.length.of(2);
+      });
+
+      it("should support the includeDeleted option", () => {
+        const articles = testCollection();
+        return articles.save({title: "yay"})
+          .then(res => articles.delete(res.data.id))
+          .then(_ => articles.list({}, {includeDeleted: true}))
+          .then(res => res.data)
+          .should.eventually.have.length.of(3);
       });
     });
 
