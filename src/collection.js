@@ -10,10 +10,15 @@ export default class Collection {
     this._name = name;
     this._db;
     this.api = api;
+    this._lastModified = null;
   }
 
   get name() {
     return this._name;
+  }
+
+  get lastModified() {
+    return this._lastModified;
   }
 
   open() {
@@ -72,13 +77,15 @@ export default class Collection {
     });
   }
 
-  _create(record) {
+  create(record, options={synced: false}) {
     return this.open().then(() => {
+      if (typeof(record) !== "object")
+        return Promise.reject(new Error('Record is not an object.'));
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         const newRecord = Object.assign({}, record, {
-          id: uuid4(),
-          _status: "created"
+          id:      options.synced ? record.id : uuid4(),
+          _status: options.synced ? "synced" : "created"
         });
         store.add(newRecord);
         transaction.onerror = event => reject(new Error(event.target.error));
@@ -92,14 +99,20 @@ export default class Collection {
     });
   }
 
-  _update(record) {
+  update(record, options={synced: false}) {
     return this.open().then(() => {
+      if (typeof(record) !== "object")
+        return Promise.reject(new Error('Record is not an object.'));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
+          var newStatus = "updated";
+          if (record._status === "deleted") {
+            newStatus = "deleted";
+          } else if (options.synced) {
+            newStatus = "synced";
+          }
           const {transaction, store} = this.prepare("readwrite");
-          const updatedRecord = Object.assign({}, record, {
-            _status: record._status === "deleted" ? "deleted" : "updated"
-          });
+          const updatedRecord = Object.assign({}, record, {_status: newStatus});
           const request = store.put(updatedRecord);
           transaction.onerror = event => reject(new Error(event.target.error));
           transaction.oncomplete = event => {
@@ -113,14 +126,6 @@ export default class Collection {
     });
   }
 
-  save(record) {
-    if (typeof(record) !== "object")
-      return Promise.reject(new Error('Record is not an object.'));
-    return this.open().then(() => {
-      return record.id ? this._update(record) : this._create(record);
-    });
-  }
-
   get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
@@ -129,12 +134,14 @@ export default class Collection {
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => {
           if (!request.result ||
-             (!options.includeDeleted && request.result._status === "deleted"))
-            return reject(new Error(`Record with id=${id} not found.`));
-          resolve({
-            data: request.result,
-            permissions: {}
-          });
+             (!options.includeDeleted && request.result._status === "deleted")) {
+            reject(new Error(`Record with id=${id} not found.`));
+          } else {
+            resolve({
+              data: request.result,
+              permissions: {}
+            });
+          }
         };
       });
     });
@@ -145,7 +152,7 @@ export default class Collection {
       // Ensure the record actually exists.
       return this.get(id).then(result => {
         if (options.virtual) {
-          return this._update(Object.assign({}, result.data, {
+          return this.update(Object.assign({}, result.data, {
             _status: "deleted"
           }));
         }
@@ -198,20 +205,33 @@ export default class Collection {
     });
   }
 
-  /**
-   * 1. retrieve local modifications made since latest call to sync()
-   * 2. upload new records
-   * 3. upload modified records
-   * 4. upload deletions
-   * 5. fetch remote changes since last last_modified
-   * 6. merge them (using a given strategy)
-   */
+  importChangesLocally(changes) {
+    return Promise.all(changes.map(change => {
+      // Retrieve local record matching this change
+      return this.get(change.id)
+        // No matching local record found, that's a creation
+        .catch(_ => {
+          return this.create(change, {synced: true})
+        })
+        // Matching local record found
+        .then(res => {
+          // Check for conflict
+          if (res.data._status && res.data._status !== "synced") {
+            // Conflict between unsynced local record data and remote ones
+            // TODO
+            console.log("Conflict detected; local:", res.data, "remote:", change);
+            return {data: null};
+          } else if (change.deleted) {
+            return this.delete(change.id, {virtual: false});
+          } else {
+            return this.update(change, {synced: true});
+          }
+        });
+    })).then(imported => imported.map(res => res.data));
+  }
+
   sync() {
-    return this._groupByStatus().then(groups => {
-      const {synced, created, updated, deleted} = groups;
-      return this.api.batch("create", created)
-        .then(_ => this.api.batch("update", updated))
-        .then(_ => this.api.batch("delete", deleted));
-    });
+    return this.api.fetchChangesSince(this.lastModified)
+      .then(changes => this.importChangesLocally(changes));
   }
 }

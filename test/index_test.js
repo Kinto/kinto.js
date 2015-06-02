@@ -3,12 +3,14 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { v4 as uuid4 } from "uuid";
 
 import Cliquetis from "../src";
-import Api from "../src/api";
+import Api, { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();
+chai.config.includeStack = true;
 
 const TEST_COLLECTION_NAME = "cliquetis-test";
 const root = typeof window === "object" ? window : global;
@@ -52,54 +54,56 @@ describe("Cliquetis", () => {
   describe("Collection", () => {
     const article = {title: "foo", url: "http://foo"};
 
-    describe("#save", () => {
-      it("should save a record and return saved record data", () => {
-        return testCollection().save(article)
+    describe("#create", () => {
+      it("should create a record and return created record data", () => {
+        return testCollection().create(article)
           .should.eventually.have.property("data");
       });
 
-      it("should save a record and return saved record perms", () => {
-        return testCollection().save(article)
+      it("should create a record and return created record perms", () => {
+        return testCollection().create(article)
           .should.eventually.have.property("permissions");
       });
 
-      it("should assign an id to the saved record", () => {
-        return testCollection().save(article)
+      it("should assign an id to the created record", () => {
+        return testCollection().create(article)
           .then(result => result.data.id)
           .should.eventually.be.a("string");
       });
 
       it("should not alter original record", () => {
-        return testCollection().save(article)
+        return testCollection().create(article)
           .should.eventually.not.eql(article);
       });
 
-      it("should add record status on create", () => {
+      it("should add record status on creation", () => {
         var articles = testCollection();
-        return articles.save(article)
+        return articles.create(article)
           .then(res => res.data._status)
           .should.eventually.eql("created");
       });
 
       it("should reject if passed argument is not an object", () => {
-        return testCollection().save(42)
+        return testCollection().create(42)
           .should.eventually.be.rejectedWith(Error, /is not an object/);
       });
 
       it("should actually persist the record into the collection", () => {
         var articles = testCollection();
-        return articles.save(article).then(result => {
+        return articles.create(article).then(result => {
           return articles.get(result.data.id).then(res => res.data.title);
         }).should.become(article.title);
       });
+    });
 
+    describe("#update", function() {
       it("should update a record", () => {
         var articles = testCollection();
-        return articles.save(article)
+        return articles.create(article)
           .then(res => articles.get(res.data.id))
           .then(res => res.data)
           .then(existing => {
-            return articles.save(
+            return articles.update(
               Object.assign({}, existing, {title: "new title"}))
           })
           .then(res => articles.get(res.data.id))
@@ -109,15 +113,15 @@ describe("Cliquetis", () => {
 
       it("should update record status on update", () => {
         var articles = testCollection();
-        return articles.save(article)
+        return articles.create(article)
           .then(res => res.data)
-          .then(data => articles.save(Object.assign({}, data, {title: "blah"})))
+          .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
           .then(res => res.data._status)
           .should.eventually.eql("updated");
       });
 
       it("should reject updates on a non-existent record", () => {
-        return testCollection().save({id: "non-existent"})
+        return testCollection().update({id: "non-existent"})
           .should.be.rejectedWith(Error, /not found/);
       });
     });
@@ -126,7 +130,7 @@ describe("Cliquetis", () => {
       var uuid;
 
       beforeEach(function() {
-        return testCollection().save(article)
+        return testCollection().create(article)
           .then(result => uuid = result.data.id);
       });
 
@@ -160,7 +164,7 @@ describe("Cliquetis", () => {
       var uuid;
 
       beforeEach(() => {
-        return testCollection().save(article)
+        return testCollection().create(article)
           .then(result => uuid = result.data.id);
       });
 
@@ -199,8 +203,8 @@ describe("Cliquetis", () => {
       beforeEach(function() {
         var articles = testCollection();
         return Promise.all([
-          articles.save(article),
-          articles.save({title: "bar", url: "http://bar"})
+          articles.create(article),
+          articles.create({title: "bar", url: "http://bar"})
         ]);
       });
 
@@ -212,7 +216,7 @@ describe("Cliquetis", () => {
 
       it("shouldn't list virtually deleted records", () => {
         const articles = testCollection();
-        return articles.save({title: "yay"})
+        return articles.create({title: "yay"})
           .then(res => articles.delete(res.data.id))
           .then(_ => articles.list())
           .then(res => res.data)
@@ -221,7 +225,7 @@ describe("Cliquetis", () => {
 
       it("should support the includeDeleted option", () => {
         const articles = testCollection();
-        return articles.save({title: "yay"})
+        return articles.create({title: "yay"})
           .then(res => articles.delete(res.data.id))
           .then(_ => articles.list({}, {includeDeleted: true}))
           .then(res => res.data)
@@ -239,7 +243,7 @@ describe("Cliquetis", () => {
 
       beforeEach(function() {
         articles = testCollection();
-        return Promise.all(fixtures.map(articles.save.bind(articles)));
+        return Promise.all(fixtures.map(fixture => articles.create(fixture)));
       });
 
       it("should load fixtures", () => {
@@ -248,21 +252,50 @@ describe("Cliquetis", () => {
           .should.eventually.have.length.of(3);
       });
 
-      it("should batch send local unsynced data to the server", () => {
-        var batch = sandbox.stub(Api.prototype, "batch")
-          .returns(Promise.resolve());
+      it("should fetch latest changes from the server", () => {
+        var fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince")
+          .returns(Promise.resolve([]));
         return articles.sync().then(res => {
-          sinon.assert.calledThrice(batch);
-          sinon.assert.calledWith(batch, "create");
-          sinon.assert.calledWith(batch, "update");
-          sinon.assert.calledWith(batch, "delete");
+          sinon.assert.calledOnce(fetchChangesSince);
         });
+      });
+    });
+
+    describe("#importChangesLocally", () => {
+      const fixtures = [
+        {title: "art1"},
+        {title: "art2"},
+        {title: "art3"},
+      ];
+      const toImport = [
+        {id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "art4"},
+        {id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", title: "art5"},
+      ];
+      var articles;
+
+      beforeEach(function() {
+        articles = testCollection();
+        return Promise.all(fixtures.map(fixture => articles.create(fixture)));
+      });
+
+      it("should import non-conflicting new records into the collection", () => {
+        return articles.importChangesLocally(toImport)
+          .then(_ => articles.list())
+          .should.eventually.have.length.of(5);
+      });
+
+      it("should resolve with non-conflicting added records information", () => {
+        return articles.importChangesLocally(toImport)
+          .should.eventually.become([
+            {id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "art4", _status: "synced"},
+            {id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", title: "art5", _status: "synced"},
+          ]);
       });
     });
   });
 
-  describe("Api", function() {
-    describe("#batch", function() {
+  describe("Api", () => {
+    describe("#batch", () => {
       const operations = [
         {id: 1, title: "foo"},
         {id: 2, title: "bar"},
@@ -274,49 +307,49 @@ describe("Cliquetis", () => {
         api = new Api("http://test/v0/articles");
       });
 
-      it("should call the batch endpoint", function() {
+      it("should call the batch endpoint", () => {
         api.batch("create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         sinon.assert.calledWithMatch(fetch, "http://test/v0/articles/batch");
       });
 
-      it("should define default batch create request method", function() {
+      it("should define default batch create request method", () => {
         api.batch("create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(requestOptions.body.defaults.method).eql("POST");
       });
 
-      it("should define default batch update request method", function() {
+      it("should define default batch update request method", () => {
         api.batch("update", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(requestOptions.body.defaults.method).eql("PATCH");
       });
 
-      it("should define default batch delete request method", function() {
+      it("should define default batch delete request method", () => {
         api.batch("delete", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(requestOptions.body.defaults.method).eql("DELETE");
       });
 
-      it("should define default batch request headers", function() {
+      it("should define default batch request headers", () => {
         api.batch("create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(requestOptions.body.defaults.headers).eql({});
       });
 
-      it("should send the expected number of request bodies", function() {
+      it("should send the expected number of request bodies", () => {
         api.batch("create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(requestOptions.body.requests).to.have.length.of(2);
       });
 
-      it("should map created records to batch request bodies", function() {
+      it("should map created records to batch request bodies", () => {
         api.batch("create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
