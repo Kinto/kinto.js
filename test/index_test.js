@@ -388,59 +388,70 @@ describe("Cliquetis", () => {
       var api;
 
       beforeEach(() => {
-        sandbox.stub(global, "fetch");
         api = new Api("http://test/v0/articles");
       });
 
-      it("should call the batch endpoint", () => {
-        api.batch("create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
+      describe("server request", function() {
+        beforeEach(() => {
+          sandbox.stub(global, "fetch");
+        });
 
-        sinon.assert.calledWithMatch(fetch, "http://test/v0/articles/batch");
+        it("should call the batch endpoint", () => {
+          api.batch("create", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          sinon.assert.calledWithMatch(fetch, "http://test/v0/articles/batch");
+        });
+
+        it("should define default batch create request method", () => {
+          api.batch("create", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.defaults.method).eql("POST");
+        });
+
+        it("should define default batch update request method", () => {
+          api.batch("update", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.defaults.method).eql("PATCH");
+        });
+
+        it("should define default batch delete request method", () => {
+          api.batch("delete", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.defaults.method).eql("DELETE");
+        });
+
+        it("should define default batch request headers", () => {
+          api.batch("create", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.defaults.headers).eql({});
+        });
+
+        it("should send the expected number of request bodies", () => {
+          api.batch("create", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.requests).to.have.length.of(2);
+        });
+
+        it("should map created records to batch request bodies", () => {
+          api.batch("create", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(requestOptions.body.requests[0]).eql({
+            path: "http://test/v0/articles/1",
+            body: { id: 1, title: "foo" },
+          });
+        });
       });
 
-      it("should define default batch create request method", () => {
-        api.batch("create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.defaults.method).eql("POST");
-      });
-
-      it("should define default batch update request method", () => {
-        api.batch("update", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.defaults.method).eql("PATCH");
-      });
-
-      it("should define default batch delete request method", () => {
-        api.batch("delete", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.defaults.method).eql("DELETE");
-      });
-
-      it("should define default batch request headers", () => {
-        api.batch("create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.defaults.headers).eql({});
-      });
-
-      it("should send the expected number of request bodies", () => {
-        api.batch("create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.requests).to.have.length.of(2);
-      });
-
-      it("should map created records to batch request bodies", () => {
-        api.batch("create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(requestOptions.body.requests[0]).eql({
-          path: "http://test/v0/articles/1",
-          body: { id: 1, title: "foo" },
+      describe("server request", function() {
+        beforeEach(() => {
+          sandbox.stub(global, "fetch").returns();
         });
       });
     });
