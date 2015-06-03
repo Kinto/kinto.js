@@ -23,12 +23,12 @@ describe("Cliquetis", () => {
     return new Cliquetis().collection(TEST_COLLECTION_NAME);
   }
 
-  beforeEach(function() {
+  beforeEach(() => {
     sandbox = sinon.sandbox.create();
     return testCollection().clear();
   });
 
-  afterEach(function() {
+  afterEach(() => {
     sandbox.restore();
   });
 
@@ -97,7 +97,7 @@ describe("Cliquetis", () => {
       });
     });
 
-    describe("#update", function() {
+    describe("#update", () => {
       it("should update a record", () => {
         var articles = testCollection();
         return articles.create(article)
@@ -130,7 +130,7 @@ describe("Cliquetis", () => {
     describe("#get", () => {
       var uuid;
 
-      beforeEach(function() {
+      beforeEach(() => {
         return testCollection().create(article)
           .then(result => uuid = result.data.id);
       });
@@ -201,7 +201,7 @@ describe("Cliquetis", () => {
     });
 
     describe("#list", () => {
-      beforeEach(function() {
+      beforeEach(() => {
         var articles = testCollection();
         return Promise.all([
           articles.create(article),
@@ -242,7 +242,7 @@ describe("Cliquetis", () => {
       ];
       var articles;
 
-      beforeEach(function() {
+      beforeEach(() => {
         articles = testCollection();
         return Promise.all(fixtures.map(fixture => articles.create(fixture)));
       });
@@ -264,6 +264,18 @@ describe("Cliquetis", () => {
           sinon.assert.calledOnce(fetchChangesSince);
         });
       });
+
+      it("should store latest lastModified value", () => {
+        sandbox.stub(articles.api, "batch");
+        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+          .returns(Promise.resolve({
+            lastModified: 42,
+            changes: []
+          }));
+        return articles.sync().then(res => {
+          expect(articles.lastModified).eql(42);
+        });
+      });
     });
 
     describe("#importChangesLocally", () => {
@@ -282,8 +294,8 @@ describe("Cliquetis", () => {
         articles = testCollection();
       });
 
-      describe("Non conflicting imports", function() {
-        beforeEach(function() {
+      describe("Non conflicting imports", () => {
+        beforeEach(() => {
           return Promise.all(
             fixtures.map(fixture => articles.create(fixture, {synced: true})));
         });
@@ -324,7 +336,7 @@ describe("Cliquetis", () => {
         });
       });
 
-      describe("Conflict handling", function() {
+      describe("Conflict handling", () => {
         it("should resolve with conflicts listed", () => {
           return articles.create({title: "local title"})
             .then(res => articles.importChangesLocally([
