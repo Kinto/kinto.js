@@ -19,7 +19,12 @@ export default class Api {
   fetchChangesSince(timestamp=null) {
     return fetch(`${this._collBaseUrl}?_since=${timestamp||""}`, {
       headers: {"Accept": "application/json"}
-    }).then(res => res.json());
+    }).then(res => {
+      return {
+        lastModified: res.headers.get("Last-Modified"),
+        changes: res.json()
+      };
+    });
   }
 
   batch(type, records) {
@@ -37,7 +42,6 @@ export default class Api {
           headers: {}, // XXX pass default headers here
         },
         requests: records.map(record => {
-          // XXX: Ensure record is clean (eg. remove last_modified, _status, …)
           return {
             path: `${this._collBaseUrl}/${record.id}`,
             body: cleanRecord(record)

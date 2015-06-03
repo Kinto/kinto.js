@@ -6,6 +6,7 @@ import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
 import Cliquetis from "../src";
+import Collection from "../src/collection";
 import Api, { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
@@ -253,8 +254,12 @@ describe("Cliquetis", () => {
       });
 
       it("should fetch latest changes from the server", () => {
-        var fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince")
-          .returns(Promise.resolve([]));
+        sandbox.stub(articles.api, "batch");
+        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+          .returns(Promise.resolve({
+            lastModified: 42,
+            changes: []
+          }));
         return articles.sync().then(res => {
           sinon.assert.calledOnce(fetchChangesSince);
         });
@@ -263,33 +268,101 @@ describe("Cliquetis", () => {
 
     describe("#importChangesLocally", () => {
       const fixtures = [
-        {title: "art1"},
-        {title: "art2"},
-        {title: "art3"},
+        {id: 1, title: "art1"},
+        {id: 2, title: "art2"},
       ];
-      const toImport = [
-        {id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "art4"},
-        {id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", title: "art5"},
+      const serverChanges = [
+        {id: 2, title: "art2mod"}, // to be updated
+        {id: 3, title: "art3"},    // to be created
+        {id: 4, deleted: true},    // to be deleted
       ];
       var articles;
 
-      beforeEach(function() {
+      beforeEach(() => {
         articles = testCollection();
-        return Promise.all(fixtures.map(fixture => articles.create(fixture)));
       });
 
-      it("should import non-conflicting new records into the collection", () => {
-        return articles.importChangesLocally(toImport)
-          .then(_ => articles.list())
-          .should.eventually.have.length.of(5);
+      describe("Non conflicting imports", function() {
+        beforeEach(function() {
+          return Promise.all(
+            fixtures.map(fixture => articles.create(fixture, {synced: true})));
+        });
+
+        it("should import changes into the collection", () => {
+          return articles.importChangesLocally(serverChanges)
+            .then(_ => articles.list())
+            .then(res => res.data)
+            .should.eventually.become([
+              {id: 1, title: "art1", _status: "synced"},
+              {id: 2, title: "art2mod", _status: "synced"},
+              {id: 3, title: "art3", _status: "synced"},
+            ]);
+        });
+
+        it("should resolve with created records information", () => {
+          return articles.importChangesLocally(serverChanges)
+            .then(res => res.created)
+            .should.eventually.become([
+              {id: 3, title: "art3", _status: "synced"},
+            ]);
+        });
+
+        it("should resolve with updated records information", () => {
+          return articles.importChangesLocally(serverChanges)
+            .then(res => res.updated)
+            .should.eventually.become([
+              {id: 2, title: "art2mod", _status: "synced"},
+            ]);
+        });
+
+        it("should resolve with deleted records information", () => {
+          return articles.importChangesLocally(serverChanges)
+            .then(res => res.deleted)
+            .should.eventually.become([
+              {id: 4},
+            ]);
+        });
       });
 
-      it("should resolve with non-conflicting added records information", () => {
-        return articles.importChangesLocally(toImport)
-          .should.eventually.become([
-            {id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", title: "art4", _status: "synced"},
-            {id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", title: "art5", _status: "synced"},
-          ]);
+      describe("Conflict handling", function() {
+        it("should resolve with conflicts listed", () => {
+          return articles.create({title: "local title"})
+            .then(res => articles.importChangesLocally([
+              Object.assign({}, res.data, {title: "server title"})
+            ]))
+            .then(imports => imports.conflicts)
+            .should.eventually.have.length.of(1);
+        });
+
+        it("should import server changes in safe mode", () => {
+          return articles.create({title: "local title"})
+            .then(res => articles.importChangesLocally([
+              Object.assign({}, res.data, {title: "server title"})
+            ]))
+            .then(imports => articles.get(imports.conflicts[0].id))
+            .then(res => res.data.title)
+            .should.eventually.become("server title");
+        });
+
+        it("should preserve local changes in force mode", () => {
+          return articles.create({title: "local title"})
+            .then(res => articles.importChangesLocally([
+              Object.assign({}, res.data, {title: "server title"})
+            ], {mode: Collection.strategy.CLIENT_WINS}))
+            .then(imports => articles.get(imports.conflicts[0].id))
+            .then(res => res.data.title)
+            .should.eventually.become("local title");
+        });
+
+        it("should handle custom reconciliation mode", () => {
+          return articles.create({title: "local title"})
+            .then(res => articles.importChangesLocally([
+              Object.assign({}, res.data, {title: "server title"})
+            ], {mode: local => Object.assign(local, {title: "manual title"})}))
+            .then(imports => articles.get(imports.conflicts[0].id))
+            .then(res => res.data.title)
+            .should.eventually.become("manual title");
+        });
       });
     });
   });

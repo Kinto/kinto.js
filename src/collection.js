@@ -21,11 +21,18 @@ export default class Collection {
     return this._lastModified;
   }
 
+  static get strategy() {
+    return {
+      CLIENT_WINS: "client_wins",
+      SERVER_WINS: "server_wins",
+    }
+  }
+
   open() {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this.name, 2);
+      var request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
         const store = event.target.result.createObjectStore(this.name, {
           keyPath: "id"
@@ -34,6 +41,8 @@ export default class Collection {
         store.createIndex("id", "id", { unique: true });
         // Local record status ("synced", "created", "updated", "deleted")
         store.createIndex("_status", "_status");
+        // Last modified field
+        store.createIndex("last_modified", "last_modified");
       };
       request.onerror = event => {
         reject(event.error);
@@ -102,7 +111,7 @@ export default class Collection {
   update(record, options={synced: false}) {
     return this.open().then(() => {
       if (typeof(record) !== "object")
-        return Promise.reject(new Error('Record is not an object.'));
+        return Promise.reject(new Error("Record is not an object."));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
           var newStatus = "updated";
@@ -196,42 +205,99 @@ export default class Collection {
     });
   }
 
-  _groupByStatus() {
+  fetchLocalChanges() {
+    // TODO: perform a filtering query on the _status field
     return this.list().then(res => {
       return res.data.reduce((acc, record) => {
-        acc[record._status].push(record);
+        if (record._status !== "synced")
+          acc[record._status].push(record);
         return acc;
-      }, {synced: [], created: [], updated: [], deleted: []});
+      }, {created: [], updated: [], deleted: []});
     });
   }
 
-  importChangesLocally(changes) {
+  handleConflict(local, remote, mode) {
+    // Server wins
+    if (mode === Collection.strategy.SERVER_WINS)
+      return this.update(remote, {synced: true});
+
+    // Client wins
+    if (mode === Collection.strategy.CLIENT_WINS)
+      return this.update(local, {synced: true});
+
+    // User provided conflict resolution strategy
+    if (typeof mode === "function") {
+      return this.update(mode(local, remote), {synced: true});
+    }
+
+    throw new Error("Unsupported sync mode.");
+  }
+
+  importChangesLocally(changes, options={mode: Collection.strategy.SERVER_WINS}) {
+    const processed = [];
+    const localImportResult = {
+      created:   [],
+      updated:   [],
+      deleted:   [],
+      conflicts: [],
+    };
     return Promise.all(changes.map(change => {
       // Retrieve local record matching this change
       return this.get(change.id)
-        // No matching local record found, that's a creation
+        // No matching local record found; that's a new addition
         .catch(_ => {
-          return this.create(change, {synced: true})
+          return this.create(change, {synced: true}).then(res => {
+            // Avoid creating deletions :)
+            if (change.deleted) return res;
+            processed.push(res.data.id);
+            localImportResult.created.push(res.data);
+            return res;
+          });
         })
         // Matching local record found
         .then(res => {
           // Check for conflict
-          if (res.data._status && res.data._status !== "synced") {
-            // Conflict between unsynced local record data and remote ones
-            // TODO
-            console.log("Conflict detected; local:", res.data, "remote:", change);
-            return {data: null};
+          if (res.data._status !== "synced") {
+            processed.push(change.id);
+            localImportResult.conflicts.push(change);
+            return this.handleConflict(res.data, change, options.mode);
           } else if (change.deleted) {
-            return this.delete(change.id, {virtual: false});
-          } else {
-            return this.update(change, {synced: true});
+            return this.delete(change.id, {virtual: false}).then(res => {
+              processed.push(change.id);
+              localImportResult.deleted.push(res.data);
+              return res;
+            });
+          } else if(processed.indexOf(change.id) === -1) {
+            return this.update(change, {synced: true}).then(res => {
+              processed.push(change.id);
+              localImportResult.updated.push(res.data);
+              return res;
+            });
           }
         });
-    })).then(imported => imported.map(res => res.data));
+    })).then(imported => {
+      // TODO: update collection's last_modified value
+      return localImportResult;
+    });
   }
 
-  sync() {
-    return this.api.fetchChangesSince(this.lastModified)
-      .then(changes => this.importChangesLocally(changes));
+  sync(options={mode: Collection.strategy.SERVER_WINS}) {
+    // First fetch the remote changes since last synchronization
+    return this.api.fetchChangesSince(this.lastModified, options)
+      // Reflect these changes locally
+      .then(res => {
+        this._lastModified = res.lastModified;
+        return this.importChangesLocally(res.changes);
+      })
+      // Retrieve local changes
+      .then(_ => this.fetchLocalChanges())
+      // Publish them remotely
+      .then(({created, updated, deleted}) => {
+        return Promise.all([
+          this.api.batch("create", created),
+          this.api.batch("update", updated),
+          this.api.batch("delete", deleted),
+        ]);
+      });
   }
 }
