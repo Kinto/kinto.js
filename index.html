@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cliquetis demo</title>
+</head>
+<body>
+  <h1>Todo list</h1>
+  <ul id="todo"></ul>
+  <form>
+    <p>
+      <input type="text" name="label" placeholder="Thing">
+      <input type="submit" value="Add">
+    </p>
+  </form>
+  <p>
+    <input type="reset" value="Clear collection">
+    <input type="button" value="Synchronize collection">
+  </p>
+  <script src="../dist/cliquetis.js"></script>
+  <script>
+  function main() {
+    var db = new Cliquetis();
+    var articles = db.collection("todo");
+
+    function toggleDone(task) {
+      return function(event) {
+        console.log("called");
+        task.done = !task.done;
+        articles.update(task).then(renderList);
+      };
+    }
+
+    function renderList() {
+      articles.list().then(function(res) {
+        var ul = document.querySelector("ul");
+        ul.innerHTML = "";
+        res.data.forEach(function(task) {
+          var li = document.createElement("li");
+          li.innerHTML = [
+            '<label>',
+            '  <input type="checkbox" ' + (task.done ? 'checked' : '') + '> ',
+            '  ' + (task.done ? '<del>' + task.label + '</del>' : task.label),
+            '  <br><small><small>' + task.id + '</small></small>',
+            '</label>'
+          ].join("");
+          li.querySelector("input")
+            .addEventListener("click", toggleDone(task));
+          ul.appendChild(li);
+        });
+      });
+    }
+
+    // form submit
+    document.querySelector("form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      articles.create({
+        label: e.target.label.value,
+        done: false
+      }).then(function(res) {
+        e.target.label.value = "";
+        e.target.label.focus();
+        renderList();
+      });
+    });
+
+    // clear button
+    document.querySelector("input[type=reset]").addEventListener("click", function(e) {
+      e.preventDefault();
+      articles.clear().then(renderList);
+    });
+
+    renderList();
+  }
+
+  window.addEventListener("DOMContentLoaded", main);
+  </script>
+</body>
+</html>
