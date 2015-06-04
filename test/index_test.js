@@ -234,50 +234,6 @@ describe("Cliquetis", () => {
       });
     });
 
-    describe("#sync", () => {
-      const fixtures = [
-        {title: "art1"},
-        {title: "art2"},
-        {title: "art3"},
-      ];
-      var articles;
-
-      beforeEach(() => {
-        articles = testCollection();
-        return Promise.all(fixtures.map(fixture => articles.create(fixture)));
-      });
-
-      it("should load fixtures", () => {
-        return articles.list()
-          .then(res => res.data)
-          .should.eventually.have.length.of(3);
-      });
-
-      it("should fetch latest changes from the server", () => {
-        sandbox.stub(articles.api, "batch");
-        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
-          .returns(Promise.resolve({
-            lastModified: 42,
-            changes: []
-          }));
-        return articles.sync().then(res => {
-          sinon.assert.calledOnce(fetchChangesSince);
-        });
-      });
-
-      it("should store latest lastModified value", () => {
-        sandbox.stub(articles.api, "batch");
-        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
-          .returns(Promise.resolve({
-            lastModified: 42,
-            changes: []
-          }));
-        return articles.sync().then(res => {
-          expect(articles.lastModified).eql(42);
-        });
-      });
-    });
-
     describe("#importChangesLocally", () => {
       const fixtures = [
         {id: 1, title: "art1"},
@@ -377,21 +333,107 @@ describe("Cliquetis", () => {
         });
       });
     });
+
+    describe("#publishChanges", () => {
+      it("should publish local changes to the server", () => {
+        // TODO
+      });
+    });
+
+    describe("#sync", () => {
+      const fixtures = [
+        {title: "art1"},
+        {title: "art2"},
+        {title: "art3"},
+      ];
+      var articles;
+
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(fixture => articles.create(fixture)));
+      });
+
+      it("should load fixtures", () => {
+        return articles.list()
+          .then(res => res.data)
+          .should.eventually.have.length.of(3);
+      });
+
+      it("should fetch latest changes from the server", () => {
+        sandbox.stub(articles.api, "batch");
+        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+          .returns(Promise.resolve({
+            lastModified: 42,
+            changes: []
+          }));
+        return articles.sync().then(res => {
+          sinon.assert.calledOnce(fetchChangesSince);
+        });
+      });
+
+      it("should store latest lastModified value", () => {
+        sandbox.stub(articles.api, "batch");
+        var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+          .returns(Promise.resolve({
+            lastModified: 42,
+            changes: []
+          }));
+        return articles.sync().then(res => {
+          expect(articles.lastModified).eql(42);
+        });
+      });
+    });
   });
 
   describe("Api", () => {
+    var api;
+
+    beforeEach(() => {
+      api = new Api("http://test/v0/articles");
+    });
+
+    function fakeServerResponse(json, headers={}) {
+      return Promise.resolve({
+        headers: {
+          get(name) {
+            return headers[name];
+          }
+        },
+        json() {
+          return json;
+        }
+      });
+    }
+
+    describe("#fetchChangesSince", () => {
+      it("should request server for latest changes", () => {
+        sandbox.stub(global, "fetch").returns(Promise.resolve());
+
+        api.fetchChangesSince(42);
+
+        sinon.assert.calledOnce(fetch);
+        sinon.assert.calledWithMatch(fetch, /\?_since=42/);
+      });
+
+      it("should resolve with a result object", () => {
+        sandbox.stub(global, "fetch").returns(
+          fakeServerResponse({items: []}, {"Last-Modified": 41}));
+
+        return api.fetchChangesSince(42)
+          .should.eventually.become({
+            lastModified: 41,
+            changes: []
+          });
+      });
+    });
+
     describe("#batch", () => {
       const operations = [
         {id: 1, title: "foo"},
         {id: 2, title: "bar"},
       ];
-      var api;
 
-      beforeEach(() => {
-        api = new Api("http://test/v0/articles");
-      });
-
-      describe("server request", function() {
+      describe("server request", () => {
         beforeEach(() => {
           sandbox.stub(global, "fetch");
         });
@@ -449,7 +491,7 @@ describe("Cliquetis", () => {
         });
       });
 
-      describe("server request", function() {
+      describe("server request", () => {
         beforeEach(() => {
           sandbox.stub(global, "fetch").returns();
         });

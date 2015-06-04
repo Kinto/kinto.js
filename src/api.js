@@ -16,13 +16,13 @@ export default class Api {
     this._options = options;
   }
 
-  fetchChangesSince(timestamp=null) {
-    return fetch(`${this._collBaseUrl}?_since=${timestamp||""}`, {
+  fetchChangesSince(lastModified=null) {
+    return fetch(`${this._collBaseUrl}?_since=${lastModified||""}`, {
       headers: {"Accept": "application/json"}
     }).then(res => {
       return {
         lastModified: res.headers.get("Last-Modified"),
-        changes: res.json()
+        changes: res.json().items
       };
     });
   }

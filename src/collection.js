@@ -267,7 +267,7 @@ export default class Collection {
               localImportResult.deleted.push(res.data);
               return res;
             });
-          } else if(processed.indexOf(change.id) === -1) {
+          } else if (processed.indexOf(change.id) === -1) {
             return this.update(change, {synced: true}).then(res => {
               processed.push(change.id);
               localImportResult.updated.push(res.data);
@@ -275,29 +275,46 @@ export default class Collection {
             });
           }
         });
-    })).then(imported => {
-      // TODO: update collection's last_modified value
-      return localImportResult;
+    })).then(_ => localImportResult);
+  }
+
+  publishChanges({created, updated, deleted}) {
+    return Promise.all([
+      this.api.batch("create", created),
+      this.api.batch("update", updated),
+      this.api.batch("delete", deleted),
+    ]).then(...published => {
+      return {
+        created: published[0],
+        updated: published[1],
+        deleted: published[2],
+      };
     });
   }
 
   sync(options={mode: Collection.strategy.SERVER_WINS}) {
+    // TODO: lock all write operations while syncing to prevent races?
+    var lastModified, report;
     // First fetch the remote changes since last synchronization
     return this.api.fetchChangesSince(this.lastModified, options)
       // Reflect these changes locally
       .then(res => {
-        this._lastModified = res.lastModified;
+        // Temporarily store server's lastModified value for further use
+        lastModified = res.lastModified;
+        // Import changes
         return this.importChangesLocally(res.changes);
+      })
+      // On successful import completion, update lastModified value and forward
+      // import report
+      .then(imported => {
+        this._lastModified = lastModified;
+        report = imported;
       })
       // Retrieve local changes
       .then(_ => this.fetchLocalChanges())
       // Publish them remotely
-      .then(({created, updated, deleted}) => {
-        return Promise.all([
-          this.api.batch("create", created),
-          this.api.batch("update", updated),
-          this.api.batch("delete", deleted),
-        ]);
-      });
+      .then(localChanges => this.publishChanges(localChanges))
+      // resolve with local import report
+      .then(_ => report);
   }
 }
