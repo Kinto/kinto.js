@@ -216,18 +216,21 @@ export default class Collection {
     });
   }
 
-  handleConflict(local, remote, mode) {
+  handleConflict(local, remote, syncStrategy) {
     // Server wins
-    if (mode === Collection.strategy.SERVER_WINS)
+    if (syncStrategy === Collection.strategy.SERVER_WINS)
       return this.update(remote, {synced: true});
 
     // Client wins
-    if (mode === Collection.strategy.CLIENT_WINS)
+    if (syncStrategy === Collection.strategy.CLIENT_WINS)
       return this.update(local, {synced: true});
 
     // User provided conflict resolution strategy
-    if (typeof mode === "function") {
-      return this.update(mode(local, remote), {synced: true});
+    if (typeof syncStrategy === "function") {
+      let resolution = syncStrategy(local, remote);
+      if (typeof(resolution) !== "object")
+        throw new Error("Conflict resolution function must return an object");
+      return this.update(resolution, {synced: true});
     }
 
     throw new Error("Unsupported sync mode.");
@@ -278,11 +281,11 @@ export default class Collection {
     })).then(_ => localImportResult);
   }
 
-  publishChanges({created, updated, deleted}) {
+  publishChanges(changes, headers={}) {
     return Promise.all([
-      this.api.batch("create", created),
-      this.api.batch("update", updated),
-      this.api.batch("delete", deleted),
+      this.api.batch(this.name, "create", changes.created, headers),
+      this.api.batch(this.name, "update", changes.updated, headers),
+      this.api.batch(this.name, "delete", changes.deleted, headers),
     ]).then(...published => {
       return {
         created: published[0],
@@ -292,11 +295,11 @@ export default class Collection {
     });
   }
 
-  sync(options={mode: Collection.strategy.SERVER_WINS}) {
+  sync(options={mode: Collection.strategy.SERVER_WINS, headers: {}}) {
     // TODO: lock all write operations while syncing to prevent races?
     var lastModified, report;
     // First fetch the remote changes since last synchronization
-    return this.api.fetchChangesSince(this.lastModified, options)
+    return this.api.fetchChangesSince(this.name, this.lastModified, options)
       // Reflect these changes locally
       .then(res => {
         // Temporarily store server's lastModified value for further use
@@ -313,7 +316,7 @@ export default class Collection {
       // Retrieve local changes
       .then(_ => this.fetchLocalChanges())
       // Publish them remotely
-      .then(localChanges => this.publishChanges(localChanges))
+      .then(localChanges => this.publishChanges(localChanges, options.headers))
       // resolve with local import report
       .then(_ => report);
   }

@@ -5,12 +5,12 @@
   "main": "index.js",
   "scripts": {
     "dist": "browserify -s Cliquetis -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js",
-    "watch": "watchify -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v",
+    "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
-    "tdd": "mocha -w --compilers js:babel/register test/*_test.js"
+    "watch": "watchify -s Cliquetis -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v"
   },
   "repository": {
     "type": "git",

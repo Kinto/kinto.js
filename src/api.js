@@ -10,44 +10,74 @@ export function cleanRecord(record, exludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
+const DEFAULT_REQUEST_HEADERS = {
+  "Accept":       "application/json",
+  "Content-Type": "application/json",
+};
+
 export default class Api {
-  constructor(collBaseUrl, options={}) {
-    this._collBaseUrl = collBaseUrl;
+  constructor(serverRootUrl, options={}) {
+    this._serverRootUrl = serverRootUrl;
     this._options = options;
   }
 
-  fetchChangesSince(lastModified=null) {
-    return fetch(`${this._collBaseUrl}?_since=${lastModified||""}`, {
-      headers: {"Accept": "application/json"}
-    }).then(res => {
-      return {
-        lastModified: res.headers.get("Last-Modified"),
-        changes: res.json().items
-      };
-    });
+  get endpoint() {
+    return {
+      root:           () => "/v0",
+      batch:          () => `${this.endpoint.root()}/batch`,
+      collection: (coll) => `${this.endpoint.root()}/collections/${coll}/records`,
+      record: (coll, id) => `${this.endpoint.collection(coll)}/${id}`,
+    };
   }
 
-  batch(type, records) {
+  fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
+    var newLastModified;
+    var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
+    return fetch(this._serverRootUrl + this.endpoint.collection(collName) + queryString, {
+      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers)
+    })
+      .then(res => {
+        newLastModified = res.headers.get("Last-Modified");
+        return res.json();
+      })
+      .then(json => {
+        return {
+          lastModified: newLastModified,
+          changes: json.items
+        };
+      });
+  }
+
+  batch(collName, type, records, headers={}) {
+    if (!records.length)
+      return Promise.resolve([]);
     var method;
     switch(type) {
       case "create": method = "POST";   break;
-      case "update": method = "PATCH";  break;
+      case "update": method = "PUT";    break;
       case "delete": method = "DELETE"; break;
     }
-    return fetch(`${this._collBaseUrl}/batch`, {
+    return fetch(this._serverRootUrl + this.endpoint.batch(), {
       method: "POST",
-      body: {
+      headers: DEFAULT_REQUEST_HEADERS,
+      body: JSON.stringify({
         defaults: {
           method:  method,
-          headers: {}, // XXX pass default headers here
+          headers: headers,
         },
         requests: records.map(record => {
-          return {
-            path: `${this._collBaseUrl}/${record.id}`,
-            body: cleanRecord(record)
-          }
+          const path = type === "create" ?
+            this.endpoint.collection(collName) :
+            this.endpoint.record(collName, record.id);
+          const body = type === "delete" ? undefined : cleanRecord(record);
+          return { path: path, body: body }
         })
-      }
+      })
+    }).then(res => {
+      // XXX do it better
+      if (res.status !== 200)
+        throw new Error("HTTP " + res.status);
+      return res;
     });
   }
 }

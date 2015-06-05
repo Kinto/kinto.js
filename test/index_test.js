@@ -14,13 +14,14 @@ chai.should();
 chai.config.includeStack = true;
 
 const TEST_COLLECTION_NAME = "cliquetis-test";
+const FAKE_SERVER_URL = "http://fake-server"
 const root = typeof window === "object" ? window : global;
 
 describe("Cliquetis", () => {
   var sandbox;
 
   function testCollection() {
-    return new Cliquetis().collection(TEST_COLLECTION_NAME);
+    return new Cliquetis({serverUrl: FAKE_SERVER_URL}).collection(TEST_COLLECTION_NAME);
   }
 
   beforeEach(() => {
@@ -389,7 +390,7 @@ describe("Cliquetis", () => {
     var api;
 
     beforeEach(() => {
-      api = new Api("http://test/v0/articles");
+      api = new Api(FAKE_SERVER_URL);
     });
 
     function fakeServerResponse(json, headers={}) {
@@ -409,7 +410,7 @@ describe("Cliquetis", () => {
       it("should request server for latest changes", () => {
         sandbox.stub(global, "fetch").returns(Promise.resolve());
 
-        api.fetchChangesSince(42);
+        api.fetchChangesSince("articles", 42);
 
         sinon.assert.calledOnce(fetch);
         sinon.assert.calledWithMatch(fetch, /\?_since=42/);
@@ -419,7 +420,7 @@ describe("Cliquetis", () => {
         sandbox.stub(global, "fetch").returns(
           fakeServerResponse({items: []}, {"Last-Modified": 41}));
 
-        return api.fetchChangesSince(42)
+        return api.fetchChangesSince("articles", 42)
           .should.eventually.become({
             lastModified: 41,
             changes: []
@@ -435,58 +436,76 @@ describe("Cliquetis", () => {
 
       describe("server request", () => {
         beforeEach(() => {
-          sandbox.stub(global, "fetch");
+          sandbox.stub(global, "fetch").returns(Promise.resolve({status: 200}));
         });
 
         it("should call the batch endpoint", () => {
-          api.batch("create", operations);
-          const requestOptions = fetch.getCall(0).args[1];
+          api.batch("articles", "create", operations);
 
-          sinon.assert.calledWithMatch(fetch, "http://test/v0/articles/batch");
+          sinon.assert.calledWithMatch(fetch, "/v0/batch");
         });
 
         it("should define default batch create request method", () => {
-          api.batch("create", operations);
+          api.batch("articles", "create", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.defaults.method).eql("POST");
+          expect(JSON.parse(requestOptions.body).defaults.method).eql("POST");
         });
 
         it("should define default batch update request method", () => {
-          api.batch("update", operations);
+          api.batch("articles", "update", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.defaults.method).eql("PATCH");
+          expect(JSON.parse(requestOptions.body).defaults.method).eql("PUT");
         });
 
         it("should define default batch delete request method", () => {
-          api.batch("delete", operations);
+          api.batch("articles", "delete", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.defaults.method).eql("DELETE");
+          expect(JSON.parse(requestOptions.body).defaults.method).eql("DELETE");
         });
 
         it("should define default batch request headers", () => {
-          api.batch("create", operations);
+          api.batch("articles", "create", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.defaults.headers).eql({});
+          expect(JSON.parse(requestOptions.body).defaults.headers).eql({});
         });
 
         it("should send the expected number of request bodies", () => {
-          api.batch("create", operations);
+          api.batch("articles", "create", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.requests).to.have.length.of(2);
+          expect(JSON.parse(requestOptions.body).requests).to.have.length.of(2);
         });
 
         it("should map created records to batch request bodies", () => {
-          api.batch("create", operations);
+          api.batch("articles", "create", operations);
           const requestOptions = fetch.getCall(0).args[1];
 
-          expect(requestOptions.body.requests[0]).eql({
-            path: "http://test/v0/articles/1",
+          expect(JSON.parse(requestOptions.body).requests[0]).eql({
+            path: "/v0/collections/articles/records",
             body: { id: 1, title: "foo" },
+          });
+        });
+
+        it("should map updated records to batch request bodies", () => {
+          api.batch("articles", "update", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(JSON.parse(requestOptions.body).requests[0]).eql({
+            path: "/v0/collections/articles/records/1",
+            body: { id: 1, title: "foo" },
+          });
+        });
+
+        it("should map deleted records to batch request bodies", () => {
+          api.batch("articles", "delete", operations);
+          const requestOptions = fetch.getCall(0).args[1];
+
+          expect(JSON.parse(requestOptions.body).requests[0]).eql({
+            path: "/v0/collections/articles/records/1"
           });
         });
       });

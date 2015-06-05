@@ -16,7 +16,7 @@ export default class Cliquetis {
     if (!collName)
       throw new Error("missing collection name");
 
-    const api = new Api(`${this._options.serverUrl}/v0/collections/${collName}/records`);
+    const api = new Api(this._options.serverUrl || "http://0.0.0.0:8888");
 
     if (!this._collections.hasOwnProperty(collName))
       this._collections[collName] = new Collection(collName, api);
