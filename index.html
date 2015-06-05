@@ -14,18 +14,19 @@
     </p>
   </form>
   <p>
-    <input type="reset" value="Clear collection">
-    <input type="button" value="Synchronize collection">
+    <input type="button" id="clearCompletedBtn" value="Clear completed">
+    <input type="reset" id="clearAllBtn" value="Clear collection">
+    <input type="button" id="syncBtn" value="Synchronize collection">
   </p>
   <script src="../dist/cliquetis.js"></script>
   <script>
   function main() {
-    var db = new Cliquetis();
+    var db = new Cliquetis({serverUrl: "http://0.0.0.0:8888"});
     var articles = db.collection("todo");
+    var headers = {Authorization: "Basic " + btoa("niko:niko")};
 
     function toggleDone(task) {
       return function(event) {
-        console.log("called");
         task.done = !task.done;
         articles.update(task).then(renderList);
       };
@@ -41,7 +42,7 @@
             '<label>',
             '  <input type="checkbox" ' + (task.done ? 'checked' : '') + '> ',
             '  ' + (task.done ? '<del>' + task.label + '</del>' : task.label),
-            '  <br><small><small>' + task.id + '</small></small>',
+            '  <br><small>id: ' + task.id + ', last_modified: ' + task.last_modified + ', _status=' + task._status + '</small>',
             '</label>'
           ].join("");
           li.querySelector("input")
@@ -64,13 +65,39 @@
       });
     });
 
-    // clear button
-    document.querySelector("input[type=reset]").addEventListener("click", function(e) {
+    // clear completed button
+    document.querySelector("#clearAllBtn").addEventListener("click", function(e) {
       e.preventDefault();
       articles.clear().then(renderList);
     });
 
-    renderList();
+    // clear all button
+    document.querySelector("#clearCompletedBtn").addEventListener("click", function(e) {
+      e.preventDefault();
+      articles.list().then(function(res) {
+        return Promise.all(res.data.filter(function(task) {
+          return task.done;
+        }).map(function(task) {
+          console.log("delete", task);
+          return articles.delete(task.id);
+        }));
+      }).then(renderList);
+    });
+
+    // sync button
+    document.querySelector("#syncBtn").addEventListener("click", function(e) {
+      e.preventDefault();
+      articles.sync({headers: headers})
+        .catch(function(err) {
+          console.error("sync error", err);
+        })
+        .then(function(result) {
+          console.log("sync result", result);
+          renderList();
+        });
+    });
+
+    articles.sync({headers: headers}).then(renderList);
   }
 
   window.addEventListener("DOMContentLoaded", main);
