@@ -1,6 +1,6 @@
 # Cliquetis
 
-[![Build Status](https://travis-ci.org/mozilla-services/cliquetis.svg?branch=master)](https://travis-ci.org/mozilla-services/cliquetis)
+[![Build Status](https://travis-ci.org/mozilla-services/cliquetis.svg?branch=master)](https://travis-ci.org/mozilla-services/cliquetis) [![Coverage Status](https://coveralls.io/repos/mozilla-services/cliquetis/badge.svg)](https://coveralls.io/r/mozilla-services/cliquetis)
 
 A JavaScript client for [Cliquet](https://github.com/mozilla-services/cliquet/).
 
@@ -284,11 +284,27 @@ TODO
 Tests
 -----
 
-    $ npm run test
+    $ npm test
 
-TDD mode:
+Note: this will also run code coverage and send the report to [Coveralls](http://coveralls.io/). Alternatives:
+
+    $ npm run test-nocover    # runs tests skipping code coverage.
+    $ npm run test-cover      # runs tests, code coverage; doesn't send results.
+    $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report.
+
+Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/cliquetis).
+
+### TDD mode
+
+This command will watch for changes on the js source files then rerun the tests:
 
     $ npm run tdd
+
+Note that it won't perform code coverage analysis.
+
+You can also grep to run a subset of tests that way:
+
+    $ npm run tdd -- -g Api # only runs Api-related tests
 
 License
 -------
