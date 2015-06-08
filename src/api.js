@@ -1,6 +1,6 @@
 "use strict";
 
-const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const RECORD_FIELDS_TO_CLEAN = ["_status"];
 
 export function cleanRecord(record, exludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -38,6 +38,7 @@ export default class Api {
     var newLastModified;
     var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
     return fetch(this.remote + this.endpoint.collection(collName) + queryString, {
+      // TODO? Pass If-Modified_since, then on response, if 304 nothing has changed
       headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers)
     })
       .then(res => {
@@ -57,7 +58,7 @@ export default class Api {
       return Promise.resolve([]);
     var method;
     switch(type) {
-      case "create": method = "POST";   break;
+      case "create":
       case "update": method = "PUT";    break;
       case "delete": method = "DELETE"; break;
     }
@@ -70,17 +71,24 @@ export default class Api {
           headers: headers,
         },
         requests: records.map(record => {
-          const path = type === "create" ?
-            this.endpoint.collection(collName) :
-            this.endpoint.record(collName, record.id);
+          const path = this.endpoint.record(collName, record.id);
           const body = type === "delete" ? undefined : cleanRecord(record);
-          return { path: path, body: body }
+          return {
+            // TODO:
+            // For DELETE and PUT requests:
+            // - if SERVER_WINS, set header IF-Unmodified-Since: record.last_modified
+            path: path,
+            body: body
+          }
         })
       })
     }).then(res => {
       // XXX do it better
       if (res.status !== 200)
         throw new Error("HTTP " + res.status);
+      // TODO: iterate over responses, check indiv. statuses
+      // - 412 if SERVER_WINS and record has been modified in the meanwhile,
+      //   return a list of these conflicts
       return res;
     });
   }

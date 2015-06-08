@@ -216,6 +216,8 @@ export default class Collection {
     });
   }
 
+  // TODO Discard automatic conflict handling on import
+  //      Instead, list conflicts so the developer handles them by hand
   handleConflict(local, remote, syncStrategy) {
     // Server wins
     if (syncStrategy === Collection.strategy.SERVER_WINS)
@@ -291,10 +293,12 @@ export default class Collection {
         created: published[0],
         updated: published[1],
         deleted: published[2],
+        // TODO: conflicts
       };
     });
   }
 
+  // TODO rename mode to strategy
   sync(options={mode: Collection.strategy.SERVER_WINS, headers: {}}) {
     // TODO: lock all write operations while syncing to prevent races?
     var lastModified, report;

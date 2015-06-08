@@ -132,7 +132,7 @@ describe("Api", () => {
         api.batch("articles", "create", operations);
         const requestOptions = fetch.getCall(0).args[1];
 
-        expect(JSON.parse(requestOptions.body).defaults.method).eql("POST");
+        expect(JSON.parse(requestOptions.body).defaults.method).eql("PUT");
       });
 
       it("should define default batch update request method", () => {
@@ -168,7 +168,7 @@ describe("Api", () => {
         const requestOptions = fetch.getCall(0).args[1];
 
         expect(JSON.parse(requestOptions.body).requests[0]).eql({
-          path: "/v0/collections/articles/records",
+          path: "/v0/collections/articles/records/1",
           body: { id: 1, title: "foo" },
         });
       });
@@ -211,7 +211,7 @@ describe("Api", () => {
   describe("Helpers", () => {
     describe("#cleanRecord", () => {
       it("should clean record data", () => {
-        expect(cleanRecord({title: "foo", _status: "foo", last_modified: 42}))
+        expect(cleanRecord({title: "foo", _status: "foo"}))
           .eql({title: "foo"});
       });
     });
