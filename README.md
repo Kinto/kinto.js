@@ -16,8 +16,6 @@ This is work in progress, and documented API isn't fully implemented just yet. D
 
 ## Usage
 
-**Caution: everything in this section is still pure fiction.**
-
 * Every operation is performed locally;
 * Synchronization with server shall be ran explicitly.
 
@@ -35,21 +33,29 @@ const db = new Cliquetis(options);
 
 ### Collection
 
+Collection are persistend through indexedDB.
+
+**Note:** A single database and store is created per collection.
+
+**Status:** Implemented.
+
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
 
 ```js
 const articles = db.collection("articles");
 ```
 
-The collection object has the following attributes:
+The collection object has the following (read-only) attribute:
 
-* **lastModified**: last synchronization timestamp, ``null`` if never sync'ed.
+* **lastModified**: last synchronization timestamp, `null` if never sync'ed.
 
-> Synchronization timestamps are persisted in the device local storage.
+> Synchronization timestamps are persisted in the device local storage. **Status:** Not implemented.
 
 All operations are asynchronous and rely on [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 
 ### Creating a record
+
+**Status:** Implemented.
 
 ```js
 articles.save({title: "foo"})
@@ -71,6 +77,8 @@ Result is:
 > Records identifiers are generated locally using UUID4.
 
 ### Retrieving a single record
+
+**Status:** Implemented.
 
 ```js
 articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
@@ -94,6 +102,8 @@ Result:
 **Note:** The promise will be rejected if no record is found for that id.
 
 ### Updating a record
+
+**Status:** Implemented.
 
 ```js
 var existing = {
@@ -123,6 +133,8 @@ Result is:
 
 ### Deleting records
 
+**Status:** Implemented.
+
 By default, local deletion is performed *virtually*, until the collection is actually synced to the remote server.
 
 Virtual deletions aren't retrieved when calling `#get()` and `#list()`.
@@ -149,6 +161,8 @@ Result:
 ```
 
 #### Multiple deletions using a query
+
+**Status:** Not implemented.
 
 ```js
 articles.delete({
@@ -187,6 +201,8 @@ Result is:
 
 #### Filtering
 
+**Status:** Not implemented.
+
 ```js
 articles.list({
   filter: { unread: { $eq: true } }
@@ -194,6 +210,8 @@ articles.list({
 ```
 
 #### Sorting
+
+**Status:** Not implemented.
 
 ```js
 articles.list({
@@ -203,6 +221,8 @@ articles.list({
 
 #### Combining `sort` and `filter`
 
+**Status:** Not implemented.
+
 ```js
 articles.list({
   filter: { unread: { $eq: true } },
@@ -211,6 +231,8 @@ articles.list({
 ```
 
 ### Clearing the collection
+
+**Status:** Implemented.
 
 This will remove all existing records from the collection:
 
@@ -229,6 +251,8 @@ Result:
 ```
 
 ### Fetching and publishing changes
+
+**Status:** Partially implemented.
 
 Synchronizing local data with remote ones is performed by calling the `.sync()` method:
 
@@ -257,14 +281,26 @@ Result:
 
 > If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and `sync()` called again.
 
-**Synchronization strategy**
+**TODO:** a `fail` strategy mode should fill the conflicts array.
 
-TODO
+### Synchronization strategies
 
-- Fetch changes since last synchronization using `?_since`;
-- Detect conflicts and apply changes if not any;
-- Publish deletions of records;
-- Publish creations records.
+The `sync()` method accepts a `mode` option, which allows the following values:
+
+- `Cliquet.SAFE`: Server data win;
+- `Cliquet.FORCE`: Client data win;
+- `function(local, remote) {}`: Manual conflict handling;
+- TODO `Cliquet.FAIL`: Conflicts are reflected in a `conflicts` array as a result.
+
+The default is `Cliquet.SAFE` (should be `FAIL` in a near future).
+
+### Synchronization workflow
+
+1. Fetch changes since last synchronization using `?_since`;
+2. Detect conflicts and apply changes if not any;
+3. Publish record creations;
+4. Publish record updates;
+5. Publish record deletions.
 
 **Notes**
 
