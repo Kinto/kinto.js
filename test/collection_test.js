@@ -309,6 +309,22 @@ describe("Collection", () => {
           .then(res => res.data.title)
           .should.eventually.become("manual title");
       });
+
+      it("should reject on invalid conflict resolution mode", () => {
+        return articles.create({title: "local title"})
+          .then(res => articles.importChangesLocally([
+            Object.assign({}, res.data, {title: "server title"})
+          ], {mode: "invalid"}))
+          .should.be.rejectedWith(Error, /Unsupported sync mode/);
+      });
+
+      it("should reject on invalid conflict resolution function", () => {
+        return articles.create({title: "local title"})
+          .then(res => articles.importChangesLocally([
+            Object.assign({}, res.data, {title: "server title"})
+          ], {mode: local => "invalid"}))
+          .should.be.rejectedWith(Error, /must return an object/);
+      });
     });
   });
 

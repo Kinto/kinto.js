@@ -3,7 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import Api from "../src/api";
+import Api, { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -41,6 +41,14 @@ describe("Api", () => {
     it("should request server for latest changes", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve());
 
+      api.fetchChangesSince("articles");
+
+      sinon.assert.calledOnce(fetch);
+    });
+
+    it("should request server changes since last modified", () =>{
+      sandbox.stub(root, "fetch").returns(Promise.resolve());
+
       api.fetchChangesSince("articles", 42);
 
       sinon.assert.calledOnce(fetch);
@@ -57,6 +65,32 @@ describe("Api", () => {
           changes: []
         });
     });
+
+    it("should pass provided headers", () => {
+      sandbox.stub(root, "fetch").returns(Promise.resolve());
+
+      api.fetchChangesSince("articles", 42, {headers: {Foo: "bar"}});
+
+      sinon.assert.calledOnce(fetch);
+      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
+        headers: {Foo: "bar"}
+      });
+    });
+
+    it("should merge provided headers with default ones", () => {
+      sandbox.stub(root, "fetch").returns(Promise.resolve());
+
+      api.fetchChangesSince("articles", 42, {headers: {Foo: "bar"}});
+
+      sinon.assert.calledOnce(fetch);
+      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
+        headers: {
+          "Foo": "bar",
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        }
+      });
+    });
   });
 
   describe("#batch", () => {
@@ -68,6 +102,12 @@ describe("Api", () => {
     describe("server request", () => {
       beforeEach(() => {
         sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+      });
+
+      it("should perform request on empty operation list", () => {
+        api.batch("articles", "create", []);
+
+        sinon.assert.notCalled(fetch);
       });
 
       it("should call the batch endpoint", () => {
@@ -139,11 +179,28 @@ describe("Api", () => {
           path: "/v0/collections/articles/records/1"
         });
       });
+
+      it("should pass provided headers", () => {
+        api.batch("articles", "create", operations, {Foo: "bar"});
+        const requestOptions = fetch.getCall(0).args[1];
+
+        expect(JSON.parse(requestOptions.body).defaults.headers)
+          .eql({Foo: "bar"});
+      });
     });
 
     describe("server response", () => {
       beforeEach(() => {
         sandbox.stub(root, "fetch").returns();
+      });
+    });
+  });
+
+  describe("Helpers", () => {
+    describe("#cleanRecord", () => {
+      it("should clean record data", () => {
+        expect(cleanRecord({title: "foo", _status: "foo", last_modified: 42}))
+          .eql({title: "foo"});
       });
     });
   });
