@@ -16,16 +16,20 @@ const DEFAULT_REQUEST_HEADERS = {
 };
 
 export default class Api {
-  constructor(serverRootUrl, options={}) {
-    this._serverRootUrl = serverRootUrl;
+  constructor(remote, options={}) {
+    this.remote = remote;
     this._options = options;
+    try {
+      this.version = "v" + remote.match(/\/v(\d+)$/)[1];
+    } catch (err) {
+      throw new Error("Invalid remote: " + remote);
+    }
   }
 
   get endpoint() {
     return {
-      root:           () => "/v0",
-      batch:          () => `${this.endpoint.root()}/batch`,
-      collection: (coll) => `${this.endpoint.root()}/collections/${coll}/records`,
+      batch:          () => `/${this.version}/batch`,
+      collection: (coll) => `/${this.version}/collections/${coll}/records`,
       record: (coll, id) => `${this.endpoint.collection(coll)}/${id}`,
     };
   }
@@ -33,7 +37,7 @@ export default class Api {
   fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
     var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
-    return fetch(this._serverRootUrl + this.endpoint.collection(collName) + queryString, {
+    return fetch(this.remote + this.endpoint.collection(collName) + queryString, {
       headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers)
     })
       .then(res => {
@@ -57,7 +61,7 @@ export default class Api {
       case "update": method = "PUT";    break;
       case "delete": method = "DELETE"; break;
     }
-    return fetch(this._serverRootUrl + this.endpoint.batch(), {
+    return fetch(this.remote + this.endpoint.batch(), {
       method: "POST",
       headers: DEFAULT_REQUEST_HEADERS,
       body: JSON.stringify({

@@ -10,7 +10,7 @@ chai.should();
 chai.config.includeStack = true;
 
 const root = typeof window === "object" ? window : global;
-const FAKE_SERVER_URL = "http://fake-server"
+const FAKE_SERVER_URL = "http://fake-server/v0"
 
 describe("Api", () => {
   var sandbox, api;
@@ -36,6 +36,18 @@ describe("Api", () => {
       }
     });
   }
+
+  describe("#constructor", function() {
+    it("should validate `remote` arg value", function() {
+      expect(function() {
+        new Api("http://nope");
+      }).to.Throw(Error, /Invalid remote/);
+    });
+
+    it("should assign version value", function() {
+      expect(new Api("http://test/v42").version).eql("v42");
+    });
+  });
 
   describe("#fetchChangesSince", () => {
     it("should request server for latest changes", () => {

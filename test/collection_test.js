@@ -13,7 +13,7 @@ chai.should();
 chai.config.includeStack = true;
 
 const TEST_COLLECTION_NAME = "cliquetis-test";
-const FAKE_SERVER_URL = "http://fake-server"
+const FAKE_SERVER_URL = "http://fake-server/v0"
 
 describe("Collection", () => {
   var sandbox, api;
