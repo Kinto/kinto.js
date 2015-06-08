@@ -21,7 +21,7 @@
   <script src="../dist/cliquetis.js"></script>
   <script>
   function main() {
-    var db = new Cliquetis({serverUrl: "http://0.0.0.0:8888"});
+    var db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
     var articles = db.collection("todo");
     var headers = {Authorization: "Basic " + btoa("niko:niko")};
 
