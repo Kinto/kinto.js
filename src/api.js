@@ -1,6 +1,6 @@
 "use strict";
 
-const RECORD_FIELDS_TO_CLEAN = ["_status"];
+const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 
 export function cleanRecord(record, exludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {

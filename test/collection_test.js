@@ -266,6 +266,7 @@ describe("Collection", () => {
         {id: 4, title: "art4"},
       ];
       const serverChanges = [
+        {id: 2, title: "art2"},
         {id: 3, title: "art3"},    // to be created
         {id: 4, deleted: true},    // to be deleted
       ];
@@ -284,13 +285,9 @@ describe("Collection", () => {
       it("should resolve with imported changes", () => {
         return articles.pullChanges()
           .should.eventually.become({
-            created: [{
-              id: 3,
-              title: "art3",
-              _status: "synced",
-            }],
-            "updated": [],
-            deleted: [{"id": 4}],
+            created:   [{id: 3, title: "art3", _status: "synced", }],
+            updated:   [{id: 2, title: "art2", _status: "synced", }],
+            deleted:   [{"id": 4}],
             conflicts: [],
           });
       });

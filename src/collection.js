@@ -1,7 +1,10 @@
 "use strict";
 
 import { v4 as uuid4 } from "uuid";
+import deepEquals from "deep-eql";
+
 import { attachFakeIDBSymbolsTo } from "./utils";
+import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
@@ -292,12 +295,19 @@ export default class Collection {
         })
         // Matching local record found
         .then(res => {
-          // Check for conflict
+          // Check for conflicts
           if (res.data._status !== "synced") {
-            // XXX we could compare the two object, if no diff, skip
             processed.push(change.id);
-            localImportResult.conflicts.push(change);
-            return Promise.resolve({data: change});
+            // If records are identical, update anyway; note that this will
+            // import the last_modified value from the server and set the local
+            // record status to "synced".
+            if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+              localImportResult.updated.push(res.data);
+              return this.update(change, {synced: true});
+            } else {
+              localImportResult.conflicts.push(change);
+              return Promise.resolve({data: change});
+            }
           } else if (change.deleted) {
             return this.delete(change.id, {virtual: false}).then(res => {
               processed.push(change.id);
