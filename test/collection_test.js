@@ -213,61 +213,91 @@ describe("Collection", () => {
   });
 
   describe("#pullChanges", () => {
-    const localData = [
-      {id: 1, title: "art1"},
-      {id: 2, title: "art2"},
-    ];
-    const serverChanges = [
-      {id: 2, title: "art2mod"}, // conflict
-      {id: 3, title: "art3"},    // to be created
-      {id: 4, deleted: true},    // to be deleted
-    ];
     var articles;
 
     beforeEach(() => {
       articles = testCollection();
-      sandbox.stub(Api.prototype, "fetchChangesSince").returns(
-        Promise.resolve({
-          lastModified: 42,
-          changes: serverChanges
+    });
+
+    describe("When no conflicts occured", () => {
+      const localData = [
+        {id: 1, title: "art1"},
+        {id: 2, title: "art2"},
+        {id: 4, title: "art4"},
+      ];
+      const serverChanges = [
+        {id: 3, title: "art3"},    // to be created
+        {id: 4, deleted: true},    // to be deleted
+      ];
+
+      beforeEach(() => {
+        sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+          Promise.resolve({
+            lastModified: 42,
+            changes: serverChanges
+          }));
+        return Promise.all(localData.map(fixture => {
+          return articles.create(fixture, {synced: true});
         }));
-      return Promise.all(
-        localData.map(fixture => articles.create(fixture, {synced: true})));
+      });
+
+      it("should resolve with imported changes", () => {
+        return articles.pullChanges()
+          .should.eventually.become({
+            created: [{
+              id: 3,
+              title: "art3",
+              _status: "synced",
+            }],
+            "updated": [],
+            deleted: [{"id": 4}],
+            conflicts: [],
+          });
+      });
+
+      it("should actually import changes into the collection", () => {
+        return articles.pullChanges()
+          .then(_ => articles.list())
+          .then(res => res.data)
+          .should.eventually.become([
+            {id: 1, title: "art1", _status: "synced"},
+            {id: 2, title: "art2", _status: "synced"},
+            {id: 3, title: "art3", _status: "synced"},
+          ]);
+      });
     });
 
-    it("should import changes into the collection", () => {
-      return articles.pullChanges(serverChanges)
-        .then(_ => articles.list())
-        .then(res => res.data)
-        .should.eventually.become([
-          {id: 1, title: "art1", _status: "synced"},
-          {id: 2, title: "art2mod", _status: "synced"},
-          {id: 3, title: "art3", _status: "synced"},
-        ]);
-    });
+    describe("When a conflict occured", () => {
+      var createdId;
 
-    it("should resolve with created records information", () => {
-      return articles.pullChanges(serverChanges)
-        .then(res => res.created)
-        .should.eventually.become([
-          {id: 3, title: "art3", _status: "synced"},
-        ]);
-    });
+      beforeEach(() => {
+        return articles.create({title: "art2"})
+          .then(res => {
+            createdId = res.data.id;
+            sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+              Promise.resolve({
+                lastModified: 42,
+                changes: [
+                  {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
+                ]
+              }));
+          });
+      });
 
-    it("should resolve with updated records information", () => {
-      return articles.pullChanges(serverChanges)
-        .then(res => res.updated)
-        .should.eventually.become([
-          {id: 2, title: "art2mod", _status: "synced"},
-        ]);
-    });
-
-    it("should resolve with deleted records information", () => {
-      return articles.pullChanges(serverChanges)
-        .then(res => res.deleted)
-        .should.eventually.become([
-          {id: 4},
-        ]);
+      it("should reject with conflicting changes", () => {
+        return articles.pullChanges()
+          .catch(res => {
+            return res;
+          })
+          .should.eventually.become({
+            created: [],
+            updated: [],
+            deleted: [],
+            conflicts: [{
+              id: createdId,
+              title: "art2mod"
+            }]});
+      });
     });
   });
 

@@ -29,11 +29,11 @@ const db = new Cliquetis(options);
 
 - `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
-- `mode`: The conflict default resolution strategy (`Cliquet.SAFE` (*server wins*), `Cliquet.FORCE` (*client wins*)).
+- `mode`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.FAIL` (default)
 
 ### Collection
 
-Collection are persistend through indexedDB.
+Collection are persisted in indexedDB.
 
 **Note:** A single database and store is created per collection.
 
@@ -254,53 +254,58 @@ Result:
 
 **Status:** Partially implemented.
 
-Synchronizing local data with remote ones is performed by calling the `.sync()` method:
+Synchronizing local data with remote ones is performed by calling the `.sync()` method.
+
+Synopsis:
+
+1. Fetch remote changes since last synchronization;
+2. Reject on any import conflict detected;
+  * The developer has to handle them manually, and call `sync ()` again when done;
+3. If everything went fine, publish local changes;
+4. Reject on any publication conflict detected;
+  * If `mode` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
+  * If `mode` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
+  * If `mode` is set to `Collection.strategy.NOTIFY`, conflicts will be reported in a Promise rejection.
+
+**Note:** On any rejection, `sync()` should be called again once conflicts are properly handled.
 
 ```js
 articles.sync()
-  .then(console.log.bind(console));
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
-Note that you can override default options by passing it a new options object, Cliquetis will merge these new values with the default ones:
+**Note:** You can override default options by passing `sync()` a new `options` object; Cliquetis will merge these new values with the default ones:
 
 ```js
-articles.sync({mode: Cliquet.FORCE})
+articles.sync({mode: Collection.strategy.CLIENT_WINS})
   .then(console.log.bind(console));
+  .catch(console.error.bind(console));
 ```
 
-Result:
+Sample result:
 
 ```js
 {
-  created:   [], // missing locally.
-  updated:   [], // changed since last sync.
-  deleted:   [], // deleted since last sync.
-  conflicts: []  // changed both sides.
+  created:   [], // missing locally
+  updated:   [], // changed since last sync
+  deleted:   [], // deleted since last sync
+  conflicts: []  // changed both sides
 }
 ```
 
-> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and `sync()` called again.
-
-**TODO:** a `fail` strategy mode should fill the conflicts array.
+> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and one more time, `sync()` called again.
 
 ### Synchronization strategies
 
 The `sync()` method accepts a `mode` option, which allows the following values:
 
-- `Cliquet.SAFE`: Server data win;
-- `Cliquet.FORCE`: Client data win;
+- `Collection.strategy.SERVER_WINS`: Server data win;
+- `Collection.strategy.CLIENT_WINS`: Client data win;
 - `function(local, remote) {}`: Manual conflict handling;
 - TODO `Cliquet.FAIL`: Conflicts are reflected in a `conflicts` array as a result.
 
-The default is `Cliquet.SAFE` (should be `FAIL` in a near future).
-
-### Synchronization workflow
-
-1. Fetch changes since last synchronization using `?_since`;
-2. Detect conflicts and apply changes if not any;
-3. Publish record creations;
-4. Publish record updates;
-5. Publish record deletions.
+The default is `Collection.strategy.SERVER_WINS` (should be `FAIL` in a near future).
 
 **Notes**
 
