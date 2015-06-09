@@ -42,8 +42,10 @@
             '<label>',
             '  <input type="checkbox" ' + (task.done ? 'checked' : '') + '> ',
             '  ' + (task.done ? '<del>' + task.label + '</del>' : task.label),
-            '  <br><small>id: ' + task.id + ', last_modified: ' + task.last_modified + ', _status=' + task._status + '</small>',
-            '</label>'
+            '</label>',
+            '<br><small>id: ' + task.id +
+              ', last_modified: ' + task.last_modified +
+              ', _status=' + task._status + '</small>',
           ].join("");
           li.querySelector("input")
             .addEventListener("click", toggleDone(task));
