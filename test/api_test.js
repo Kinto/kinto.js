@@ -40,9 +40,8 @@ describe("Api", () => {
 
   describe("#constructor", () => {
     it("should validate `remote` arg value", () => {
-      expect(function() {
-        new Api("http://nope");
-      }).to.Throw(Error, /Invalid remote/);
+      expect(() => new Api("http://nope"))
+        .to.Throw(Error, /The remote URL must contain the version/);
     });
 
     it("should assign version value", () => {
@@ -223,14 +222,14 @@ describe("Api", () => {
       describe("success", () => {
         const published = [{ id: 1, title: "art1" }, { id: 2, title: "art2" }];
 
-        it("should reject on HTTP 400", function() {
+        it("should reject on HTTP 400", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(400, {}));
 
           return api.batch("articles", published)
             .should.eventually.be.rejectedWith(Error, /Invalid BATCH request/);
         });
 
-        it("should reject on HTTP error status code", function() {
+        it("should reject on HTTP error status code", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {}));
 
           return api.batch("articles", published)

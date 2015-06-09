@@ -22,7 +22,7 @@ export default class Api {
     try {
       this.version = "v" + remote.match(/\/v(\d+)$/)[1];
     } catch (err) {
-      throw new Error("Invalid remote: " + remote);
+      throw new Error("The remote URL must contain the version: " + remote);
     }
   }
 
