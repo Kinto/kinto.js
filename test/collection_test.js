@@ -212,13 +212,13 @@ describe("Collection", () => {
     });
   });
 
-  describe("#importChangesLocally", () => {
-    const fixtures = [
+  describe("#pullChanges", () => {
+    const localData = [
       {id: 1, title: "art1"},
       {id: 2, title: "art2"},
     ];
     const serverChanges = [
-      {id: 2, title: "art2mod"}, // to be updated
+      {id: 2, title: "art2mod"}, // conflict
       {id: 3, title: "art3"},    // to be created
       {id: 4, deleted: true},    // to be deleted
     ];
@@ -226,109 +226,52 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
+      sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+        Promise.resolve({
+          lastModified: 42,
+          changes: serverChanges
+        }));
+      return Promise.all(
+        localData.map(fixture => articles.create(fixture, {synced: true})));
     });
 
-    describe("Non conflicting imports", () => {
-      beforeEach(() => {
-        return Promise.all(
-          fixtures.map(fixture => articles.create(fixture, {synced: true})));
-      });
-
-      it("should import changes into the collection", () => {
-        return articles.importChangesLocally(serverChanges)
-          .then(_ => articles.list())
-          .then(res => res.data)
-          .should.eventually.become([
-            {id: 1, title: "art1", _status: "synced"},
-            {id: 2, title: "art2mod", _status: "synced"},
-            {id: 3, title: "art3", _status: "synced"},
-          ]);
-      });
-
-      it("should resolve with created records information", () => {
-        return articles.importChangesLocally(serverChanges)
-          .then(res => res.created)
-          .should.eventually.become([
-            {id: 3, title: "art3", _status: "synced"},
-          ]);
-      });
-
-      it("should resolve with updated records information", () => {
-        return articles.importChangesLocally(serverChanges)
-          .then(res => res.updated)
-          .should.eventually.become([
-            {id: 2, title: "art2mod", _status: "synced"},
-          ]);
-      });
-
-      it("should resolve with deleted records information", () => {
-        return articles.importChangesLocally(serverChanges)
-          .then(res => res.deleted)
-          .should.eventually.become([
-            {id: 4},
-          ]);
-      });
+    it("should import changes into the collection", () => {
+      return articles.pullChanges(serverChanges)
+        .then(_ => articles.list())
+        .then(res => res.data)
+        .should.eventually.become([
+          {id: 1, title: "art1", _status: "synced"},
+          {id: 2, title: "art2mod", _status: "synced"},
+          {id: 3, title: "art3", _status: "synced"},
+        ]);
     });
 
-    describe("Conflict handling", () => {
-      it("should resolve with conflicts listed", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ]))
-          .then(imports => imports.conflicts)
-          .should.eventually.have.length.of(1);
-      });
+    it("should resolve with created records information", () => {
+      return articles.pullChanges(serverChanges)
+        .then(res => res.created)
+        .should.eventually.become([
+          {id: 3, title: "art3", _status: "synced"},
+        ]);
+    });
 
-      it("should import server changes in safe mode", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ]))
-          .then(imports => articles.get(imports.conflicts[0].id))
-          .then(res => res.data.title)
-          .should.eventually.become("server title");
-      });
+    it("should resolve with updated records information", () => {
+      return articles.pullChanges(serverChanges)
+        .then(res => res.updated)
+        .should.eventually.become([
+          {id: 2, title: "art2mod", _status: "synced"},
+        ]);
+    });
 
-      it("should preserve local changes in force mode", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ], {mode: Collection.strategy.CLIENT_WINS}))
-          .then(imports => articles.get(imports.conflicts[0].id))
-          .then(res => res.data.title)
-          .should.eventually.become("local title");
-      });
-
-      it("should handle custom reconciliation mode", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ], {mode: local => Object.assign(local, {title: "manual title"})}))
-          .then(imports => articles.get(imports.conflicts[0].id))
-          .then(res => res.data.title)
-          .should.eventually.become("manual title");
-      });
-
-      it("should reject on invalid conflict resolution mode", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ], {mode: "invalid"}))
-          .should.be.rejectedWith(Error, /Unsupported sync mode/);
-      });
-
-      it("should reject on invalid conflict resolution function", () => {
-        return articles.create({title: "local title"})
-          .then(res => articles.importChangesLocally([
-            Object.assign({}, res.data, {title: "server title"})
-          ], {mode: local => "invalid"}))
-          .should.be.rejectedWith(Error, /must return an object/);
-      });
+    it("should resolve with deleted records information", () => {
+      return articles.pullChanges(serverChanges)
+        .then(res => res.deleted)
+        .should.eventually.become([
+          {id: 4},
+        ]);
     });
   });
 
-  describe("#publishChanges", () => {
+  describe("#pushChanges", () => {
     it("should publish local changes to the server", () => {
       // TODO
     });

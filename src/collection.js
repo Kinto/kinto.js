@@ -28,6 +28,11 @@ export default class Collection {
     }
   }
 
+  /**
+   * Ensures a connection to the local database has been opened.
+   *
+   * @return {Promise}
+   */
   open() {
     if (this._db)
       return Promise.resolve(this);
@@ -70,6 +75,11 @@ export default class Collection {
     return {transaction, store};
   }
 
+  /**
+   * Clears current collection.
+   *
+   * @return {Promise}
+   */
   clear() {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
@@ -86,6 +96,13 @@ export default class Collection {
     });
   }
 
+  /**
+   * Adds a record to the local database.
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Promise}
+   */
   create(record, options={synced: false}) {
     return this.open().then(() => {
       if (typeof(record) !== "object")
@@ -108,6 +125,13 @@ export default class Collection {
     });
   }
 
+  /**
+   * Updates a record from the local database.
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Promise}
+   */
   update(record, options={synced: false}) {
     return this.open().then(() => {
       if (typeof(record) !== "object")
@@ -135,6 +159,13 @@ export default class Collection {
     });
   }
 
+  /**
+   * Retrieve a record to the local database.
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Promise}
+   */
   get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
@@ -156,6 +187,13 @@ export default class Collection {
     });
   }
 
+  /**
+   * Deletes a record from the local database.
+   *
+   * @param  {String} id
+   * @param  {Object} options
+   * @return {Promise}
+   */
   delete(id, options={virtual: true}) {
     return this.open().then(() => {
       // Ensure the record actually exists.
@@ -180,6 +218,13 @@ export default class Collection {
     });
   }
 
+  /**
+   * Lists records from the local database.
+   *
+   * @param  {Object} params
+   * @param  {Object} options
+   * @return {Promise}
+   */
   list(params={}, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
@@ -205,14 +250,17 @@ export default class Collection {
     });
   }
 
+  /**
+   * Fetches a list of unsynced records from the local database.
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Prmise}
+   */
   fetchLocalChanges() {
     // TODO: perform a filtering query on the _status field
     return this.list().then(res => {
-      return res.data.reduce((acc, record) => {
-        if (record._status !== "synced")
-          acc[record._status].push(record);
-        return acc;
-      }, {created: [], updated: [], deleted: []});
+      return res.data.filter(r => r._status !== "synced");
     });
   }
 
@@ -238,7 +286,7 @@ export default class Collection {
     throw new Error("Unsupported sync mode.");
   }
 
-  importChangesLocally(changes, options={mode: Collection.strategy.SERVER_WINS}) {
+  _importChanges(changes) {
     const processed = [];
     const localImportResult = {
       created:   [],
@@ -250,7 +298,9 @@ export default class Collection {
       // Retrieve local record matching this change
       return this.get(change.id)
         // No matching local record found; that's a new addition
-        .catch(_ => {
+        .catch(err => {
+          if (!(/not found/i).test(err.message))
+            throw err;
           return this.create(change, {synced: true}).then(res => {
             // Avoid creating deletions :)
             if (change.deleted) return res;
@@ -263,9 +313,10 @@ export default class Collection {
         .then(res => {
           // Check for conflict
           if (res.data._status !== "synced") {
+            // XXX we could compare the two object, if no diff, skip
             processed.push(change.id);
             localImportResult.conflicts.push(change);
-            return this.handleConflict(res.data, change, options.mode);
+            return Promise.resolve({data: change});
           } else if (change.deleted) {
             return this.delete(change.id, {virtual: false}).then(res => {
               processed.push(change.id);
@@ -280,48 +331,82 @@ export default class Collection {
             });
           }
         });
-    })).then(_ => localImportResult);
-  }
-
-  publishChanges(changes, headers={}) {
-    return Promise.all([
-      this.api.batch(this.name, "create", changes.created, headers),
-      this.api.batch(this.name, "update", changes.updated, headers),
-      this.api.batch(this.name, "delete", changes.deleted, headers),
-    ]).then(...published => {
-      return {
-        created: published[0],
-        updated: published[1],
-        deleted: published[2],
-        // TODO: conflicts
-      };
+    })).then(_ => {
+      if (localImportResult.conflicts.length > 0) {
+        return Promise.reject(localImportResult);
+      } else {
+        return Promise.resolve(localImportResult);
+      }
     });
   }
 
-  // TODO rename mode to strategy
-  sync(options={mode: Collection.strategy.SERVER_WINS, headers: {}}) {
-    // TODO: lock all write operations while syncing to prevent races?
-    var lastModified, report;
-    // First fetch the remote changes since last synchronization
+  /**
+   * Import remote changes to the local database. Will reject on encountered
+   * conflicts.
+   *
+   * @param  {Options} options
+   * @return {Promise}
+   */
+  pullChanges(options) {
+    var lastModified, imported;
+    // First fetch remote changes from the server
     return this.api.fetchChangesSince(this.name, this.lastModified, options)
       // Reflect these changes locally
       .then(res => {
         // Temporarily store server's lastModified value for further use
         lastModified = res.lastModified;
         // Import changes
-        return this.importChangesLocally(res.changes);
+        return this._importChanges(res.changes);
       })
       // On successful import completion, update lastModified value and forward
       // import report
       .then(imported => {
         this._lastModified = lastModified;
-        report = imported;
-      })
-      // Retrieve local changes
-      .then(_ => this.fetchLocalChanges())
+        return imported;
+      });
+  }
+
+  /**
+   * Publish local changes to the remote server.
+   *
+   * @param  {Options} options
+   * @return {Promise}
+   */
+  pushChanges(options) {
+    // Fetch local changes
+    return this.fetchLocalChanges()
       // Publish them remotely
-      .then(localChanges => this.publishChanges(localChanges, options.headers))
-      // resolve with local import report
-      .then(_ => report);
+      .then(localChanges => {
+        return this.api.batch(this.name, localChanges, options.headers, {
+          safe: options.mode === Collection.SERVER_WINS
+        })
+      }).then(res => {
+        // TODO: reduce to {created: …, updated: …, etc…}
+        return res;
+      });
+  }
+
+
+  /**
+   * Synchronize remote and local data. The promise will reject on local
+   * conflicts encountered, will resolve with two lists:
+   * - local imports
+   * - remote exports
+   *
+   * @param  {Object} options options
+   * @return {Promise}
+   */
+  sync(options={mode: Collection.strategy.SERVER_WINS, headers: {}}) {
+    // TODO rename options.mode to options.strategy
+    var imported, exported;
+    return this.pullChanges(options)
+      .then(res => {
+        imported = res;
+        return this.pushChanges(options);
+      })
+      .then(res => {
+        exported = res;
+        return {imported, exported};
+      });
   }
 }

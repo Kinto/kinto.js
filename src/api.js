@@ -26,18 +26,20 @@ export default class Api {
     }
   }
 
-  get endpoint() {
+  endpoints(options={full: true}) {
+    var root = options.full ? this.remote : `/${this.version}`;
     return {
-      batch:          () => `/${this.version}/batch`,
-      collection: (coll) => `/${this.version}/collections/${coll}/records`,
-      record: (coll, id) => `${this.endpoint.collection(coll)}/${id}`,
+      root:           () => root,
+      batch:          () => `${root}/batch`,
+      collection: (coll) => `${root}/collections/${coll}/records`,
+      record: (coll, id) => `${this.endpoints(options).collection(coll)}/${id}`,
     };
   }
 
   fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
     var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
-    return fetch(this.remote + this.endpoint.collection(collName) + queryString, {
+    return fetch(this.endpoints().collection(collName) + queryString, {
       // TODO? Pass If-Modified_since, then on response, if 304 nothing has changed
       headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers)
     })
@@ -53,33 +55,24 @@ export default class Api {
       });
   }
 
-  batch(collName, type, records, headers={}) {
+  batch(collName, records, headers={}, options={safe: true}) {
     if (!records.length)
       return Promise.resolve([]);
-    var method;
-    switch(type) {
-      case "create":
-      case "update": method = "PUT";    break;
-      case "delete": method = "DELETE"; break;
-    }
-    return fetch(this.remote + this.endpoint.batch(), {
+    return fetch(this.endpoints().batch(), {
       method: "POST",
       headers: DEFAULT_REQUEST_HEADERS,
       body: JSON.stringify({
         defaults: {
-          method:  method,
           headers: headers,
         },
         requests: records.map(record => {
-          const path = this.endpoint.record(collName, record.id);
-          const body = type === "delete" ? undefined : cleanRecord(record);
-          return {
-            // TODO:
-            // For DELETE and PUT requests:
-            // - if SERVER_WINS, set header IF-Unmodified-Since: record.last_modified
-            path: path,
-            body: body
-          }
+          const isDeletion = record._status === "deleted";
+          const path = this.endpoints({full: false}).record(collName, record.id);
+          const method = isDeletion ? "DELETE" : "PUT";
+          const body = isDeletion ? undefined : cleanRecord(record);
+          const headers = options.safe && record.last_modified ?
+                          {"If-Unmodified-Since": record.last_modified} : {};
+          return {method, headers, path, body};
         })
       })
     }).then(res => {

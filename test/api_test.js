@@ -37,15 +37,67 @@ describe("Api", () => {
     });
   }
 
-  describe("#constructor", function() {
-    it("should validate `remote` arg value", function() {
+  describe("#constructor", () => {
+    it("should validate `remote` arg value", () => {
       expect(function() {
         new Api("http://nope");
       }).to.Throw(Error, /Invalid remote/);
     });
 
-    it("should assign version value", function() {
+    it("should assign version value", () => {
       expect(new Api("http://test/v42").version).eql("v42");
+    });
+  });
+
+  describe("#endpoints", () => {
+    describe("full URL", () => {
+      var endpoints;
+
+      beforeEach(() => endpoints = api.endpoints())
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.root()).eql(FAKE_SERVER_URL);
+      });
+
+      it("should provide batch endpoint", () => {
+        expect(endpoints.batch())
+          .eql("http://fake-server/v0/batch");
+      });
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.collection("toto"))
+          .eql("http://fake-server/v0/collections/toto/records");
+      });
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.record("toto", 42))
+          .eql("http://fake-server/v0/collections/toto/records/42");
+      });
+    });
+
+    describe("absolute URL", () => {
+      var endpoints;
+
+      beforeEach(() => endpoints = api.endpoints({full: false}))
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.root()).eql("/v0");
+      });
+
+      it("should provide batch endpoint", () => {
+        expect(endpoints.batch())
+          .eql("/v0/batch");
+      });
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.collection("toto"))
+          .eql("/v0/collections/toto/records");
+      });
+
+      it("should provide root endpoint", () => {
+        expect(endpoints.record("toto", 42))
+          .eql("/v0/collections/toto/records/42");
+      });
     });
   });
 
@@ -109,101 +161,66 @@ describe("Api", () => {
     const operations = [
       {id: 1, title: "foo"},
       {id: 2, title: "bar"},
+      {id: 3, title: "baz", _status: "deleted"},
     ];
 
     describe("server request", () => {
-      beforeEach(() => {
-        sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-      });
+      var requestBody;
 
-      it("should perform request on empty operation list", () => {
-        api.batch("articles", "create", []);
+      describe("empty changes", () => {
+        it("should not perform request on empty operation list", () => {
+          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
 
-        sinon.assert.notCalled(fetch);
-      });
+          api.batch("articles", []);
 
-      it("should call the batch endpoint", () => {
-        api.batch("articles", "create", operations);
-
-        sinon.assert.calledWithMatch(fetch, "/v0/batch");
-      });
-
-      it("should define default batch create request method", () => {
-        api.batch("articles", "create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).defaults.method).eql("PUT");
-      });
-
-      it("should define default batch update request method", () => {
-        api.batch("articles", "update", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).defaults.method).eql("PUT");
-      });
-
-      it("should define default batch delete request method", () => {
-        api.batch("articles", "delete", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).defaults.method).eql("DELETE");
-      });
-
-      it("should define default batch request headers", () => {
-        api.batch("articles", "create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).defaults.headers).eql({});
-      });
-
-      it("should send the expected number of request bodies", () => {
-        api.batch("articles", "create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).requests).to.have.length.of(2);
-      });
-
-      it("should map created records to batch request bodies", () => {
-        api.batch("articles", "create", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).requests[0]).eql({
-          path: "/v0/collections/articles/records/1",
-          body: { id: 1, title: "foo" },
+          sinon.assert.notCalled(fetch);
         });
       });
 
-      it("should map updated records to batch request bodies", () => {
-        api.batch("articles", "update", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).requests[0]).eql({
-          path: "/v0/collections/articles/records/1",
-          body: { id: 1, title: "foo" },
+      describe("non-empty changes", () => {
+        beforeEach(() => {
+          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+          api.batch("articles", operations, {Foo: "Bar"});
+          requestBody = JSON.parse(fetch.getCall(0).args[1].body);
         });
-      });
 
-      it("should map deleted records to batch request bodies", () => {
-        api.batch("articles", "delete", operations);
-        const requestOptions = fetch.getCall(0).args[1];
-
-        expect(JSON.parse(requestOptions.body).requests[0]).eql({
-          path: "/v0/collections/articles/records/1"
+        it("should call the batch endpoint", () => {
+          sinon.assert.calledWithMatch(fetch, "/v0/batch");
         });
-      });
 
-      it("should pass provided headers", () => {
-        api.batch("articles", "create", operations, {Foo: "bar"});
-        const requestOptions = fetch.getCall(0).args[1];
+        it("should define batch default headers", () => {
+          expect(requestBody.defaults.headers).eql({Foo: "Bar"});
+        });
 
-        expect(JSON.parse(requestOptions.body).defaults.headers)
-          .eql({Foo: "bar"});
+        it("should batch the expected number of requests", () => {
+          expect(requestBody.requests.length).eql(3);
+        });
+
+        it("should map create & update requests", () => {
+          expect(requestBody.requests[0]).eql({
+            "body": {
+              "id": 1,
+              "title": "foo",
+            },
+            headers: {},
+            method: "PUT",
+            path: "/v0/collections/articles/records/1",
+          });
+        });
+
+        it("should map batch delete requests", () => {
+          expect(requestBody.requests[2]).eql({
+            headers: {},
+            method: "DELETE",
+            path: "/v0/collections/articles/records/3",
+          });
+        });
       });
     });
 
     describe("server response", () => {
       beforeEach(() => {
-        sandbox.stub(root, "fetch").returns();
+        sandbox.stub(root, "fetch").returns(Promise.resolve());
       });
     });
   });
