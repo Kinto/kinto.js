@@ -33,6 +33,46 @@ describe("Collection", () => {
     sandbox.restore();
   });
 
+  describe("#open", () => {
+    it("should fetch and update lastModified value", () => {
+      sandbox.stub(Collection.prototype, "getLastModified")
+        .returns(Promise.resolve(42))
+      var articles = testCollection();
+
+      return articles.open()
+        .then(() => expect(articles.lastModified).eql(42));
+    });
+  });
+
+  describe("#saveLastModified", () => {
+    var articles;
+
+    beforeEach(() => articles = testCollection());
+
+    it("should resolve with lastModified value", () => {
+      return articles.saveLastModified(42)
+        .should.eventually.become(42);
+    });
+
+    it("should save a lastModified value", () => {
+      return articles.saveLastModified(42)
+        .then(_ => articles.getLastModified())
+        .should.eventually.become(42);
+    });
+
+    it("should update instance lastModified property value", () => {
+      return articles.saveLastModified(42)
+        .then(val => expect(articles.lastModified).eql(val));
+    });
+
+    it("should allow updating previous value", () => {
+      return articles.saveLastModified(42)
+        .then(_ => articles.saveLastModified(43))
+        .then(_ => articles.getLastModified())
+        .should.eventually.become(43);
+    });
+  });
+
   describe("#create", () => {
     it("should create a record and return created record data", () => {
       return testCollection().create(article)

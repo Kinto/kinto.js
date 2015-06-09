@@ -37,17 +37,24 @@ export default class Collection {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this.name, 1);
+      var request = indexedDB.open(this.name, 2);
       request.onupgradeneeded = event => {
-        const store = event.target.result.createObjectStore(this.name, {
+        // Main collection store
+        const collStore = event.target.result.createObjectStore(this.name, {
           keyPath: "id"
         });
         // Primary key (UUID)
-        store.createIndex("id", "id", { unique: true });
+        collStore.createIndex("id", "id", { unique: true });
         // Local record status ("synced", "created", "updated", "deleted")
-        store.createIndex("_status", "_status");
+        collStore.createIndex("_status", "_status");
         // Last modified field
-        store.createIndex("last_modified", "last_modified");
+        collStore.createIndex("last_modified", "last_modified");
+
+        // Metadata store
+        const metaStore = event.target.result.createObjectStore("__meta__", {
+          keyPath: "name"
+        });
+        metaStore.createIndex("name", "name");
       };
       request.onerror = event => {
         reject(event.error);
@@ -56,7 +63,10 @@ export default class Collection {
         this._db = event.target.result;
         resolve(this);
       };
-    });
+    })
+      // Ensure we reflect collection lastModified value
+      .then(() => this.getLastModified())
+      .then(lastModified => this._lastModified = lastModified);
   }
 
   /**
@@ -67,11 +77,13 @@ export default class Collection {
    * request’s success event, because the transaction may still fail after the
    * success event fires.
    *
-   * @param {String} mode  Transaction mode ("readwrite" or undefined)
+   * @param {String}      mode  Transaction mode ("readwrite" or undefined)
+   * @param {String|null} name  Store name (defaults to coll name)
    */
-  prepare(mode) {
-    const transaction = this._db.transaction([this.name], mode);
-    const store = transaction.objectStore(this.name);
+  prepare(mode=undefined, name=null) {
+    const storeName = name || this.name;
+    const transaction = this._db.transaction([storeName], mode);
+    const store = transaction.objectStore(storeName);
     return {transaction, store};
   }
 
@@ -250,42 +262,6 @@ export default class Collection {
     });
   }
 
-  /**
-   * Fetches a list of unsynced records from the local database.
-   *
-   * @param  {Object} record
-   * @param  {Object} options
-   * @return {Prmise}
-   */
-  fetchLocalChanges() {
-    // TODO: perform a filtering query on the _status field
-    return this.list().then(res => {
-      return res.data.filter(r => r._status !== "synced");
-    });
-  }
-
-  // TODO Discard automatic conflict handling on import
-  //      Instead, list conflicts so the developer handles them by hand
-  handleConflict(local, remote, syncStrategy) {
-    // Server wins
-    if (syncStrategy === Collection.strategy.SERVER_WINS)
-      return this.update(remote, {synced: true});
-
-    // Client wins
-    if (syncStrategy === Collection.strategy.CLIENT_WINS)
-      return this.update(local, {synced: true});
-
-    // User provided conflict resolution strategy
-    if (typeof syncStrategy === "function") {
-      let resolution = syncStrategy(local, remote);
-      if (typeof(resolution) !== "object")
-        throw new Error("Conflict resolution function must return an object");
-      return this.update(resolution, {synced: true});
-    }
-
-    throw new Error("Unsupported sync mode.");
-  }
-
   _importChanges(changes) {
     const processed = [];
     const localImportResult = {
@@ -341,6 +317,54 @@ export default class Collection {
   }
 
   /**
+   * Store the lastModified value into collection's metadata store.
+   *
+   * @param  {Number}  lastModified
+   * @param  {Boolean} update
+   * @return {Promise}
+   */
+  saveLastModified(lastModified, update=false) {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite", "__meta__");
+        store[update ? "put" : "add"]({
+          name: "lastModified",
+          value: lastModified,
+        });
+        transaction.onerror = event => {
+          // If a value already exists, override it
+          if (/ConstraintError/.test(event.target.error))
+            return resolve(this.saveLastModified(lastModified, true));
+          reject(event.target.error);
+        };
+        transaction.oncomplete = event => {
+          // update locally cached property
+          this._lastModified = lastModified;
+          resolve(lastModified);
+        };
+      });
+    });
+  }
+
+  /**
+   * Retrieve saved collection's lastModified value.
+   *
+   * @return {Promise}
+   */
+  getLastModified() {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare(undefined, "__meta__");
+        const request = store.get("lastModified");
+        transaction.onerror = event => reject(event.target.error);
+        transaction.oncomplete = event => {
+          resolve(request.result && request.result.value || null)
+        };
+      });
+    });
+  }
+
+  /**
    * Import remote changes to the local database. Will reject on encountered
    * conflicts.
    *
@@ -358,12 +382,13 @@ export default class Collection {
         // Import changes
         return this._importChanges(res.changes);
       })
-      // On successful import completion, update lastModified value and forward
-      // import result
-      .then(imported => {
-        this._lastModified = lastModified;
-        return imported;
-      });
+      // On successful import completion, update lastModified value
+      .then(result => {
+        imported = result;
+        return this.saveLastModified(lastModified);
+      })
+      // Resolve with import report
+      .then(_ => imported);
   }
 
   /**
@@ -374,15 +399,13 @@ export default class Collection {
    */
   pushChanges(options) {
     // Fetch local changes
-    return this.fetchLocalChanges()
-      // Publish them remotely
+    return this.list()
+      // TODO: perform a filtering query on the _status field
+      .then(res => res.data.filter(r => r._status !== "synced"))
       .then(localChanges => {
         return this.api.batch(this.name, localChanges, options.headers, {
           safe: options.mode === Collection.SERVER_WINS
         })
-      }).then(res => {
-        // TODO: reduce to {created: …, updated: …, etc…}
-        return res;
       });
   }
 
