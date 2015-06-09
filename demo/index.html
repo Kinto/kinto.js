@@ -6,6 +6,7 @@
 </head>
 <body>
   <h1>Todo list</h1>
+  <p>Last modified: <span id="lastModified"></span></p>
   <ul id="todo"></ul>
   <form>
     <p>
@@ -22,18 +23,18 @@
   <script>
   function main() {
     var db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
-    var articles = db.collection("todo");
+    var tasks = db.collection("todo");
     var headers = {Authorization: "Basic " + btoa("niko:niko")};
 
     function toggleDone(task) {
       return function(event) {
         task.done = !task.done;
-        articles.update(task).then(renderList);
+        tasks.update(task).then(renderList);
       };
     }
 
     function renderList() {
-      articles.list().then(function(res) {
+      tasks.list().then(function(res) {
         var ul = document.querySelector("ul");
         ul.innerHTML = "";
         res.data.forEach(function(task) {
@@ -57,7 +58,7 @@
     // form submit
     document.querySelector("form").addEventListener("submit", function(e) {
       e.preventDefault();
-      articles.create({
+      tasks.create({
         label: e.target.label.value,
         done: false
       }).then(function(res) {
@@ -70,18 +71,18 @@
     // clear completed button
     document.querySelector("#clearAllBtn").addEventListener("click", function(e) {
       e.preventDefault();
-      articles.clear().then(renderList);
+      tasks.clear().then(renderList);
     });
 
     // clear all button
     document.querySelector("#clearCompletedBtn").addEventListener("click", function(e) {
       e.preventDefault();
-      articles.list().then(function(res) {
+      tasks.list().then(function(res) {
         return Promise.all(res.data.filter(function(task) {
           return task.done;
         }).map(function(task) {
           console.log("delete", task);
-          return articles.delete(task.id);
+          return tasks.delete(task.id);
         }));
       }).then(renderList);
     });
@@ -89,7 +90,7 @@
     // sync button
     document.querySelector("#syncBtn").addEventListener("click", function(e) {
       e.preventDefault();
-      articles.sync({headers: headers})
+      tasks.sync({headers: headers})
         .catch(function(err) {
           console.error("sync error", err);
         })
@@ -99,7 +100,12 @@
         });
     });
 
-    articles.sync({headers: headers}).then(renderList);
+    tasks.getLastModified().then(lastModified => {
+      document.querySelector("#lastModified").textContent = lastModified;
+      return tasks.sync({headers: headers});
+    })
+      .catch(console.error.bind(console))
+      .then(renderList);
   }
 
   window.addEventListener("DOMContentLoaded", main);

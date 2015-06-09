@@ -33,14 +33,16 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  open() {
+  open(options={checkLastModified: true}) {
     if (this._db)
       return Promise.resolve(this);
-    return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this.name, 2);
+    const promise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
+        // DB object
+        const db = event.target.result;
         // Main collection store
-        const collStore = event.target.result.createObjectStore(this.name, {
+        const collStore = db.createObjectStore(this.name, {
           keyPath: "id"
         });
         // Primary key (UUID)
@@ -51,22 +53,25 @@ export default class Collection {
         collStore.createIndex("last_modified", "last_modified");
 
         // Metadata store
-        const metaStore = event.target.result.createObjectStore("__meta__", {
+        const metaStore = db.createObjectStore("__meta__", {
           keyPath: "name"
         });
-        metaStore.createIndex("name", "name");
+        metaStore.createIndex("name", "name", { unique: true });
       };
-      request.onerror = event => {
-        reject(event.error);
-      };
+      request.onerror = event => reject(event.error);
       request.onsuccess = event => {
         this._db = event.target.result;
         resolve(this);
       };
-    })
-      // Ensure we reflect collection lastModified value
-      .then(() => this.getLastModified())
+    });
+    if (options.checkLastModified) {
+      // Fetch and reflect collection lastModified value locally
+      return promise
+      .then(_ => this.getLastModified())
       .then(lastModified => this._lastModified = lastModified);
+    } else {
+      return promise;
+    }
   }
 
   /**
@@ -320,23 +325,15 @@ export default class Collection {
    * Store the lastModified value into collection's metadata store.
    *
    * @param  {Number}  lastModified
-   * @param  {Boolean} update
+   * @param  {Object}  options
    * @return {Promise}
    */
-  saveLastModified(lastModified, update=false) {
-    return this.open().then(() => {
+  saveLastModified(lastModified) {
+    return this.open({checkLastModified: false}).then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
-        store[update ? "put" : "add"]({
-          name: "lastModified",
-          value: lastModified,
-        });
-        transaction.onerror = event => {
-          // If a value already exists, override it
-          if (/ConstraintError/.test(event.target.error))
-            return resolve(this.saveLastModified(lastModified, true));
-          reject(event.target.error);
-        };
+        const request = store.put({name: "lastModified", value: lastModified});
+        transaction.onerror = event => reject(event.target.error);
         transaction.oncomplete = event => {
           // update locally cached property
           this._lastModified = lastModified;
@@ -351,8 +348,9 @@ export default class Collection {
    *
    * @return {Promise}
    */
+
   getLastModified() {
-    return this.open().then(() => {
+    return this.open({checkLastModified: false}).then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare(undefined, "__meta__");
         const request = store.get("lastModified");
