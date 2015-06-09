@@ -24,8 +24,9 @@ describe("Api", () => {
     sandbox.restore();
   });
 
-  function fakeServerResponse(json, headers={}) {
+  function fakeServerResponse(status, json, headers={}) {
     return Promise.resolve({
+      status: status,
       headers: {
         get(name) {
           return headers[name];
@@ -121,7 +122,7 @@ describe("Api", () => {
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse({items: []}, {"Last-Modified": 41}));
+        fakeServerResponse(200, {items: []}, {"Last-Modified": 41}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -219,8 +220,76 @@ describe("Api", () => {
     });
 
     describe("server response", () => {
-      beforeEach(() => {
-        sandbox.stub(root, "fetch").returns(Promise.resolve());
+      describe("success", () => {
+        const published = [{ id: 1, title: "art1" }, { id: 2, title: "art2" }];
+
+        it("should reject on HTTP 400", function() {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(400, {}));
+
+          return api.batch("articles", published)
+            .should.eventually.be.rejectedWith(Error, /Invalid BATCH request/);
+        });
+
+        it("should reject on HTTP error status code", function() {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {}));
+
+          return api.batch("articles", published)
+            .should.eventually.be.rejectedWith(Error, "BATCH request failed, HTTP 500");
+        });
+
+        it("should expose succesfully published results", () => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: [
+              { status: 201,
+                path: "/v0/articles",
+                body: published[0]},
+              { status: 201,
+                path: "/v0/articles",
+                body: published[1]},
+            ]
+          }));
+
+          return api.batch("articles", published)
+            .should.eventually.become({
+              conflicts: [],
+              errors:    [],
+              published: published
+            });
+        });
+
+        it("should reject on encountered individual request errors", () => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: [
+              { status: 404,
+                path: "/v0/articles/1",
+                body: { invalid: true }},
+            ]
+          }));
+
+          return api.batch("articles", published)
+            .should.eventually.be.rejectedWith({
+              conflicts: [],
+              errors:    [{ invalid: true}],
+              published: []
+            });
+        });
+
+        it("should expose encountered conflicts", () => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: [
+              { status: 412,
+                path: "/v0/articles/1",
+                body: { invalid: true }},
+            ]
+          }));
+
+          return api.batch("articles", published)
+            .should.eventually.be.rejectedWith({
+              conflicts: [{ invalid: true}],
+              errors:    [],
+              published: []
+            });
+        });
       });
     });
   });

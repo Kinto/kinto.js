@@ -56,8 +56,14 @@ export default class Api {
   }
 
   batch(collName, records, headers={}, options={safe: true}) {
+    const results = {
+      errors:    [],
+      published: [],
+      conflicts: [],
+    };
+    var reject = false;
     if (!records.length)
-      return Promise.resolve([]);
+      return Promise.resolve(results);
     return fetch(this.endpoints().batch(), {
       method: "POST",
       headers: DEFAULT_REQUEST_HEADERS,
@@ -76,13 +82,26 @@ export default class Api {
         })
       })
     }).then(res => {
-      // XXX do it better
+      if (res.status === 400)
+        throw new Error("Invalid BATCH request"); // TODO: precise error reporting
       if (res.status !== 200)
-        throw new Error("HTTP " + res.status);
-      // TODO: iterate over responses, check indiv. statuses
-      // - 412 if SERVER_WINS and record has been modified in the meanwhile,
-      //   return a list of these conflicts
-      return res;
+        throw new Error("BATCH request failed, HTTP " + res.status); // TODO: precise error reporting
+      return res.json();
+    }).then(res => {
+      res.responses.forEach(response => {
+        if (response.status && response.status >= 200 && response.status < 400) {
+          results.published.push(response.body);
+        } else if (response.status === 412) {
+          results.conflicts.push(response.body);
+          reject = true;
+        } else {
+          results.errors.push(response.body);
+          reject = true;
+        }
+      });
+      if (reject)
+        throw results;
+      return results;
     });
   }
 }

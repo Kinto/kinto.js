@@ -359,7 +359,7 @@ export default class Collection {
         return this._importChanges(res.changes);
       })
       // On successful import completion, update lastModified value and forward
-      // import report
+      // import result
       .then(imported => {
         this._lastModified = lastModified;
         return imported;
@@ -388,15 +388,16 @@ export default class Collection {
 
 
   /**
-   * Synchronize remote and local data. The promise will reject on local
-   * conflicts encountered, will resolve with two lists:
+   * Synchronize remote and local data. The promise will resolve with two lists:
    * - local imports
    * - remote exports
+   * The promise will reject if conflicts have been encountered, with the same
+   * result.
    *
    * @param  {Object} options options
    * @return {Promise}
    */
-  sync(options={mode: Collection.strategy.SERVER_WINS, headers: {}}) {
+  sync(options={mode: Collection.strategy.FAIL, headers: {}}) {
     // TODO rename options.mode to options.strategy
     var imported, exported;
     return this.pullChanges(options)
