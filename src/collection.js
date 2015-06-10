@@ -28,6 +28,7 @@ export default class Collection {
     return {
       CLIENT_WINS: "client_wins",
       SERVER_WINS: "server_wins",
+      FAIL:        "fail",
     }
   }
 
@@ -404,8 +405,8 @@ export default class Collection {
    * @param  {Options} options
    * @return {Promise}
    */
-  pushChanges(options) {
-    var result;
+  pushChanges(options={headers: {}}) {
+    var exported;
     // Fetch local changes
     return this.list()
       // TODO: perform a filtering query on the _status field
@@ -416,13 +417,16 @@ export default class Collection {
         })
       })
       // Update published local records status to "synced"
-      .then(exported => {
-        result = exported;
+      .then(result => {
+        exported = result;
         return Promise.all(exported.published.map(record => {
           return this.update(record, {synced: true});
         }));
       }).
-      then(_ => result);
+      then(results => {
+        exported.published = results.map(res => res.data);
+        return exported;
+      });
   }
 
 

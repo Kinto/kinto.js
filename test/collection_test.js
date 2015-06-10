@@ -375,8 +375,46 @@ describe("Collection", () => {
   });
 
   describe("#pushChanges", () => {
+    var articles, records;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return Promise.all([
+        articles.create({title: "foo"}),
+        articles.create({id: "fake-uuid", title: "bar"}, {synced: true}),
+      ])
+        .then(results => records = results.map(res => res.data));
+    });
+
     it("should publish local changes to the server", () => {
-      // TODO
+      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: []
+      }));
+      return articles.pushChanges()
+        .then(_ => {
+          sinon.assert.calledOnce(batch);
+          sinon.assert.calledWithExactly(batch,
+            TEST_COLLECTION_NAME,
+            sinon.match(v => v.length === 1 && v[0].title === "foo"),
+            {},
+            {safe: true});
+        });
+    });
+
+    it("should update published records local status", function() {
+      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [records[0]]
+      }));
+      return articles.pushChanges()
+        .should.eventually.become({
+          published: [
+            {
+              _status: "synced",
+              id: records[0].id,
+              title: "foo",
+            }
+          ]
+        });
     });
   });
 
