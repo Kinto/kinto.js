@@ -3,6 +3,18 @@
 <head>
   <meta charset="utf-8">
   <title>Cliquetis demo</title>
+  <style>
+  .log {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    padding: .4em;
+    font-size: .8em;
+    color: white;
+  }
+  </style>
 </head>
 <body>
   <h1>Todo list</h1>
@@ -20,7 +32,7 @@
     <input type="button" id="syncBtn" value="Synchronize collection">
   </p>
   <p>
-    <textarea id="log" style="position:fixed;top:0;right:0;width:50%;height:100%;padding:.4em"></textarea>
+    <textarea id="log" class="log"></textarea>
   </p>
   <script src="../dist/cliquetis.js"></script>
   <script>
@@ -34,6 +46,16 @@
         task.done = !task.done;
         tasks.update(task).then(renderList);
       };
+    }
+
+    function logResult(status, result) {
+      var log = document.querySelector("#log");
+      if (status !== "OK") {
+        log.style.background = "red";
+      } else {
+        log.style.background = "green";
+      }
+      log.value = status + "\n\n" + JSON.stringify(result, null, 2);
     }
 
     function renderList() {
@@ -94,11 +116,14 @@
     document.querySelector("#syncBtn").addEventListener("click", function(e) {
       e.preventDefault();
       tasks.sync({headers: headers})
-        .catch(function(err) {
-          console.error("sync error", err);
-        })
         .then(function(result) {
-          document.querySelector("#log").value = JSON.stringify(result, null, 2);
+          logResult("OK", result)
+        })
+        .catch(function(result) {
+          logResult("KO", result)
+          return result;
+        })
+        .then(function() {
           renderList();
         });
     });
@@ -107,7 +132,9 @@
       document.querySelector("#lastModified").textContent = lastModified;
       return tasks.sync({headers: headers});
     })
-      .catch(console.error.bind(console))
+      .catch(result => {
+        logResult("KO", result);
+      })
       .then(renderList);
   }
 
