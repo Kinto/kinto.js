@@ -302,8 +302,9 @@ export default class Collection {
             // import the last_modified value from the server and set the local
             // record status to "synced".
             if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
-              localImportResult.updated.push(res.data);
-              return this.update(change, {synced: true});
+              return this.update(change, {synced: true}).then(res => {
+                localImportResult.updated.push(res.data);
+              });
             } else {
               localImportResult.conflicts.push(change);
               return Promise.resolve({data: change});
@@ -312,13 +313,11 @@ export default class Collection {
             return this.delete(change.id, {virtual: false}).then(res => {
               processed.push(change.id);
               localImportResult.deleted.push(res.data);
-              return res;
             });
           } else if (processed.indexOf(change.id) === -1) {
             return this.update(change, {synced: true}).then(res => {
               processed.push(change.id);
               localImportResult.updated.push(res.data);
-              return res;
             });
           }
         });

@@ -143,6 +143,11 @@ describe("Collection", () => {
       return testCollection().update({id: "non-existent"})
         .should.be.rejectedWith(Error, /not found/);
     });
+
+    it("should reject updates on a non-object record", () => {
+      return testCollection().update("invalid")
+        .should.be.rejectedWith(Error, /Record is not an object/);
+    });
   });
 
   describe("#get", () => {
@@ -334,6 +339,37 @@ describe("Collection", () => {
               id: createdId,
               title: "art2mod"
             }]});
+      });
+    });
+
+    describe("When a resolvable conflict occured", () => {
+      var createdId;
+
+      beforeEach(() => {
+        return articles.create({title: "art2"})
+          .then(res => {
+            createdId = res.data.id;
+            sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+              Promise.resolve({
+                lastModified: 42,
+                changes: [
+                  {id: createdId, title: "art2"}, // resolvable conflict
+                ]
+              }));
+          });
+      });
+
+      it("should resolve with solved changes", () => {
+        return articles.pullChanges()
+          .should.eventually.become({
+            created: [],
+            updated: [{
+              id: createdId,
+              title: "art2",
+              _status: "synced",
+            }],
+            deleted: [],
+            conflicts: []});
       });
     });
   });
