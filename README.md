@@ -58,8 +58,9 @@ All operations are asynchronous and rely on [Promises](https://developer.mozilla
 **Status:** Implemented.
 
 ```js
-articles.save({title: "foo"})
-  .then(console.log.bind(console));
+articles.create({title: "foo"})
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
 Result is:
@@ -115,7 +116,7 @@ var updated = Object.assign(existing, {
   title: "baz"
 });
 
-articles.save(updated)
+articles.update(updated)
   .then(console.log.bind(console));
 ```
 
@@ -197,7 +198,7 @@ Result is:
 }
 ```
 
-> Records with ``last_modified`` attribute were sync'ed on a server.
+> Records with `last_modified` attribute were sync'ed on a server.
 
 #### Filtering
 
@@ -287,14 +288,21 @@ Sample result:
 
 ```js
 {
-  created:   [], // missing locally
-  updated:   [], // changed since last sync
-  deleted:   [], // deleted since last sync
-  conflicts: []  // changed both sides
+  imported: {
+    created:   [], // Created in local database
+    updated:   [], // Updated
+    deleted:   [], // Deleted
+    conflicts: []  // Changed both sides
+  },
+  exported: {
+    errors:    [], // HTTP errors encountered
+    published: [], // Successful publications
+    conflicts: []  // Conflicts
+  },
 }
 ```
 
-> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and one more time, `sync()` called again.
+> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and `sync()` called again.
 
 ### Synchronization strategies
 
