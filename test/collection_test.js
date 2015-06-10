@@ -285,8 +285,8 @@ describe("Collection", () => {
       it("should resolve with imported changes", () => {
         return articles.pullChanges()
           .should.eventually.become({
-            created:   [{id: 3, title: "art3", _status: "synced", }],
-            updated:   [{id: 2, title: "art2", _status: "synced", }],
+            created:   [{id: 3, title: "art3", _status: "synced"}],
+            updated:   [{id: 2, title: "art2", _status: "synced"}],
             deleted:   [{"id": 4}],
             conflicts: [],
           });
@@ -354,6 +354,11 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
+      sandbox.stub(api, "batch").returns({
+        errors:    [],
+        published: [],
+        conflicts: [],
+      });
       return Promise.all(fixtures.map(fixture => articles.create(fixture)));
     });
 
@@ -364,19 +369,17 @@ describe("Collection", () => {
     });
 
     it("should fetch latest changes from the server", () => {
-      sandbox.stub(api, "batch");
       var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,
           changes: []
         }));
       return articles.sync().then(res => {
-        sinon.assert.calledOnce(fetchChangesSince);
+        sinon.assert.calledTwice(fetchChangesSince);
       });
     });
 
     it("should store latest lastModified value", () => {
-      sandbox.stub(api, "batch");
       var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,

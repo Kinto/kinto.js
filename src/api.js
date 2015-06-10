@@ -77,7 +77,7 @@ export default class Api {
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
           const headers = options.safe && record.last_modified ?
-                          {"If-Unmodified-Since": record.last_modified} : {};
+                          {"If-Unmodified-Since": String(record.last_modified)} : {};
           return {method, headers, path, body};
         })
       })

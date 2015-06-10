@@ -406,6 +406,7 @@ export default class Collection {
    * @return {Promise}
    */
   pushChanges(options) {
+    var result;
     // Fetch local changes
     return this.list()
       // TODO: perform a filtering query on the _status field
@@ -414,7 +415,15 @@ export default class Collection {
         return this.api.batch(this.name, localChanges, options.headers, {
           safe: options.mode === Collection.SERVER_WINS
         })
-      });
+      })
+      // Update published local records status to "synced"
+      .then(exported => {
+        result = exported;
+        return Promise.all(exported.published.map(record => {
+          return this.update(record, {synced: true});
+        }));
+      }).
+      then(_ => result);
   }
 
 
@@ -430,6 +439,7 @@ export default class Collection {
    */
   sync(options={mode: Collection.strategy.FAIL, headers: {}}) {
     // TODO rename options.mode to options.strategy
+    // TODO ensure we always return the same result data struct (imported, exported)
     var imported, exported;
     return this.pullChanges(options)
       .then(res => {
@@ -438,6 +448,9 @@ export default class Collection {
       })
       .then(res => {
         exported = res;
+        return this.pullChanges(options);
+      })
+      .then(_ => {
         return {imported, exported};
       });
   }

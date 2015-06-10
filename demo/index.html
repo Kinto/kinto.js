@@ -19,6 +19,9 @@
     <input type="reset" id="clearAllBtn" value="Clear collection">
     <input type="button" id="syncBtn" value="Synchronize collection">
   </p>
+  <p>
+    <textarea id="log" style="position:fixed;top:0;right:0;width:50%;height:100%;padding:.4em"></textarea>
+  </p>
   <script src="../dist/cliquetis.js"></script>
   <script>
   function main() {
@@ -95,7 +98,7 @@
           console.error("sync error", err);
         })
         .then(function(result) {
-          console.log("sync result", result);
+          document.querySelector("#log").value = JSON.stringify(result, null, 2);
           renderList();
         });
     });
