@@ -32,6 +32,10 @@ export default class Collection {
     }
   }
 
+  _handleError(method) {
+    return err => {throw new Error(method + "() " + err.message)}
+  }
+
   /**
    * Ensures a connection to the local database has been opened.
    *
@@ -114,7 +118,7 @@ export default class Collection {
           });
         };
       });
-    }).catch(err => {throw new Error("clear() " + err.message)});
+    }).catch(this._handleError("clear"));
   }
 
   /**
@@ -143,7 +147,7 @@ export default class Collection {
           });
         };
       });
-    }).catch(err => {throw new Error("create() " + err.message)});
+    }).catch(this._handleError("create"));
   }
 
   /**
@@ -177,7 +181,7 @@ export default class Collection {
           };
         });
       });
-    }).catch(err => {throw new Error("update() " + err.message)});
+    }).catch(this._handleError("update"));
   }
 
   /**
@@ -205,7 +209,7 @@ export default class Collection {
           }
         };
       });
-    }).catch(err => {throw new Error("get() " + err.message)});
+    }).catch(this._handleError("get"));
   }
 
   /**
@@ -244,7 +248,7 @@ export default class Collection {
           };
         });
       });
-    }).catch(err => {throw new Error("delete() " + err.message)});
+    }).catch(this._handleError("delete"));
   }
 
   /**
@@ -277,7 +281,7 @@ export default class Collection {
           });
         };
       });
-    }).catch(err => {throw new Error("list() " + err.message)});
+    }).catch(this._handleError("list"));
   }
 
   _importChanges(changes) {
