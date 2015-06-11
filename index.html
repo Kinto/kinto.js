@@ -48,6 +48,12 @@
       };
     }
 
+    function deleteTask(task) {
+      return function(event) {
+        tasks.delete(task.id).then(renderList);
+      }
+    }
+
     function logResult(status, result) {
       var log = document.querySelector("#log");
       if (status !== "OK") {
@@ -59,7 +65,7 @@
     }
 
     function renderList() {
-      tasks.list().then(function(res) {
+      tasks.list({}, {includeDeleted: true}).then(function(res) {
         var ul = document.querySelector("ul");
         ul.innerHTML = "";
         res.data.forEach(function(task) {
@@ -72,9 +78,12 @@
             '<br><small>id: ' + task.id +
               ', last_modified: ' + task.last_modified +
               ', _status=' + task._status + '</small>',
+            '<input type="button" value="Delete">'
           ].join("");
-          li.querySelector("input")
+          li.querySelector("input[type=checkbox]")
             .addEventListener("click", toggleDone(task));
+          li.querySelector("input[type=button]")
+            .addEventListener("click", deleteTask(task));
           ul.appendChild(li);
         });
       });
@@ -112,30 +121,34 @@
       }).then(renderList);
     });
 
-    // sync button
-    document.querySelector("#syncBtn").addEventListener("click", function(e) {
-      e.preventDefault();
-      tasks.sync({headers: headers})
+    function load() {
+      return tasks.sync({headers: headers})
         .then(function(result) {
-          logResult("OK", result)
+          logResult("OK", result);
         })
         .catch(function(result) {
-          logResult("KO", result)
-          return result;
+          logResult("KO", result);
+          console.log("catch", result);
+          return Promise.all(result.conflicts.map(conflict => {
+            console.log("importing server version", conflict);
+            return tasks.update(conflict);
+          }));
         })
         .then(function() {
           renderList();
         });
+    }
+
+    // sync button
+    document.querySelector("#syncBtn").addEventListener("click", function(e) {
+      e.preventDefault();
+      load();
     });
 
     tasks.getLastModified().then(lastModified => {
       document.querySelector("#lastModified").textContent = lastModified;
-      return tasks.sync({headers: headers});
-    })
-      .catch(result => {
-        logResult("KO", result);
-      })
-      .then(renderList);
+      load();
+    });
   }
 
   window.addEventListener("DOMContentLoaded", main);
