@@ -220,9 +220,17 @@ export default class Collection {
       // Ensure the record actually exists.
       return this.get(id, {includeDeleted: true}).then(res => {
         if (options.virtual) {
-          return this.update(Object.assign({}, res.data, {
-            _status: "deleted"
-          }));
+          if (res.data._status === "deleted") {
+            // Record is already deleted
+            return Promise.resolve({
+              data: { id: id },
+              permissions: {}
+            });
+          } else {
+            return this.update(Object.assign({}, res.data, {
+              _status: "deleted"
+            }));
+          }
         }
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");

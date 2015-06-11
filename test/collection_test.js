@@ -74,50 +74,60 @@ describe("Collection", () => {
   });
 
   describe("#create", () => {
+    var articles;
+
+    beforeEach(() => articles = testCollection());
+
     it("should create a record and return created record data", () => {
-      return testCollection().create(article)
+      return articles.create(article)
         .should.eventually.have.property("data");
     });
 
     it("should create a record and return created record perms", () => {
-      return testCollection().create(article)
+      return articles.create(article)
         .should.eventually.have.property("permissions");
     });
 
     it("should assign an id to the created record", () => {
-      return testCollection().create(article)
+      return articles.create(article)
         .then(result => result.data.id)
         .should.eventually.be.a("string");
     });
 
     it("should not alter original record", () => {
-      return testCollection().create(article)
+      return articles.create(article)
         .should.eventually.not.eql(article);
     });
 
     it("should add record status on creation", () => {
-      var articles = testCollection();
       return articles.create(article)
         .then(res => res.data._status)
         .should.eventually.eql("created");
     });
 
     it("should reject if passed argument is not an object", () => {
-      return testCollection().create(42)
+      return articles.create(42)
         .should.eventually.be.rejectedWith(Error, /is not an object/);
     });
 
     it("should actually persist the record into the collection", () => {
-      var articles = testCollection();
       return articles.create(article).then(result => {
         return articles.get(result.data.id).then(res => res.data.title);
       }).should.become(article.title);
     });
+
+    it("should prefix error encountered", function() {
+      sandbox.stub(articles, "open").returns(Promise.reject("error"));
+      return articles.create().should.be.rejectedWith(Error, /^create/);
+    });
   });
 
   describe("#update", () => {
+    var articles;
+
+    beforeEach(() => articles = testCollection());
+
     it("should update a record", () => {
-      var articles = testCollection();
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => res.data)
@@ -131,7 +141,6 @@ describe("Collection", () => {
     });
 
     it("should update record status on update", () => {
-      var articles = testCollection();
       return articles.create(article)
         .then(res => res.data)
         .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
@@ -140,83 +149,111 @@ describe("Collection", () => {
     });
 
     it("should reject updates on a non-existent record", () => {
-      return testCollection().update({id: "non-existent"})
+      return articles.update({id: "non-existent"})
         .should.be.rejectedWith(Error, /not found/);
     });
 
     it("should reject updates on a non-object record", () => {
-      return testCollection().update("invalid")
+      return articles.update("invalid")
         .should.be.rejectedWith(Error, /Record is not an object/);
+    });
+
+    it("should prefix error encountered", function() {
+      sandbox.stub(articles, "open").returns(Promise.reject("error"));
+      return articles.update().should.be.rejectedWith(Error, /^update/);
     });
   });
 
   describe("#get", () => {
-    var uuid;
+    var articles, uuid;
 
     beforeEach(() => {
-      return testCollection().create(article)
+      articles = testCollection();
+      return articles.create(article)
         .then(result => uuid = result.data.id);
     });
 
     it("should retrieve a record from its id", () => {
-      return testCollection().get(uuid)
+      return articles.get(uuid)
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
     });
 
     it("should have record status info attached", () => {
-      return testCollection().get(uuid)
+      return articles.get(uuid)
         .then(res => res.data._status)
         .should.eventually.eql("created");
     });
 
     it("should reject in case of record not found", () => {
-      return testCollection().get("non-existent")
+      return articles.get("non-existent")
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);
     });
 
     it("should reject on virtually deleted record", () => {
-      const articles = testCollection();
       return articles.delete(uuid)
         .then(res => articles.get(uuid))
         .should.be.rejectedWith(Error, /not found/);
     });
+
+    it("should prefix error encountered", function() {
+      sandbox.stub(articles, "open").returns(Promise.reject("error"));
+      return articles.get().should.be.rejectedWith(Error, /^get/);
+    });
   });
 
   describe("#delete", () => {
-    var uuid;
+    var articles, uuid;
 
     beforeEach(() => {
-      return testCollection().create(article)
+      articles = testCollection();
+      return articles.create(article)
         .then(result => uuid = result.data.id);
     });
 
     describe("Virtual", () => {
       it("should virtually delete a record", () => {
-        var articles = testCollection();
         return articles.delete(uuid, {virtual: true})
           .then(res => articles.get(res.data.id, {includeDeleted: true}))
           .then(res => res.data._status)
           .should.eventually.eql("deleted");
       });
 
+      it("should resolve with an already deleted record data", () => {
+        return articles.delete(uuid, {virtual: true})
+          .then(res => articles.delete(uuid, {virtual: true}))
+          .then(res => res.data.id)
+          .should.eventually.eql(uuid);
+      });
+
       it("should reject on non-existent record", () => {
-        return testCollection().delete("non-existent", {virtual: true})
+        return articles.delete("non-existent", {virtual: true})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should prefix error encountered", function() {
+        sandbox.stub(articles, "open").returns(Promise.reject("error"));
+        return articles.delete().should.be.rejectedWith(Error, /^delete/);
       });
     });
 
     describe("Factual", () => {
       it("should factually delete a record", () => {
-        return testCollection().delete(uuid, {virtual: false})
+        return articles.delete(uuid, {virtual: false})
+          .then(res => articles.get(res.data.id))
+          .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should resolve with deletion information", () => {
+        return articles.delete(uuid, {virtual: false})
           .then(res => res.data)
           .should.eventually.eql({id: uuid});
       });
 
       it("should reject on non-existent record", () => {
-        return testCollection().delete("non-existent", {virtual: false})
+        return articles.delete("non-existent", {virtual: false})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
@@ -224,8 +261,10 @@ describe("Collection", () => {
   });
 
   describe("#list", () => {
+    var articles;
+
     beforeEach(() => {
-      var articles = testCollection();
+      articles = testCollection();
       return Promise.all([
         articles.create(article),
         articles.create({title: "bar", url: "http://bar"})
@@ -233,13 +272,12 @@ describe("Collection", () => {
     });
 
     it("should retrieve the list of records", () => {
-      return testCollection().list()
+      return articles.list()
         .then(res => res.data)
         .should.eventually.have.length.of(2);
     });
 
     it("shouldn't list virtually deleted records", () => {
-      const articles = testCollection();
       return articles.create({title: "yay"})
         .then(res => articles.delete(res.data.id))
         .then(_ => articles.list())
@@ -248,21 +286,23 @@ describe("Collection", () => {
     });
 
     it("should support the includeDeleted option", () => {
-      const articles = testCollection();
       return articles.create({title: "yay"})
         .then(res => articles.delete(res.data.id))
         .then(_ => articles.list({}, {includeDeleted: true}))
         .then(res => res.data)
         .should.eventually.have.length.of(3);
     });
+
+    it("should prefix error encountered", function() {
+      sandbox.stub(articles, "open").returns(Promise.reject("error"));
+      return articles.list().should.be.rejectedWith(Error, /^list/);
+    });
   });
 
   describe("#pullChanges", () => {
     var articles;
 
-    beforeEach(() => {
-      articles = testCollection();
-    });
+    beforeEach(() => articles = testCollection());
 
     describe("When no conflicts occured", () => {
       const localData = [
@@ -408,7 +448,7 @@ describe("Collection", () => {
         });
     });
 
-    it("should update published records local status", function() {
+    it("should update published records local status", () => {
       var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [records[0]]
       }));
