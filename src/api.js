@@ -95,7 +95,10 @@ export default class Api {
           results.conflicts.push(response.body);
           reject = true;
         } else {
-          results.errors.push(response.body);
+          results.errors.push({
+            path: response.path, // this is the only way to have the id…
+            error: response.body
+          });
           reject = true;
         }
       });

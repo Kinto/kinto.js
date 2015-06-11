@@ -114,7 +114,7 @@ export default class Collection {
           });
         };
       });
-    });
+    }).catch(err => {throw new Error("clear() " + err.message)});
   }
 
   /**
@@ -143,7 +143,7 @@ export default class Collection {
           });
         };
       });
-    });
+    }).catch(err => {throw new Error("create() " + err.message)});
   }
 
   /**
@@ -177,13 +177,13 @@ export default class Collection {
           };
         });
       });
-    });
+    }).catch(err => {throw new Error("update() " + err.message)});
   }
 
   /**
-   * Retrieve a record to the local database.
+   * Retrieve a record by its id from the local database.
    *
-   * @param  {Object} record
+   * @param  {String} id
    * @param  {Object} options
    * @return {Promise}
    */
@@ -205,7 +205,7 @@ export default class Collection {
           }
         };
       });
-    });
+    }).catch(err => {throw new Error("get() " + err.message)});
   }
 
   /**
@@ -218,9 +218,9 @@ export default class Collection {
   delete(id, options={virtual: true}) {
     return this.open().then(() => {
       // Ensure the record actually exists.
-      return this.get(id).then(result => {
+      return this.get(id, {includeDeleted: true}).then(res => {
         if (options.virtual) {
-          return this.update(Object.assign({}, result.data, {
+          return this.update(Object.assign({}, res.data, {
             _status: "deleted"
           }));
         }
@@ -236,7 +236,7 @@ export default class Collection {
           };
         });
       });
-    });
+    }).catch(err => {throw new Error("delete() " + err.message)});
   }
 
   /**
@@ -255,8 +255,9 @@ export default class Collection {
         request.onsuccess = function(event) {
           var cursor = event.target.result;
           if (cursor) {
-            if (options.includeDeleted || cursor.value._status !== "deleted")
+            if (options.includeDeleted || cursor.value._status !== "deleted") {
               results.push(cursor.value);
+            }
             cursor.continue();
           }
         };
@@ -268,7 +269,7 @@ export default class Collection {
           });
         };
       });
-    });
+    }).catch(err => {throw new Error("list() " + err.message)});
   }
 
   _importChanges(changes) {
@@ -281,7 +282,7 @@ export default class Collection {
     };
     return Promise.all(changes.map(change => {
       // Retrieve local record matching this change
-      return this.get(change.id)
+      return this.get(change.id, {includeDeleted: true})
         // No matching local record found; that's a new addition
         .catch(err => {
           if (!(/not found/i).test(err.message))
@@ -299,16 +300,22 @@ export default class Collection {
           // Check for conflicts
           if (res.data._status !== "synced") {
             processed.push(change.id);
-            // If records are identical, update anyway; note that this will
-            // import the last_modified value from the server and set the local
-            // record status to "synced".
-            if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+            if (res.data._status === "deleted") {
+              // locally deleted, unsynced but scheduled for remote deletion.
+              return Promise.resolve({});
+            } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+              // If records are identical, import anyway, so we bump the
+              // local last_modified value from the server and set record
+              // status to "synced".
               return this.update(change, {synced: true}).then(res => {
                 localImportResult.updated.push(res.data);
               });
             } else {
-              localImportResult.conflicts.push(change);
-              return Promise.resolve({data: change});
+              localImportResult.conflicts.push({
+                local: res.data,
+                remote: change,
+              });
+              return Promise.resolve({});
             }
           } else if (change.deleted) {
             return this.delete(change.id, {virtual: false}).then(res => {
@@ -408,19 +415,38 @@ export default class Collection {
   pushChanges(options={headers: {}}) {
     var exported;
     // Fetch local changes
-    return this.list()
+    return this.list({}, {includeDeleted: true})
       // TODO: perform a filtering query on the _status field
-      .then(res => res.data.filter(r => r._status !== "synced"))
-      .then(localChanges => {
-        return this.api.batch(this.name, localChanges, options.headers, {
-          safe: options.mode === Collection.SERVER_WINS
-        })
+      .then(res => {
+        return res.data.reduce((acc, record) => {
+          if (record._status === "deleted" && !record.last_modified)
+            acc.toDelete.push(record);
+          else if (record._status !== "synced")
+            acc.toSync.push(record);
+          return acc;
+        }, {toDelete: [], toSync: []});
       })
+      .then(operations => {
+        return Promise.all([
+          // Locally delete never synced deleted local records
+          Promise.all(operations.toDelete.map(record => {
+            return this.delete(record.id, {virtual: false});
+          })),
+          // Send batch update requests
+          this.api.batch(this.name, operations.toSync, options.headers, {
+            safe: options.mode === Collection.SERVER_WINS
+          })
+        ]);
+      })
+      .then(res => res[1])
       // Update published local records status to "synced"
       .then(result => {
         exported = result;
         return Promise.all(exported.published.map(record => {
-          return this.update(record, {synced: true});
+          if (record.deleted)
+            return this.delete(record.id, {virtual: false});
+          else
+            return this.update(record, {synced: true});
         }));
       }).
       then(results => {

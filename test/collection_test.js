@@ -336,8 +336,15 @@ describe("Collection", () => {
             updated: [],
             deleted: [],
             conflicts: [{
-              id: createdId,
-              title: "art2mod"
+              "local": {
+                _status: "created",
+                id: createdId,
+                title: "art2",
+              },
+              remote: {
+                id: createdId,
+                title: "art2mod",
+              }
             }]});
       });
     });
