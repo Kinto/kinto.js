@@ -37,9 +37,9 @@
   <script src="../dist/cliquetis.js"></script>
   <script>
   function main() {
-    var db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
-    var tasks = db.collection("todo");
-    var headers = {Authorization: "Basic " + btoa("niko:niko")};
+    const db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
+    const tasks = db.collection("todo");
+    const headers = {Authorization: "Basic " + btoa("niko:niko")};
 
     function toggleDone(task) {
       return function(event) {
@@ -55,7 +55,7 @@
     }
 
     function logResult(status, result) {
-      var log = document.querySelector("#log");
+      const log = document.querySelector("#log");
       if (status !== "OK") {
         log.style.background = "red";
       } else {
@@ -64,22 +64,28 @@
       log.value = status + "\n\n" + JSON.stringify(result, null, 2);
     }
 
+    function taskTpl(task) {
+      return `
+        <label>
+          <input type="checkbox" ${task.done ? 'checked' : ''}>
+          ${task.done ? `<del>${task.label}</del>` : task.label}
+        </label>
+        <br>
+        <small>
+          id: ${task.id}
+          last_modified: ${task.last_modified}
+          _status=${task._status}
+        </small>
+        <input type="button" value="Delete">`;
+    }
+
     function renderList() {
-      tasks.list({}, {includeDeleted: true}).then(function(res) {
-        var ul = document.querySelector("ul");
+      tasks.list({}, {includeDeleted: true}).then(res => {
+        const ul = document.querySelector("ul");
         ul.innerHTML = "";
         res.data.forEach(function(task) {
-          var li = document.createElement("li");
-          li.innerHTML = [
-            '<label>',
-            '  <input type="checkbox" ' + (task.done ? 'checked' : '') + '> ',
-            '  ' + (task.done ? '<del>' + task.label + '</del>' : task.label),
-            '</label>',
-            '<br><small>id: ' + task.id +
-              ', last_modified: ' + task.last_modified +
-              ', _status=' + task._status + '</small>',
-            '<input type="button" value="Delete">'
-          ].join("");
+          const li = document.createElement("li");
+          li.innerHTML = taskTpl(task);
           li.querySelector("input[type=checkbox]")
             .addEventListener("click", toggleDone(task));
           li.querySelector("input[type=button]")
@@ -90,12 +96,12 @@
     }
 
     // form submit
-    document.querySelector("form").addEventListener("submit", function(e) {
+    document.querySelector("form").addEventListener("submit", e => {
       e.preventDefault();
       tasks.create({
         label: e.target.label.value,
         done: false
-      }).then(function(res) {
+      }).then(res => {
         e.target.label.value = "";
         e.target.label.focus();
         renderList();
@@ -103,21 +109,18 @@
     });
 
     // clear completed button
-    document.querySelector("#clearAllBtn").addEventListener("click", function(e) {
+    document.querySelector("#clearAllBtn").addEventListener("click", e => {
       e.preventDefault();
       tasks.clear().then(renderList);
     });
 
     // clear all button
-    document.querySelector("#clearCompletedBtn").addEventListener("click", function(e) {
+    document.querySelector("#clearCompletedBtn").addEventListener("click", e => {
       e.preventDefault();
-      tasks.list().then(function(res) {
-        return Promise.all(res.data.filter(function(task) {
-          return task.done;
-        }).map(function(task) {
-          console.log("delete", task);
-          return tasks.delete(task.id);
-        }));
+      tasks.list().then(res => {
+        return Promise.all(res.data
+          .filter(task => task.done)
+          .map(task => tasks.delete(task.id)));
       }).then(renderList);
     });
 
@@ -140,7 +143,7 @@
     }
 
     // sync button
-    document.querySelector("#syncBtn").addEventListener("click", function(e) {
+    document.querySelector("#syncBtn").addEventListener("click", e => {
       e.preventDefault();
       load();
     });
