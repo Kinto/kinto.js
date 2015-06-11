@@ -302,18 +302,40 @@ Sample result:
 }
 ```
 
-> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and `sync()` called again.
+If conflicts occured, they're listed in `conflicts` result array properties; they must be resolved locally and `sync()` called again.
+
+The `imported.conflicts` array is in this form:
+
+```js
+{
+  imported: {
+    // …
+    conflicts: [
+      {
+        local: {
+          _status: "created",
+          id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+          title: "local title",
+        },
+        remote: {
+          id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+          title: "remote title",
+        }
+      }
+    ]
+  }
+}
+```
+
+Whereas the `exported.conflicts` one lists the server HTTP response bodies.
 
 ### Synchronization strategies
 
-The `sync()` method accepts a `mode` option, which allows the following values:
+The `sync()` method accepts a `mode` option, which accepts the following values:
 
-- `Collection.strategy.SERVER_WINS`: Server data win;
-- `Collection.strategy.CLIENT_WINS`: Client data win;
-- `function(local, remote) {}`: Manual conflict handling;
-- TODO `Cliquet.FAIL`: Conflicts are reflected in a `conflicts` array as a result.
-
-The default is `Collection.strategy.SERVER_WINS` (should be `FAIL` in a near future).
+- `Collection.strategy.FAIL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
+- `Collection.strategy.SERVER_WINS`: Server data will be preserved;
+- `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
 
 **Notes**
 

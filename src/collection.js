@@ -301,7 +301,7 @@ export default class Collection {
           if (res.data._status !== "synced") {
             processed.push(change.id);
             if (res.data._status === "deleted") {
-              // locally deleted, unsynced but scheduled for remote deletion.
+              // Locally deleted, unsynced but scheduled for remote deletion.
               return Promise.resolve({});
             } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
               // If records are identical, import anyway, so we bump the
@@ -428,7 +428,7 @@ export default class Collection {
       })
       .then(operations => {
         return Promise.all([
-          // Locally delete never synced deleted local records
+          // Delete never synced records marked for deletion
           Promise.all(operations.toDelete.map(record => {
             return this.delete(record.id, {virtual: false});
           })),
