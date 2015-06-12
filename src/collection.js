@@ -428,7 +428,6 @@ export default class Collection {
     var exported;
     // Fetch local changes
     return this.list({}, {includeDeleted: true})
-      // TODO: perform a filtering query on the _status field
       .then(res => {
         return res.data.reduce((acc, record) => {
           if (record._status === "deleted" && !record.last_modified)
@@ -455,10 +454,14 @@ export default class Collection {
       .then(result => {
         exported = result;
         return Promise.all(exported.published.map(record => {
-          if (record.deleted)
-            return this.delete(record.id, {virtual: false});
-          else
+          if (record.deleted) {
+            return this.delete(record.id, {virtual: false}).then(res => {
+              // Amend result data with the deleted attribute set
+              return {data: {id: res.data.id, deleted: true}};
+            });
+          } else {
             return this.update(record, {synced: true});
+          }
         }));
       }).
       then(results => {

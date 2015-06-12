@@ -463,6 +463,28 @@ describe("Collection", () => {
           ]
         });
     });
+
+    it("should delete unsynced virtually deleted local records", () => {
+      return articles.delete(records[0].id)
+        .then(_ => articles.pushChanges())
+        .then(_ => articles.get(records[0].id, {includeDeleted: true}))
+        .should.be.eventually.rejectedWith(Error, /not found/);
+    });
+
+    it("should locally delete remotely deleted records", () => {
+      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [Object.assign({}, records[1], {deleted: true})]
+      }));
+      return articles.pushChanges()
+        .should.eventually.become({
+          published: [
+            {
+              id: records[1].id,
+              deleted: true
+            }
+          ]
+        });
+    });
   });
 
   describe("#sync", () => {
