@@ -284,8 +284,13 @@ export default class Collection {
     }).catch(this._handleError("list"));
   }
 
-  _importChanges(changes) {
-    const processed = [];
+  /**
+   * Import changes into the local database.
+   *
+   * @param  {Array} changes
+   * @return {Promise}
+   */
+  import(changes) {
     const localImportResult = {
       created:   [],
       updated:   [],
@@ -295,23 +300,10 @@ export default class Collection {
     return Promise.all(changes.map(change => {
       // Retrieve local record matching this change
       return this.get(change.id, {includeDeleted: true})
-        // No matching local record found; that's a new addition
-        .catch(err => {
-          if (!(/not found/i).test(err.message))
-            throw err;
-          return this.create(change, {synced: true}).then(res => {
-            // Avoid creating deletions :)
-            if (change.deleted) return res;
-            processed.push(res.data.id);
-            localImportResult.created.push(res.data);
-            return res;
-          });
-        })
         // Matching local record found
         .then(res => {
           // Check for conflicts
           if (res.data._status !== "synced") {
-            processed.push(change.id);
             if (res.data._status === "deleted") {
               // Locally deleted, unsynced but scheduled for remote deletion.
               return Promise.resolve({});
@@ -331,15 +323,24 @@ export default class Collection {
             }
           } else if (change.deleted) {
             return this.delete(change.id, {virtual: false}).then(res => {
-              processed.push(change.id);
               localImportResult.deleted.push(res.data);
             });
-          } else if (processed.indexOf(change.id) === -1) {
+          } else {
             return this.update(change, {synced: true}).then(res => {
-              processed.push(change.id);
               localImportResult.updated.push(res.data);
             });
           }
+        })
+        .catch(err => {
+          if (!(/not found/i).test(err.message))
+            throw err;
+          // Avoid recreating records deleted remotely :)
+          if (change.deleted)
+            return {};
+          return this.create(change, {synced: true}).then(res => {
+            localImportResult.created.push(res.data);
+            return res;
+          });
         });
     })).then(_ => {
       if (localImportResult.conflicts.length > 0) {
@@ -407,7 +408,7 @@ export default class Collection {
         // Temporarily store server's lastModified value for further use
         lastModified = res.lastModified;
         // Import changes
-        return this._importChanges(res.changes);
+        return this.import(res.changes);
       })
       // On successful import completion, update lastModified value
       .then(result => {

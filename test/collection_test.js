@@ -116,7 +116,7 @@ describe("Collection", () => {
       }).should.become(article.title);
     });
 
-    it("should prefix error encountered", function() {
+    it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.create().should.be.rejectedWith(Error, /^create/);
     });
@@ -158,7 +158,7 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Record is not an object/);
     });
 
-    it("should prefix error encountered", function() {
+    it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.update().should.be.rejectedWith(Error, /^update/);
     });
@@ -197,7 +197,7 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /not found/);
     });
 
-    it("should prefix error encountered", function() {
+    it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.get().should.be.rejectedWith(Error, /^get/);
     });
@@ -233,7 +233,7 @@ describe("Collection", () => {
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
 
-      it("should prefix error encountered", function() {
+      it("should prefix error encountered", () => {
         sandbox.stub(articles, "open").returns(Promise.reject("error"));
         return articles.delete().should.be.rejectedWith(Error, /^delete/);
       });
@@ -293,7 +293,7 @@ describe("Collection", () => {
         .should.eventually.have.length.of(3);
     });
 
-    it("should prefix error encountered", function() {
+    it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.list().should.be.rejectedWith(Error, /^list/);
     });
@@ -309,11 +309,13 @@ describe("Collection", () => {
         {id: 1, title: "art1"},
         {id: 2, title: "art2"},
         {id: 4, title: "art4"},
+        {id: 5, title: "art5"},
       ];
       const serverChanges = [
-        {id: 2, title: "art2"},
-        {id: 3, title: "art3"},    // to be created
-        {id: 4, deleted: true},    // to be deleted
+        {id: 2, title: "art2"}, // existing, should simply be marked as synced
+        {id: 3, title: "art3"}, // to be created
+        {id: 4, deleted: true}, // to be deleted
+        {id: 6, deleted: true}, // remotely deleted, missing locally
       ];
 
       beforeEach(() => {
@@ -327,14 +329,34 @@ describe("Collection", () => {
         }));
       });
 
-      it("should resolve with imported changes", () => {
+      it("should resolve with imported creations", () => {
         return articles.pullChanges()
-          .should.eventually.become({
-            created:   [{id: 3, title: "art3", _status: "synced"}],
-            updated:   [{id: 2, title: "art2", _status: "synced"}],
-            deleted:   [{"id": 4}],
-            conflicts: [],
-          });
+          .then(res => res.created)
+          .should.eventually.become([
+            {id: 3, title: "art3", _status: "synced"}
+          ]);
+      });
+
+      it("should resolve with imported updates", () => {
+        return articles.pullChanges()
+          .then(res => res.updated)
+          .should.eventually.become([
+            {id: 2, title: "art2", _status: "synced"}
+          ]);
+      });
+
+      it("should resolve with imported deletions", () => {
+        return articles.pullChanges()
+          .then(res => res.deleted)
+          .should.eventually.become([
+            {id: 4}
+          ]);
+      });
+
+      it("should resolve with no conflicts detected", () => {
+        return articles.pullChanges()
+          .then(res => res.conflicts)
+          .should.eventually.become([]);
       });
 
       it("should actually import changes into the collection", () => {
@@ -345,6 +367,7 @@ describe("Collection", () => {
             {id: 1, title: "art1", _status: "synced"},
             {id: 2, title: "art2", _status: "synced"},
             {id: 3, title: "art3", _status: "synced"},
+            {id: 5, title: "art5", _status: "synced"},
           ]);
       });
     });
