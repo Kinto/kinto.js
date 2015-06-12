@@ -291,43 +291,36 @@ export default class Collection {
    * @return {Promise}
    */
   import(changes) {
-    const localImportResult = {
-      created:   [],
-      updated:   [],
-      deleted:   [],
-      conflicts: [],
-    };
     return Promise.all(changes.map(change => {
       // Retrieve local record matching this change
       return this.get(change.id, {includeDeleted: true})
         // Matching local record found
         .then(res => {
-          // Check for conflicts
+          // Unsynced local data
           if (res.data._status !== "synced") {
+            // Locally deleted, unsynced: scheduled for remote deletion.
             if (res.data._status === "deleted") {
-              // Locally deleted, unsynced but scheduled for remote deletion.
-              return Promise.resolve({});
+              return {type: "skipped", data: res.data};
             } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
               // If records are identical, import anyway, so we bump the
               // local last_modified value from the server and set record
               // status to "synced".
               return this.update(change, {synced: true}).then(res => {
-                localImportResult.updated.push(res.data);
+                return {type: "updated", data: res.data};
               });
             } else {
-              localImportResult.conflicts.push({
-                local: res.data,
-                remote: change,
-              });
-              return Promise.resolve({});
+              return {
+                type: "conflicts",
+                data: { local: res.data, remote: change }
+              };
             }
           } else if (change.deleted) {
             return this.delete(change.id, {virtual: false}).then(res => {
-              localImportResult.deleted.push(res.data);
+              return {type: "deleted", data: res.data};
             });
           } else {
             return this.update(change, {synced: true}).then(res => {
-              localImportResult.updated.push(res.data);
+              return {type: "updated", data: res.data};
             });
           }
         })
@@ -336,17 +329,26 @@ export default class Collection {
             throw err;
           // Avoid recreating records deleted remotely :)
           if (change.deleted)
-            return {};
+            return {type: "skipped", data: change};
           return this.create(change, {synced: true}).then(res => {
-            localImportResult.created.push(res.data);
-            return res;
+            return {type: "created", data: res.data};
           });
         });
-    })).then(_ => {
-      if (localImportResult.conflicts.length > 0) {
-        return Promise.reject(localImportResult);
+    })).then(imports => {
+      const results = imports.reduce((acc, imported) => {
+        acc[imported.type].push(imported.data);
+        return acc;
+      }, {
+        created:   [],
+        updated:   [],
+        deleted:   [],
+        conflicts: [],
+        skipped:   [],
+      });
+      if (results.conflicts.length > 0) {
+        return Promise.reject(results);
       } else {
-        return Promise.resolve(localImportResult);
+        return Promise.resolve(results);
       }
     });
   }

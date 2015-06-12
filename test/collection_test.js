@@ -370,6 +370,14 @@ describe("Collection", () => {
             {id: 5, title: "art5", _status: "synced"},
           ]);
       });
+
+      it("should skip already locally deleted data", function() {
+        return articles.create({title: "foo"})
+          .then(res => articles.delete(res.data.id))
+          .then(res => articles.import([{id: res.data.id, deleted: true}]))
+          .then(res => res.skipped[0].title)
+          .should.eventually.become("foo");
+      });
     });
 
     describe("When a conflict occured", () => {
@@ -398,8 +406,9 @@ describe("Collection", () => {
             created: [],
             updated: [],
             deleted: [],
+            skipped: [],
             conflicts: [{
-              "local": {
+              local: {
                 _status: "created",
                 id: createdId,
                 title: "art2",
@@ -438,6 +447,7 @@ describe("Collection", () => {
               title: "art2",
               _status: "synced",
             }],
+            skipped: [],
             deleted: [],
             conflicts: []});
       });
