@@ -285,55 +285,64 @@ export default class Collection {
   }
 
   /**
+   * Import a single change into the local database.
+   *
+   * @param  {Object} change
+   * @return {Promise}
+   */
+  importChange(change) {
+    return this.get(change.id, {includeDeleted: true})
+      // Matching local record found
+      .then(res => {
+        // Unsynced local data
+        if (res.data._status !== "synced") {
+          // Locally deleted, unsynced: scheduled for remote deletion.
+          if (res.data._status === "deleted") {
+            return {type: "skipped", data: res.data};
+          } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+            // If records are identical, import anyway, so we bump the
+            // local last_modified value from the server and set record
+            // status to "synced".
+            return this.update(change, {synced: true}).then(res => {
+              return {type: "updated", data: res.data};
+            });
+          } else {
+            return {
+              type: "conflicts",
+              data: { local: res.data, remote: change }
+            };
+          }
+        } else if (change.deleted) {
+          return this.delete(change.id, {virtual: false}).then(res => {
+            return {type: "deleted", data: res.data};
+          });
+        } else {
+          return this.update(change, {synced: true}).then(res => {
+            return {type: "updated", data: res.data};
+          });
+        }
+      })
+      .catch(err => {
+        if (!(/not found/i).test(err.message))
+          throw err;
+        // Avoid recreating records deleted remotely :)
+        if (change.deleted)
+          return {type: "skipped", data: change};
+        return this.create(change, {synced: true}).then(res => {
+          return {type: "created", data: res.data};
+        });
+      });
+  }
+
+  /**
    * Import changes into the local database.
    *
    * @param  {Array} changes
    * @return {Promise}
    */
-  import(changes) {
+  importChanges(changes) {
     return Promise.all(changes.map(change => {
-      // Retrieve local record matching this change
-      return this.get(change.id, {includeDeleted: true})
-        // Matching local record found
-        .then(res => {
-          // Unsynced local data
-          if (res.data._status !== "synced") {
-            // Locally deleted, unsynced: scheduled for remote deletion.
-            if (res.data._status === "deleted") {
-              return {type: "skipped", data: res.data};
-            } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
-              // If records are identical, import anyway, so we bump the
-              // local last_modified value from the server and set record
-              // status to "synced".
-              return this.update(change, {synced: true}).then(res => {
-                return {type: "updated", data: res.data};
-              });
-            } else {
-              return {
-                type: "conflicts",
-                data: { local: res.data, remote: change }
-              };
-            }
-          } else if (change.deleted) {
-            return this.delete(change.id, {virtual: false}).then(res => {
-              return {type: "deleted", data: res.data};
-            });
-          } else {
-            return this.update(change, {synced: true}).then(res => {
-              return {type: "updated", data: res.data};
-            });
-          }
-        })
-        .catch(err => {
-          if (!(/not found/i).test(err.message))
-            throw err;
-          // Avoid recreating records deleted remotely :)
-          if (change.deleted)
-            return {type: "skipped", data: change};
-          return this.create(change, {synced: true}).then(res => {
-            return {type: "created", data: res.data};
-          });
-        });
+      return this.importChange(change);
     })).then(imports => {
       const results = imports.reduce((acc, imported) => {
         acc[imported.type].push(imported.data);
@@ -410,7 +419,7 @@ export default class Collection {
         // Temporarily store server's lastModified value for further use
         lastModified = res.lastModified;
         // Import changes
-        return this.import(res.changes);
+        return this.importChanges(res.changes);
       })
       // On successful import completion, update lastModified value
       .then(result => {
@@ -419,6 +428,19 @@ export default class Collection {
       })
       // Resolve with import report
       .then(_ => imported);
+  }
+
+  gatherLocalChanges() {
+    return this.list({}, {includeDeleted: true})
+      .then(res => {
+        return res.data.reduce((acc, record) => {
+          if (record._status === "deleted" && !record.last_modified)
+            acc.toDelete.push(record);
+          else if (record._status !== "synced")
+            acc.toSync.push(record);
+          return acc;
+        }, {toDelete: [], toSync: []});
+      });
   }
 
   /**
@@ -430,24 +452,15 @@ export default class Collection {
   pushChanges(options={headers: {}}) {
     var exported;
     // Fetch local changes
-    return this.list({}, {includeDeleted: true})
-      .then(res => {
-        return res.data.reduce((acc, record) => {
-          if (record._status === "deleted" && !record.last_modified)
-            acc.toDelete.push(record);
-          else if (record._status !== "synced")
-            acc.toSync.push(record);
-          return acc;
-        }, {toDelete: [], toSync: []});
-      })
-      .then(operations => {
+    return this.gatherLocalChanges()
+      .then(localChanges => {
         return Promise.all([
           // Delete never synced records marked for deletion
-          Promise.all(operations.toDelete.map(record => {
+          Promise.all(localChanges.toDelete.map(record => {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.name, operations.toSync, options.headers, {
+          this.api.batch(this.name, localChanges.toSync, options.headers, {
             safe: options.mode === Collection.SERVER_WINS
           })
         ]);

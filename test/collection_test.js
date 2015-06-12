@@ -374,8 +374,8 @@ describe("Collection", () => {
       it("should skip already locally deleted data", function() {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
-          .then(res => articles.import([{id: res.data.id, deleted: true}]))
-          .then(res => res.skipped[0].title)
+          .then(res => articles.importChange({id: res.data.id, deleted: true}))
+          .then(res => res.data.title)
           .should.eventually.become("foo");
       });
     });
