@@ -468,7 +468,9 @@ describe("Collection", () => {
 
     it("should publish local changes to the server", () => {
       var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: []
+        published: [],
+        errors:    [],
+        conflicts: [],
       }));
       return articles.pushChanges()
         .then(_ => {

@@ -28,7 +28,7 @@ export default class Collection {
     return {
       CLIENT_WINS: "client_wins",
       SERVER_WINS: "server_wins",
-      FAIL:        "fail",
+      MANUAL:      "manual",
     }
   }
 
@@ -322,10 +322,12 @@ export default class Collection {
           });
         }
       })
+      // Unatched local record
       .catch(err => {
         if (!(/not found/i).test(err.message))
           throw err;
-        // Avoid recreating records deleted remotely :)
+        // Not found locally but remote change is marked as deleted; skip to
+        // avoid recreation.
         if (change.deleted)
           return {type: "skipped", data: change};
         return this.create(change, {synced: true}).then(res => {
@@ -430,6 +432,14 @@ export default class Collection {
       .then(_ => imported);
   }
 
+  /**
+   * Returns an object containing two lists:
+   *
+   * - `toDelete`: unsynced deleted records we can safely delete;
+   * - `toSync`: local updates to send to the server.
+   *
+   * @return {Object}
+   */
   gatherLocalChanges() {
     return this.list({}, {includeDeleted: true})
       .then(res => {
@@ -450,39 +460,38 @@ export default class Collection {
    * @return {Promise}
    */
   pushChanges(options={headers: {}}) {
-    var exported;
     // Fetch local changes
     return this.gatherLocalChanges()
-      .then(localChanges => {
+      .then(({toDelete, toSync}) => {
         return Promise.all([
           // Delete never synced records marked for deletion
-          Promise.all(localChanges.toDelete.map(record => {
+          Promise.all(toDelete.map(record => {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.name, localChanges.toSync, options.headers, {
+          this.api.batch(this.name, toSync, options.headers, {
             safe: options.mode === Collection.SERVER_WINS
           })
         ]);
       })
-      .then(res => res[1])
-      // Update published local records status to "synced"
-      .then(result => {
-        exported = result;
-        return Promise.all(exported.published.map(record => {
+      // Update published local records
+      .then(([deleted, synced]) => {
+        return Promise.all(synced.published.map(record => {
           if (record.deleted) {
+            // Remote deletion was successful, refect it locally
             return this.delete(record.id, {virtual: false}).then(res => {
               // Amend result data with the deleted attribute set
               return {data: {id: res.data.id, deleted: true}};
             });
           } else {
+            // Remote update was successful, refect it locally
             return this.update(record, {synced: true});
           }
-        }));
-      }).
-      then(results => {
-        exported.published = results.map(res => res.data);
-        return exported;
+        })).then(published => {
+          return Object.assign(synced, {
+            published: published.map(res => res.data)
+          });
+        });
       });
   }
 
@@ -497,7 +506,7 @@ export default class Collection {
    * @param  {Object} options options
    * @return {Promise}
    */
-  sync(options={mode: Collection.strategy.FAIL, headers: {}}) {
+  sync(options={mode: Collection.strategy.MANUAL, headers: {}}) {
     // TODO rename options.mode to options.strategy
     // TODO ensure we always return the same result data struct (imported, exported)
     var imported, exported;

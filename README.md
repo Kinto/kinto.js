@@ -29,7 +29,7 @@ const db = new Cliquetis(options);
 
 - `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
-- `mode`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.FAIL` (default)
+- `mode`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.MANUAL` (default)
 
 ### Collection
 
@@ -266,7 +266,7 @@ Synopsis:
 4. Reject on any publication conflict detected;
   * If `mode` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
   * If `mode` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
-  * If `mode` is set to `Collection.strategy.NOTIFY`, conflicts will be reported in a Promise rejection.
+  * If `mode` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a Promise rejection.
 
 **Note:** On any rejection, `sync()` should be called again once conflicts are properly handled.
 
@@ -333,7 +333,7 @@ Whereas the `exported.conflicts` one lists the server HTTP response bodies.
 
 The `sync()` method accepts a `mode` option, which accepts the following values:
 
-- `Collection.strategy.FAIL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
+- `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
 - `Collection.strategy.SERVER_WINS`: Server data will be preserved;
 - `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
 
