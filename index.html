@@ -56,11 +56,7 @@
 
     function logResult(status, result) {
       const log = document.querySelector("#log");
-      if (status !== "OK") {
-        log.style.background = "red";
-      } else {
-        log.style.background = "green";
-      }
+      log.style.background = status !== "OK" ? "red": "green";
       log.value = status + "\n\n" + JSON.stringify(result, null, 2);
     }
 
@@ -117,11 +113,14 @@
     // clear all button
     document.querySelector("#clearCompletedBtn").addEventListener("click", e => {
       e.preventDefault();
-      tasks.list().then(res => {
-        return Promise.all(res.data
-          .filter(task => task.done)
-          .map(task => tasks.delete(task.id)));
-      }).then(renderList);
+      tasks.list()
+        .then(res => {
+          return Promise.all(res.data
+            .filter(task => task.done)
+            .map(task => tasks.delete(task.id)));
+        })
+        .catch(err => console.error.bind(console))
+        .then(renderList);
     });
 
     function load() {
@@ -131,9 +130,7 @@
         })
         .catch(function(result) {
           logResult("KO", result);
-          console.log("catch", result);
           return Promise.all(result.conflicts.map(conflict => {
-            console.log("importing server version", conflict);
             return tasks.update(conflict);
           }));
         })
