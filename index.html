@@ -60,6 +60,12 @@
       log.value = status + "\n\n" + JSON.stringify(result, null, 2);
     }
 
+    function date(timestamp) {
+      var d = new Date();
+      d.setTime(timestamp);
+      return d.toLocaleString();
+    }
+
     function taskTpl(task) {
       return `
         <label>
@@ -123,20 +129,21 @@
         .then(renderList);
     });
 
+    function renderLastModified(lastModified) {
+      document.querySelector("#lastModified").textContent = `${lastModified} (${date(lastModified)})`;
+    }
+
     function load() {
-      return tasks.sync({headers: headers})
-        .then(function(result) {
-          logResult("OK", result);
+      return tasks.getLastModified().then(lastModified => {
+        renderLastModified(lastModified);
+        return tasks.sync({headers: headers})
+      })
+        .catch(console.error.bind(console))
+        .then(result => {
+          renderLastModified(result.imported.lastModified);
+          return logResult(result.ok ? "OK" : "KO", result);
         })
-        .catch(function(result) {
-          logResult("KO", result);
-          return Promise.all(result.conflicts.map(conflict => {
-            return tasks.update(conflict);
-          }));
-        })
-        .then(function() {
-          renderList();
-        });
+        .then(renderList);
     }
 
     // sync button
@@ -145,10 +152,7 @@
       load();
     });
 
-    tasks.getLastModified().then(lastModified => {
-      document.querySelector("#lastModified").textContent = lastModified;
-      load();
-    });
+    load();
   }
 
   window.addEventListener("DOMContentLoaded", main);
