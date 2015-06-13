@@ -267,17 +267,24 @@ describe("Api", () => {
         const published = [{ id: 1, title: "art1" }, { id: 2, title: "art2" }];
 
         it("should reject on HTTP 400", () => {
-          sandbox.stub(root, "fetch").returns(fakeServerResponse(400, {}));
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(400, {
+            error: true,
+            errno: 117,
+            message: "http 400"
+          }));
 
           return api.batch("articles", published)
-            .should.eventually.be.rejectedWith(Error, /Invalid BATCH request/);
+            .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 400/);
         });
 
         it("should reject on HTTP error status code", () => {
-          sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {}));
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {
+            error: true,
+            message: "http 500"
+          }));
 
           return api.batch("articles", published)
-            .should.eventually.be.rejectedWith(Error, "BATCH request failed, HTTP 500");
+            .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 500/);
         });
 
         it("should expose succesfully published results", () => {
@@ -300,7 +307,7 @@ describe("Api", () => {
             });
         });
 
-        it("should reject on encountered individual request errors", () => {
+        it("should resolve with encountered individual request errors", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
@@ -310,9 +317,14 @@ describe("Api", () => {
           }));
 
           return api.batch("articles", published)
-            .should.eventually.be.rejectedWith({
+            .should.eventually.become({
               conflicts: [],
-              errors:    [{ invalid: true}],
+              errors:    [{
+                error: {
+                  invalid: true
+                },
+                path: "/v0/articles/1"
+              }],
               published: []
             });
         });
@@ -327,7 +339,7 @@ describe("Api", () => {
           }));
 
           return api.batch("articles", published)
-            .should.eventually.be.rejectedWith({
+            .should.eventually.become({
               conflicts: [{ invalid: true}],
               errors:    [],
               published: []

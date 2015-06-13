@@ -325,7 +325,7 @@ export default class Collection {
       // Unatched local record
       .catch(err => {
         if (!(/not found/i).test(err.message))
-          throw err;
+          return {type: "errors", data: err};
         // Not found locally but remote change is marked as deleted; skip to
         // avoid recreation.
         if (change.deleted)
@@ -346,21 +346,17 @@ export default class Collection {
     return Promise.all(changes.map(change => {
       return this.importChange(change);
     })).then(imports => {
-      const results = imports.reduce((acc, imported) => {
+      return imports.reduce((acc, imported) => {
         acc[imported.type].push(imported.data);
         return acc;
       }, {
+        errors:    [],
         created:   [],
         updated:   [],
         deleted:   [],
         conflicts: [],
         skipped:   [],
       });
-      if (results.conflicts.length > 0) {
-        return Promise.reject(results);
-      } else {
-        return Promise.resolve(results);
-      }
     });
   }
 
@@ -372,15 +368,16 @@ export default class Collection {
    * @return {Promise}
    */
   saveLastModified(lastModified) {
+    var value = parseInt(lastModified, 10);
     return this.open({checkLastModified: false}).then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
-        const request = store.put({name: "lastModified", value: lastModified});
+        const request = store.put({name: "lastModified", value: value});
         transaction.onerror = event => reject(event.target.error);
         transaction.oncomplete = event => {
           // update locally cached property
-          this._lastModified = lastModified;
-          resolve(lastModified);
+          this._lastModified = value;
+          resolve(value);
         };
       });
     });
@@ -429,7 +426,9 @@ export default class Collection {
         return this.saveLastModified(lastModified);
       })
       // Resolve with import report
-      .then(_ => imported);
+      .then(lastModified => Object.assign(imported, {
+        lastModified: lastModified
+      }));
   }
 
   /**
@@ -520,7 +519,10 @@ export default class Collection {
         return this.pullChanges(options);
       })
       .then(_ => {
-        return {imported, exported};
+        return Object.assign({imported, exported}, {
+          ok: imported.errors.length + imported.conflicts.length +
+              exported.errors.length + exported.conflicts.length === 0
+        });
       });
   }
 }

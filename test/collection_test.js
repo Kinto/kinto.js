@@ -397,12 +397,11 @@ describe("Collection", () => {
           });
       });
 
-      it("should reject with conflicting changes", () => {
+      it("should resolve listing conflicting changes", () => {
         return articles.pullChanges()
-          .catch(res => {
-            return res;
-          })
           .should.eventually.become({
+            lastModified: 42,
+            errors:  [],
             created: [],
             updated: [],
             deleted: [],
@@ -441,6 +440,8 @@ describe("Collection", () => {
       it("should resolve with solved changes", () => {
         return articles.pullChanges()
           .should.eventually.become({
+            lastModified: 42,
+            errors:  [],
             created: [],
             updated: [{
               id: createdId,

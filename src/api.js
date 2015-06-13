@@ -89,7 +89,6 @@ export default class Api {
       published: [],
       conflicts: [],
     };
-    var reject = false;
     if (!records.length)
       return Promise.resolve(results);
     return fetch(this.endpoints().batch(), {
@@ -102,36 +101,33 @@ export default class Api {
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
-          // Note: seems server expect lastModified passed as a string
           const headers = options.safe && record.last_modified ?
                           {"If-Unmodified-Since": String(record.last_modified)} : {};
           return {method, headers, path, body};
         })
       })
-    }).then(res => {
-      if (res.status === 400)
-        throw new Error("Invalid BATCH request"); // TODO: precise error reporting
-      if (res.status !== 200)
-        throw new Error("BATCH request failed, HTTP " + res.status); // TODO: precise error reporting
-      return res.json();
-    }).then(res => {
-      res.responses.forEach(response => {
-        if (response.status && response.status >= 200 && response.status < 400) {
-          results.published.push(response.body);
-        } else if (response.status === 412) {
-          results.conflicts.push(response.body);
-          reject = true;
-        } else {
-          results.errors.push({
-            path: response.path, // this is the only way to have the id…
-            error: response.body
-          });
-          reject = true;
-        }
+    })
+      .then(res => res.json())
+      .then(res => {
+        if (res.error)
+          throw Object.keys(res).reduce((err, key) => {
+            if (key !== "message")
+              err[key] = res[key];
+            return err;
+          }, new Error("BATCH request failed: " + res.message));
+        res.responses.forEach(response => {
+          if (response.status && response.status >= 200 && response.status < 400) {
+            results.published.push(response.body);
+          } else if (response.status === 412) {
+            results.conflicts.push(response.body);
+          } else {
+            results.errors.push({
+              path: response.path, // this is the only way to have the id…
+              error: response.body
+            });
+          }
+        });
+        return results;
       });
-      if (reject)
-        throw results;
-      return results;
-    });
   }
 }
