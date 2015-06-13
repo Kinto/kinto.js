@@ -39,6 +39,11 @@ describe("Api", () => {
   }
 
   describe("#constructor", () => {
+    it("should check that `remote` is a string", function() {
+      expect(() => new Api(42))
+        .to.Throw(Error, /Invalid remote URL/);
+    });
+
     it("should validate `remote` arg value", () => {
       expect(() => new Api("http://nope"))
         .to.Throw(Error, /The remote URL must contain the version/);
@@ -159,7 +164,7 @@ describe("Api", () => {
 
   describe("#batch", () => {
     const operations = [
-      {id: 1, title: "foo"},
+      {id: 1, title: "foo", last_modified: 42},
       {id: 2, title: "bar"},
       {id: 3, title: "baz", _status: "deleted"},
     ];
@@ -202,7 +207,7 @@ describe("Api", () => {
               "id": 1,
               "title": "foo",
             },
-            headers: {},
+            headers: {"If-Unmodified-Since": "42"},
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
@@ -214,6 +219,20 @@ describe("Api", () => {
             method: "DELETE",
             path: "/v0/collections/articles/records/3",
           });
+        });
+      });
+
+      describe("safe mode", () => {
+        var requests;
+
+        beforeEach(() => {
+          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+          api.batch("articles", operations);
+          requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
+        });
+
+        it("should send If-Unmodified-Since headers", () => {
+          expect(requests[0].headers).eql({"If-Unmodified-Since": "42"});
         });
       });
     });
