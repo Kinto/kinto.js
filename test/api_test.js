@@ -39,7 +39,7 @@ describe("Api", () => {
   }
 
   describe("#constructor", () => {
-    it("should check that `remote` is a string", function() {
+    it("should check that `remote` is a string", () => {
       expect(() => new Api(42))
         .to.Throw(Error, /Invalid remote URL/);
     });
@@ -124,6 +124,17 @@ describe("Api", () => {
       sinon.assert.calledWithMatch(fetch, /\?_since=42/);
     });
 
+    it("should attach an If-Modified-Since header if lastModified is provided", () =>{
+      sandbox.stub(root, "fetch").returns(Promise.resolve());
+
+      api.fetchChangesSince("articles", 42);
+
+      sinon.assert.calledOnce(fetch);
+      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
+        headers: {"If-Modified-Since": "42"}
+      });
+    });
+
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, {items: []}, {"Last-Modified": 41}));
@@ -159,6 +170,20 @@ describe("Api", () => {
           "Content-Type": "application/json",
         }
       });
+    });
+
+    it("should resolve with no changes if HTTP 304 is received", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(304, {}));
+
+      return api.fetchChangesSince("articles", 42)
+        .should.eventually.become({lastModified: 42, changes: []});
+    });
+
+    it("should reject on any HTTP status >= 400", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
+
+      return api.fetchChangesSince("articles", 42)
+        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401/);
     });
   });
 

@@ -37,16 +37,34 @@ export default class Api {
     };
   }
 
+  /**
+   * Fetches latest changes from the remote server.
+   *
+   * @param  {String} collName     The collection name.
+   * @param  {Number} lastModified Latest sync timestamp.
+   * @param  {Object} options      Options.
+   * @return {Promise}
+   */
   fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
     var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
     return fetch(this.endpoints().collection(collName) + queryString, {
-      // TODO? Pass If-Modified_since, then on response, if 304 nothing has changed
-      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers)
+      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, {
+        "If-Modified-Since": lastModified ? String(lastModified) : "0"
+      }, options.headers)
     })
       .then(res => {
-        newLastModified = res.headers.get("Last-Modified");
-        return res.json();
+        // If HTTP 304, nothing has changed
+        if (res.status === 304) {
+          newLastModified = lastModified;
+          return {items: []};
+        } else if (res.status >= 400) {
+          // TODO: attach better error reporting
+          throw new Error("Fetching changes failed: HTTP " + res.status);
+        } else {
+          newLastModified = res.headers.get("Last-Modified");
+          return res.json();
+        }
       })
       .then(json => {
         return {
@@ -56,6 +74,15 @@ export default class Api {
       });
   }
 
+  /**
+   * Sends batch update requests to the remote server.
+   *
+   * @param  {String} collName The collection name.
+   * @param  {Array}  records  The list of record updates to send.
+   * @param  {Object} headers  Headers to attach to each update request.
+   * @param  {Object} options  Options.
+   * @return {Promise}
+   */
   batch(collName, records, headers={}, options={safe: true}) {
     const results = {
       errors:    [],
@@ -75,6 +102,7 @@ export default class Api {
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
+          // Note: seems server expect lastModified passed as a string
           const headers = options.safe && record.last_modified ?
                           {"If-Unmodified-Since": String(record.last_modified)} : {};
           return {method, headers, path, body};
