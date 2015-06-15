@@ -49,7 +49,7 @@ The collection object has the following (read-only) attribute:
 
 * **lastModified**: last synchronization timestamp, `null` if never sync'ed.
 
-> Synchronization timestamps are persisted in the device local storage. **Status:** Not implemented.
+> Synchronization timestamps are persisted in the device local storage.
 
 All operations are asynchronous and rely on [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 

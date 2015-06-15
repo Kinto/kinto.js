@@ -27,7 +27,9 @@ export class SyncResultObject {
     Object.assign(this, SyncResultObject.defaults);
   }
 
-  add(type, entries=[]) {
+  add(type, entries) {
+    if (!Array.isArray(this[type]))
+      return;
     this[type] = this[type].concat(entries);
     this.ok = this.errors.length + this.conflicts.length === 0
   }

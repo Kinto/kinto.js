@@ -99,6 +99,14 @@ describe("Collection", () => {
 
         expect(result.ok).eql(false);
       });
+
+      it("should alter non-array properties", function() {
+        const result = new SyncResultObject();
+
+        result.add("ok", false);
+
+        expect(result.ok).eql(true);
+      });
     });
   });
 
@@ -632,6 +640,14 @@ describe("Collection", () => {
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(42);
       });
+    });
+
+    it("should resolve early on pull failure", () => {
+      const result = new SyncResultObject();
+      result.add("conflicts", [1]);
+      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
+      return articles.sync()
+        .should.eventually.become(result);
     });
   });
 });

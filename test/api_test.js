@@ -308,7 +308,7 @@ describe("Api", () => {
             });
         });
 
-        it("should resolve with encountered individual request errors", () => {
+        it("should resolve with skipped missing records", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
@@ -322,6 +322,31 @@ describe("Api", () => {
               conflicts: [],
               skipped:   [{ 404: true }],
               errors:    [],
+              published: []
+            });
+        });
+
+        it("should resolve with encountered HTTP errors", () => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: [
+              { status: 500,
+                path: "/v0/articles/1",
+                body: { 500: true }},
+            ]
+          }));
+
+          return api.batch("articles", published)
+            .should.eventually.become({
+              conflicts: [],
+              skipped:   [],
+              errors:    [
+                {
+                  path: "/v0/articles/1",
+                  error: {
+                    500: true
+                  }
+                }
+              ],
               published: []
             });
         });
