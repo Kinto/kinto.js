@@ -88,6 +88,7 @@ export default class Api {
       errors:    [],
       published: [],
       conflicts: [],
+      skipped:   []
     };
     if (!records.length)
       return Promise.resolve(results);
@@ -118,8 +119,13 @@ export default class Api {
         res.responses.forEach(response => {
           if (response.status && response.status >= 200 && response.status < 400) {
             results.published.push(response.body);
+          } else if (response.status === 404) {
+            results.skipped.push(response.body);
           } else if (response.status === 412) {
-            results.conflicts.push(response.body);
+            results.conflicts.push({
+              type: "outgoing",
+              data: response.body
+            });
           } else {
             results.errors.push({
               path: response.path, // this is the only way to have the id…

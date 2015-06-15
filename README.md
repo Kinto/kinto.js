@@ -260,13 +260,13 @@ Synchronizing local data with remote ones is performed by calling the `.sync()` 
 Synopsis:
 
 1. Fetch remote changes since last synchronization;
-2. Reject on any import conflict detected;
+2. Fail on any conflict detected;
   * The developer has to handle them manually, and call `sync ()` again when done;
 3. If everything went fine, publish local changes;
-4. Reject on any publication conflict detected;
+4. Fail on any publication conflict detected;
   * If `mode` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
   * If `mode` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
-  * If `mode` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a Promise rejection.
+  * If `mode` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a dedicated array.
 
 **Note:** On any rejection, `sync()` should be called again once conflicts are properly handled.
 
@@ -288,46 +288,42 @@ Sample result:
 
 ```js
 {
-  imported: {
-    created:   [], // Created in local database
-    updated:   [], // Updated
-    deleted:   [], // Deleted
-    conflicts: []  // Changed both sides
-  },
-  exported: {
-    errors:    [], // HTTP errors encountered
-    published: [], // Successful publications
-    conflicts: []  // Conflicts
-  },
+  ok: true,
+  lastModified: 1434270764485,
+  errors:    [], // Errors encountered, if any
+  created:   [], // Created locally
+  updated:   [], // Updated locally
+  deleted:   [], // Deleted locally
+  conflicts: [], // Import conflicts
+  skipped:   [], // Skipped imports
+  published: [], // Successfully published
+  conflicts: []  // Export conflicts
 }
 ```
 
-If conflicts occured, they're listed in `conflicts` result array properties; they must be resolved locally and `sync()` called again.
+If conflicts occured, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
 
-The `imported.conflicts` array is in this form:
+The `conflicts` array is in this form:
 
 ```js
 {
-  imported: {
-    // …
-    conflicts: [
-      {
-        local: {
-          _status: "created",
-          id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
-          title: "local title",
-        },
-        remote: {
-          id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
-          title: "remote title",
-        }
+  // …
+  conflicts: [
+    {
+      type: "incoming", // can also be "outgoing"
+      local: {
+        _status: "created",
+        id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+        title: "local title",
+      },
+      remote: {
+        id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+        title: "remote title",
       }
-    ]
-  }
+    }
+  ]
 }
 ```
-
-Whereas the `exported.conflicts` one lists the server HTTP response bodies.
 
 ### Synchronization strategies
 

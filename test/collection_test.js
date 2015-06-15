@@ -5,7 +5,7 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
-import Collection from "../src/collection";
+import Collection, { SyncResultObject } from "../src/collection";
 import Api from "../src/api";
 
 chai.use(chaiAsPromised);
@@ -34,13 +34,71 @@ describe("Collection", () => {
   });
 
   describe("#open", () => {
-    it("should fetch and update lastModified value", () => {
-      sandbox.stub(Collection.prototype, "getLastModified")
-        .returns(Promise.resolve(42))
+    it("should resolve with current instance", () => {
       var articles = testCollection();
 
       return articles.open()
-        .then(() => expect(articles.lastModified).eql(42));
+        .then(res => expect(res).eql(articles));
+    });
+  });
+
+  describe("SyncResultObject", () => {
+    it("should create a result object", () => {
+      expect(new SyncResultObject()).to.include.keys([
+        "lastModified",
+        "errors",
+        "created",
+        "updated",
+        "deleted",
+        "published",
+        "conflicts",
+        "skipped",
+      ]);
+    });
+
+    describe("set lastModified", () => {
+      it("should set lastModified", () => {
+        const result = new SyncResultObject();
+
+        result.lastModified = 42;
+
+        expect(result.lastModified).eql(42);
+      });
+    });
+
+    describe("#add", () => {
+      it("should add typed entries", () => {
+        const result = new SyncResultObject();
+
+        result.add("skipped", [1, 2]);
+        expect(result.skipped).eql([1, 2]);
+      });
+
+      it("should concat typed entries", () => {
+        const result = new SyncResultObject();
+
+        result.add("skipped", [1, 2]);
+        expect(result.skipped).eql([1, 2]);
+
+        result.add("skipped", [3]);
+        expect(result.skipped).eql([1, 2, 3]);
+      });
+
+      it("should update the ok status flag on errors", () => {
+        const result = new SyncResultObject();
+
+        result.add("errors", [1]);
+
+        expect(result.ok).eql(false);
+      });
+
+      it("should update the ok status flag on conflicts", () => {
+        const result = new SyncResultObject();
+
+        result.add("conflicts", [1]);
+
+        expect(result.ok).eql(false);
+      });
     });
   });
 
@@ -300,9 +358,12 @@ describe("Collection", () => {
   });
 
   describe("#pullChanges", () => {
-    var articles;
+    var articles, result;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => {
+      articles = testCollection();
+      result = new SyncResultObject();
+    });
 
     describe("When no conflicts occured", () => {
       const localData = [
@@ -330,7 +391,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported creations", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .then(res => res.created)
           .should.eventually.become([
             {id: 3, title: "art3", _status: "synced"}
@@ -338,7 +399,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported updates", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .then(res => res.updated)
           .should.eventually.become([
             {id: 2, title: "art2", _status: "synced"}
@@ -346,7 +407,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported deletions", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .then(res => res.deleted)
           .should.eventually.become([
             {id: 4}
@@ -354,13 +415,13 @@ describe("Collection", () => {
       });
 
       it("should resolve with no conflicts detected", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .then(res => res.conflicts)
           .should.eventually.become([]);
       });
 
       it("should actually import changes into the collection", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .then(_ => articles.list())
           .then(res => res.data)
           .should.eventually.become([
@@ -371,7 +432,7 @@ describe("Collection", () => {
           ]);
       });
 
-      it("should skip already locally deleted data", function() {
+      it("should skip already locally deleted data", () => {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
           .then(res => articles.importChange({id: res.data.id, deleted: true}))
@@ -398,15 +459,18 @@ describe("Collection", () => {
       });
 
       it("should resolve listing conflicting changes", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .should.eventually.become({
+            ok: false,
             lastModified: 42,
-            errors:  [],
-            created: [],
-            updated: [],
-            deleted: [],
-            skipped: [],
+            errors:    [],
+            created:   [],
+            updated:   [],
+            deleted:   [],
+            skipped:   [],
+            published: [],
             conflicts: [{
+              type: "incoming",
               local: {
                 _status: "created",
                 id: createdId,
@@ -438,11 +502,13 @@ describe("Collection", () => {
       });
 
       it("should resolve with solved changes", () => {
-        return articles.pullChanges()
+        return articles.pullChanges(result)
           .should.eventually.become({
+            ok: true,
             lastModified: 42,
-            errors:  [],
-            created: [],
+            errors:    [],
+            created:   [],
+            published: [],
             updated: [{
               id: createdId,
               title: "art2",
@@ -456,10 +522,11 @@ describe("Collection", () => {
   });
 
   describe("#pushChanges", () => {
-    var articles, records;
+    var articles, records, result;
 
     beforeEach(() => {
       articles = testCollection();
+      result = new SyncResultObject();
       return Promise.all([
         articles.create({title: "foo"}),
         articles.create({id: "fake-uuid", title: "bar"}, {synced: true}),
@@ -473,7 +540,7 @@ describe("Collection", () => {
         errors:    [],
         conflicts: [],
       }));
-      return articles.pushChanges()
+      return articles.pushChanges(result)
         .then(_ => {
           sinon.assert.calledOnce(batch);
           sinon.assert.calledWithExactly(batch,
@@ -488,21 +555,20 @@ describe("Collection", () => {
       var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [records[0]]
       }));
-      return articles.pushChanges()
-        .should.eventually.become({
-          published: [
-            {
-              _status: "synced",
-              id: records[0].id,
-              title: "foo",
-            }
-          ]
-        });
+      return articles.pushChanges(result)
+        .then(res => res.published)
+        .should.eventually.become([
+          {
+            _status: "synced",
+            id: records[0].id,
+            title: "foo",
+          }
+        ]);
     });
 
     it("should delete unsynced virtually deleted local records", () => {
       return articles.delete(records[0].id)
-        .then(_ => articles.pushChanges())
+        .then(_ => articles.pushChanges(result))
         .then(_ => articles.get(records[0].id, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
@@ -511,15 +577,14 @@ describe("Collection", () => {
       var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [Object.assign({}, records[1], {deleted: true})]
       }));
-      return articles.pushChanges()
-        .should.eventually.become({
-          published: [
-            {
-              id: records[1].id,
-              deleted: true
-            }
-          ]
-        });
+      return articles.pushChanges(result)
+        .then(res => res.published)
+        .should.eventually.become([
+          {
+            id: records[1].id,
+            deleted: true
+          }
+        ]);
     });
   });
 

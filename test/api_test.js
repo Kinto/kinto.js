@@ -303,6 +303,7 @@ describe("Api", () => {
             .should.eventually.become({
               conflicts: [],
               errors:    [],
+              skipped:   [],
               published: published
             });
         });
@@ -312,19 +313,15 @@ describe("Api", () => {
             responses: [
               { status: 404,
                 path: "/v0/articles/1",
-                body: { invalid: true }},
+                body: { 404: true }},
             ]
           }));
 
           return api.batch("articles", published)
             .should.eventually.become({
               conflicts: [],
-              errors:    [{
-                error: {
-                  invalid: true
-                },
-                path: "/v0/articles/1"
-              }],
+              skipped:   [{ 404: true }],
+              errors:    [],
               published: []
             });
         });
@@ -340,9 +337,13 @@ describe("Api", () => {
 
           return api.batch("articles", published)
             .should.eventually.become({
-              conflicts: [{ invalid: true}],
+              conflicts: [{
+                type: "outgoing",
+                data: { invalid: true },
+              }],
+              skipped:   [],
               errors:    [],
-              published: []
+              published: [],
             });
         });
       });

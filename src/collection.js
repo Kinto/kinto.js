@@ -8,6 +8,31 @@ import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
+export class SyncResultObject {
+  static get defaults() {
+    return {
+      ok:           true,
+      lastModified: null,
+      errors:       [],
+      created:      [],
+      updated:      [],
+      deleted:      [],
+      published:    [],
+      conflicts:    [],
+      skipped:      [],
+    };
+  }
+
+  constructor() {
+    Object.assign(this, SyncResultObject.defaults);
+  }
+
+  add(type, entries=[]) {
+    this[type] = this[type].concat(entries);
+    this.ok = this.errors.length + this.conflicts.length === 0
+  }
+}
+
 export default class Collection {
   constructor(name, api) {
     this._name = name;
@@ -41,10 +66,10 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  open(options={checkLastModified: true}) {
+  open() {
     if (this._db)
       return Promise.resolve(this);
-    const promise = new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
         // DB object
@@ -72,14 +97,6 @@ export default class Collection {
         resolve(this);
       };
     });
-    if (options.checkLastModified) {
-      // Fetch and reflect collection lastModified value locally
-      return promise
-      .then(_ => this.getLastModified())
-      .then(lastModified => this._lastModified = lastModified);
-    } else {
-      return promise;
-    }
   }
 
   /**
@@ -309,7 +326,7 @@ export default class Collection {
           } else {
             return {
               type: "conflicts",
-              data: { local: res.data, remote: change }
+              data: { type: "incoming", local: res.data, remote: change }
             };
           }
         } else if (change.deleted) {
@@ -339,25 +356,28 @@ export default class Collection {
   /**
    * Import changes into the local database.
    *
-   * @param  {Array} changes
+   * @param  {SyncResultObject} syncResultObject
+   * @param  {Object} changeObject The change object.
    * @return {Promise}
    */
-  importChanges(changes) {
-    return Promise.all(changes.map(change => {
-      return this.importChange(change);
-    })).then(imports => {
-      return imports.reduce((acc, imported) => {
-        acc[imported.type].push(imported.data);
-        return acc;
-      }, {
-        errors:    [],
-        created:   [],
-        updated:   [],
-        deleted:   [],
-        conflicts: [],
-        skipped:   [],
-      });
-    });
+  importChanges(syncResultObject, changeObject) {
+    return Promise.all(changeObject.changes.map(change => {
+      return this.importChange(change); // XXX direct method ref?
+    }))
+      .then(imports => {
+        for (let imported of imports) {
+          syncResultObject.add(imported.type, imported.data);
+        }
+        return syncResultObject;
+      })
+      .then(syncResultObject => {
+        // Import is done, save lastModified value received from the server
+        return this.saveLastModified(changeObject.lastModified)
+          .then(lastModified => {
+            syncResultObject.lastModified = lastModified;
+            return syncResultObject;
+          });
+      })
   }
 
   /**
@@ -369,7 +389,7 @@ export default class Collection {
    */
   saveLastModified(lastModified) {
     var value = parseInt(lastModified, 10);
-    return this.open({checkLastModified: false}).then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
         const request = store.put({name: "lastModified", value: value});
@@ -388,9 +408,8 @@ export default class Collection {
    *
    * @return {Promise}
    */
-
   getLastModified() {
-    return this.open({checkLastModified: false}).then(() => {
+    return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare(undefined, "__meta__");
         const request = store.get("lastModified");
@@ -400,35 +419,6 @@ export default class Collection {
         };
       });
     });
-  }
-
-  /**
-   * Import remote changes to the local database. Will reject on encountered
-   * conflicts.
-   *
-   * @param  {Options} options
-   * @return {Promise}
-   */
-  pullChanges(options) {
-    var lastModified, imported;
-    // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.name, this.lastModified, options)
-      // Reflect these changes locally
-      .then(res => {
-        // Temporarily store server's lastModified value for further use
-        lastModified = res.lastModified;
-        // Import changes
-        return this.importChanges(res.changes);
-      })
-      // On successful import completion, update lastModified value
-      .then(result => {
-        imported = result;
-        return this.saveLastModified(lastModified);
-      })
-      // Resolve with import report
-      .then(lastModified => Object.assign(imported, {
-        lastModified: lastModified
-      }));
   }
 
   /**
@@ -453,12 +443,28 @@ export default class Collection {
   }
 
   /**
-   * Publish local changes to the remote server.
+   * Import remote changes to the local database. Will reject on encountered
+   * conflicts.
    *
+   * @param  {SyncResultObject} syncResultObject
    * @param  {Options} options
    * @return {Promise}
    */
-  pushChanges(options={headers: {}}) {
+  pullChanges(syncResultObject, options) {
+    // First fetch remote changes from the server
+    return this.api.fetchChangesSince(this.name, this.lastModified, options)
+      // Reflect these changes locally
+      .then(changes => this.importChanges(syncResultObject, changes));
+  }
+
+  /**
+   * Publish local changes to the remote server.
+   *
+   * @param  {SyncResultObject} syncResultObject
+   * @param  {Options} options
+   * @return {Promise}
+   */
+  pushChanges(syncResultObject, options={headers: {}}) {
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
@@ -487,9 +493,8 @@ export default class Collection {
             return this.update(record, {synced: true});
           }
         })).then(published => {
-          return Object.assign(synced, {
-            published: published.map(res => res.data)
-          });
+          syncResultObject.add("published", published.map(res => res.data))
+          return syncResultObject;
         });
       });
   }
@@ -507,22 +512,17 @@ export default class Collection {
    */
   sync(options={mode: Collection.strategy.MANUAL, headers: {}}) {
     // TODO rename options.mode to options.strategy
-    // TODO ensure we always return the same result data struct (imported, exported)
-    var imported, exported;
-    return this.pullChanges(options)
-      .then(res => {
-        imported = res;
-        return this.pushChanges(options);
-      })
-      .then(res => {
-        exported = res;
-        return this.pullChanges(options);
-      })
-      .then(_ => {
-        return Object.assign({imported, exported}, {
-          ok: imported.errors.length + imported.conflicts.length +
-              exported.errors.length + exported.conflicts.length === 0
-        });
+    const result = new SyncResultObject();
+    return this.getLastModified()
+      .then(lastModified => this._lastModified = lastModified)
+      .then(_ => this.pullChanges(result, options))
+      .then(result => {
+        if (!result.ok) {
+          return result;
+        } else {
+          return this.pushChanges(result, options)
+            .then(result => this.pullChanges(result, options));
+        }
       });
   }
 }
