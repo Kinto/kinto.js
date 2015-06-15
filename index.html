@@ -54,9 +54,9 @@
       }
     }
 
-    function logResult(status, result) {
+    function logResult(result) {
       const log = document.querySelector("#log");
-      log.style.background = status !== "OK" ? "red": "green";
+      log.style.background = !result.ok ? "red": "green";
       log.value = status + "\n\n" + JSON.stringify(result, null, 2);
     }
 
@@ -140,8 +140,8 @@
       })
         .catch(console.error.bind(console))
         .then(result => {
-          renderLastModified(result.imported.lastModified);
-          return logResult(result.ok ? "OK" : "KO", result);
+          renderLastModified(result.lastModified);
+          return logResult(result);
         })
         .then(renderList);
     }
