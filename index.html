@@ -94,7 +94,7 @@
             .addEventListener("click", deleteTask(task));
           ul.appendChild(li);
         });
-      });
+      }).catch(console.error.bind(this));
     }
 
     // form submit
