@@ -54,11 +54,11 @@ describe("Api", () => {
     });
   });
 
-  describe("#endpoints", () => {
+  describe.only("#endpoints", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints())
+      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(FAKE_SERVER_URL);
@@ -69,12 +69,12 @@ describe("Api", () => {
           .eql("http://fake-server/v0/batch");
       });
 
-      it("should provide root endpoint", () => {
+      it("should provide collection endpoint", () => {
         expect(endpoints.collection("toto"))
           .eql("http://fake-server/v0/collections/toto/records");
       });
 
-      it("should provide root endpoint", () => {
+      it("should provide record endpoint", () => {
         expect(endpoints.record("toto", 42))
           .eql("http://fake-server/v0/collections/toto/records/42");
       });
@@ -83,7 +83,7 @@ describe("Api", () => {
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({full: false}))
+      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql("/v0");
@@ -94,12 +94,12 @@ describe("Api", () => {
           .eql("/v0/batch");
       });
 
-      it("should provide root endpoint", () => {
+      it("should provide collection endpoint", () => {
         expect(endpoints.collection("toto"))
           .eql("/v0/collections/toto/records");
       });
 
-      it("should provide root endpoint", () => {
+      it("should provide record endpoint", () => {
         expect(endpoints.record("toto", 42))
           .eql("/v0/collections/toto/records/42");
       });
@@ -144,17 +144,6 @@ describe("Api", () => {
           lastModified: 41,
           changes: []
         });
-    });
-
-    it("should pass provided headers", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
-
-      api.fetchChangesSince("articles", 42, {headers: {Foo: "bar"}});
-
-      sinon.assert.calledOnce(fetch);
-      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {Foo: "bar"}
-      });
     });
 
     it("should merge provided headers with default ones", () => {
@@ -238,11 +227,27 @@ describe("Api", () => {
           });
         });
 
-        it("should map batch delete requests", () => {
+        it("should map batch delete requestsfor non-synced records", () => {
           expect(requestBody.requests[2]).eql({
-            headers: {},
+            headers: {
+              "If-Unmodified-Since": "0"
+            },
             method: "DELETE",
             path: "/v0/collections/articles/records/3",
+          });
+        });
+
+        it("should map batch delete requests for synced records", () => {
+          expect(requestBody.requests[0]).eql({
+            path: "/v0/collections/articles/records/1",
+            method: "PUT",
+            headers: {
+              "If-Unmodified-Since": "42"
+            },
+            body: {
+              id: 1,
+              title: "foo"
+            }
           });
         });
       });

@@ -41,13 +41,27 @@ describe("Cliquetis", () => {
     });
 
     it("should cache collection instance", () => {
-      var db = new Cliquetis();
+      const db = new Cliquetis();
       expect(db.collection("a") == db.collection("a")).eql(true);
     });
 
     it("should reject on missing collection name", () => {
       expect(() => new Cliquetis().collection())
         .to.Throw(Error, /missing collection name/);
+    });
+
+    it("should setup the Api cient using default server URL", () => {
+      const db = new Cliquetis();
+      const coll = db.collection("plop");
+
+      expect(coll.api.remote).eql("http://0.0.0.0:8888/v0");
+    });
+
+    it("should setup the Api cient using provided server URL", () => {
+      const db = new Cliquetis({remote: "http://1.2.3.4:1234/v1"});
+      const coll = db.collection("plop");
+
+      expect(coll.api.remote).eql("http://1.2.3.4:1234/v1");
     });
   });
 });

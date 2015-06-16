@@ -29,11 +29,11 @@ const db = new Cliquetis(options);
 
 - `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
-- `mode`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.MANUAL` (default)
+- `strategy`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.MANUAL` (default)
 
-### Collection
+### Collections
 
-Collection are persisted in indexedDB.
+Collections are persisted in indexedDB.
 
 **Note:** A single database and store is created per collection.
 
@@ -264,9 +264,9 @@ Synopsis:
   * The developer has to handle them manually, and call `sync ()` again when done;
 3. If everything went fine, publish local changes;
 4. Fail on any publication conflict detected;
-  * If `mode` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
-  * If `mode` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
-  * If `mode` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a dedicated array.
+  * If `strategy` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
+  * If `strategy` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
+  * If `strategy` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a dedicated array.
 
 **Note:** On any rejection, `sync()` should be called again once conflicts are properly handled.
 
@@ -296,8 +296,7 @@ Sample result:
   deleted:   [], // Deleted locally
   conflicts: [], // Import conflicts
   skipped:   [], // Skipped imports
-  published: [], // Successfully published
-  conflicts: []  // Export conflicts
+  published: []  // Successfully published
 }
 ```
 
@@ -327,7 +326,7 @@ The `conflicts` array is in this form:
 
 ### Synchronization strategies
 
-The `sync()` method accepts a `mode` option, which accepts the following values:
+The `sync()` method accepts a `strategy` option, which accepts the following values:
 
 - `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
 - `Collection.strategy.SERVER_WINS`: Server data will be preserved;

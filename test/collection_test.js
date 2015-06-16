@@ -259,8 +259,18 @@ describe("Collection", () => {
 
     it("should reject on virtually deleted record", () => {
       return articles.delete(uuid)
-        .then(res => articles.get(uuid))
-        .should.be.rejectedWith(Error, /not found/);
+        .then(res => articles.get(uuid, {includeDeleted: true}))
+        .then(res => res.data)
+        .should.eventually.become({
+          _status: "deleted",
+          id: uuid,
+          title: "foo",
+          url: "http://foo",
+        });
+    });
+
+    it("should support the includeDeleted option", function() {
+      // body...
     });
 
     it("should prefix error encountered", () => {
@@ -443,7 +453,7 @@ describe("Collection", () => {
       it("should skip already locally deleted data", () => {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
-          .then(res => articles.importChange({id: res.data.id, deleted: true}))
+          .then(res => articles._importChange({id: res.data.id, deleted: true}))
           .then(res => res.data.title)
           .should.eventually.become("foo");
       });

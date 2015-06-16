@@ -10,6 +10,8 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
+// TODO: This could probably be an attribute of the Api class, so that
+// developers can get a hand on it to add their own headers.
 const DEFAULT_REQUEST_HEADERS = {
   "Accept":       "application/json",
   "Content-Type": "application/json",
@@ -27,8 +29,17 @@ export default class Api {
     }
   }
 
-  endpoints(options={full: true}) {
-    var root = options.full ? this.remote : `/${this.version}`;
+  /**
+   * Retrieves available server enpoints.
+   *
+   * Options:
+   * - {Boolean} fullUrl: Retrieve a fully qualified URL (default: true).
+   *
+   * @param  {Object} options Options object.
+   * @return {String}
+   */
+  endpoints(options={fullUrl: true}) {
+    var root = options.fullUrl ? this.remote : `/${this.version}`;
     return {
       root:           () => root,
       batch:          () => `${root}/batch`,
@@ -77,6 +88,9 @@ export default class Api {
   /**
    * Sends batch update requests to the remote server.
    *
+   * TODO: If more than X results (default is 25 on server), split in several
+   * calls. Related: https://github.com/mozilla-services/cliquet/issues/318
+   *
    * @param  {String} collName The collection name.
    * @param  {Array}  records  The list of record updates to send.
    * @param  {Object} headers  Headers to attach to each update request.
@@ -102,8 +116,9 @@ export default class Api {
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
-          const headers = options.safe && record.last_modified ?
-                          {"If-Unmodified-Since": String(record.last_modified)} : {};
+          const headers = options.safe ? {
+            "If-Unmodified-Since": String(record.last_modified || "0")
+          } : {};
           return {method, headers, path, body};
         })
       })
@@ -117,6 +132,8 @@ export default class Api {
             return err;
           }, new Error("BATCH request failed: " + res.message));
         res.responses.forEach(response => {
+          // TODO: handle 409 when unicity rule is violated (ex. POST with
+          // existing id, unique field, etc.)
           if (response.status && response.status >= 200 && response.status < 400) {
             results.published.push(response.body);
           } else if (response.status === 404) {
@@ -128,6 +145,8 @@ export default class Api {
             });
           } else {
             results.errors.push({
+              // TODO: since responses come in the same order, there should be a
+              // way to get original record id
               path: response.path, // this is the only way to have the id…
               error: response.body
             });

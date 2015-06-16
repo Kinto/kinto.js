@@ -120,7 +120,7 @@ export default class Collection {
   }
 
   /**
-   * Clears current collection.
+   * Deletes every records in the current collection.
    *
    * @return {Promise}
    */
@@ -142,6 +142,9 @@ export default class Collection {
 
   /**
    * Adds a record to the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
    *
    * @param  {Object} record
    * @param  {Object} options
@@ -171,6 +174,9 @@ export default class Collection {
 
   /**
    * Updates a record from the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
    *
    * @param  {Object} record
    * @param  {Object} options
@@ -233,6 +239,10 @@ export default class Collection {
 
   /**
    * Deletes a record from the local database.
+   *
+   * Options:
+   * - {Boolean} virtual: When set to true, doesn't actually delete the record,
+   *                      update its _status attribute to "deleted" instead.
    *
    * @param  {String} id
    * @param  {Object} options
@@ -309,7 +319,7 @@ export default class Collection {
    * @param  {Object} change
    * @return {Promise}
    */
-  importChange(change) {
+  _importChange(change) {
     return this.get(change.id, {includeDeleted: true})
       // Matching local record found
       .then(res => {
@@ -364,7 +374,7 @@ export default class Collection {
    */
   importChanges(syncResultObject, changeObject) {
     return Promise.all(changeObject.changes.map(change => {
-      return this.importChange(change); // XXX direct method ref?
+      return this._importChange(change); // XXX direct method ref?
     }))
       .then(imports => {
         for (let imported of imports) {
@@ -449,7 +459,7 @@ export default class Collection {
    * conflicts.
    *
    * @param  {SyncResultObject} syncResultObject
-   * @param  {Options} options
+   * @param  {Object}           options
    * @return {Promise}
    */
   pullChanges(syncResultObject, options) {
@@ -463,7 +473,7 @@ export default class Collection {
    * Publish local changes to the remote server.
    *
    * @param  {SyncResultObject} syncResultObject
-   * @param  {Options} options
+   * @param  {Object}           options
    * @return {Promise}
    */
   pushChanges(syncResultObject, options={headers: {}}) {
@@ -477,7 +487,7 @@ export default class Collection {
           })),
           // Send batch update requests
           this.api.batch(this.name, toSync, options.headers, {
-            safe: options.mode === Collection.SERVER_WINS
+            safe: options.strategy === Collection.SERVER_WINS
           })
         ]);
       })
@@ -509,10 +519,20 @@ export default class Collection {
    * The promise will reject if conflicts have been encountered, with the same
    * result.
    *
-   * @param  {Object} options options
+   * Options:
+   * - {Object} headers: HTTP headers to attach to outgoing requests.
+   * - {Collection.strategy} strategy: The synchronization strategy:
+   *   * `Collection.strategy.SERVER_WINS`:
+   *     No remote data override will be performed by the server.
+   *   * `Collection.strategy.CLIENT_WINS`:
+   *     Conflicting server records will be overriden with local changes.
+   *   * `Collection.strategy.MANUAL`:
+   *     Conflicts will be reported in a dedicated array.
+   *
+   * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={mode: Collection.strategy.MANUAL, headers: {}}) {
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
     // TODO rename options.mode to options.strategy
     const result = new SyncResultObject();
     return this.getLastModified()
