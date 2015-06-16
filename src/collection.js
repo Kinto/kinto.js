@@ -1,34 +1,99 @@
 "use strict";
 
 import { v4 as uuid4 } from "uuid";
+import deepEquals from "deep-eql";
+
 import { attachFakeIDBSymbolsTo } from "./utils";
+import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
+export class SyncResultObject {
+  static get defaults() {
+    return {
+      ok:           true,
+      lastModified: null,
+      errors:       [],
+      created:      [],
+      updated:      [],
+      deleted:      [],
+      published:    [],
+      conflicts:    [],
+      skipped:      [],
+    };
+  }
+
+  constructor() {
+    Object.assign(this, SyncResultObject.defaults);
+  }
+
+  add(type, entries) {
+    if (!Array.isArray(this[type]))
+      return;
+    this[type] = this[type].concat(entries);
+    this.ok = this.errors.length + this.conflicts.length === 0
+  }
+}
+
 export default class Collection {
-  constructor(name) {
+  constructor(name, api) {
     this._name = name;
     this._db;
+    this.api = api;
+    this._lastModified = null;
   }
 
   get name() {
     return this._name;
   }
 
+  get lastModified() {
+    return this._lastModified;
+  }
+
+  static get strategy() {
+    return {
+      CLIENT_WINS: "client_wins",
+      SERVER_WINS: "server_wins",
+      MANUAL:      "manual",
+    }
+  }
+
+  _handleError(method) {
+    return err => {throw new Error(method + "() " + err.message)}
+  }
+
+  /**
+   * Ensures a connection to the local database has been opened.
+   *
+   * @return {Promise}
+   */
   open() {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      var request = indexedDB.open(this.name, 1);
+      const request = indexedDB.open(this.name, 1);
       request.onupgradeneeded = event => {
-        var store = event.target.result.createObjectStore(this.name, {
+        // DB object
+        const db = event.target.result;
+        // Main collection store
+        const collStore = db.createObjectStore(this.name, {
           keyPath: "id"
         });
-        store.createIndex("id", "id", { unique: true });
+        // Primary key (UUID)
+        collStore.createIndex("id", "id", { unique: true });
+        // Local record status ("synced", "created", "updated", "deleted")
+        collStore.createIndex("_status", "_status");
+        // Last modified field
+        collStore.createIndex("last_modified", "last_modified");
+
+        // Metadata store
+        const metaStore = db.createObjectStore("__meta__", {
+          keyPath: "name"
+        });
+        metaStore.createIndex("name", "name", { unique: true });
       };
-      request.onerror = event => {
-        reject(event.error);
-      };
+      request.onerror = event => reject(event.error);
       request.onsuccess = event => {
         this._db = event.target.result;
         resolve(this);
@@ -44,143 +109,442 @@ export default class Collection {
    * request’s success event, because the transaction may still fail after the
    * success event fires.
    *
-   * @param {String} mode  Transaction mode ("readwrite" or undefined)
+   * @param {String}      mode  Transaction mode ("readwrite" or undefined)
+   * @param {String|null} name  Store name (defaults to coll name)
    */
-  prepare(mode) {
-    const transaction = this._db.transaction([this.name], mode);
-    const store = transaction.objectStore(this.name);
+  prepare(mode=undefined, name=null) {
+    const storeName = name || this.name;
+    const transaction = this._db.transaction([storeName], mode);
+    const store = transaction.objectStore(storeName);
     return {transaction, store};
   }
 
+  /**
+   * Deletes every records in the current collection.
+   *
+   * @return {Promise}
+   */
   clear() {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: [],
             permissions: {}
           });
         };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
-        };
       });
-    });
+    }).catch(this._handleError("clear"));
   }
 
-  _create(record) {
+  /**
+   * Adds a record to the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  create(record, options={synced: false}) {
     return this.open().then(() => {
+      if (typeof(record) !== "object")
+        return Promise.reject(new Error('Record is not an object.'));
       return new Promise((resolve, reject) => {
-        var {transaction, store} = this.prepare("readwrite");
-        var newRecord = Object.assign({}, record, {id: uuid4()});
+        const {transaction, store} = this.prepare("readwrite");
+        const newRecord = Object.assign({}, record, {
+          id:      options.synced ? record.id : uuid4(),
+          _status: options.synced ? "synced" : "created"
+        });
         store.add(newRecord);
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: newRecord,
             permissions: {}
           });
         };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
-        };
       });
-    });
+    }).catch(this._handleError("create"));
   }
 
-  _update(record) {
+  /**
+   * Updates a record from the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  update(record, options={synced: false}) {
     return this.open().then(() => {
+      if (typeof(record) !== "object")
+        return Promise.reject(new Error("Record is not an object."));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
-          var {transaction, store} = this.prepare("readwrite");
-          var request = store.put(record);
-          transaction.oncomplete = function(event) {
+          var newStatus = "updated";
+          if (record._status === "deleted") {
+            newStatus = "deleted";
+          } else if (options.synced) {
+            newStatus = "synced";
+          }
+          const {transaction, store} = this.prepare("readwrite");
+          const updatedRecord = Object.assign({}, record, {_status: newStatus});
+          const request = store.put(updatedRecord);
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => {
             resolve({
-              data: Object.assign({}, record, {id: request.result}),
+              data: Object.assign({}, updatedRecord, {id: request.result}),
               permissions: {}
             });
           };
-          transaction.onerror = function(event) {
-            reject(new Error(event.target.error));
-          };
         });
       });
-    });
+    }).catch(this._handleError("update"));
   }
 
-  save(record) {
-    if (typeof(record) !== "object")
-      return Promise.reject(new Error('Record is not an object.'));
-    return this.open().then(() => {
-      return record.id ? this._update(record) : this._create(record);
-    });
-  }
-
-  get(id) {
+  /**
+   * Retrieve a record by its id from the local database.
+   *
+   * @param  {String} id
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        var {transaction, store} = this.prepare();
-        var request = store.get(id);
-        transaction.oncomplete = function(event) {
-          if (!request.result)
-            return reject(new Error(`Record with id=${id} not found.`));
-          resolve({
-            data: request.result,
-            permissions: {}
-          });
-        };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
+        const {transaction, store} = this.prepare();
+        const request = store.get(id);
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
+          if (!request.result ||
+             (!options.includeDeleted && request.result._status === "deleted")) {
+            reject(new Error(`Record with id=${id} not found.`));
+          } else {
+            resolve({
+              data: request.result,
+              permissions: {}
+            });
+          }
         };
       });
-    });
+    }).catch(this._handleError("get"));
   }
 
-  delete(id) {
+  /**
+   * Deletes a record from the local database.
+   *
+   * Options:
+   * - {Boolean} virtual: When set to true, doesn't actually delete the record,
+   *                      update its _status attribute to "deleted" instead.
+   *
+   * @param  {String} id
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  delete(id, options={virtual: true}) {
     return this.open().then(() => {
       // Ensure the record actually exists.
-      return this.get(id).then(result => {
+      return this.get(id, {includeDeleted: true}).then(res => {
+        if (options.virtual) {
+          if (res.data._status === "deleted") {
+            // Record is already deleted
+            return Promise.resolve({
+              data: { id: id },
+              permissions: {}
+            });
+          } else {
+            return this.update(Object.assign({}, res.data, {
+              _status: "deleted"
+            }));
+          }
+        }
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");
           store.delete(id);
-          transaction.oncomplete = function(event) {
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => {
             resolve({
-              data: { id: id, deleted: true },
+              data: { id: id },
               permissions: {}
             });
           };
-          transaction.onerror = function(event) {
-            reject(new Error(event.target.error));
-          };
         });
       });
-    });
+    }).catch(this._handleError("delete"));
   }
 
-  list() {
+  /**
+   * Lists records from the local database.
+   *
+   * @param  {Object} params
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  list(params={}, options={includeDeleted: false}) {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        var results = [];
+        const results = [];
         const {transaction, store} = this.prepare();
-        var request = store.openCursor();
+        const request = store.openCursor();
         request.onsuccess = function(event) {
           var cursor = event.target.result;
           if (cursor) {
-            results.push(cursor.value);
+            if (options.includeDeleted || cursor.value._status !== "deleted") {
+              results.push(cursor.value);
+            }
             cursor.continue();
           }
         };
-        transaction.oncomplete = function(event) {
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
           resolve({
             data: results,
             permissions: {}
           });
         };
-        transaction.onerror = function(event) {
-          reject(new Error(event.target.error));
+      });
+    }).catch(this._handleError("list"));
+  }
+
+  /**
+   * Import a single change into the local database.
+   *
+   * @param  {Object} change
+   * @return {Promise}
+   */
+  _importChange(change) {
+    return this.get(change.id, {includeDeleted: true})
+      // Matching local record found
+      .then(res => {
+        // Unsynced local data
+        if (res.data._status !== "synced") {
+          // Locally deleted, unsynced: scheduled for remote deletion.
+          if (res.data._status === "deleted") {
+            return {type: "skipped", data: res.data};
+          } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+            // If records are identical, import anyway, so we bump the
+            // local last_modified value from the server and set record
+            // status to "synced".
+            return this.update(change, {synced: true}).then(res => {
+              return {type: "updated", data: res.data};
+            });
+          } else {
+            return {
+              type: "conflicts",
+              data: { type: "incoming", local: res.data, remote: change }
+            };
+          }
+        } else if (change.deleted) {
+          return this.delete(change.id, {virtual: false}).then(res => {
+            return {type: "deleted", data: res.data};
+          });
+        } else {
+          return this.update(change, {synced: true}).then(res => {
+            return {type: "updated", data: res.data};
+          });
+        }
+      })
+      // Unatched local record
+      .catch(err => {
+        if (!(/not found/i).test(err.message))
+          return {type: "errors", data: err};
+        // Not found locally but remote change is marked as deleted; skip to
+        // avoid recreation.
+        if (change.deleted)
+          return {type: "skipped", data: change};
+        return this.create(change, {synced: true}).then(res => {
+          return {type: "created", data: res.data};
+        });
+      });
+  }
+
+  /**
+   * Import changes into the local database.
+   *
+   * @param  {SyncResultObject} syncResultObject
+   * @param  {Object} changeObject The change object.
+   * @return {Promise}
+   */
+  importChanges(syncResultObject, changeObject) {
+    return Promise.all(changeObject.changes.map(change => {
+      return this._importChange(change); // XXX direct method ref?
+    }))
+      .then(imports => {
+        for (let imported of imports) {
+          syncResultObject.add(imported.type, imported.data);
+        }
+        return syncResultObject;
+      })
+      .then(syncResultObject => {
+        // Import is done, save lastModified value received from the server
+        return this.saveLastModified(changeObject.lastModified)
+          .then(lastModified => {
+            syncResultObject.lastModified = lastModified;
+            return syncResultObject;
+          });
+      })
+  }
+
+  /**
+   * Store the lastModified value into collection's metadata store.
+   *
+   * @param  {Number}  lastModified
+   * @param  {Object}  options
+   * @return {Promise}
+   */
+  saveLastModified(lastModified) {
+    var value = parseInt(lastModified, 10);
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite", "__meta__");
+        const request = store.put({name: "lastModified", value: value});
+        transaction.onerror = event => reject(event.target.error);
+        transaction.oncomplete = event => {
+          // update locally cached property
+          this._lastModified = value;
+          resolve(value);
         };
       });
     });
+  }
+
+  /**
+   * Retrieve saved collection's lastModified value.
+   *
+   * @return {Promise}
+   */
+  getLastModified() {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare(undefined, "__meta__");
+        const request = store.get("lastModified");
+        transaction.onerror = event => reject(event.target.error);
+        transaction.oncomplete = event => {
+          resolve(request.result && request.result.value || null)
+        };
+      });
+    });
+  }
+
+  /**
+   * Returns an object containing two lists:
+   *
+   * - `toDelete`: unsynced deleted records we can safely delete;
+   * - `toSync`: local updates to send to the server.
+   *
+   * @return {Object}
+   */
+  gatherLocalChanges() {
+    return this.list({}, {includeDeleted: true})
+      .then(res => {
+        return res.data.reduce((acc, record) => {
+          if (record._status === "deleted" && !record.last_modified)
+            acc.toDelete.push(record);
+          else if (record._status !== "synced")
+            acc.toSync.push(record);
+          return acc;
+        }, {toDelete: [], toSync: []});
+      });
+  }
+
+  /**
+   * Import remote changes to the local database. Will reject on encountered
+   * conflicts.
+   *
+   * @param  {SyncResultObject} syncResultObject
+   * @param  {Object}           options
+   * @return {Promise}
+   */
+  pullChanges(syncResultObject, options) {
+    // First fetch remote changes from the server
+    return this.api.fetchChangesSince(this.name, this.lastModified, options)
+      // Reflect these changes locally
+      .then(changes => this.importChanges(syncResultObject, changes));
+  }
+
+  /**
+   * Publish local changes to the remote server.
+   *
+   * @param  {SyncResultObject} syncResultObject
+   * @param  {Object}           options
+   * @return {Promise}
+   */
+  pushChanges(syncResultObject, options={headers: {}}) {
+    // Fetch local changes
+    return this.gatherLocalChanges()
+      .then(({toDelete, toSync}) => {
+        return Promise.all([
+          // Delete never synced records marked for deletion
+          Promise.all(toDelete.map(record => {
+            return this.delete(record.id, {virtual: false});
+          })),
+          // Send batch update requests
+          this.api.batch(this.name, toSync, options.headers, {
+            safe: options.strategy === Collection.SERVER_WINS
+          })
+        ]);
+      })
+      // Update published local records
+      .then(([deleted, synced]) => {
+        return Promise.all(synced.published.map(record => {
+          if (record.deleted) {
+            // Remote deletion was successful, refect it locally
+            return this.delete(record.id, {virtual: false}).then(res => {
+              // Amend result data with the deleted attribute set
+              return {data: {id: res.data.id, deleted: true}};
+            });
+          } else {
+            // Remote update was successful, refect it locally
+            return this.update(record, {synced: true});
+          }
+        })).then(published => {
+          syncResultObject.add("published", published.map(res => res.data))
+          return syncResultObject;
+        });
+      });
+  }
+
+
+  /**
+   * Synchronize remote and local data. The promise will resolve with two lists:
+   * - local imports
+   * - remote exports
+   * The promise will reject if conflicts have been encountered, with the same
+   * result.
+   *
+   * Options:
+   * - {Object} headers: HTTP headers to attach to outgoing requests.
+   * - {Collection.strategy} strategy: The synchronization strategy:
+   *   * `Collection.strategy.SERVER_WINS`:
+   *     No remote data override will be performed by the server.
+   *   * `Collection.strategy.CLIENT_WINS`:
+   *     Conflicting server records will be overriden with local changes.
+   *   * `Collection.strategy.MANUAL`:
+   *     Conflicts will be reported in a dedicated array.
+   *
+   * @param  {Object} options Options.
+   * @return {Promise}
+   */
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
+    // TODO rename options.mode to options.strategy
+    const result = new SyncResultObject();
+    return this.getLastModified()
+      .then(lastModified => this._lastModified = lastModified)
+      .then(_ => this.pullChanges(result, options))
+      .then(result => {
+        if (!result.ok) {
+          return result;
+        } else {
+          return this.pushChanges(result, options)
+            .then(result => this.pullChanges(result, options));
+        }
+      });
   }
 }

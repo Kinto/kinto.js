@@ -4,13 +4,13 @@
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
-    "dist": "browserify -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js",
-    "watch": "watchify -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v",
+    "dist": "browserify -s Cliquetis -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js",
+    "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
-    "tdd": "mocha -w --compilers js:babel/register test/*_test.js"
+    "watch": "watchify -s Cliquetis -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v"
   },
   "repository": {
     "type": "git",
@@ -35,7 +35,9 @@
     "chai": "^2.3.0",
     "chai-as-promised": "^5.0.0",
     "coveralls": "^2.11.2",
+    "deep-eql": "^0.1.3",
     "fake-indexeddb": "^1.0.3",
+    "isomorphic-fetch": "^2.1.0",
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",

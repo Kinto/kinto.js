@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Cliquetis demo</title>
+  <style>
+  .log {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50%;
+    height: 100%;
+    padding: .4em;
+    font-size: .8em;
+    color: white;
+  }
+  </style>
+</head>
+<body>
+  <h1>Todo list</h1>
+  <p>Last modified: <span id="lastModified"></span></p>
+  <ul id="todo"></ul>
+  <form>
+    <p>
+      <input type="text" name="label" placeholder="Thing">
+      <input type="submit" value="Add">
+    </p>
+  </form>
+  <p>
+    <input type="button" id="clearCompletedBtn" value="Clear completed">
+    <input type="reset" id="clearAllBtn" value="Clear collection">
+    <input type="button" id="syncBtn" value="Synchronize collection">
+  </p>
+  <p>
+    <textarea id="log" class="log"></textarea>
+  </p>
+  <script src="../dist/cliquetis.js"></script>
+  <script>
+  function main() {
+    const db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
+    const tasks = db.collection("todo");
+    const headers = {Authorization: "Basic " + btoa("niko:niko")};
+
+    function toggleDone(task) {
+      return function(event) {
+        task.done = !task.done;
+        tasks.update(task).then(renderList);
+      };
+    }
+
+    function deleteTask(task) {
+      return function(event) {
+        tasks.delete(task.id).then(renderList);
+      }
+    }
+
+    function logResult(result) {
+      const log = document.querySelector("#log");
+      log.style.background = !result.ok ? "red": "green";
+      log.value = status + "\n\n" + JSON.stringify(result, null, 2);
+    }
+
+    function date(timestamp) {
+      var d = new Date();
+      d.setTime(timestamp);
+      return d.toLocaleString();
+    }
+
+    function taskTpl(task) {
+      return `
+        <label>
+          <input type="checkbox" ${task.done ? 'checked' : ''}>
+          ${task.done ? `<del>${task.label}</del>` : task.label}
+        </label>
+        <br>
+        <small>
+          id: ${task.id}
+          last_modified: ${task.last_modified}
+          _status=${task._status}
+        </small>
+        <input type="button" value="Delete">`;
+    }
+
+    function renderList() {
+      tasks.list({}, {includeDeleted: true}).then(res => {
+        const ul = document.querySelector("ul");
+        ul.innerHTML = "";
+        res.data.forEach(function(task) {
+          const li = document.createElement("li");
+          li.innerHTML = taskTpl(task);
+          li.querySelector("input[type=checkbox]")
+            .addEventListener("click", toggleDone(task));
+          li.querySelector("input[type=button]")
+            .addEventListener("click", deleteTask(task));
+          ul.appendChild(li);
+        });
+      }).catch(console.error.bind(this));
+    }
+
+    // form submit
+    document.querySelector("form").addEventListener("submit", e => {
+      e.preventDefault();
+      tasks.create({
+        label: e.target.label.value,
+        done: false
+      }).then(res => {
+        e.target.label.value = "";
+        e.target.label.focus();
+        renderList();
+      });
+    });
+
+    // clear completed button
+    document.querySelector("#clearAllBtn").addEventListener("click", e => {
+      e.preventDefault();
+      tasks.clear().then(renderList);
+    });
+
+    // clear all button
+    document.querySelector("#clearCompletedBtn").addEventListener("click", e => {
+      e.preventDefault();
+      tasks.list()
+        .then(res => {
+          return Promise.all(res.data
+            .filter(task => task.done)
+            .map(task => tasks.delete(task.id)));
+        })
+        .catch(err => console.error.bind(console))
+        .then(renderList);
+    });
+
+    function renderLastModified(lastModified) {
+      document.querySelector("#lastModified").textContent = `${lastModified} (${date(lastModified)})`;
+    }
+
+    function load() {
+      return tasks.getLastModified().then(lastModified => {
+        renderLastModified(lastModified);
+        return tasks.sync({headers: headers})
+      })
+        .catch(console.error.bind(console))
+        .then(result => {
+          renderLastModified(result.lastModified);
+          return logResult(result);
+        })
+        .then(renderList);
+    }
+
+    // sync button
+    document.querySelector("#syncBtn").addEventListener("click", e => {
+      e.preventDefault();
+      load();
+    });
+
+    load();
+  }
+
+  window.addEventListener("DOMContentLoaded", main);
+  </script>
+</body>
+</html>

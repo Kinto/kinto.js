@@ -16,8 +16,6 @@ This is work in progress, and documented API isn't fully implemented just yet. D
 
 ## Usage
 
-**Caution: everything in this section is still pure fiction.**
-
 * Every operation is performed locally;
 * Synchronization with server shall be ran explicitly.
 
@@ -31,9 +29,15 @@ const db = new Cliquetis(options);
 
 - `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
-- `mode`: The conflict default resolution strategy (`Cliquet.SAFE` (*server wins*), `Cliquet.FORCE` (*client wins*)).
+- `strategy`: The conflict default resolution strategy (`Collection.strategy.SERVER_WINS`, `Collection.strategy.CLIENT_WINS` or `Collection.strategy.MANUAL` (default)
 
-### Collection
+### Collections
+
+Collections are persisted in indexedDB.
+
+**Note:** A single database and store is created per collection.
+
+**Status:** Implemented.
 
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
 
@@ -41,9 +45,9 @@ Selecting a collection is done by calling the `collection()` method, passing it 
 const articles = db.collection("articles");
 ```
 
-The collection object has the following attributes:
+The collection object has the following (read-only) attribute:
 
-* **lastModified**: last synchronization timestamp, ``null`` if never sync'ed.
+* **lastModified**: last synchronization timestamp, `null` if never sync'ed.
 
 > Synchronization timestamps are persisted in the device local storage.
 
@@ -51,9 +55,12 @@ All operations are asynchronous and rely on [Promises](https://developer.mozilla
 
 ### Creating a record
 
+**Status:** Implemented.
+
 ```js
-articles.save({title: "foo"})
-  .then(console.log.bind(console));
+articles.create({title: "foo"})
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
 Result is:
@@ -71,6 +78,8 @@ Result is:
 > Records identifiers are generated locally using UUID4.
 
 ### Retrieving a single record
+
+**Status:** Implemented.
 
 ```js
 articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
@@ -95,6 +104,8 @@ Result:
 
 ### Updating a record
 
+**Status:** Implemented.
+
 ```js
 var existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
@@ -105,7 +116,7 @@ var updated = Object.assign(existing, {
   title: "baz"
 });
 
-articles.save(updated)
+articles.update(updated)
   .then(console.log.bind(console));
 ```
 
@@ -123,6 +134,12 @@ Result is:
 
 ### Deleting records
 
+**Status:** Implemented.
+
+By default, local deletion is performed *virtually*, until the collection is actually synced to the remote server.
+
+Virtual deletions aren't retrieved when calling `#get()` and `#list()`.
+
 #### Single unique record passing its `id`:
 
 ```js
@@ -137,13 +154,16 @@ Result:
   data: [
     {
       id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
-      deleted: true,
+      title: "foo",
+      _status: "deleted"
     }
   ]
 }
 ```
 
 #### Multiple deletions using a query
+
+**Status:** Not implemented.
 
 ```js
 articles.delete({
@@ -178,9 +198,11 @@ Result is:
 }
 ```
 
-> Records with ``last_modified`` attribute were sync'ed on a server.
+> Records with `last_modified` attribute were sync'ed on a server.
 
 #### Filtering
+
+**Status:** Not implemented.
 
 ```js
 articles.list({
@@ -190,6 +212,8 @@ articles.list({
 
 #### Sorting
 
+**Status:** Not implemented.
+
 ```js
 articles.list({
   sort: ["-unread", "-added_on"]
@@ -197,6 +221,8 @@ articles.list({
 ```
 
 #### Combining `sort` and `filter`
+
+**Status:** Not implemented.
 
 ```js
 articles.list({
@@ -206,6 +232,8 @@ articles.list({
 ```
 
 ### Clearing the collection
+
+**Status:** Implemented.
 
 This will remove all existing records from the collection:
 
@@ -225,46 +253,89 @@ Result:
 
 ### Fetching and publishing changes
 
-Synchronizing local data with remote ones is performed by calling the `.sync()` method:
+**Status:** Partially implemented.
+
+Synchronizing local data with remote ones is performed by calling the `.sync()` method.
+
+Synopsis:
+
+1. Fetch remote changes since last synchronization;
+2. Fail on any conflict detected;
+  * The developer has to handle them manually, and call `sync ()` again when done;
+3. If everything went fine, publish local changes;
+4. Fail on any publication conflict detected;
+  * If `strategy` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
+  * If `strategy` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
+  * If `strategy` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a dedicated array.
+
+**Note:** On any rejection, `sync()` should be called again once conflicts are properly handled.
 
 ```js
 articles.sync()
-  .then(console.log.bind(console));
+  .then(console.log.bind(console))
+  .catch(console.error.bind(console));
 ```
 
-Note that you can override default options by passing it a new options object, Cliquetis will merge these new values with the default ones:
+**Note:** You can override default options by passing `sync()` a new `options` object; Cliquetis will merge these new values with the default ones:
 
 ```js
-articles.sync({mode: Cliquet.FORCE})
+articles.sync({mode: Collection.strategy.CLIENT_WINS})
   .then(console.log.bind(console));
+  .catch(console.error.bind(console));
 ```
 
-Result:
+Sample result:
 
 ```js
 {
-  created:   [], // missing locally.
-  updated:   [], // changed since last sync.
-  deleted:   [], // deleted since last sync.
-  conflicts: []  // changed both sides.
+  ok: true,
+  lastModified: 1434270764485,
+  errors:    [], // Errors encountered, if any
+  created:   [], // Created locally
+  updated:   [], // Updated locally
+  deleted:   [], // Deleted locally
+  conflicts: [], // Import conflicts
+  skipped:   [], // Skipped imports
+  published: []  // Successfully published
 }
 ```
 
-> If conflicts occured, they're listed in the `conflicts` array property; they must be resolved locally and `sync()` called again.
+If conflicts occured, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
 
-**Synchronization strategy**
+The `conflicts` array is in this form:
 
-TODO
+```js
+{
+  // …
+  conflicts: [
+    {
+      type: "incoming", // can also be "outgoing"
+      local: {
+        _status: "created",
+        id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+        title: "local title",
+      },
+      remote: {
+        id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
+        title: "remote title",
+      }
+    }
+  ]
+}
+```
 
-- Fetch changes since last synchronization using `?_since`;
-- Detect conflicts and apply changes if not any;
-- Publish deletions of records;
-- Publish creations records.
+### Synchronization strategies
+
+The `sync()` method accepts a `strategy` option, which accepts the following values:
+
+- `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
+- `Collection.strategy.SERVER_WINS`: Server data will be preserved;
+- `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
 
 **Notes**
 
 > During synchronization, records created locally are published on the server
-> using ``PUT`` and the ``If-None-Match: *`` request header to prevent overwriting.
+> using `PUT` and the `If-None-Match: *` request header to prevent overwriting.
 
 > Since fetching changes is paginated, it should be performed using `If-None-Match`
 > header to prevent race-conditions.
