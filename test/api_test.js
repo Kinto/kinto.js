@@ -54,7 +54,7 @@ describe("Api", () => {
     });
   });
 
-  describe.only("#endpoints", () => {
+  describe("#endpoints", () => {
     describe("full URL", () => {
       var endpoints;
 
