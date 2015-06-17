@@ -4,7 +4,9 @@
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
-    "dist": "browserify -s Cliquetis -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js",
+    "dist": "npm run dist-dev && npm run dist-prod",
+    "dist-dev": "browserify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js",
+    "dist-prod": "browserify -s Cliquetis -x fake-indexeddb -g uglifyify -e src/index.js -o dist/cliquetis.min.js",
     "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
@@ -27,6 +29,11 @@
   "bugs": {
     "url": "https://github.com/mozilla-services/cliquetis/issues"
   },
+  "browserify": {
+    "transform": [
+      ["babelify", {"sourceMapRelative": "."} ]
+    ]
+  },
   "homepage": "https://github.com/mozilla-services/cliquetis",
   "devDependencies": {
     "babel": "^5.4.4",
@@ -41,6 +48,7 @@
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",
+    "uglifyify": "^3.0.1",
     "uuid": "^2.0.1",
     "watchify": "^3.2.1"
   }
