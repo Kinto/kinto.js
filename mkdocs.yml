@@ -1,0 +1,7 @@
+site_name: Cliquetis documentation
+pages:
+- Home: index.md
+- Tutorial: tutorial.md
+- Api: api.md
+- Hacking: hacking.md
+theme: mkdocs
