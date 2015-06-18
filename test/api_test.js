@@ -4,6 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import Api, { cleanRecord } from "../src/api";
+import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -141,20 +142,19 @@ describe("Api", () => {
       sinon.assert.calledWithMatch(fetch, /\?_since=42/);
     });
 
-    it("should attach an If-Modified-Since header if lastModified is provided", () =>{
+    it("should attach an If-None-Match header if lastModified is provided", () =>{
       sandbox.stub(root, "fetch").returns(Promise.resolve());
-
       api.fetchChangesSince("articles", 42);
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-Modified-Since": "42"}
+        headers: {"If-None-Match": quote(42)}
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"Last-Modified": 41}));
+        fakeServerResponse(200, {items: []}, {"ETag": quote(41)}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -242,36 +242,48 @@ describe("Api", () => {
 
         it("should map create & update requests", () => {
           expect(requestBody.requests[0]).eql({
-            "body": {
-              "id": 1,
-              "title": "foo",
+            body: {
+              id: 1,
+              title: "foo",
             },
-            headers: {"If-Unmodified-Since": "42"},
+            headers: {"If-Match": quote(42)},
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
         });
 
-        it("should map batch delete requestsfor non-synced records", () => {
+        it("should map batch delete requests for non-synced records", () => {
           expect(requestBody.requests[2]).eql({
-            headers: {
-              "If-Unmodified-Since": "0"
-            },
+            headers: {},
             method: "DELETE",
             path: "/v0/collections/articles/records/3",
           });
         });
 
-        it("should map batch delete requests for synced records", () => {
+        it("should map batch update requests for synced records", () => {
           expect(requestBody.requests[0]).eql({
             path: "/v0/collections/articles/records/1",
             method: "PUT",
             headers: {
-              "If-Unmodified-Since": "42"
+              "If-Match": quote(42)
             },
             body: {
               id: 1,
               title: "foo"
+            }
+          });
+        });
+
+        it("should map create requests for non-synced records", () => {
+          expect(requestBody.requests[1]).eql({
+            path: "/v0/collections/articles/records/2",
+            method: "PUT",
+            headers: {
+              "If-None-Match": '*'
+            },
+            body: {
+              id: 2,
+              title: "bar"
             }
           });
         });
@@ -286,8 +298,8 @@ describe("Api", () => {
           requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
         });
 
-        it("should send If-Unmodified-Since headers", () => {
-          expect(requests[0].headers).eql({"If-Unmodified-Since": "42"});
+        it("should send If-Match headers", () => {
+          expect(requests[0].headers).eql({"If-Match": quote(42)});
         });
       });
     });

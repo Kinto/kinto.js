@@ -1,5 +1,7 @@
 "use strict";
 
+import { quote, unquote } from "./utils.js";
+
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
@@ -59,12 +61,21 @@ export default class Api {
    */
   fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
-    var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
-    return fetch(this.endpoints().collection(collName) + queryString, {
-      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, this.optionHeaders, {
-        "If-Modified-Since": lastModified ? String(lastModified) : "0"
-      }, options.headers)
-    })
+    var queryString = "";
+    var headers = Object.assign({},
+      DEFAULT_REQUEST_HEADERS,
+      this.optionHeaders,
+      options.headers
+    );
+
+    if (lastModified) {
+      queryString = "?_since=" + lastModified;
+      headers["If-None-Match"] = quote(lastModified);
+    }
+
+    const url = this.endpoints().collection(collName) + queryString;
+
+    return fetch(url, {headers: headers})
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
@@ -74,7 +85,9 @@ export default class Api {
           // TODO: attach better error reporting
           throw new Error("Fetching changes failed: HTTP " + res.status);
         } else {
-          newLastModified = res.headers.get("Last-Modified");
+          const etag = res.headers.get("ETag");  // e.g. '"42"'
+          // XXX: ETag are supposed to be opaque and stored «as-is».
+          newLastModified = parseInt(unquote(etag), 10);
           return res.json();
         }
       })
@@ -117,9 +130,16 @@ export default class Api {
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
-          const headers = options.safe ? {
-            "If-Unmodified-Since": String(record.last_modified || "0")
-          } : {};
+          const headers = {};
+          if (options.safe) {
+            if (record.last_modified) {
+              // Safe replace.
+              headers["If-Match"] = quote(record.last_modified);
+            } else if (!isDeletion) {
+              // Safe creation.
+              headers["If-None-Match"] = "*";
+            }
+          }
           return {method, headers, path, body};
         })
       })
