@@ -80,7 +80,7 @@ export default class Api {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
           newLastModified = lastModified;
-          return {items: []};
+          return {data: []};
         } else if (res.status >= 400) {
           // TODO: attach better error reporting
           throw new Error("Fetching changes failed: HTTP " + res.status);
@@ -94,7 +94,7 @@ export default class Api {
       .then(json => {
         return {
           lastModified: newLastModified,
-          changes: json.items
+          changes: json.data
         };
       });
   }
@@ -129,7 +129,7 @@ export default class Api {
           const isDeletion = record._status === "deleted";
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
-          const body = isDeletion ? undefined : cleanRecord(record);
+          const body = isDeletion ? undefined : { data: cleanRecord(record) };
           const headers = {};
           if (options.safe) {
             if (record.last_modified) {
@@ -156,7 +156,7 @@ export default class Api {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
           // existing id, unique field, etc.)
           if (response.status && response.status >= 200 && response.status < 400) {
-            results.published.push(response.body);
+            results.published.push(response.body.data);
           } else if (response.status === 404) {
             results.skipped.push(response.body);
           } else if (response.status === 412) {

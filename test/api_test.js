@@ -4,7 +4,6 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import Api, { cleanRecord } from "../src/api";
-import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -64,7 +63,7 @@ describe("Api", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: true }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(FAKE_SERVER_URL);
@@ -89,7 +88,7 @@ describe("Api", () => {
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: false }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql("/v0");
@@ -148,13 +147,13 @@ describe("Api", () => {
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-None-Match": quote(42)}
+        headers: { "If-None-Match": quote(42) }
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"ETag": quote(41)}));
+        fakeServerResponse(200, {items: []}, { "ETag": quote(41) }));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -243,10 +242,9 @@ describe("Api", () => {
         it("should map create & update requests", () => {
           expect(requestBody.requests[0]).eql({
             body: {
-              id: 1,
-              title: "foo",
+              data: { id: 1, title: "foo" },
             },
-            headers: {"If-Match": quote(42)},
+            headers: { "If-Match": quote(42) },
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
@@ -264,12 +262,9 @@ describe("Api", () => {
           expect(requestBody.requests[0]).eql({
             path: "/v0/collections/articles/records/1",
             method: "PUT",
-            headers: {
-              "If-Match": quote(42)
-            },
+            headers: { "If-Match": quote(42) },
             body: {
-              id: 1,
-              title: "foo"
+              data: { id: 1, title: "foo" },
             }
           });
         });
@@ -282,8 +277,7 @@ describe("Api", () => {
               "If-None-Match": '*'
             },
             body: {
-              id: 2,
-              title: "bar"
+              data: { id: 2, title: "bar" },
             }
           });
         });
@@ -334,10 +328,10 @@ describe("Api", () => {
             responses: [
               { status: 201,
                 path: "/v0/articles",
-                body: published[0]},
+                body: { data: published[0]}},
               { status: 201,
                 path: "/v0/articles",
-                body: published[1]},
+                body: { data: published[1]}},
             ]
           }));
 
