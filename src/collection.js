@@ -383,12 +383,13 @@ export default class Collection {
         return syncResultObject;
       })
       .then(syncResultObject => {
-        // Import is done, save lastModified value received from the server
-        return this.saveLastModified(changeObject.lastModified)
-          .then(lastModified => {
-            syncResultObject.lastModified = lastModified;
-            return syncResultObject;
-          });
+        syncResultObject.lastModified = changeObject.lastModified;
+        // Don't persist lastModified value if conflicts occured
+        if (syncResultObject.conflicts.length > 0)
+          return syncResultObject;
+        // No conflict occured, persist collection's lastModified value
+        return this.saveLastModified(syncResultObject.lastModified)
+          .then(_ => syncResultObject);
       })
   }
 
