@@ -58,11 +58,16 @@ export default class Api {
    */
   fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
-    var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
+    var queryString = "";
+    var headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
+
+    if (lastModified) {
+      queryString = "?_since=" + lastModified;
+      headers["If-None-Match"] = `"${lastModified}"`;
+    }
+
     return fetch(this.endpoints().collection(collName) + queryString, {
-      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, {
-        "If-Modified-Since": lastModified ? String(lastModified) : "0"
-      }, options.headers)
+      headers: headers
     })
       .then(res => {
         // If HTTP 304, nothing has changed
@@ -73,7 +78,8 @@ export default class Api {
           // TODO: attach better error reporting
           throw new Error("Fetching changes failed: HTTP " + res.status);
         } else {
-          newLastModified = res.headers.get("Last-Modified");
+          var etag = res.headers.get("ETag");  // e.g. '"42"'
+          newLastModified = parseInt(etag.substring(1, etag.length - 1));
           return res.json();
         }
       })
@@ -116,9 +122,17 @@ export default class Api {
           const path = this.endpoints({full: false}).record(collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : cleanRecord(record);
-          const headers = options.safe ? {
-            "If-Unmodified-Since": String(record.last_modified || "0")
-          } : {};
+          const headers = {};
+          if (options.safe) {
+            if (record.last_modified) {
+              // Safe replace.
+              headers["If-Match"] = `"${record.last_modified}"`;
+            }
+            else if (!isDeletion) {
+              // Safe creation.
+              headers["If-None-Match"] = "*";
+            }
+          }
           return {method, headers, path, body};
         })
       })

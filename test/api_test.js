@@ -124,20 +124,19 @@ describe("Api", () => {
       sinon.assert.calledWithMatch(fetch, /\?_since=42/);
     });
 
-    it("should attach an If-Modified-Since header if lastModified is provided", () =>{
+    it("should attach an If-None-Match header if lastModified is provided", () =>{
       sandbox.stub(root, "fetch").returns(Promise.resolve());
-
       api.fetchChangesSince("articles", 42);
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-Modified-Since": "42"}
+        headers: {"If-None-Match": '"42"'}
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"Last-Modified": 41}));
+        fakeServerResponse(200, {items: []}, {"ETag": '"41"'}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -221,17 +220,15 @@ describe("Api", () => {
               "id": 1,
               "title": "foo",
             },
-            headers: {"If-Unmodified-Since": "42"},
+            headers: {"If-Match": '"42"'},
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
         });
 
-        it("should map batch delete requestsfor non-synced records", () => {
+        it("should map batch delete requests for non-synced records", () => {
           expect(requestBody.requests[2]).eql({
-            headers: {
-              "If-Unmodified-Since": "0"
-            },
+            headers: {},
             method: "DELETE",
             path: "/v0/collections/articles/records/3",
           });
@@ -242,7 +239,7 @@ describe("Api", () => {
             path: "/v0/collections/articles/records/1",
             method: "PUT",
             headers: {
-              "If-Unmodified-Since": "42"
+              "If-Match": '"42"'
             },
             body: {
               id: 1,
@@ -261,8 +258,8 @@ describe("Api", () => {
           requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
         });
 
-        it("should send If-Unmodified-Since headers", () => {
-          expect(requests[0].headers).eql({"If-Unmodified-Since": "42"});
+        it("should send If-Match headers", () => {
+          expect(requests[0].headers).eql({"If-Match": '"42"'});
         });
       });
     });
