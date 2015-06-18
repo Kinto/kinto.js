@@ -216,9 +216,9 @@ describe("Api", () => {
 
         it("should map create & update requests", () => {
           expect(requestBody.requests[0]).eql({
-            "body": {
-              "id": 1,
-              "title": "foo",
+            body: {
+              id: 1,
+              title: "foo",
             },
             headers: {"If-Match": '"42"'},
             method: "PUT",
@@ -234,7 +234,7 @@ describe("Api", () => {
           });
         });
 
-        it("should map batch delete requests for synced records", () => {
+        it("should map batch update requests for synced records", () => {
           expect(requestBody.requests[0]).eql({
             path: "/v0/collections/articles/records/1",
             method: "PUT",
@@ -244,6 +244,20 @@ describe("Api", () => {
             body: {
               id: 1,
               title: "foo"
+            }
+          });
+        });
+
+        it("should map create requests for non-synced records", () => {
+          expect(requestBody.requests[1]).eql({
+            path: "/v0/collections/articles/records/2",
+            method: "PUT",
+            headers: {
+              "If-None-Match": '*'
+            },
+            body: {
+              id: 2,
+              title: "bar"
             }
           });
         });

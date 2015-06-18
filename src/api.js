@@ -79,7 +79,8 @@ export default class Api {
           throw new Error("Fetching changes failed: HTTP " + res.status);
         } else {
           var etag = res.headers.get("ETag");  // e.g. '"42"'
-          newLastModified = parseInt(etag.substring(1, etag.length - 1));
+          // XXX: ETag are supposed to be opaque and stored «as-is».
+          newLastModified = parseInt(etag.substring(1, etag.length - 1), 10);
           return res.json();
         }
       })
