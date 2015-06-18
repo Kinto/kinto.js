@@ -218,8 +218,7 @@ describe("Api", () => {
         it("should map create & update requests", () => {
           expect(requestBody.requests[0]).eql({
             body: {
-              id: 1,
-              title: "foo",
+              data: { id: 1, title: "foo" },
             },
             headers: {"If-Match": quote(42)},
             method: "PUT",
@@ -243,8 +242,7 @@ describe("Api", () => {
               "If-Match": quote(42)
             },
             body: {
-              id: 1,
-              title: "foo"
+              data: { id: 1, title: "foo" },
             }
           });
         });
@@ -257,8 +255,7 @@ describe("Api", () => {
               "If-None-Match": '*'
             },
             body: {
-              id: 2,
-              title: "bar"
+              data: { id: 2, title: "bar" },
             }
           });
         });
@@ -309,10 +306,10 @@ describe("Api", () => {
             responses: [
               { status: 201,
                 path: "/v0/articles",
-                body: published[0]},
+                body: { data: published[0]}},
               { status: 201,
                 path: "/v0/articles",
-                body: published[1]},
+                body: { data: published[1]}},
             ]
           }));
 
