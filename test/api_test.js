@@ -59,7 +59,7 @@ describe("Api", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: true }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(FAKE_SERVER_URL);
@@ -84,7 +84,7 @@ describe("Api", () => {
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: false }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql("/v0");
@@ -131,13 +131,13 @@ describe("Api", () => {
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-None-Match": quote(42)}
+        headers: {"If-None-Match": '"42"'}
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"ETag": quote(41)}));
+        fakeServerResponse(200, {items: []}, {"ETag": '"41"'}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -220,7 +220,7 @@ describe("Api", () => {
             body: {
               data: { id: 1, title: "foo" },
             },
-            headers: {"If-Match": quote(42)},
+            headers: { "If-Match": quote(42) },
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
@@ -238,9 +238,7 @@ describe("Api", () => {
           expect(requestBody.requests[0]).eql({
             path: "/v0/collections/articles/records/1",
             method: "PUT",
-            headers: {
-              "If-Match": quote(42)
-            },
+            headers: { "If-Match": quote(42) },
             body: {
               data: { id: 1, title: "foo" },
             }
