@@ -612,7 +612,7 @@ describe("Collection", () => {
       {title: "art2"},
       {title: "art3"},
     ];
-    var articles;
+    var articles, ids;
 
     beforeEach(() => {
       articles = testCollection();
@@ -621,7 +621,8 @@ describe("Collection", () => {
         published: [],
         conflicts: [],
       });
-      return Promise.all(fixtures.map(fixture => articles.create(fixture)));
+      return Promise.all(fixtures.map(fixture => articles.create(fixture)))
+        .then(res => ids = res.map(r => r.data.id));
     });
 
     it("should load fixtures", () => {
@@ -641,11 +642,25 @@ describe("Collection", () => {
       });
     });
 
-    it("should store latest lastModified value", () => {
-      var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+    it("should store latest lastModified value when no conflicts", () => {
+      sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,
           changes: []
+        }));
+      return articles.sync().then(res => {
+        expect(articles.lastModified).eql(42);
+      });
+    });
+
+    it("shouldn't store latest lastModified on conflicts", () => {
+      sandbox.stub(articles.api, "fetchChangesSince")
+        .returns(Promise.resolve({
+          lastModified: 43,
+          changes: [{
+            id: ids[0],
+            title: "art1mod",
+          }]
         }));
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(42);
