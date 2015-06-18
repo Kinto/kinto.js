@@ -245,20 +245,23 @@ describe("Collection", () => {
     });
 
     it("should mark a conflict as resolved", () => {
-      return articles.resolve({
+      const remote = Object.assign({}, local, {
+        title: "blah",
+        last_modified: 42,
+      });
+      const conflict = {
         type: "incoming",
         local: local,
-        remote: Object.assign({}, local, {
-          title: "blah",
-          last_modified: 42
-        })
-      }, Object.assign({}, local, {title: "resolved"}))
+        remote: remote,
+      };
+      const resolution = Object.assign({}, local, {title: "resolved"});
+      return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
           _status: "updated",
           id: local.id,
-          title: "resolved",
-          last_modified: 42
+          title: resolution.title,
+          last_modified: remote.last_modified
         });
     });
   });
