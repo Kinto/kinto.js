@@ -1,5 +1,7 @@
 "use strict";
 
+import { quote, unquote } from "./utils.js";
+
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
@@ -63,7 +65,7 @@ export default class Api {
 
     if (lastModified) {
       queryString = "?_since=" + lastModified;
-      headers["If-None-Match"] = `"${lastModified}"`;
+      headers["If-None-Match"] = quote(lastModified);
     }
 
     return fetch(this.endpoints().collection(collName) + queryString, {
@@ -78,9 +80,9 @@ export default class Api {
           // TODO: attach better error reporting
           throw new Error("Fetching changes failed: HTTP " + res.status);
         } else {
-          var etag = res.headers.get("ETag");  // e.g. '"42"'
+          const etag = res.headers.get("ETag");  // e.g. '"42"'
           // XXX: ETag are supposed to be opaque and stored «as-is».
-          newLastModified = parseInt(etag.substring(1, etag.length - 1), 10);
+          newLastModified = parseInt(unquote(etag), 10);
           return res.json();
         }
       })
@@ -127,7 +129,7 @@ export default class Api {
           if (options.safe) {
             if (record.last_modified) {
               // Safe replace.
-              headers["If-Match"] = `"${record.last_modified}"`;
+              headers["If-Match"] = quote(record.last_modified);
             }
             else if (!isDeletion) {
               // Safe creation.
