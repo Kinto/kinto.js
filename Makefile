@@ -3,5 +3,5 @@
 test-functional:
 	npm run selenium-start &> /dev/null &
 	npm run demo &> /dev/null &
-	sleep 2
+	sleep 10
 	mocha --compilers js:babel/register test/functional/*_test.js
