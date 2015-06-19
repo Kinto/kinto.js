@@ -240,6 +240,13 @@ describe("Collection", () => {
         .then(result => uuid = result.data.id);
     });
 
+    it("should isolate records by bucket", () => {
+      const otherbucket = new Collection('other', TEST_COLLECTION_NAME, api);
+      return otherbucket.get(uuid)
+        .then(res => res.data)
+        .should.be.rejectedWith(Error, /not found/);
+    });
+
     it("should retrieve a record from its id", () => {
       return articles.get(uuid)
         .then(res => res.data.title)

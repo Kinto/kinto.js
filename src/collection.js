@@ -52,6 +52,10 @@ export default class Collection {
     return this._bucket;
   }
 
+  get dbname() {
+    return `${this.bucket}/${this.name}`;
+  }
+
   get lastModified() {
     return this._lastModified;
   }
@@ -77,12 +81,12 @@ export default class Collection {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.name, 1);
+      const request = indexedDB.open(this.dbname, 1);
       request.onupgradeneeded = event => {
         // DB object
         const db = event.target.result;
         // Main collection store
-        const collStore = db.createObjectStore(this.name, {
+        const collStore = db.createObjectStore(this.dbname, {
           keyPath: "id"
         });
         // Primary key (UUID)
@@ -118,7 +122,7 @@ export default class Collection {
    * @param {String|null} name  Store name (defaults to coll name)
    */
   prepare(mode=undefined, name=null) {
-    const storeName = name || this.name;
+    const storeName = name || this.dbname;
     const transaction = this._db.transaction([storeName], mode);
     const store = transaction.objectStore(storeName);
     return {transaction, store};
