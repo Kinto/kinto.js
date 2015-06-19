@@ -473,7 +473,7 @@ export default class Collection {
    */
   pullChanges(syncResultObject, options) {
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.name, this.lastModified, options)
+    return this.api.fetchChangesSince(this.bucket, this.name, this.lastModified, options)
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes));
   }
@@ -495,7 +495,7 @@ export default class Collection {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.name, toSync, options.headers, {
+          this.api.batch(this.bucket, this.name, toSync, options.headers, {
             safe: options.strategy === Collection.SERVER_WINS
           })
         ]);

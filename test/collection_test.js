@@ -384,7 +384,7 @@ describe("Collection", () => {
   });
 
   describe("#pullChanges", () => {
-    var articles, result;
+    var fetchChangesSince, articles, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -406,7 +406,7 @@ describe("Collection", () => {
       ];
 
       beforeEach(() => {
-        sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+        fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince").returns(
           Promise.resolve({
             lastModified: 42,
             changes: serverChanges
@@ -414,6 +414,18 @@ describe("Collection", () => {
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
         }));
+      });
+
+      it("should fetch remote changes from the server", () => {
+        return articles.pullChanges(result)
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              null,
+              undefined);
+          });
       });
 
       it("should resolve with imported creations", () => {
@@ -570,6 +582,7 @@ describe("Collection", () => {
         .then(_ => {
           sinon.assert.calledOnce(batch);
           sinon.assert.calledWithExactly(batch,
+            TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
             sinon.match(v => v.length === 1 && v[0].title === "foo"),
             {},
