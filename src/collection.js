@@ -471,7 +471,7 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pullChanges(syncResultObject, options) {
+  pullChanges(syncResultObject, options={}) {
     options = Object.assign({lastModified: this.lastModified}, options);
     // First fetch remote changes from the server
     return this.api.fetchChangesSince(this.bucket, this.name, options)
@@ -486,7 +486,7 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pushChanges(syncResultObject, options={headers: {}}) {
+  pushChanges(syncResultObject, options={}) {
     const safe = options.strategy === Collection.SERVER_WINS;
     options = Object.assign({safe}, options);
 

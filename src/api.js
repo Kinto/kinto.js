@@ -42,15 +42,15 @@ export default class Api {
    */
   endpoints(options={fullUrl: true}) {
     var root = options.fullUrl ? this.remote : `/${this.version}`;
-    var endpoints = {
-      root:           () => root,
-      batch:          () => `${root}/batch`,
-      bucket: (bucket) => `${root}/buckets/${bucket}`,
-      collection: (bucket, coll) => `${endpoints.bucket(bucket)}/collections/${coll}`,
-      records: (bucket, coll) => `${endpoints.collection(bucket, coll)}/records`,
-      record: (bucket, coll, id) => `${endpoints.records(bucket, coll)}/${id}`,
+    var urls = {
+      root: ()                   => root,
+      batch: ()                  => `${root}/batch`,
+      bucket: (bucket)           => `${root}/buckets/${bucket}`,
+      collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
+      records: (bucket, coll)    => `${urls.collection(bucket, coll)}/records`,
+      record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
     };
-    return endpoints;
+    return urls;
   }
 
   /**
@@ -63,7 +63,7 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     var newLastModified;
-    var recordsUrl = this.endpoints().records(bucketName, collName);
+    const recordsUrl = this.endpoints().records(bucketName, collName);
     var queryString = "";
     var headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
 
@@ -72,9 +72,7 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {
-      headers: headers
-    })
+    return fetch(recordsUrl + queryString, {headers: headers})
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
@@ -110,7 +108,7 @@ export default class Api {
    * @param  {Object} options  Options.
    * @return {Promise}
    */
-  batch(bucketName, collName, records, options={headers: {}, safe: true}) {
+  batch(bucketName, collName, records, options={}) {
     const safe = options.safe || true;
     const headers = options.headers || {};
     const results = {
@@ -125,7 +123,7 @@ export default class Api {
       method: "POST",
       headers: DEFAULT_REQUEST_HEADERS,
       body: JSON.stringify({
-        defaults: {headers: headers},
+        defaults: { headers },
         requests: records.map(record => {
           const isDeletion = record._status === "deleted";
           const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
