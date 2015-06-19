@@ -43,23 +43,27 @@ export default class Api {
    */
   endpoints(options={fullUrl: true}) {
     var root = options.fullUrl ? this.remote : `/${this.version}`;
-    return {
-      root:           () => root,
-      batch:          () => `${root}/batch`,
-      collection: (coll) => `${root}/collections/${coll}/records`,
-      record: (coll, id) => `${this.endpoints(options).collection(coll)}/${id}`,
+    var urls = {
+      root: ()                   => root,
+      batch: ()                  => `${root}/batch`,
+      bucket: (bucket)           => `${root}/buckets/${bucket}`,
+      collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
+      records: (bucket, coll)    => `${urls.collection(bucket, coll)}/records`,
+      record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
     };
+    return urls;
   }
 
   /**
    * Fetches latest changes from the remote server.
    *
+   * @param  {String} bucketName   The bucket name.
    * @param  {String} collName     The collection name.
-   * @param  {Number} lastModified Latest sync timestamp.
    * @param  {Object} options      Options.
    * @return {Promise}
    */
-  fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
+  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
+    const recordsUrl = this.endpoints().records(bucketName, collName);
     var newLastModified;
     var queryString = "";
     var headers = Object.assign({},
@@ -68,18 +72,16 @@ export default class Api {
       options.headers
     );
 
-    if (lastModified) {
-      queryString = "?_since=" + lastModified;
-      headers["If-None-Match"] = quote(lastModified);
+    if (options.lastModified) {
+      queryString = "?_since=" + options.lastModified;
+      headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    const url = this.endpoints().collection(collName) + queryString;
-
-    return fetch(url, {headers: headers})
+    return fetch(recordsUrl + queryString, {headers})
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
-          newLastModified = lastModified;
+          newLastModified = options.lastModified;
           return {data: []};
         } else if (res.status >= 400) {
           // TODO: attach better error reporting
@@ -105,13 +107,19 @@ export default class Api {
    * TODO: If more than X results (default is 25 on server), split in several
    * calls. Related: https://github.com/mozilla-services/cliquet/issues/318
    *
-   * @param  {String} collName The collection name.
-   * @param  {Array}  records  The list of record updates to send.
-   * @param  {Object} headers  Headers to attach to each update request.
-   * @param  {Object} options  Options.
+   * @param  {String} bucketName   The bucket name.
+   * @param  {String} collName     The collection name.
+   * @param  {Array}  records      The list of record updates to send.
+   * @param  {Object} options      The options object.
    * @return {Promise}
    */
-  batch(collName, records, headers={}, options={safe: true}) {
+  batch(bucketName, collName, records, options={headers: {}}) {
+    const safe = options.safe || true;
+    const headers = Object.assign({},
+      DEFAULT_REQUEST_HEADERS,
+      this.optionHeaders,
+      options.headers
+    );
     const results = {
       errors:    [],
       published: [],
@@ -122,16 +130,16 @@ export default class Api {
       return Promise.resolve(results);
     return fetch(this.endpoints().batch(), {
       method: "POST",
-      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, this.optionHeaders),
+      headers: headers,
       body: JSON.stringify({
-        defaults: { headers },
+        defaults: {headers},
         requests: records.map(record => {
           const isDeletion = record._status === "deleted";
-          const path = this.endpoints({full: false}).record(collName, record.id);
+          const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : { data: cleanRecord(record) };
           const headers = {};
-          if (options.safe) {
+          if (safe) {
             if (record.last_modified) {
               // Safe replace.
               headers["If-Match"] = quote(record.last_modified);
