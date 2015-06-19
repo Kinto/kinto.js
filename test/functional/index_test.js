@@ -6,7 +6,7 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
-describe("using promises and chai-as-promised", () => {
+describe("Demo app", () => {
   var browser;
 
   before(() => {
@@ -14,20 +14,11 @@ describe("using promises and chai-as-promised", () => {
     return browser.init({browserName: "chrome"});
   });
 
-  beforeEach(() => {
-    return browser.get("http://admc.io/wd/test-pages/guinea-pig.html");
-  });
+  beforeEach(() => browser.get("http://localhost:8080/"));
 
-  after(() => {
-    return browser.quit();
-  });
+  after(() => browser.quit());
 
   it("should retrieve the page title", () => {
-    return browser.title().should.become("WD Tests");
-  });
-
-  it("submit element should be clicked", () => {
-    return browser.elementById("submit").click().eval("window.location.href")
-      .should.eventually.include("&submit");
+    return browser.title().should.become("Cliquetis demo");
   });
 });

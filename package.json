@@ -4,16 +4,18 @@
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
+    "demo": "npm run dist-prod && http-server demo",
     "dist": "npm run dist-dev && npm run dist-prod",
     "dist-dev": "browserify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js",
     "dist-prod": "browserify -s Cliquetis -x fake-indexeddb -g uglifyify -e src/index.js -o dist/cliquetis.min.js",
     "selenium-start": "selenium-standalone install && selenium-standalone start",
     "tdd": "mocha -w --compilers js:babel/register test/unit/*_test.js",
-    "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
+    "test": "npm run test-functional && npm run test-unit",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha -- test/unit/*_test.js",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha -- test/unit/*_test.js && open coverage/index.html",
-    "test-functional": "mocha -w --compilers js:babel/register test/functional/*_test.js",
+    "test-functional": "make test-functional",
     "test-nocover": "mocha --compilers js:babel/register test/unit/*_test.js",
+    "test-unit": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "watch": "watchify -s Cliquetis -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v"
   },
   "repository": {
