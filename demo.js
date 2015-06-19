@@ -1,5 +1,5 @@
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
