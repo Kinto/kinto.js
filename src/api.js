@@ -58,19 +58,18 @@ export default class Api {
    *
    * @param  {String} bucketName   The bucket name.
    * @param  {String} collName     The collection name.
-   * @param  {Number} lastModified Latest sync timestamp.
    * @param  {Object} options      Options.
    * @return {Promise}
    */
-  fetchChangesSince(bucketName, collName, lastModified=null, options={headers: {}}) {
+  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     var newLastModified;
     var recordsUrl = this.endpoints().records(bucketName, collName);
     var queryString = "";
     var headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
 
-    if (lastModified) {
-      queryString = "?_since=" + lastModified;
-      headers["If-None-Match"] = quote(lastModified);
+    if (options.lastModified) {
+      queryString = "?_since=" + options.lastModified;
+      headers["If-None-Match"] = quote(options.lastModified);
     }
 
     return fetch(recordsUrl + queryString, {
@@ -79,7 +78,7 @@ export default class Api {
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
-          newLastModified = lastModified;
+          newLastModified = options.lastModified;
           return {data: []};
         } else if (res.status >= 400) {
           // TODO: attach better error reporting

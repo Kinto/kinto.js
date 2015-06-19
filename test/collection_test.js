@@ -423,8 +423,18 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              null,
-              undefined);
+              {lastModified: null});
+          });
+      });
+
+      it("should use timestamp to fetch remote changes from the server", () => {
+        return articles.pullChanges(result, {lastModified: 42})
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              {lastModified: 42});
           });
       });
 
