@@ -219,7 +219,7 @@ describe("Api", () => {
       describe("non-empty changes", () => {
         beforeEach(() => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-          api.batch("blog", "articles", operations, {Foo: "Bar"});
+          api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}});
           requestBody = JSON.parse(fetch.getCall(0).args[1].body);
         });
 

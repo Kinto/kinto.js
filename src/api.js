@@ -107,11 +107,12 @@ export default class Api {
    * @param  {String} bucketName   The bucket name.
    * @param  {String} collName The collection name.
    * @param  {Array}  records  The list of record updates to send.
-   * @param  {Object} headers  Headers to attach to each update request.
    * @param  {Object} options  Options.
    * @return {Promise}
    */
-  batch(bucketName, collName, records, headers={}, options={safe: true}) {
+  batch(bucketName, collName, records, options={headers: {}, safe: true}) {
+    const safe = options.safe || true;
+    const headers = options.headers || {};
     const results = {
       errors:    [],
       published: [],
@@ -124,14 +125,14 @@ export default class Api {
       method: "POST",
       headers: DEFAULT_REQUEST_HEADERS,
       body: JSON.stringify({
-        defaults: { headers },
+        defaults: {headers: headers},
         requests: records.map(record => {
           const isDeletion = record._status === "deleted";
           const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : { data: cleanRecord(record) };
           const headers = {};
-          if (options.safe) {
+          if (safe) {
             if (record.last_modified) {
               // Safe replace.
               headers["If-Match"] = quote(record.last_modified);

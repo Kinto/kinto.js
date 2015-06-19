@@ -487,6 +487,9 @@ export default class Collection {
    * @return {Promise}
    */
   pushChanges(syncResultObject, options={headers: {}}) {
+    const safe = options.strategy === Collection.SERVER_WINS;
+    options = Object.assign({safe}, options);
+
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
@@ -496,9 +499,7 @@ export default class Collection {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options.headers, {
-            safe: options.strategy === Collection.SERVER_WINS
-          })
+          this.api.batch(this.bucket, this.name, toSync, options)
         ]);
       })
       // Update published local records
