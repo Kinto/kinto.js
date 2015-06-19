@@ -17,9 +17,10 @@ export default class Cliquetis {
       throw new Error("missing collection name");
 
     const api = new Api(this._options.remote || "http://0.0.0.0:8888/v0");
+    const bucket = this._options.bucket || "default";
 
     if (!this._collections.hasOwnProperty(collName))
-      this._collections[collName] = new Collection(collName, api);
+      this._collections[collName] = new Collection(bucket, collName, api);
 
     return this._collections[collName];
   }

@@ -36,7 +36,8 @@ export class SyncResultObject {
 }
 
 export default class Collection {
-  constructor(name, api) {
+  constructor(bucket, name, api) {
+    this._bucket = bucket;
     this._name = name;
     this._db;
     this.api = api;
@@ -45,6 +46,10 @@ export default class Collection {
 
   get name() {
     return this._name;
+  }
+
+  get bucket() {
+    return this._bucket;
   }
 
   get lastModified() {

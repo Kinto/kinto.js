@@ -12,6 +12,7 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
+const TEST_BUCKET_NAME = "cliquetis-test";
 const TEST_COLLECTION_NAME = "cliquetis-test";
 const FAKE_SERVER_URL = "http://fake-server/v0"
 
@@ -21,7 +22,7 @@ describe("Collection", () => {
 
   function testCollection() {
     api = new Api(FAKE_SERVER_URL);
-    return new Collection(TEST_COLLECTION_NAME, api);
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
   }
 
   beforeEach(() => {

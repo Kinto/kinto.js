@@ -12,6 +12,7 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
+const TEST_BUCKET_NAME = "cliquetis-test";
 const TEST_COLLECTION_NAME = "cliquetis-test";
 const FAKE_SERVER_URL = "http://fake-server"
 
@@ -19,7 +20,11 @@ describe("Cliquetis", () => {
   var sandbox;
 
   function testCollection() {
-    return new Cliquetis({serverUrl: FAKE_SERVER_URL}).collection(TEST_COLLECTION_NAME);
+    const db = new Cliquetis({
+      bucket: TEST_BUCKET_NAME,
+      bucketserverUrl: FAKE_SERVER_URL
+    });
+    return db.collection(TEST_COLLECTION_NAME);
   }
 
   beforeEach(() => {
@@ -39,6 +44,15 @@ describe("Cliquetis", () => {
     it("should resolve to a named collection instance", () => {
       expect(testCollection().name).eql(TEST_COLLECTION_NAME);
     });
+
+    it("should use specified bucket name if specified", () => {
+      expect(testCollection().bucket).eql(TEST_BUCKET_NAME);
+    })
+
+    it("should use default bucket if not specified", () => {
+      const coll = new Cliquetis().collection(TEST_COLLECTION_NAME);
+      expect(coll.bucket).eql("default");
+    })
 
     it("should cache collection instance", () => {
       const db = new Cliquetis();
