@@ -69,14 +69,24 @@ describe("Api", () => {
           .eql("http://fake-server/v0/batch");
       });
 
+      it("should provide bucket endpoint", () => {
+        expect(endpoints.bucket("foo"))
+          .eql("http://fake-server/v0/buckets/foo");
+      });
+
       it("should provide collection endpoint", () => {
-        expect(endpoints.collection("toto"))
-          .eql("http://fake-server/v0/collections/toto/records");
+        expect(endpoints.collection("foo", "bar"))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar");
+      });
+
+      it("should provide records endpoint", () => {
+        expect(endpoints.records("foo", "bar"))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar/records");
       });
 
       it("should provide record endpoint", () => {
-        expect(endpoints.record("toto", 42))
-          .eql("http://fake-server/v0/collections/toto/records/42");
+        expect(endpoints.record("foo", "bar", 42))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar/records/42");
       });
     });
 
@@ -94,14 +104,24 @@ describe("Api", () => {
           .eql("/v0/batch");
       });
 
+      it("should provide bucket endpoint", () => {
+        expect(endpoints.bucket("foo"))
+          .eql("/v0/buckets/foo");
+      });
+
       it("should provide collection endpoint", () => {
-        expect(endpoints.collection("toto"))
-          .eql("/v0/collections/toto/records");
+        expect(endpoints.collection("foo", "bar"))
+          .eql("/v0/buckets/foo/collections/bar");
+      });
+
+      it("should provide records endpoint", () => {
+        expect(endpoints.records("foo", "bar", 42))
+          .eql("/v0/buckets/foo/collections/bar/records");
       });
 
       it("should provide record endpoint", () => {
-        expect(endpoints.record("toto", 42))
-          .eql("/v0/collections/toto/records/42");
+        expect(endpoints.record("foo", "bar", 42))
+          .eql("/v0/buckets/foo/collections/bar/records/42");
       });
     });
   });

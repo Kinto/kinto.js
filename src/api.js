@@ -42,12 +42,15 @@ export default class Api {
    */
   endpoints(options={fullUrl: true}) {
     var root = options.fullUrl ? this.remote : `/${this.version}`;
-    return {
+    var endpoints = {
       root:           () => root,
       batch:          () => `${root}/batch`,
-      collection: (coll) => `${root}/collections/${coll}/records`,
-      record: (coll, id) => `${this.endpoints(options).collection(coll)}/${id}`,
+      bucket: (bucket) => `${root}/buckets/${bucket}`,
+      collection: (bucket, coll) => `${endpoints.bucket(bucket)}/collections/${coll}`,
+      records: (bucket, coll) => `${endpoints.collection(bucket, coll)}/records`,
+      record: (bucket, coll, id) => `${endpoints.records(bucket, coll)}/${id}`,
     };
+    return endpoints;
   }
 
   /**
