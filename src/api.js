@@ -56,13 +56,15 @@ export default class Api {
   /**
    * Fetches latest changes from the remote server.
    *
+   * @param  {String} bucketName   The bucket name.
    * @param  {String} collName     The collection name.
    * @param  {Number} lastModified Latest sync timestamp.
    * @param  {Object} options      Options.
    * @return {Promise}
    */
-  fetchChangesSince(collName, lastModified=null, options={headers: {}}) {
+  fetchChangesSince(bucketName, collName, lastModified=null, options={headers: {}}) {
     var newLastModified;
+    var recordsUrl = this.endpoints().records(bucketName, collName);
     var queryString = "";
     var headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
 
@@ -71,7 +73,7 @@ export default class Api {
       headers["If-None-Match"] = quote(lastModified);
     }
 
-    return fetch(this.endpoints().collection(collName) + queryString, {
+    return fetch(recordsUrl + queryString, {
       headers: headers
     })
       .then(res => {
@@ -103,13 +105,14 @@ export default class Api {
    * TODO: If more than X results (default is 25 on server), split in several
    * calls. Related: https://github.com/mozilla-services/cliquet/issues/318
    *
+   * @param  {String} bucketName   The bucket name.
    * @param  {String} collName The collection name.
    * @param  {Array}  records  The list of record updates to send.
    * @param  {Object} headers  Headers to attach to each update request.
    * @param  {Object} options  Options.
    * @return {Promise}
    */
-  batch(collName, records, headers={}, options={safe: true}) {
+  batch(bucketName, collName, records, headers={}, options={safe: true}) {
     const results = {
       errors:    [],
       published: [],
@@ -125,7 +128,7 @@ export default class Api {
         defaults: { headers },
         requests: records.map(record => {
           const isDeletion = record._status === "deleted";
-          const path = this.endpoints({full: false}).record(collName, record.id);
+          const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
           const body = isDeletion ? undefined : { data: cleanRecord(record) };
           const headers = {};
