@@ -3,7 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import Api, { cleanRecord } from "../src/api";
+import Api, { cleanRecord } from "../../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();

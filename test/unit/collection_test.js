@@ -5,8 +5,8 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
-import Collection, { SyncResultObject } from "../src/collection";
-import Api from "../src/api";
+import Collection, { SyncResultObject } from "../../src/collection";
+import Api from "../../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();

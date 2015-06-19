@@ -7,11 +7,13 @@
     "dist": "npm run dist-dev && npm run dist-prod",
     "dist-dev": "browserify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js",
     "dist-prod": "browserify -s Cliquetis -x fake-indexeddb -g uglifyify -e src/index.js -o dist/cliquetis.min.js",
-    "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
+    "selenium-start": "selenium-standalone install && selenium-standalone start",
+    "tdd": "mocha -w --compilers js:babel/register test/unit/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
-    "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
-    "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha && open coverage/index.html",
-    "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
+    "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha -- test/unit/*_test.js",
+    "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha -- test/unit/*_test.js && open coverage/index.html",
+    "test-functional": "mocha -w --compilers js:babel/register test/functional/*_test.js",
+    "test-nocover": "mocha --compilers js:babel/register test/unit/*_test.js",
     "watch": "watchify -s Cliquetis -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v"
   },
   "repository": {
@@ -31,7 +33,12 @@
   },
   "browserify": {
     "transform": [
-      ["babelify", {"sourceMapRelative": "."} ]
+      [
+        "babelify",
+        {
+          "sourceMapRelative": "."
+        }
+      ]
     ]
   },
   "homepage": "https://github.com/mozilla-services/cliquetis",
@@ -47,9 +54,11 @@
     "isomorphic-fetch": "^2.1.0",
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
+    "selenium-standalone": "^4.4.2",
     "sinon": "^1.14.1",
     "uglifyify": "^3.0.1",
     "uuid": "^2.0.1",
-    "watchify": "^3.2.1"
+    "watchify": "^3.2.1",
+    "wd": "^0.3.12"
   }
 }

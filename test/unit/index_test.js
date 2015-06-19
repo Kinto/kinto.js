@@ -5,8 +5,8 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
-import Cliquetis from "../src";
-import Collection from "../src/collection";
+import Cliquetis from "../../src";
+import Collection from "../../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
