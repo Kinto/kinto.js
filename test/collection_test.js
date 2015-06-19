@@ -100,7 +100,7 @@ describe("Collection", () => {
         expect(result.ok).eql(false);
       });
 
-      it("should alter non-array properties", function() {
+      it("should alter non-array properties", () => {
         const result = new SyncResultObject();
 
         result.add("ok", false);
@@ -224,9 +224,45 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Record is not an object/);
     });
 
+    it("should reject updates on a record without an id", () => {
+      return articles.update({title: "foo"})
+        .should.be.rejectedWith(Error, /missing id/);
+    });
+
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.update().should.be.rejectedWith(Error, /^update/);
+    });
+  });
+
+  describe("#resolve", () => {
+    var articles, local;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return articles.create({title: "local title", last_modified: 41})
+        .then(res => local = res.data);
+    });
+
+    it("should mark a conflict as resolved", () => {
+      const remote = Object.assign({}, local, {
+        title: "blah",
+        last_modified: 42,
+      });
+      const conflict = {
+        type: "incoming",
+        local: local,
+        remote: remote,
+      };
+      const resolution = Object.assign({}, local, {title: "resolved"});
+      return articles.resolve(conflict, resolution)
+        .then(res => res.data)
+        .should.eventually.become({
+          _status: "updated",
+          id: local.id,
+          title: resolution.title,
+          last_modified: remote.last_modified
+        });
     });
   });
 
@@ -269,7 +305,7 @@ describe("Collection", () => {
         });
     });
 
-    it("should support the includeDeleted option", function() {
+    it("should support the includeDeleted option", () => {
       // body...
     });
 

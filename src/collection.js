@@ -186,6 +186,8 @@ export default class Collection {
     return this.open().then(() => {
       if (typeof(record) !== "object")
         return Promise.reject(new Error("Record is not an object."));
+      if (!record.id)
+        return Promise.reject(new Error("Cannot update a record missing id."));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
           var newStatus = "updated";
@@ -207,6 +209,21 @@ export default class Collection {
         });
       });
     }).catch(this._handleError("update"));
+  }
+
+  /**
+   * Resolves a conflict, updating local record according to proposed
+   * resolution — keeping remote record last_modified value as a reference for
+   * further batch sending.
+   *
+   * @param  {Object} conflict   The conflict object.
+   * @param  {Object} resolution The proposed record.
+   * @return {Promise}
+   */
+  resolve(conflict, resolution) {
+    return this.update(Object.assign({}, resolution, {
+      last_modified: conflict.remote.last_modified
+    }));
   }
 
   /**
