@@ -11,7 +11,15 @@ describe("Demo app", () => {
 
   before(() => {
     browser = wd.promiseChainRemote();
-    return browser.init({browserName: "chrome"});
+    var chromeBin = process.env.CHROME_BIN;
+    var options = {
+      browserName: "chrome",
+      webStorageEnabled: true
+    };
+    if (chromeBin) {
+      options.binary = chromeBin;
+    }
+    return browser.init(options);
   });
 
   beforeEach(() => browser.get("http://localhost:8080/"));
