@@ -17,7 +17,7 @@ describe("Demo app", () => {
       webStorageEnabled: true
     };
     if (chromeBin) {
-      options.binary = chromeBin;
+      options.chrome_binary = chromeBin;
     }
     return browser.init(options);
   });
