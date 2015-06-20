@@ -2,7 +2,7 @@
 
 import chai, { expect } from "chai";
 
-import { attachFakeIDBSymbolsTo } from "../src/utils";
+import { attachFakeIDBSymbolsTo } from "../../src/utils";
 
 chai.should();
 chai.config.includeStack = true;
