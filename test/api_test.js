@@ -131,13 +131,13 @@ describe("Api", () => {
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-None-Match": '"42"'}
+        headers: {"If-None-Match": quote(42)}
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"ETag": '"41"'}));
+        fakeServerResponse(200, {items: []}, {"ETag": quote(41)}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
