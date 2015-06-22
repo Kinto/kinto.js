@@ -72,7 +72,7 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {headers: headers})
+    return fetch(recordsUrl + queryString, { headers })
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {

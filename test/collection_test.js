@@ -595,7 +595,7 @@ describe("Collection", () => {
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
             sinon.match(v => v.length === 1 && v[0].title === "foo"),
-            {headers: {}, safe: true});
+            { safe: true });
         });
     });
 

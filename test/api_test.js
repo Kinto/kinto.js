@@ -157,9 +157,9 @@ describe("Api", () => {
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, { "ETag": quote(41) }));
+        fakeServerResponse(200, { data: [] }, { "ETag": quote(41) }));
 
-      return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+      return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
         .should.eventually.become({
           lastModified: 41,
           changes: []
