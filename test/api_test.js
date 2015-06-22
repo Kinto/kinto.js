@@ -4,6 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import Api, { cleanRecord } from "../src/api";
+import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -130,13 +131,13 @@ describe("Api", () => {
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-None-Match": '"42"'}
+        headers: {"If-None-Match": quote(42)}
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"ETag": '"41"'}));
+        fakeServerResponse(200, {items: []}, {"ETag": quote(41)}));
 
       return api.fetchChangesSince("articles", 42)
         .should.eventually.become({
@@ -220,7 +221,7 @@ describe("Api", () => {
               id: 1,
               title: "foo",
             },
-            headers: {"If-Match": '"42"'},
+            headers: {"If-Match": quote(42)},
             method: "PUT",
             path: "/v0/collections/articles/records/1",
           });
@@ -239,7 +240,7 @@ describe("Api", () => {
             path: "/v0/collections/articles/records/1",
             method: "PUT",
             headers: {
-              "If-Match": '"42"'
+              "If-Match": quote(42)
             },
             body: {
               id: 1,
@@ -273,7 +274,7 @@ describe("Api", () => {
         });
 
         it("should send If-Match headers", () => {
-          expect(requests[0].headers).eql({"If-Match": '"42"'});
+          expect(requests[0].headers).eql({"If-Match": quote(42)});
         });
       });
     });

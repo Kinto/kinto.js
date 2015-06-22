@@ -130,8 +130,7 @@ export default class Api {
             if (record.last_modified) {
               // Safe replace.
               headers["If-Match"] = quote(record.last_modified);
-            }
-            else if (!isDeletion) {
+            } else if (!isDeletion) {
               // Safe creation.
               headers["If-None-Match"] = "*";
             }
