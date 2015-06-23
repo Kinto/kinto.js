@@ -37,7 +37,7 @@
   <script src="cliquetis.min.js"></script>
   <script>
   function main() {
-    const db = new Cliquetis({remote: "http://0.0.0.0:8888/v0"});
+    const db = new Cliquetis({remote: "http://0.0.0.0:8888/v1"});
     const tasks = db.collection("todo");
     const headers = {Authorization: "Basic " + btoa("niko:niko")};
 

@@ -6,6 +6,10 @@ import "isomorphic-fetch";
 import Api from "./api";
 import Collection from "./collection";
 
+
+const DEFAULT_BUCKET_NAME = "default";
+
+
 export default class Cliquetis {
   constructor(options = {}) {
     this._options = options;
@@ -17,9 +21,10 @@ export default class Cliquetis {
       throw new Error("missing collection name");
 
     const api = new Api(this._options.remote || "http://0.0.0.0:8888/v0");
+    const bucket = this._options.bucket || DEFAULT_BUCKET_NAME;
 
     if (!this._collections.hasOwnProperty(collName))
-      this._collections[collName] = new Collection(collName, api);
+      this._collections[collName] = new Collection(bucket, collName, api);
 
     return this._collections[collName];
   }

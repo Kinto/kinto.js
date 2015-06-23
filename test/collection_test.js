@@ -12,6 +12,7 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
+const TEST_BUCKET_NAME = "cliquetis-test";
 const TEST_COLLECTION_NAME = "cliquetis-test";
 const FAKE_SERVER_URL = "http://fake-server/v0"
 
@@ -21,7 +22,7 @@ describe("Collection", () => {
 
   function testCollection() {
     api = new Api(FAKE_SERVER_URL);
-    return new Collection(TEST_COLLECTION_NAME, api);
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
   }
 
   beforeEach(() => {
@@ -275,6 +276,13 @@ describe("Collection", () => {
         .then(result => uuid = result.data.id);
     });
 
+    it("should isolate records by bucket", () => {
+      const otherbucket = new Collection('other', TEST_COLLECTION_NAME, api);
+      return otherbucket.get(uuid)
+        .then(res => res.data)
+        .should.be.rejectedWith(Error, /not found/);
+    });
+
     it("should retrieve a record from its id", () => {
       return articles.get(uuid)
         .then(res => res.data.title)
@@ -412,7 +420,7 @@ describe("Collection", () => {
   });
 
   describe("#pullChanges", () => {
-    var articles, result;
+    var fetchChangesSince, articles, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -434,7 +442,7 @@ describe("Collection", () => {
       ];
 
       beforeEach(() => {
-        sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+        fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince").returns(
           Promise.resolve({
             lastModified: 42,
             changes: serverChanges
@@ -442,6 +450,28 @@ describe("Collection", () => {
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
         }));
+      });
+
+      it("should fetch remote changes from the server", () => {
+        return articles.pullChanges(result)
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              {lastModified: null});
+          });
+      });
+
+      it("should use timestamp to fetch remote changes from the server", () => {
+        return articles.pullChanges(result, {lastModified: 42})
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              {lastModified: 42});
+          });
       });
 
       it("should resolve with imported creations", () => {
@@ -598,10 +628,10 @@ describe("Collection", () => {
         .then(_ => {
           sinon.assert.calledOnce(batch);
           sinon.assert.calledWithExactly(batch,
+            TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
             sinon.match(v => v.length === 1 && v[0].title === "foo"),
-            {},
-            {safe: true});
+            { safe: true });
         });
     });
 

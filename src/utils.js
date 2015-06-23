@@ -23,3 +23,21 @@ export function attachFakeIDBSymbolsTo(obj) {
   })
   obj.indexedDB = require("fake-indexeddb");
 }
+
+/**
+ * Returns the specified string with double quotes.
+ * @param  {String} str  A string to quote.
+ * @return {String}
+ */
+export function quote(str) {
+  return `"${str}"`;
+}
+
+/**
+ * Trim double quotes from specified string.
+ * @param  {String} str  A string to unquote.
+ * @return {String}
+ */
+export function unquote(str) {
+  return str.replace(/^"/, "").replace(/"$/, "");
+}

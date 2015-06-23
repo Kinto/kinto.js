@@ -36,7 +36,18 @@ export class SyncResultObject {
 }
 
 export default class Collection {
-  constructor(name, api) {
+
+  /**
+   * Ensures a connection to the local database has been opened.
+   *
+   * @param {String}      bucket  Bucket identifier.
+   * @param {String}      name    Collection name.
+   * @param {Api}         api     Reference to Api instance.
+   *
+   * @return {Promise}
+   */
+  constructor(bucket, name, api) {
+    this._bucket = bucket;
     this._name = name;
     this._db;
     this.api = api;
@@ -45,6 +56,14 @@ export default class Collection {
 
   get name() {
     return this._name;
+  }
+
+  get bucket() {
+    return this._bucket;
+  }
+
+  get dbname() {
+    return `${this.bucket}/${this.name}`;
   }
 
   get lastModified() {
@@ -72,12 +91,12 @@ export default class Collection {
     if (this._db)
       return Promise.resolve(this);
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.name, 1);
+      const request = indexedDB.open(this.dbname, 1);
       request.onupgradeneeded = event => {
         // DB object
         const db = event.target.result;
         // Main collection store
-        const collStore = db.createObjectStore(this.name, {
+        const collStore = db.createObjectStore(this.dbname, {
           keyPath: "id"
         });
         // Primary key (UUID)
@@ -113,7 +132,7 @@ export default class Collection {
    * @param {String|null} name  Store name (defaults to coll name)
    */
   prepare(mode=undefined, name=null) {
-    const storeName = name || this.name;
+    const storeName = name || this.dbname;
     const transaction = this._db.transaction([storeName], mode);
     const store = transaction.objectStore(storeName);
     return {transaction, store};
@@ -480,9 +499,10 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pullChanges(syncResultObject, options) {
+  pullChanges(syncResultObject, options={}) {
+    options = Object.assign({lastModified: this.lastModified}, options);
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.name, this.lastModified, options)
+    return this.api.fetchChangesSince(this.bucket, this.name, options)
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes));
   }
@@ -494,7 +514,10 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pushChanges(syncResultObject, options={headers: {}}) {
+  pushChanges(syncResultObject, options={}) {
+    const safe = options.strategy === Collection.SERVER_WINS;
+    options = Object.assign({safe}, options);
+
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
@@ -504,9 +527,7 @@ export default class Collection {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.name, toSync, options.headers, {
-            safe: options.strategy === Collection.SERVER_WINS
-          })
+          this.api.batch(this.bucket, this.name, toSync, options)
         ]);
       })
       // Update published local records

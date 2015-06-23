@@ -4,6 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import Api, { cleanRecord } from "../src/api";
+import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -58,7 +59,7 @@ describe("Api", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: true }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(FAKE_SERVER_URL);
@@ -69,21 +70,31 @@ describe("Api", () => {
           .eql("http://fake-server/v0/batch");
       });
 
+      it("should provide bucket endpoint", () => {
+        expect(endpoints.bucket("foo"))
+          .eql("http://fake-server/v0/buckets/foo");
+      });
+
       it("should provide collection endpoint", () => {
-        expect(endpoints.collection("toto"))
-          .eql("http://fake-server/v0/collections/toto/records");
+        expect(endpoints.collection("foo", "bar"))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar");
+      });
+
+      it("should provide records endpoint", () => {
+        expect(endpoints.records("foo", "bar"))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar/records");
       });
 
       it("should provide record endpoint", () => {
-        expect(endpoints.record("toto", 42))
-          .eql("http://fake-server/v0/collections/toto/records/42");
+        expect(endpoints.record("foo", "bar", 42))
+          .eql("http://fake-server/v0/buckets/foo/collections/bar/records/42");
       });
     });
 
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
+      beforeEach(() => endpoints = api.endpoints({ fullUrl: false }))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql("/v0");
@@ -94,14 +105,24 @@ describe("Api", () => {
           .eql("/v0/batch");
       });
 
+      it("should provide bucket endpoint", () => {
+        expect(endpoints.bucket("foo"))
+          .eql("/v0/buckets/foo");
+      });
+
       it("should provide collection endpoint", () => {
-        expect(endpoints.collection("toto"))
-          .eql("/v0/collections/toto/records");
+        expect(endpoints.collection("foo", "bar"))
+          .eql("/v0/buckets/foo/collections/bar");
+      });
+
+      it("should provide records endpoint", () => {
+        expect(endpoints.records("foo", "bar", 42))
+          .eql("/v0/buckets/foo/collections/bar/records");
       });
 
       it("should provide record endpoint", () => {
-        expect(endpoints.record("toto", 42))
-          .eql("/v0/collections/toto/records/42");
+        expect(endpoints.record("foo", "bar", 42))
+          .eql("/v0/buckets/foo/collections/bar/records/42");
       });
     });
   });
@@ -110,7 +131,7 @@ describe("Api", () => {
     it("should request server for latest changes", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve());
 
-      api.fetchChangesSince("articles");
+      api.fetchChangesSince("blog", "articles");
 
       sinon.assert.calledOnce(fetch);
     });
@@ -118,28 +139,27 @@ describe("Api", () => {
     it("should request server changes since last modified", () =>{
       sandbox.stub(root, "fetch").returns(Promise.resolve());
 
-      api.fetchChangesSince("articles", 42);
+      api.fetchChangesSince("blog", "articles", {lastModified: 42});
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/);
     });
 
-    it("should attach an If-Modified-Since header if lastModified is provided", () =>{
+    it("should attach an If-None-Match header if lastModified is provided", () =>{
       sandbox.stub(root, "fetch").returns(Promise.resolve());
-
-      api.fetchChangesSince("articles", 42);
+      api.fetchChangesSince("blog", "articles", {lastModified: 42});
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {"If-Modified-Since": "42"}
+        headers: { "If-None-Match": quote(42) }
       });
     });
 
     it("should resolve with a result object", () => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {items: []}, {"Last-Modified": 41}));
+        fakeServerResponse(200, { data: [] }, { "ETag": quote(41) }));
 
-      return api.fetchChangesSince("articles", 42)
+      return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
         .should.eventually.become({
           lastModified: 41,
           changes: []
@@ -149,7 +169,8 @@ describe("Api", () => {
     it("should merge provided headers with default ones", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve());
 
-      api.fetchChangesSince("articles", 42, {headers: {Foo: "bar"}});
+      const options = {lastModified: 42, headers: {Foo: "bar"}};
+      api.fetchChangesSince("blog", "articles", options);
 
       sinon.assert.calledOnce(fetch);
       sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
@@ -164,14 +185,14 @@ describe("Api", () => {
     it("should resolve with no changes if HTTP 304 is received", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(304, {}));
 
-      return api.fetchChangesSince("articles", 42)
+      return api.fetchChangesSince("blog", "articles", {lastModified: 42})
         .should.eventually.become({lastModified: 42, changes: []});
     });
 
     it("should reject on any HTTP status >= 400", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
 
-      return api.fetchChangesSince("articles", 42)
+      return api.fetchChangesSince("blog", "articles", {lastModified: 42})
         .should.eventually.be.rejectedWith(Error, /failed: HTTP 401/);
     });
   });
@@ -190,7 +211,7 @@ describe("Api", () => {
         it("should not perform request on empty operation list", () => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
 
-          api.batch("articles", []);
+          api.batch("blog", "articles", []);
 
           sinon.assert.notCalled(fetch);
         });
@@ -199,7 +220,7 @@ describe("Api", () => {
       describe("non-empty changes", () => {
         beforeEach(() => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-          api.batch("articles", operations, {Foo: "Bar"});
+          api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}});
           requestBody = JSON.parse(fetch.getCall(0).args[1].body);
         });
 
@@ -217,36 +238,43 @@ describe("Api", () => {
 
         it("should map create & update requests", () => {
           expect(requestBody.requests[0]).eql({
-            "body": {
-              "id": 1,
-              "title": "foo",
+            body: {
+              data: { id: 1, title: "foo" },
             },
-            headers: {"If-Unmodified-Since": "42"},
+            headers: { "If-Match": quote(42) },
             method: "PUT",
-            path: "/v0/collections/articles/records/1",
+            path: "/v0/buckets/blog/collections/articles/records/1",
           });
         });
 
-        it("should map batch delete requestsfor non-synced records", () => {
+        it("should map batch delete requests for non-synced records", () => {
           expect(requestBody.requests[2]).eql({
-            headers: {
-              "If-Unmodified-Since": "0"
-            },
+            headers: {},
             method: "DELETE",
-            path: "/v0/collections/articles/records/3",
+            path: "/v0/buckets/blog/collections/articles/records/3",
           });
         });
 
-        it("should map batch delete requests for synced records", () => {
+        it("should map batch update requests for synced records", () => {
           expect(requestBody.requests[0]).eql({
-            path: "/v0/collections/articles/records/1",
+            path: "/v0/buckets/blog/collections/articles/records/1",
+            method: "PUT",
+            headers: { "If-Match": quote(42) },
+            body: {
+              data: { id: 1, title: "foo" },
+            }
+          });
+        });
+
+        it("should map create requests for non-synced records", () => {
+          expect(requestBody.requests[1]).eql({
+            path: "/v0/buckets/blog/collections/articles/records/2",
             method: "PUT",
             headers: {
-              "If-Unmodified-Since": "42"
+              "If-None-Match": '*'
             },
             body: {
-              id: 1,
-              title: "foo"
+              data: { id: 2, title: "bar" },
             }
           });
         });
@@ -257,12 +285,12 @@ describe("Api", () => {
 
         beforeEach(() => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-          api.batch("articles", operations);
+          api.batch("blog", "articles", operations);
           requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
         });
 
-        it("should send If-Unmodified-Since headers", () => {
-          expect(requests[0].headers).eql({"If-Unmodified-Since": "42"});
+        it("should send If-Match headers", () => {
+          expect(requests[0].headers).eql({"If-Match": quote(42)});
         });
       });
     });
@@ -278,7 +306,7 @@ describe("Api", () => {
             message: "http 400"
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 400/);
         });
 
@@ -288,7 +316,7 @@ describe("Api", () => {
             message: "http 500"
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 500/);
         });
 
@@ -296,15 +324,15 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 201,
-                path: "/v0/articles",
-                body: published[0]},
+                path: "/v0/buckets/blog/collections/articles/records",
+                body: { data: published[0]}},
               { status: 201,
-                path: "/v0/articles",
-                body: published[1]},
+                path: "/v0/buckets/blog/collections/articles/records",
+                body: { data: published[1]}},
             ]
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.become({
               conflicts: [],
               errors:    [],
@@ -317,12 +345,12 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
-                path: "/v0/articles/1",
+                path: "/v0/buckets/blog/collections/articles/records/1",
                 body: { 404: true }},
             ]
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.become({
               conflicts: [],
               skipped:   [{ 404: true }],
@@ -335,18 +363,18 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 500,
-                path: "/v0/articles/1",
+                path: "/v0/buckets/blog/collections/articles/records/1",
                 body: { 500: true }},
             ]
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.become({
               conflicts: [],
               skipped:   [],
               errors:    [
                 {
-                  path: "/v0/articles/1",
+                  path: "/v0/buckets/blog/collections/articles/records/1",
                   error: {
                     500: true
                   }
@@ -360,12 +388,12 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 412,
-                path: "/v0/articles/1",
+                path: "/v0/buckets/blog/collections/articles/records/1",
                 body: { invalid: true }},
             ]
           }));
 
-          return api.batch("articles", published)
+          return api.batch("blog", "articles", published)
             .should.eventually.become({
               conflicts: [{
                 type: "outgoing",
