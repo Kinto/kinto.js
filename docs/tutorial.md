@@ -6,9 +6,11 @@ We'll create a super simple offline-first, remotely synchronized todo list appli
 
 The final demo code is [available](https://github.com/mozilla-services/cliquetis/tree/master/demo) in the Cliquetis repository.
 
-## Prerequisites
-
-To remotely store and synchronize data, we're using a [Kinto](http://kinto.readthedocs.org/) server instance from the [0.2.2 tag](https://github.com/mozilla-services/kinto/releases/tag/0.2.2). Please refer to Kinto documentation for [setup instructions](http://kinto.readthedocs.org/en/stable/installation.html).
+> #### Note:
+>
+> **For this tutorial we'll be using a public test server instance of [Kinto](http://kinto.readthedocs.org/); data stored on this instance are purged every 24 hours. Don't rely on this server for production use.**
+>
+> If you plan on using your own version of Kinto, please refer to the [setup instructions](http://kinto.readthedocs.org/en/stable/installation.html).
 
 ## Bootstrapping a demo Web application
 
@@ -43,7 +45,7 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Cliquetis();
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 }
 
@@ -51,12 +53,17 @@ window.addEventListener("DOMContentLoaded", main);
 
 ```
 
-**Note:** You'll need to serve this page over HTTP, for Cliquetis to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
+> #### Notes
+>
+> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are resetted everyday**;
+> - You'll need to serve this page over HTTP, for Cliquetis to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
 
 For example, if you're using http-server:
 
+    $ pwd
+    /home/niko/cliquetis-tutorial
     $ npm install -g http-server
-    $ http-server yourdirectory
+    $ http-server /home/niko/cliquetis-tutorial
 
 And that's it. You should see something like this on `http://localhost:3000`:
 
