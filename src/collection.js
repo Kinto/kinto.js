@@ -93,7 +93,7 @@ export default class Collection {
         });
         metaStore.createIndex("name", "name", { unique: true });
       };
-      request.onerror = event => reject(event.error);
+      request.onerror = event => reject(event.target.error);
       request.onsuccess = event => {
         this._db = event.target.result;
         resolve(this);

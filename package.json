@@ -4,7 +4,7 @@
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
-    "demo": "npm run dist-prod && http-server demo",
+    "demo": "npm run dist && http-server demo",
     "dist": "npm run dist-dev && npm run dist-prod",
     "dist-dev": "browserify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js",
     "dist-prod": "browserify -s Cliquetis -x fake-indexeddb -g uglifyify -e src/index.js -o dist/cliquetis.min.js",
