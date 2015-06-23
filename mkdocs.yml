@@ -5,3 +5,5 @@ pages:
 - Api: api.md
 - Hacking: hacking.md
 theme: mkdocs
+markdown_extensions:
+- codehilite
