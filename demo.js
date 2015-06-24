@@ -6,11 +6,11 @@ function main() {
     .addEventListener("submit", function(event) {
       event.preventDefault();
       tasks.create({
-        label: event.target.label.value,
+        title: event.target.title.value,
         done: false
       }).then(function(res) {
-        event.target.label.value = "";
-        event.target.label.focus();
+        event.target.title.value = "";
+        event.target.title.focus();
         render();
       }).catch(function(err) {
         console.error(err);
@@ -66,7 +66,7 @@ function main() {
   function renderTask(task) {
     var tpl = document.getElementById("task-tpl");
     var li = tpl.content.cloneNode(true);
-    li.querySelector(".title").textContent = task.label;
+    li.querySelector(".title").textContent = task.title;
     li.querySelector(".uuid").textContent = task.id;
     // retrieve a reference to the checkbox element
     var checkbox = li.querySelector(".done");
