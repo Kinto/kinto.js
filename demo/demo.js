@@ -1,6 +1,19 @@
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var serverBaseUrl = "https://kinto.dev.mozaws.net/v0";
+  var db = new Cliquetis({remote: serverBaseUrl});
   var tasks = db.collection("tasks");
+  var fxaToken = localStorage.getItem("fxaToken") || (location.hash ? location.hash.slice(1) : null);
+
+  // Setup FXa auth link
+  var authLink = document.getElementById("signin-link");
+  var headers = {};
+  if (!fxaToken) {
+    authLink.href = serverBaseUrl + "/fxa-oauth/login?redirect=" + location.href + "%23";
+  } else {
+    authLink.textContent = "Signed as " + fxaToken;
+    headers.Authorization = "Bearer " + fxaToken;
+    localStorage.setItem("fxaToken", fxaToken);
+  }
 
   document.getElementById("form")
     .addEventListener("submit", function(event) {
@@ -42,16 +55,14 @@ function main() {
       return tasks.resolve(conflict, conflict.remote);
     }))
       .then(function() {
-        tasks.sync();
+        tasks.sync({headers: headers});
       });
   }
 
   document.getElementById("sync")
     .addEventListener("click", function(event) {
       event.preventDefault();
-      tasks.sync({
-        headers: {Authorization: "Basic " + btoa("user:pass")
-      }})
+      tasks.sync({headers: headers})
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
@@ -106,7 +117,13 @@ function main() {
     });
   }
 
-  render();
+  var app = document.getElementById("app");
+  if (fxaToken) {
+    app.style.display = "block";
+    render();
+  } else {
+    app.style.display = "none";
+  }
 }
 
 window.addEventListener("DOMContentLoaded", main);

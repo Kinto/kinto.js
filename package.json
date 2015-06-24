@@ -13,7 +13,7 @@
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
-    "watch": "watchify -s Cliquetis -d -t [ babelify --sourceMapRelative . ] -e src/index.js -o dist/cliquetis.js -v"
+    "watch": "watchify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js -v"
   },
   "repository": {
     "type": "git",

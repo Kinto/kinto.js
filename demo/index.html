@@ -7,23 +7,32 @@
 </head>
 <body>
   <div class="container">
-    <h1>Tasks</h1>
-    <form class="form-inline" id="form">
-      <div class="form-group">
-        <input class="form-control" type="text" name="title" placeholder="Thing">
-        <input class="btn btn-primary" type="submit" value="Add">
-      </div>
-    </form>
-    <hr>
-    <div class="row">
+    <div class="row" class="signin">
       <div class="col-md-6">
-        <ul id="tasks" class="list-group"></ul>
-        <button id="clearCompleted" class="btn">Clear completed</button>
-        <button id="sync" class="btn">Synchronize</button>
+        <h1>Tasks</h1>
       </div>
-      <div class="col-md-6">
-        <textarea id="results" style="font-family:Monaco,monospace;font-size:12px"
-          class="form-control col-md-6" rows="20"></textarea>
+      <div class="col-md-6 text-right">
+        <p><a id="signin-link" href="">Sign in your Firefox Account</a></p>
+      </div>
+    </div>
+    <div id="app">
+      <form class="form-inline" id="form">
+        <div class="form-group">
+          <input class="form-control" type="text" name="title" placeholder="Thing">
+          <input class="btn btn-primary" type="submit" value="Add">
+        </div>
+      </form>
+      <hr>
+      <div class="row">
+        <div class="col-md-6">
+          <ul id="tasks" class="list-group"></ul>
+          <button id="clearCompleted" class="btn">Clear completed</button>
+          <button id="sync" class="btn">Synchronize</button>
+        </div>
+        <div class="col-md-6">
+          <textarea id="results" style="font-family:Monaco,monospace;font-size:12px"
+            class="form-control col-md-6" rows="20"></textarea>
+        </div>
       </div>
     </div>
     <template id="task-tpl">
