@@ -40,9 +40,10 @@ function main() {
   function handleConflicts(conflicts) {
     return Promise.all(conflicts.map(function(conflict) {
       return tasks.resolve(conflict, conflict.remote);
-    })).then(function() {
-      tasks.sync();
-    });
+    }))
+      .then(function() {
+        tasks.sync();
+      });
   }
 
   document.getElementById("sync")
@@ -55,9 +56,8 @@ function main() {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
             return handleConflicts(res.conflicts);
-          } else {
-            return res;
           }
+          return res;
         })
         .then(render)
         .catch(function(err) {

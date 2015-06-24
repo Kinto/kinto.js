@@ -86,10 +86,11 @@ function main() {
         title: event.target.title.value,
         done: false
       })
-      .then(_ => {
+      .then(function(res) {
         event.target.title.value = "";
         event.target.title.focus();
       })
+      .then(render)
       .catch(function(err) {
         console.error(err);
       });
@@ -131,7 +132,7 @@ function main() {
         event.target.title.value = "";
         event.target.title.focus();
       })
-	  // Render the list once a value had been submitted.
+	    // Render the list once a value had been submitted.
       .then(render)
       .catch(function(err) {
         console.error(err);
@@ -471,10 +472,12 @@ Your take really. Let's take the former approach:
 
 ```js
   function handleConflicts(conflicts) {
-    // For each conflict, resolve it by picking the remote version
     return Promise.all(conflicts.map(function(conflict) {
       return tasks.resolve(conflict, conflict.remote);
-    })).then(_ => tasks.sync());
+    }))
+      .then(function() {
+        tasks.sync();
+      });
   }
 
   document.getElementById("sync")
@@ -484,11 +487,9 @@ Your take really. Let's take the former approach:
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
-            // Conflicts! let's handle'em
             return handleConflicts(res.conflicts);
-          } else {
-            return res;
           }
+          return res;
         })
         .then(render)
         .catch(function(err) {
