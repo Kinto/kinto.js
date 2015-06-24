@@ -29,7 +29,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
     <h1>Tasks</h1>
     <form class="form-inline" id="form">
       <div class="form-group">
-        <input class="form-control" type="text" name="label" placeholder="Thing">
+        <input class="form-control" type="text" name="title" placeholder="Thing">
         <input class="btn btn-primary" type="submit" value="Add">
       </div>
     </form>
@@ -83,11 +83,11 @@ function main() {
     .addEventListener("submit", function(event) {
       event.preventDefault();
       tasks.create({
-        label: event.target.label.value,
+        title: event.target.title.value,
         done: false
       }).then(_ => {
-        event.target.label.value = "";
-        event.target.label.focus();
+        event.target.title.value = "";
+        event.target.title.focus();
       }).catch(function(err) {
         console.error(err);
       });
@@ -119,11 +119,11 @@ function main() {
     .addEventListener("submit", function(event) {
       event.preventDefault();
       tasks.create({
-        label: event.target.label.value,
+        title: event.target.title.value,
         done: false
       }).then(function(res) {
-        event.target.label.value = "";
-        event.target.label.focus();
+        event.target.title.value = "";
+        event.target.title.focus();
         // Render the list once a value had been submitted.
         render();
       }).catch(function(err) {
@@ -134,7 +134,7 @@ function main() {
   function renderTask(task) {
     var li = document.createElement("li");
     li.classList.add("list-group-item");
-    li.innerHTML = task.label;
+    li.innerHTML = task.title;
     return li;
   }
 
@@ -191,7 +191,7 @@ First, let's move to using a `template` tag in our HTML document so we can defin
     <li class="list-group-item">
       <label>
         <input class="done" type="checkbox">
-        <span class="label"></span>
+        <span class="title"></span>
       </label>
     </li>
   </template>
@@ -204,7 +204,7 @@ Our `renderTask()` function becomes:
   function renderTask(task) {
     var tpl = document.getElementById("task-tpl");
     var li = tpl.content.cloneNode(true);
-    li.querySelector(".label").textContent = task.label;
+    li.querySelector(".title").textContent = task.title;
     li.querySelector(".done").checked = task.done;
     return li;
   }
@@ -220,7 +220,7 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
   function renderTask(task) {
     var tpl = document.getElementById("task-tpl");
     var li = tpl.content.cloneNode(true);
-    li.querySelector(".label").textContent = task.label;
+    li.querySelector(".title").textContent = task.title;
     // retrieve a reference to the checkbox element
     var checkbox = li.querySelector(".done");
     // initialize it with task status
@@ -341,14 +341,14 @@ Here's a sample result object, so you can appreciate it all:
       "last_modified": 1434617181458,
       "done": false,
       "id": "7ca54d89-479a-4201-8494-ba7d40b9248f",
-      "label": "eat more cheese",
+      "title": "eat more cheese",
       "_status": "synced"
     },
     {
       "last_modified": 1434617181453,
       "done": false,
       "id": "0422fba7-32ad-48e2-a9eb-82725b12e6fa",
-      "label": "eat cheese",
+      "title": "eat cheese",
       "_status": "synced"
     }
   ],
@@ -358,14 +358,14 @@ Here's a sample result object, so you can appreciate it all:
       "last_modified": 1434617181453,
       "done": false,
       "id": "0422fba7-32ad-48e2-a9eb-82725b12e6fa",
-      "label": "eat cheese",
+      "title": "eat cheese",
       "_status": "synced"
     },
     {
       "last_modified": 1434617181458,
       "done": false,
       "id": "7ca54d89-479a-4201-8494-ba7d40b9248f",
-      "label": "eat more cheese",
+      "title": "eat more cheese",
       "_status": "synced"
     }
   ],
@@ -393,12 +393,12 @@ If the client and the server have different versions of a single record, it will
 Let's create a conflict by:
 
 - Marking a local task record as `done`;
-- Updating the record on the server and alter its label; we'll use [httpie](https://github.com/jakubroztocil/httpie) to do so:
+- Updating the record on the server and alter its title; we'll use [httpie](https://github.com/jakubroztocil/httpie) to do so:
 
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ http -a user:pass PATCH :8888/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 label="eat even more cheese"
+$ http -a user:pass PATCH :8888/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
 HTTP/1.1 200 OK
 Access-Control-Expose-Headers: Backoff, Retry-After, Alert
 Content-Length: 118
@@ -409,7 +409,7 @@ Server: waitress
 {
     "done": false,
     "id": "c8d522b1-11bd-4c0a-ab34-a36c427e0530",
-    "label": "eat even more cheese",
+    "title": "eat even more cheese",
     "last_modified": 1434619745465
 }
 ```
@@ -432,14 +432,14 @@ If we try to `#sync`, now we get a conflict:
         "last_modified": 1434619634577,
         "done": true,
         "id": "c8d522b1-11bd-4c0a-ab34-a36c427e0530",
-        "label": "eat even more cheese",
+        "title": "eat even more cheese",
         "_status": "updated"
       },
       "remote": {
         "last_modified": 1434619745465,
         "done": false,
         "id": "c8d522b1-11bd-4c0a-ab34-a36c427e0530",
-        "label": "eat even more cheese!"
+        "title": "eat even more cheese!"
       }
     }
   ],
