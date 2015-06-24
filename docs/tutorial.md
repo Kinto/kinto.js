@@ -115,6 +115,9 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
+  var db = new Cliquetis();
+  var tasks = db.collection("tasks");
+
   document.getElementById("form")
     .addEventListener("submit", function(event) {
       event.preventDefault();
