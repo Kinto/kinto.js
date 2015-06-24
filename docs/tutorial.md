@@ -191,7 +191,7 @@ First, let's move to using a `template` tag in our HTML document so we can defin
     <li class="list-group-item">
       <label>
         <input class="done" type="checkbox">
-        <span class="title"></span>
+        <span class="label"></span>
       </label>
     </li>
   </template>
@@ -204,7 +204,7 @@ Our `renderTask()` function becomes:
   function renderTask(task) {
     var tpl = document.getElementById("task-tpl");
     var li = tpl.content.cloneNode(true);
-    li.querySelector(".title").textContent = task.label;
+    li.querySelector(".label").textContent = task.label;
     li.querySelector(".done").checked = task.done;
     return li;
   }
@@ -220,7 +220,7 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
   function renderTask(task) {
     var tpl = document.getElementById("task-tpl");
     var li = tpl.content.cloneNode(true);
-    li.querySelector(".title").textContent = task.label;
+    li.querySelector(".label").textContent = task.label;
     // retrieve a reference to the checkbox element
     var checkbox = li.querySelector(".done");
     // initialize it with task status
@@ -393,7 +393,7 @@ If the client and the server have different versions of a single record, it will
 Let's create a conflict by:
 
 - Marking a local task record as `done`;
-- Updating the record on the server and alter its title; we'll use [httpie](https://github.com/jakubroztocil/httpie) to do so:
+- Updating the record on the server and alter its label; we'll use [httpie](https://github.com/jakubroztocil/httpie) to do so:
 
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
@@ -473,9 +473,7 @@ Your take really. Let's take the former approach:
   document.getElementById("sync")
     .addEventListener("click", function(event) {
       event.preventDefault();
-      tasks.sync({
-        headers: {Authorization: "Basic " + btoa("user:pass")
-      }})
+      tasks.sync({headers: {Authorization: "Basic " + btoa("user:pass")}})
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
