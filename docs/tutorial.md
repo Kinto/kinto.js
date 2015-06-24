@@ -191,7 +191,7 @@ First, let's move to using a `template` tag in our HTML document so we can defin
     <li class="list-group-item">
       <label>
         <input class="done" type="checkbox">
-        <span class="name"></span>
+        <span class="title"></span>
       </label>
     </li>
   </template>
@@ -288,22 +288,6 @@ Then the JavaScript:
 
 ## Synchronizing tasks
 
-If you [installed Kinto](https://kinto.readthedocs.org/en/latest/installation.html), you should have a server instance running on `http://0.0.0.0:8888`, which is also the remote endpoint Cliquetis is configured to use by default.
-
-If for some reason it's running on a different host/ip, you can override the default by passing a `remote` option to the `Cliquetis` constructor:
-
-```js
-function main() {
-  var db = new Cliquetis({remote: "http://1.2.3.4:5678/v42"});
-  var tasks = db.collection("tasks");
-  // …
-```
-
->#### Notes
->
->- We need to pass the API version as well, here `v42` for example;
->- In a near future the version to use will be retrieved automatically.
-
 Synchronizing local data is done by calling the `#sync()` method on our collection. First things first, let's add a shiny *Synchronize* button to our HTML document, as well as a textarea to display synchronization results:
 
 ```html
@@ -392,13 +376,13 @@ Here's a sample result object, so you can appreciate it all:
 
 Let's review the different result object properties:
 
-- `ok`: this is set to false when any error or conflict has been encountered;
-- `lastModified`: the collection lastest modification timestamp server returned;
+- `ok`: this is set to `false` when any error or conflict has been encountered;
+- `lastModified`: the collection latest modification timestamp;
 - `errors`: the list of encountered error (eg. IndexedDB errors) encountered, if any;
 - `created`: the list of records imported locally;
 - `updated`: the list of records updated locally; in our case, the `_status` and `last_modified` values were updated;
 - `deleted`: the list of records deleted locally;
-- `published`: the list of records published remotely; here we see we successfully pushed our two local tasks to the server;
+- `published`: the list of records published; here we see we successfully pushed our two local tasks;
 - `conflicts`: the list of conflicts encountered, if any (we'll see this in a minute);
 - `skipped`: the list of skipped operations; for example, if we're trying to remotely delete a record which doesn't exist on the server, that information will be listed here.
 
@@ -410,6 +394,8 @@ Let's create a conflict by:
 
 - Marking a local task record as `done`;
 - Updating the record on the server and alter its title; we'll use [httpie](https://github.com/jakubroztocil/httpie) to do so:
+
+To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
 $ http -a user:pass PATCH :8888/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 label="eat even more cheese"
