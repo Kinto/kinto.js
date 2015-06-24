@@ -76,7 +76,7 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Cliquetis();
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -115,7 +115,7 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Cliquetis();
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
