@@ -33,6 +33,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
         <input class="btn btn-primary" type="submit" value="Add">
       </div>
     </form>
+    <hr>
     <ul id="tasks" class="list-group"></ul>
   </div>
   <script src="https://raw.githubusercontent.com/mozilla-services/cliquetis/master/dist/cliquetis.min.js"></script>
@@ -55,7 +56,7 @@ window.addEventListener("DOMContentLoaded", main);
 
 > #### Notes
 >
-> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are resetted everyday**;
+> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are reset everyday**;
 > - You'll need to serve this page over HTTP, for Cliquetis to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
 
 For example, if you're using http-server:
@@ -100,17 +101,13 @@ Notice the call to `tasks.create()`, which returns a [Promise](https://developer
 
 If you try to add a task… well, nothing seems to happen. That's pretty much expected, as we're not displaying anything yet!
 
-Though if you're using Firefox, open your [Developer Tools](https://developer.mozilla.org/en-US/docs/Tools) and head to the *Storage* tab; you should see some IndexedDB databases listed there, and should find you're recently created tasks:
+Though if you're using Firefox, open your [Developer Tools](https://developer.mozilla.org/en-US/docs/Tools) and head to the *Storage* tab; you should see some IndexedDB databases listed there, and should find you're recently created tasks. If the storage tab is missing, you need to enable "Storage" in the "Toolbox options" menu".:
+
+![](images/enable-storage.png)
+
+You should now see a storage tab listing your added entries:
 
 ![](images/indexeddb-inspector.png)
-
-Now, refresh the page; your data are still there, thank you [indexedDB](https://developer.mozilla.org/fr/docs/IndexedDB)!
-
-Last, switch off your Internet connection, and try adding tasks. It still works, because we're offline first, remember. We'll get through synchronization a bit later.
-
-> #### Notes
->
-> - The Cliquetis API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). We suggest we learn a little about them before digging further into this tutorial.
 
 ## Listing tasks
 
@@ -127,6 +124,7 @@ function main() {
       }).then(function(res) {
         event.target.label.value = "";
         event.target.label.focus();
+        // Render the list once a value had been submitted.
         render();
       }).catch(function(err) {
         console.error(err);
@@ -171,13 +169,20 @@ You should now see your added tasks:
 
 ![](images/step2.png)
 
-Again, feel free to switch of your Internet connection and refresh the page. Keep adding tasks. Refresh. Feelings.
+Now, refresh the page; your data are still there, thank you [indexedDB](https://developer.mozilla.org/fr/docs/IndexedDB)!
+
+Last, switch off your Internet connection, and try adding tasks. It still works, because we're offline first, remember. We'll get through synchronization a bit later.
+
+> #### Notes
+>
+> - The Cliquetis API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). Don't hesitate to learn a but more about them before digging further into this tutorial.
+
 
 ## Updating a task
 
 Hey, is this a todo list or what? Where are my checkboxes? Okay, let's implement that.
 
-First, let's move to using a `template` tag in our HTML document so we can define how a task look like:
+First, let's move to using a `template` tag in our HTML document so we can define how a task looks like; Add this in your `index.html` file:
 
 ```html
   …
@@ -220,7 +225,7 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
     var checkbox = li.querySelector(".done");
     // initialize it with task status
     checkbox.checked = task.done;
-    // listen to cliecks
+    // listen to clicks
     checkbox.addEventListener("click", function(event) {
       // prevent the click to actually toggle the checkbox
       event.preventDefault();
@@ -228,7 +233,7 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
       task.done = !task.done;
       // update task status
       tasks.update(task).then(function(res) {
-        // on success, re-render
+        // on success, re-render to actually reflect the checkbox states.
         render();
       }).catch(function(err) {
         console.error(err);
