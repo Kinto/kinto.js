@@ -85,10 +85,12 @@ function main() {
       tasks.create({
         title: event.target.title.value,
         done: false
-      }).then(_ => {
+      })
+      .then(_ => {
         event.target.title.value = "";
         event.target.title.focus();
-      }).catch(function(err) {
+      })
+      .catch(function(err) {
         console.error(err);
       });
     });
@@ -124,12 +126,14 @@ function main() {
       tasks.create({
         title: event.target.title.value,
         done: false
-      }).then(function(res) {
+      })
+      .then(function(res) {
         event.target.title.value = "";
         event.target.title.focus();
-        // Render the list once a value had been submitted.
-        render();
-      }).catch(function(err) {
+      })
+	  // Render the list once a value had been submitted.
+      .then(render)
+      .catch(function(err) {
         console.error(err);
       });
     });
@@ -152,7 +156,8 @@ function main() {
   function render() {
     tasks.list().then(function(res) {
       renderTasks(res.data);
-    }).catch(function(err) {
+    })
+    .catch(function(err) {
       console.error(err);
     });
   }
@@ -235,10 +240,10 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
       // invert the task status
       task.done = !task.done;
       // update task status
-      tasks.update(task).then(function(res) {
-        // on success, re-render to actually reflect the checkbox states.
-        render();
-      }).catch(function(err) {
+      tasks.update(task)
+      // on success, re-render to actually reflect the checkbox states.
+      .then(render)
+      .catch(function(err) {
         console.error(err);
       });
     });
@@ -282,10 +287,10 @@ Then the JavaScript:
             return tasks.delete(task.id);
           }));
         })
+        .then(render)
         .catch(function(err) {
           console.error(err);
-        })
-        .then(render);
+        });
     });
 ```
 
@@ -315,8 +320,8 @@ document.getElementById("sync")
     tasks.sync({headers: {Authorization: "Basic " + btoa("user:pass")}})
       .then(function(res) {
         document.getElementById("results").value = JSON.stringify(res, null, 2);
-        render();
       })
+      .then(render)
       .catch(function(err) {
         console.error(err);
       });
@@ -485,10 +490,10 @@ Your take really. Let's take the former approach:
             return res;
           }
         })
+        .then(render)
         .catch(function(err) {
           console.error(err);
-        })
-        .then(render);
+        });
     });
 ```
 

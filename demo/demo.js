@@ -8,11 +8,13 @@ function main() {
       tasks.create({
         title: event.target.title.value,
         done: false
-      }).then(function(res) {
+      })
+      .then(function(res) {
         event.target.title.value = "";
         event.target.title.focus();
-        render();
-      }).catch(function(err) {
+      })
+      .then(render)
+      .catch(function(err) {
         console.error(err);
       });
     });
@@ -29,10 +31,10 @@ function main() {
             return tasks.delete(task.id);
           }));
         })
+        .then(render)
         .catch(function(err) {
           console.error(err);
-        })
-        .then(render);
+        });
     });
 
   function handleConflicts(conflicts) {
@@ -57,10 +59,10 @@ function main() {
             return res;
           }
         })
+        .then(render)
         .catch(function(err) {
           console.error(err);
-        })
-        .then(render);
+        });
     });
 
   function renderTask(task) {
@@ -79,12 +81,11 @@ function main() {
       // invert the task status
       task.done = !task.done;
       // update task status
-      tasks.update(task).then(function(res) {
-        // on success, re-render
-        render();
-      }).catch(function(err) {
-        console.error(err);
-      });
+      tasks.update(task)
+        .then(render)
+        .catch(function(err) {
+          console.error(err);
+        });
     });
     return li;
   }
