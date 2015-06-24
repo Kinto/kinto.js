@@ -38,7 +38,9 @@ function main() {
   function handleConflicts(conflicts) {
     return Promise.all(conflicts.map(function(conflict) {
       return tasks.resolve(conflict, conflict.remote);
-    })).then(_ => tasks.sync());
+    })).then(function() {
+      tasks.sync();
+    });
   }
 
   document.getElementById("sync")
