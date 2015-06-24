@@ -6,7 +6,7 @@ We'll create a super simple offline-first, remotely synchronized todo list appli
 
 The final demo code is [available](https://github.com/mozilla-services/cliquetis/tree/master/demo) in the Cliquetis repository.
 
-> #### Note:
+> #### Notes
 >
 > **For this tutorial we'll be using a public test server instance of [Kinto](http://kinto.readthedocs.org/); data stored on this instance are purged every 24 hours. Don't rely on this server for production use.**
 >
@@ -401,8 +401,7 @@ Let's create a conflict by:
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ http -a user:pass PATCH :8888/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
-HTTP/1.1 200 OK
+$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
 Access-Control-Expose-Headers: Backoff, Retry-After, Alert
 Content-Length: 118
 Content-Type: application/json; charset=UTF-8
