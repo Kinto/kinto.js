@@ -63,5 +63,14 @@ describe("Cliquetis", () => {
 
       expect(coll.api.remote).eql("http://1.2.3.4:1234/v1");
     });
+
+    it("should pass option headers to the api", () => {
+      const db = new Cliquetis({remote: "http://1.2.3.4:1234/v1", headers: {
+        Authorization: "Basic plop"
+      }});
+      const coll = db.collection("plop");
+
+      expect(coll.api.optionHeaders).eql({Authorization: "Basic plop"});
+    });
   });
 });
