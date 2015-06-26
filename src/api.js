@@ -44,11 +44,11 @@ export default class Api {
   endpoints(options={fullUrl: true}) {
     var root = options.fullUrl ? this.remote : `/${this.version}`;
     var urls = {
-      root: ()                   => root,
-      batch: ()                  => `${root}/batch`,
-      bucket: (bucket)           => `${root}/buckets/${bucket}`,
+      root:                   () => root,
+      batch:                  () => `${root}/batch`,
+      bucket:           (bucket) => `${root}/buckets/${bucket}`,
       collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
-      records: (bucket, coll)    => `${urls.collection(bucket, coll)}/records`,
+      records:    (bucket, coll) => `${urls.collection(bucket, coll)}/records`,
       record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
     };
     return urls;
@@ -137,7 +137,7 @@ export default class Api {
           const isDeletion = record._status === "deleted";
           const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
           const method = isDeletion ? "DELETE" : "PUT";
-          const body = isDeletion ? undefined : { data: cleanRecord(record) };
+          const body = isDeletion ? undefined : {data: cleanRecord(record)};
           const headers = {};
           if (safe) {
             if (record.last_modified) {

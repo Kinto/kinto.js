@@ -64,7 +64,7 @@ describe("Api", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({ fullUrl: true }))
+      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(FAKE_SERVER_URL);
@@ -99,7 +99,7 @@ describe("Api", () => {
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({ fullUrl: false }))
+      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql("/v0");
