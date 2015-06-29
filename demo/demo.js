@@ -1,5 +1,8 @@
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v1"});
+  var db = new Cliquetis({
+    remote: "https://kinto.dev.mozaws.net/v1",
+    headers: {Authorization: "Basic " + btoa("user:pass")}
+  });
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -49,9 +52,7 @@ function main() {
   document.getElementById("sync")
     .addEventListener("click", function(event) {
       event.preventDefault();
-      tasks.sync({
-        headers: {Authorization: "Basic " + btoa("user:pass")
-      }})
+      tasks.sync()
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
