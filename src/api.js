@@ -18,10 +18,11 @@ const DEFAULT_REQUEST_HEADERS = {
 };
 
 export default class Api {
-  constructor(remote, options={}) {
+  constructor(remote, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
     this.remote = remote;
+    this.optionHeaders = options.headers;
     try {
       this.version = "v" + remote.match(/\/v(\d+)\/?$/)[1];
     } catch (err) {
@@ -60,7 +61,7 @@ export default class Api {
     var newLastModified;
     var queryString = "?" + (lastModified ? "_since=" + lastModified : "");
     return fetch(this.endpoints().collection(collName) + queryString, {
-      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, {
+      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, this.optionHeaders, {
         "If-Modified-Since": lastModified ? String(lastModified) : "0"
       }, options.headers)
     })
@@ -108,7 +109,7 @@ export default class Api {
       return Promise.resolve(results);
     return fetch(this.endpoints().batch(), {
       method: "POST",
-      headers: DEFAULT_REQUEST_HEADERS,
+      headers: Object.assign({}, DEFAULT_REQUEST_HEADERS, this.optionHeaders),
       body: JSON.stringify({
         defaults: { headers },
         requests: records.map(record => {

@@ -52,6 +52,11 @@ describe("Api", () => {
     it("should assign version value", () => {
       expect(new Api("http://test/v42").version).eql("v42");
     });
+
+    it("should accept a headers option", () => {
+      expect(new Api("http://test/v42", {headers: {Foo: "Bar"}}).optionHeaders)
+        .eql({Foo: "Bar"});
+    });
   });
 
   describe("#endpoints", () => {
@@ -113,6 +118,18 @@ describe("Api", () => {
       api.fetchChangesSince("articles");
 
       sinon.assert.calledOnce(fetch);
+    });
+
+    it("should merge instance option headers", () => {
+      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      api.optionHeaders = {Foo: "Bar"};
+
+      api.fetchChangesSince("articles");
+
+      sinon.assert.calledOnce(fetch);
+      sinon.assert.calledWithMatch(fetch, "/records", {
+        headers: {Foo: "Bar"}
+      });
     });
 
     it("should request server changes since last modified", () =>{
@@ -184,7 +201,7 @@ describe("Api", () => {
     ];
 
     describe("server request", () => {
-      var requestBody;
+      var requestBody, requestHeaders;
 
       describe("empty changes", () => {
         it("should not perform request on empty operation list", () => {
@@ -199,8 +216,12 @@ describe("Api", () => {
       describe("non-empty changes", () => {
         beforeEach(() => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+          api.optionHeaders = {Authorization: "Basic plop"};
           api.batch("articles", operations, {Foo: "Bar"});
-          requestBody = JSON.parse(fetch.getCall(0).args[1].body);
+
+          const request = fetch.getCall(0).args[1];
+          requestHeaders = request.headers;
+          requestBody = JSON.parse(request.body);
         });
 
         it("should call the batch endpoint", () => {
@@ -209,6 +230,10 @@ describe("Api", () => {
 
         it("should define batch default headers", () => {
           expect(requestBody.defaults.headers).eql({Foo: "Bar"});
+        });
+
+        it("should attach all batch request headers", () => {
+          expect(requestHeaders.Authorization).eql("Basic plop");
         });
 
         it("should batch the expected number of requests", () => {

@@ -329,11 +329,16 @@ document.getElementById("sync")
   });
 ```
 
-> #### Notes
->
-> - We're using Basic Auth mode for Kinto, so we need to pass an `Authorization` header as an option to `#sync()`.
+We're passing an `Authorization` header as an option to `#sync()`; that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Cliquetis` constructor:
 
-If you click on the button, you should see the JSON synchronization result object in the textarea:
+```js
+var db = new Cliquetis({
+  remote: "https://kinto.dev.mozaws.net/v0",
+  headers: {Authorization: "Basic " + btoa("user:pass")}
+});
+```
+
+Now, if you click on the button, you should see the JSON synchronization result object in the textarea:
 
 ![](images/step4.png)
 
