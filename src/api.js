@@ -57,9 +57,9 @@ export default class Api {
   /**
    * Fetches latest changes from the remote server.
    *
-   * @param  {String} bucketName   The bucket name.
-   * @param  {String} collName     The collection name.
-   * @param  {Object} options      Options.
+   * @param  {String} bucketName  The bucket name.
+   * @param  {String} collName    The collection name.
+   * @param  {Object} options     The options object.
    * @return {Promise}
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
@@ -102,15 +102,40 @@ export default class Api {
   }
 
   /**
+   * Builds an individual record batch request body.
+   *
+   * @param  {Object}  record The record object.
+   * @param  {String}  path   The record endpoint URL.
+   * @param  {Boolean} safe   Safe update?
+   * @return {Object}         The request body object.
+   */
+  _buildRecordBatchRequest(record, path, safe) {
+    const isDeletion = record._status === "deleted";
+    const method = isDeletion ? "DELETE" : "PUT";
+    const body = isDeletion ? undefined : {data: cleanRecord(record)};
+    const headers = {};
+    if (safe) {
+      if (record.last_modified) {
+        // Safe replace.
+        headers["If-Match"] = quote(record.last_modified);
+      } else if (!isDeletion) {
+        // Safe creation.
+        headers["If-None-Match"] = "*";
+      }
+    }
+    return {method, headers, path, body};
+  }
+
+  /**
    * Sends batch update requests to the remote server.
    *
    * TODO: If more than X results (default is 25 on server), split in several
    * calls. Related: https://github.com/mozilla-services/cliquet/issues/318
    *
-   * @param  {String} bucketName   The bucket name.
-   * @param  {String} collName     The collection name.
-   * @param  {Array}  records      The list of record updates to send.
-   * @param  {Object} options      The options object.
+   * @param  {String} bucketName  The bucket name.
+   * @param  {String} collName    The collection name.
+   * @param  {Array}  records     The list of record updates to send.
+   * @param  {Object} options     The options object.
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
@@ -134,21 +159,9 @@ export default class Api {
       body: JSON.stringify({
         defaults: {headers},
         requests: records.map(record => {
-          const isDeletion = record._status === "deleted";
-          const path = this.endpoints({full: false}).record(bucketName, collName, record.id);
-          const method = isDeletion ? "DELETE" : "PUT";
-          const body = isDeletion ? undefined : {data: cleanRecord(record)};
-          const headers = {};
-          if (safe) {
-            if (record.last_modified) {
-              // Safe replace.
-              headers["If-Match"] = quote(record.last_modified);
-            } else if (!isDeletion) {
-              // Safe creation.
-              headers["If-None-Match"] = "*";
-            }
-          }
-          return {method, headers, path, body};
+          const path = this.endpoints({full: false})
+            .record(bucketName, collName, record.id);
+          return this._buildRecordBatchRequest(record, path, safe);
         })
       })
     })
