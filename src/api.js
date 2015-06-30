@@ -177,32 +177,35 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
-    const safe = options.safe || true;
-    const headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
-      this.optionHeaders,
-      options.headers
-    );
     const results = {
       errors:    [],
       published: [],
       conflicts: [],
       skipped:   []
     };
-    if (!records.length)
-      return Promise.resolve(results);
-    return fetch(this.endpoints().batch(), {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        defaults: {headers},
-        requests: records.map(record => {
-          const path = this.endpoints({full: false})
-            .record(bucketName, collName, record.id);
-          return this._buildRecordBatchRequest(record, path, safe);
-        })
+    return this.checkServerVersion()
+      .then(() => {
+        const safe = options.safe || true;
+        const headers = Object.assign({},
+          DEFAULT_REQUEST_HEADERS,
+          this.optionHeaders,
+          options.headers
+        );
+        if (!records.length)
+          return Promise.resolve(results);
+        return fetch(this.endpoints().batch(), {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            defaults: {headers},
+            requests: records.map(record => {
+              const path = this.endpoints({full: false})
+                .record(bucketName, collName, record.id);
+              return this._buildRecordBatchRequest(record, path, safe);
+            })
+          })
+        });
       })
-    })
       .then(res => res.json())
       .then(res => {
         if (res.error)

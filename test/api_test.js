@@ -197,7 +197,7 @@ describe("Api", () => {
 
     it("should request server for latest changes", (done) => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {data: []}, {}));
+        fakeServerResponse(200, {data: []}));
 
       api.fetchChangesSince("blog", "articles")
         .then(() => {
@@ -208,7 +208,7 @@ describe("Api", () => {
 
     it("should merge instance option headers", (done) => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {data: []}, {}));
+        fakeServerResponse(200, {data: []}));
       api.optionHeaders = {Foo: "Bar"};
 
       api.fetchChangesSince("blog", "articles")
@@ -223,7 +223,7 @@ describe("Api", () => {
 
     it("should request server changes since last modified", (done) =>{
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {data: []}, {}));
+        fakeServerResponse(200, {data: []}));
 
       api.fetchChangesSince("blog", "articles", {lastModified: 42})
         .then(() => {
@@ -235,7 +235,7 @@ describe("Api", () => {
 
     it("should attach an If-None-Match header if lastModified is provided", (done) =>{
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {data: []}, {}));
+        fakeServerResponse(200, {data: []}));
 
       api.fetchChangesSince("blog", "articles", {lastModified: 42})
         .then(() => {
@@ -260,7 +260,7 @@ describe("Api", () => {
 
     it("should merge provided headers with default ones", (done) => {
       sandbox.stub(root, "fetch").returns(
-        fakeServerResponse(200, {data: []}, {}));
+        fakeServerResponse(200, {data: []}));
       const options = {lastModified: 42, headers: {Foo: "bar"}};
 
       api.fetchChangesSince("blog", "articles", options)
@@ -304,30 +304,37 @@ describe("Api", () => {
     beforeEach(() => {
       api = new Api(FAKE_SERVER_URL);
       api.serverVersion = "v1";
+      sandbox.stub(api, "checkServerVersion").returns(Promise.resolve("v1"));
     });
 
     describe("server request", () => {
       var requestBody, requestHeaders;
 
-      describe("empty changes", () => {
+      describe("empty changes", (done) => {
         it("should not perform request on empty operation list", () => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}));
 
-          api.batch("blog", "articles", []);
-
-          sinon.assert.notCalled(fetch);
+          api.batch("blog", "articles", [])
+            .then(() => {
+              sinon.assert.notCalled(fetch);
+              done();
+            });
         });
       });
 
       describe("non-empty changes", () => {
-        beforeEach(() => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
+        beforeEach(done => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: []
+          }));
           api.optionHeaders = {Authorization: "Basic plop"};
-          api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}});
-
-          const request = fetch.getCall(0).args[1];
-          requestHeaders = request.headers;
-          requestBody = JSON.parse(request.body);
+          api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}})
+            .then(() => {
+              const request = fetch.getCall(0).args[1];
+              requestHeaders = request.headers;
+              requestBody = JSON.parse(request.body);
+              done();
+            });
         });
 
         it("should call the batch endpoint", () => {
@@ -398,10 +405,15 @@ describe("Api", () => {
       describe("safe mode", () => {
         var requests;
 
-        beforeEach(() => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-          api.batch("blog", "articles", operations);
-          requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
+        beforeEach(done => {
+          sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+            responses: []
+          }));
+          api.batch("blog", "articles", operations)
+            .then(() => {
+              requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
+              done();
+            });
         });
 
         it("should send If-Match headers", () => {

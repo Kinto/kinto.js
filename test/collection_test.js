@@ -14,7 +14,7 @@ chai.config.includeStack = true;
 
 const TEST_BUCKET_NAME = "cliquetis-test";
 const TEST_COLLECTION_NAME = "cliquetis-test";
-const FAKE_SERVER_URL = "http://fake-server/v0"
+const FAKE_SERVER_URL = "http://fake-server";
 
 describe("Collection", () => {
   var sandbox, api;
@@ -651,6 +651,9 @@ describe("Collection", () => {
     });
 
     it("should delete unsynced virtually deleted local records", () => {
+      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: []
+      }));
       return articles.delete(records[0].id)
         .then(_ => articles.pushChanges(result))
         .then(_ => articles.get(records[0].id, {includeDeleted: true}))
