@@ -132,6 +132,26 @@ describe("Api", () => {
     });
   });
 
+  describe("#fetchVersion", () => {
+    it("should retrieve the API version", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+        url: "http://fakeserver:1234/v42/"
+      }));
+
+      return api.fetchVersion()
+        .should.eventually.become("v42");
+    });
+
+    it("should reject if retrieval failed", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+        url: "http://fakeserver:1234/"
+      }));
+
+      return api.fetchVersion()
+        .should.be.rejectedWith(Error, /does not contain the version/);
+    });
+  });
+
   describe("#fetchChangesSince", () => {
     it("should request server for latest changes", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve());

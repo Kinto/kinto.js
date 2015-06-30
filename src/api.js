@@ -55,6 +55,25 @@ export default class Api {
   }
 
   /**
+   * Fetch latest API version URL.
+   *
+   * @return {String}
+   */
+  fetchVersion() {
+    return fetch(this.endpoints().root(), {
+      headers: DEFAULT_REQUEST_HEADERS
+    })
+      .then(res => res.json())
+      .then(res => {
+        try {
+          return "v" + res.url.match(/\/v(\d+)\/?$/)[1];
+        } catch (err) {
+          throw new Error("Remote URL does not contain the version: " + res.url);
+        }
+      });
+  }
+
+  /**
    * Fetches latest changes from the remote server.
    *
    * @param  {String} bucketName  The bucket name.
