@@ -80,7 +80,7 @@ export default class Api {
       .then(res => res.json())
       .then(res => {
         try {
-          this.serverVersion = "v" + res.url.match(/\/v(\d+)\/?$/)[1];
+          this.serverVersion = res.url.match(/\/(v\d+)\/?$/)[1];
         } catch (err) {
           throw new Error(`Remote URL version couldn't be checked; ${err.message}`);
         }
