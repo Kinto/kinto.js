@@ -46,7 +46,7 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net"});
   var tasks = db.collection("tasks");
 }
 
@@ -56,7 +56,7 @@ window.addEventListener("DOMContentLoaded", main);
 
 > #### Notes
 >
-> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are reset everyday**;
+> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net`; **be warned that data pushed to this instance are reset everyday**;
 > - You'll need to serve this page over HTTP, for Cliquetis to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
 
 For example, if you're using http-server:
@@ -76,7 +76,7 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -104,7 +104,7 @@ Notice the call to `tasks.create()`, which returns a [Promise](https://developer
 
 If you try to add a task… well, nothing seems to happen. That's pretty much expected, as we're not displaying anything yet!
 
-Though if you're using Firefox, open your [Developer Tools](https://developer.mozilla.org/en-US/docs/Tools) and head to the *Storage* tab; you should see some IndexedDB databases listed there, and should find you're recently created tasks. If the storage tab is missing, you need to enable "Storage" in the "Toolbox options" menu".:
+Though if you're using Firefox, open your [Developer Tools](https://developer.mozilla.org/en-US/docs/Tools) and head to the *Storage* tab; you should see some IndexedDB databases listed there, and should find your recently created tasks. If the storage tab is missing, you need to enable "Storage" in the "Toolbox options" menu".:
 
 ![](images/enable-storage.png)
 
@@ -118,7 +118,7 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -333,7 +333,7 @@ We're passing an `Authorization` header as an option to `#sync()`; that's becaus
 
 ```js
 var db = new Cliquetis({
-  remote: "https://kinto.dev.mozaws.net/v0",
+  remote: "https://kinto.dev.mozaws.net/v1",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 });
 ```
@@ -412,7 +412,7 @@ Let's create a conflict by:
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
+$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v1/buckets/default/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
 Access-Control-Expose-Headers: Backoff, Retry-After, Alert
 Content-Length: 118
 Content-Type: application/json; charset=UTF-8

@@ -2,7 +2,14 @@
 
 import { quote, unquote } from "./utils.js";
 
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+// TODO: This could probably be an attribute of the Api class, so that
+// developers can get a hand on it to add their own headers.
+const DEFAULT_REQUEST_HEADERS = {
+  "Accept":       "application/json",
+  "Content-Type": "application/json",
+};
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -12,24 +19,18 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
-// TODO: This could probably be an attribute of the Api class, so that
-// developers can get a hand on it to add their own headers.
-const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
-};
-
 export default class Api {
   constructor(remote, options={headers: {}}) {
-    if (typeof(remote) !== "string" || !remote.length)
+    if (typeof(remote) !== "string" || !remote.length) {
       throw new Error("Invalid remote URL: " + remote);
+    }
+    // Remove trailing slash, if any
+    if (remote.lastIndexOf("/") === remote.length - 1) {
+      remote = remote.substr(0, remote.length - 1);
+    }
     this.remote = remote;
     this.optionHeaders = options.headers;
-    try {
-      this.version = "v" + remote.match(/\/v(\d+)\/?$/)[1];
-    } catch (err) {
-      throw new Error("The remote URL must contain the version: " + remote);
-    }
+    this.serverVersion = null;
   }
 
   /**
@@ -42,16 +43,49 @@ export default class Api {
    * @return {String}
    */
   endpoints(options={fullUrl: true}) {
-    var root = options.fullUrl ? this.remote : `/${this.version}`;
+    var rootPath = `/${SUPPORTED_PROTOCOL_VERSION}`;
+    if (options.fullUrl)
+      rootPath = this.remote + rootPath;
     var urls = {
-      root:                   () => root,
-      batch:                  () => `${root}/batch`,
-      bucket:           (bucket) => `${root}/buckets/${bucket}`,
+      root:                   () => rootPath,
+      batch:                  () => `${rootPath}/batch`,
+      bucket:           (bucket) => `${rootPath}/buckets/${bucket}`,
       collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
       records:    (bucket, coll) => `${urls.collection(bucket, coll)}/records`,
       record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
     };
     return urls;
+  }
+
+  /**
+   * Fetch latest API version URL.
+   *
+   * @return {Promise}
+   */
+  checkServerVersion() {
+    function check(serverVersion) {
+      if (serverVersion !== SUPPORTED_PROTOCOL_VERSION) {
+        throw new Error(`Unsupported protocol version: ${serverVersion}`);
+      }
+      return serverVersion;
+    }
+    if (this.serverVersion) {
+      try {
+        return Promise.resolve(check(this.serverVersion));
+      } catch(err) {
+        return Promise.reject(err);
+      }
+    }
+    return fetch(this.remote, {headers: DEFAULT_REQUEST_HEADERS})
+      .then(res => res.json())
+      .then(res => {
+        try {
+          this.serverVersion = res.url.match(/\/(v\d+)\/?$/)[1];
+        } catch (err) {
+          throw new Error(`Remote URL version couldn't be checked; ${err.message}`);
+        }
+        return check(this.serverVersion);
+      });
   }
 
   /**
@@ -63,21 +97,24 @@ export default class Api {
    * @return {Promise}
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
-    const recordsUrl = this.endpoints().records(bucketName, collName);
     var newLastModified;
-    var queryString = "";
-    var headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
-      this.optionHeaders,
-      options.headers
-    );
+    return this.checkServerVersion()
+      .then(() => {
+        const recordsUrl = this.endpoints().records(bucketName, collName);
+        var queryString = "";
+        var headers = Object.assign({},
+          DEFAULT_REQUEST_HEADERS,
+          this.optionHeaders,
+          options.headers
+        );
 
-    if (options.lastModified) {
-      queryString = "?_since=" + options.lastModified;
-      headers["If-None-Match"] = quote(options.lastModified);
-    }
+        if (options.lastModified) {
+          queryString = "?_since=" + options.lastModified;
+          headers["If-None-Match"] = quote(options.lastModified);
+        }
 
-    return fetch(recordsUrl + queryString, {headers})
+        return fetch(recordsUrl + queryString, {headers});
+      })
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
@@ -89,7 +126,8 @@ export default class Api {
         } else {
           const etag = res.headers.get("ETag");  // e.g. '"42"'
           // XXX: ETag are supposed to be opaque and stored «as-is».
-          newLastModified = parseInt(unquote(etag), 10);
+          if (etag)
+            newLastModified = parseInt(unquote(etag), 10);
           return res.json();
         }
       })
@@ -139,32 +177,35 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
-    const safe = options.safe || true;
-    const headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
-      this.optionHeaders,
-      options.headers
-    );
     const results = {
       errors:    [],
       published: [],
       conflicts: [],
       skipped:   []
     };
-    if (!records.length)
-      return Promise.resolve(results);
-    return fetch(this.endpoints().batch(), {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        defaults: {headers},
-        requests: records.map(record => {
-          const path = this.endpoints({full: false})
-            .record(bucketName, collName, record.id);
-          return this._buildRecordBatchRequest(record, path, safe);
-        })
+    return this.checkServerVersion()
+      .then(() => {
+        const safe = options.safe || true;
+        const headers = Object.assign({},
+          DEFAULT_REQUEST_HEADERS,
+          this.optionHeaders,
+          options.headers
+        );
+        if (!records.length)
+          return Promise.resolve(results);
+        return fetch(this.endpoints().batch(), {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            defaults: {headers},
+            requests: records.map(record => {
+              const path = this.endpoints({full: false})
+                .record(bucketName, collName, record.id);
+              return this._buildRecordBatchRequest(record, path, safe);
+            })
+          })
+        });
       })
-    })
       .then(res => res.json())
       .then(res => {
         if (res.error)

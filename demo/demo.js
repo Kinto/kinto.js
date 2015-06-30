@@ -1,6 +1,6 @@
 function main() {
   var db = new Cliquetis({
-    remote: "https://kinto.dev.mozaws.net/v1",
+    remote: "https://kinto.dev.mozaws.net",
     headers: {Authorization: "Basic " + btoa("user:pass")}
   });
   var tasks = db.collection("tasks");
