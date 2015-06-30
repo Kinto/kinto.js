@@ -8,12 +8,12 @@ const db = new Cliquetis(options);
 
 `options` is an object defining the following option values:
 
-- `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
+- `remote`: The Kinto server base URL (eg. `"https://kinto.server.tld"`); Cliquetis will always check that the server uses the version of the protocol it supports;
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
 
 ## Collections
 
-Collections are persisted locally in indexedDB.
+Collections are persisted locally in [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API).
 
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
 
