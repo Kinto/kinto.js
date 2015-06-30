@@ -3,7 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import Api, { cleanRecord } from "../src/api";
+import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
 import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
@@ -11,14 +11,13 @@ chai.should();
 chai.config.includeStack = true;
 
 const root = typeof window === "object" ? window : global;
-const FAKE_SERVER_URL = "http://fake-server/v0"
+const FAKE_SERVER_URL = "http://fake-server"
 
 describe("Api", () => {
-  var sandbox, api;
+  var sandbox;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    api = new Api(FAKE_SERVER_URL);
   });
 
   afterEach(() => {
@@ -45,54 +44,62 @@ describe("Api", () => {
         .to.Throw(Error, /Invalid remote URL/);
     });
 
-    it("should validate `remote` arg value", () => {
-      expect(() => new Api("http://nope"))
-        .to.Throw(Error, /The remote URL must contain the version/);
+    it("should set the remote property", function() {
+      expect(new Api("http://test").remote)
+        .eql("http://test");
     });
 
-    it("should assign version value", () => {
-      expect(new Api("http://test/v42").version).eql("v42");
+    it("should remove remote url trailing slash", function() {
+      expect(new Api("http://test/").remote)
+        .eql("http://test");
     });
 
     it("should accept a headers option", () => {
-      expect(new Api("http://test/v42", {headers: {Foo: "Bar"}}).optionHeaders)
+      expect(new Api("http://test/", {headers: {Foo: "Bar"}}).optionHeaders)
         .eql({Foo: "Bar"});
     });
   });
 
   describe("#endpoints", () => {
+    var api;
+
+    beforeEach(() => {
+      api = new Api(FAKE_SERVER_URL);
+    });
+
     describe("full URL", () => {
       var endpoints;
 
       beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
 
       it("should provide root endpoint", () => {
-        expect(endpoints.root()).eql(FAKE_SERVER_URL);
+        expect(endpoints.root())
+          .eql(FAKE_SERVER_URL + `/${SPV}`);
       });
 
       it("should provide batch endpoint", () => {
         expect(endpoints.batch())
-          .eql("http://fake-server/v0/batch");
+          .eql(`http://fake-server/${SPV}/batch`);
       });
 
       it("should provide bucket endpoint", () => {
         expect(endpoints.bucket("foo"))
-          .eql("http://fake-server/v0/buckets/foo");
+          .eql(`http://fake-server/${SPV}/buckets/foo`);
       });
 
       it("should provide collection endpoint", () => {
         expect(endpoints.collection("foo", "bar"))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar`);
       });
 
       it("should provide records endpoint", () => {
         expect(endpoints.records("foo", "bar"))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar/records");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar/records`);
       });
 
       it("should provide record endpoint", () => {
         expect(endpoints.record("foo", "bar", 42))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar/records/42");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar/records/42`);
       });
     });
 
@@ -102,94 +109,142 @@ describe("Api", () => {
       beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
 
       it("should provide root endpoint", () => {
-        expect(endpoints.root()).eql("/v0");
+        expect(endpoints.root()).eql(`/${SPV}`);
       });
 
       it("should provide batch endpoint", () => {
         expect(endpoints.batch())
-          .eql("/v0/batch");
+          .eql(`/${SPV}/batch`);
       });
 
       it("should provide bucket endpoint", () => {
         expect(endpoints.bucket("foo"))
-          .eql("/v0/buckets/foo");
+          .eql(`/${SPV}/buckets/foo`);
       });
 
       it("should provide collection endpoint", () => {
         expect(endpoints.collection("foo", "bar"))
-          .eql("/v0/buckets/foo/collections/bar");
+          .eql(`/${SPV}/buckets/foo/collections/bar`);
       });
 
       it("should provide records endpoint", () => {
         expect(endpoints.records("foo", "bar", 42))
-          .eql("/v0/buckets/foo/collections/bar/records");
+          .eql(`/${SPV}/buckets/foo/collections/bar/records`);
       });
 
       it("should provide record endpoint", () => {
         expect(endpoints.record("foo", "bar", 42))
-          .eql("/v0/buckets/foo/collections/bar/records/42");
+          .eql(`/${SPV}/buckets/foo/collections/bar/records/42`);
       });
     });
   });
 
-  describe("#fetchVersion", () => {
-    it("should retrieve the API version", () => {
-      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
-        url: "http://fakeserver:1234/v42/"
-      }));
+  describe("#checkServerVersion", () => {
+    var api;
 
-      return api.fetchVersion()
-        .should.eventually.become("v42");
+    beforeEach(() => {
+      api = new Api(FAKE_SERVER_URL);
     });
 
-    it("should reject if retrieval failed", () => {
+    it("should resolve if the protocol version is supported", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+        url: `http://fakeserver:1234/${SPV}`
+      }));
+
+      return api.checkServerVersion().should.eventually.become("v1");
+    });
+
+    it("should reject if the protocol version isn't supported", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+        url: "http://fakeserver:1234/v999"
+      }));
+
+      return api.checkServerVersion()
+        .should.be.rejectedWith(Error, /Unsupported protocol version/);
+    });
+
+    it("should revalidate against fetched version on each call", () => {
+      api.serverVersion = "v999";
+
+      return api.checkServerVersion()
+        .should.be.rejectedWith(Error, /Unsupported protocol version/);
+    });
+
+    it("should reject when protocol version retrieval fails", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
         url: "http://fakeserver:1234/"
       }));
 
-      return api.fetchVersion()
-        .should.be.rejectedWith(Error, /does not contain the version/);
+      return api.checkServerVersion()
+        .should.be.rejectedWith(Error, /couldn't be checked/);
     });
   });
 
   describe("#fetchChangesSince", () => {
-    it("should request server for latest changes", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+    var api;
 
-      api.fetchChangesSince("blog", "articles");
-
-      sinon.assert.calledOnce(fetch);
+    beforeEach(() => {
+      api = new Api(FAKE_SERVER_URL);
+      api.serverVersion = "v1";
+      sandbox.stub(api, "checkServerVersion").returns(Promise.resolve("v1"));
     });
 
-    it("should merge instance option headers", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+    it("should check that protocol version is supported", function() {
+      api.fetchChangesSince("blog", "articles");
+
+      sinon.assert.calledOnce(api.checkServerVersion);
+    });
+
+    it("should request server for latest changes", (done) => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {data: []}, {}));
+
+      api.fetchChangesSince("blog", "articles")
+        .then(() => {
+          sinon.assert.calledOnce(fetch);
+          done();
+        });
+    });
+
+    it("should merge instance option headers", (done) => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {data: []}, {}));
       api.optionHeaders = {Foo: "Bar"};
 
-      api.fetchChangesSince("blog", "articles");
-
-      sinon.assert.calledOnce(fetch);
-      sinon.assert.calledWithMatch(fetch, "/records", {
-        headers: {Foo: "Bar"}
-      });
+      api.fetchChangesSince("blog", "articles")
+        .then(() => {
+          sinon.assert.calledOnce(fetch);
+          sinon.assert.calledWithMatch(fetch, "/records", {
+            headers: {Foo: "Bar"}
+          });
+          done();
+        });
     });
 
-    it("should request server changes since last modified", () =>{
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+    it("should request server changes since last modified", (done) =>{
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {data: []}, {}));
 
-      api.fetchChangesSince("blog", "articles", {lastModified: 42});
-
-      sinon.assert.calledOnce(fetch);
-      sinon.assert.calledWithMatch(fetch, /\?_since=42/);
+      api.fetchChangesSince("blog", "articles", {lastModified: 42})
+        .then(() => {
+          sinon.assert.calledOnce(fetch);
+          sinon.assert.calledWithMatch(fetch, /\?_since=42/);
+          done();
+        });
     });
 
-    it("should attach an If-None-Match header if lastModified is provided", () =>{
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
-      api.fetchChangesSince("blog", "articles", {lastModified: 42});
+    it("should attach an If-None-Match header if lastModified is provided", (done) =>{
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {data: []}, {}));
 
-      sinon.assert.calledOnce(fetch);
-      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: { "If-None-Match": quote(42) }
-      });
+      api.fetchChangesSince("blog", "articles", {lastModified: 42})
+        .then(() => {
+          sinon.assert.calledOnce(fetch);
+          sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
+            headers: { "If-None-Match": quote(42) }
+          });
+          done();
+        });
     });
 
     it("should resolve with a result object", () => {
@@ -203,20 +258,23 @@ describe("Api", () => {
         });
     });
 
-    it("should merge provided headers with default ones", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
-
+    it("should merge provided headers with default ones", (done) => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {data: []}, {}));
       const options = {lastModified: 42, headers: {Foo: "bar"}};
-      api.fetchChangesSince("blog", "articles", options);
 
-      sinon.assert.calledOnce(fetch);
-      sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
-        headers: {
-          "Foo": "bar",
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-        }
-      });
+      api.fetchChangesSince("blog", "articles", options)
+        .then(() => {
+          sinon.assert.calledOnce(fetch);
+          sinon.assert.calledWithMatch(fetch, /\?_since=42/, {
+            headers: {
+              "Foo": "bar",
+              "Accept": "application/json",
+              "Content-Type": "application/json",
+            }
+          });
+          done();
+        });
     });
 
     it("should resolve with no changes if HTTP 304 is received", () => {
@@ -235,11 +293,18 @@ describe("Api", () => {
   });
 
   describe("#batch", () => {
+    var api;
+
     const operations = [
       {id: 1, title: "foo", last_modified: 42},
       {id: 2, title: "bar"},
       {id: 3, title: "baz", _status: "deleted"},
     ];
+
+    beforeEach(() => {
+      api = new Api(FAKE_SERVER_URL);
+      api.serverVersion = "v1";
+    });
 
     describe("server request", () => {
       var requestBody, requestHeaders;
@@ -266,7 +331,7 @@ describe("Api", () => {
         });
 
         it("should call the batch endpoint", () => {
-          sinon.assert.calledWithMatch(fetch, "/v0/batch");
+          sinon.assert.calledWithMatch(fetch, "/v1/batch");
         });
 
         it("should define batch default headers", () => {
@@ -293,7 +358,7 @@ describe("Api", () => {
             },
             headers: { "If-Match": quote(42) },
             method: "PUT",
-            path: "/v0/buckets/blog/collections/articles/records/1",
+            path: "/v1/buckets/blog/collections/articles/records/1",
           });
         });
 
@@ -301,13 +366,13 @@ describe("Api", () => {
           expect(requestBody.requests[2]).eql({
             headers: {},
             method: "DELETE",
-            path: "/v0/buckets/blog/collections/articles/records/3",
+            path: "/v1/buckets/blog/collections/articles/records/3",
           });
         });
 
         it("should map batch update requests for synced records", () => {
           expect(requestBody.requests[0]).eql({
-            path: "/v0/buckets/blog/collections/articles/records/1",
+            path: "/v1/buckets/blog/collections/articles/records/1",
             method: "PUT",
             headers: { "If-Match": quote(42) },
             body: {
@@ -318,7 +383,7 @@ describe("Api", () => {
 
         it("should map create requests for non-synced records", () => {
           expect(requestBody.requests[1]).eql({
-            path: "/v0/buckets/blog/collections/articles/records/2",
+            path: "/v1/buckets/blog/collections/articles/records/2",
             method: "PUT",
             headers: {
               "If-None-Match": '*'
@@ -374,10 +439,10 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 201,
-                path: "/v0/buckets/blog/collections/articles/records",
+                path: "/v1/buckets/blog/collections/articles/records",
                 body: { data: published[0]}},
               { status: 201,
-                path: "/v0/buckets/blog/collections/articles/records",
+                path: "/v1/buckets/blog/collections/articles/records",
                 body: { data: published[1]}},
             ]
           }));
@@ -395,7 +460,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: "/v1/buckets/blog/collections/articles/records/1",
                 body: { 404: true }},
             ]
           }));
@@ -413,7 +478,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 500,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: "/v1/buckets/blog/collections/articles/records/1",
                 body: { 500: true }},
             ]
           }));
@@ -424,7 +489,7 @@ describe("Api", () => {
               skipped:   [],
               errors:    [
                 {
-                  path: "/v0/buckets/blog/collections/articles/records/1",
+                  path: "/v1/buckets/blog/collections/articles/records/1",
                   error: {
                     500: true
                   }
@@ -438,7 +503,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 412,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: "/v1/buckets/blog/collections/articles/records/1",
                 body: { invalid: true }},
             ]
           }));
