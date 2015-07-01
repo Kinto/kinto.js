@@ -10,8 +10,8 @@
     "dist-prod": "browserify -s Kinto -x fake-indexeddb -g uglifyify -e src/index.js -o dist/kinto.min.js",
     "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
-    "test-cover": "babel-node node_modules/.bin/isparta cover $npm_package_vars_ISPARTA_OPTS --report text node_modules/.bin/_mocha",
-    "test-cover-html": "babel-node node_modules/.bin/isparta cover $npm_package_vars_ISPARTA_OPTS --report html node_modules/.bin/_mocha && open coverage/index.html",
+    "test-cover": "babel-node node_modules/.bin/isparta cover $npm_package_config_ISPARTA_OPTS --report text node_modules/.bin/_mocha",
+    "test-cover-html": "babel-node node_modules/.bin/isparta cover $npm_package_config_ISPARTA_OPTS --report html node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
     "watch": "watchify -s Kinto -x fake-indexeddb -d -e src/index.js -o dist/kinto.dev.js -v"
   },
@@ -41,7 +41,7 @@
     ]
   },
   "homepage": "https://github.com/mozilla-services/kinto.js",
-  "vars": {
+  "config": {
     "ISPARTA_OPTS": "--report lcovonly --root ./src"
   },
   "devDependencies": {
