@@ -35,6 +35,7 @@
       [
         "babelify",
         {
+          "optional": ["es7.decorators"],
           "sourceMapRelative": "."
         }
       ]

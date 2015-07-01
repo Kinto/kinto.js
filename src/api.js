@@ -62,9 +62,9 @@ export default class Api {
    * @param  {Object} options     The options object.
    * @return {Promise}
    */
-  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
+  async fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    var newLastModified;
+    var newLastModified, changes;
     var queryString = "";
     var headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
@@ -77,28 +77,25 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {headers})
-      .then(res => {
-        // If HTTP 304, nothing has changed
-        if (res.status === 304) {
-          newLastModified = options.lastModified;
-          return {data: []};
-        } else if (res.status >= 400) {
-          // TODO: attach better error reporting
-          throw new Error("Fetching changes failed: HTTP " + res.status);
-        } else {
-          const etag = res.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          newLastModified = parseInt(unquote(etag), 10);
-          return res.json();
-        }
-      })
-      .then(json => {
-        return {
-          lastModified: newLastModified,
-          changes: json.data
-        };
-      });
+    try {
+      var res = await fetch(recordsUrl + queryString, {headers});
+      let json = await res.json();
+
+      if (res.status >= 400)
+        throw new Error("Fetching changes failed: HTTP " + res.status);
+
+      if (res.status === 304) {
+        newLastModified = options.lastModified;
+        changes = [];
+      } else {
+        newLastModified = parseInt(unquote(res.headers.get("ETag")), 10);
+        changes = [];
+      }
+
+      return {lastModified: newLastModified, changes: changes};
+    } catch(err) {
+      throw err; // ???
+    }
   }
 
   /**
