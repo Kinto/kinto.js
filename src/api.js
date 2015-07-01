@@ -77,25 +77,21 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    try {
-      var res = await fetch(recordsUrl + queryString, {headers});
-      let json = await res.json();
+    var res = await fetch(recordsUrl + queryString, {headers});
+    let json = await res.json();
 
-      if (res.status >= 400)
-        throw new Error("Fetching changes failed: HTTP " + res.status);
+    if (res.status >= 400)
+      throw new Error("Fetching changes failed: HTTP " + res.status);
 
-      if (res.status === 304) {
-        newLastModified = options.lastModified;
-        changes = [];
-      } else {
-        newLastModified = parseInt(unquote(res.headers.get("ETag")), 10);
-        changes = [];
-      }
-
-      return {lastModified: newLastModified, changes: changes};
-    } catch(err) {
-      throw err; // ???
+    if (res.status === 304) {
+      newLastModified = options.lastModified;
+      changes = [];
+    } else {
+      newLastModified = parseInt(unquote(res.headers.get("ETag")), 10);
+      changes = [];
     }
+
+    return {lastModified: newLastModified, changes: changes};
   }
 
   /**
