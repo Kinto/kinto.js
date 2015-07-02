@@ -522,40 +522,35 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pushChanges(syncResultObject, options={}) {
+  async pushChanges(syncResultObject, options={}) {
     const safe = options.strategy === Collection.SERVER_WINS;
     options = Object.assign({safe}, options);
 
     // Fetch local changes
-    return this.gatherLocalChanges()
-      .then(({toDelete, toSync}) => {
-        return Promise.all([
-          // Delete never synced records marked for deletion
-          Promise.all(toDelete.map(record => {
-            return this.delete(record.id, {virtual: false});
-          })),
-          // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options)
-        ]);
-      })
-      // Update published local records
-      .then(([deleted, synced]) => {
-        return Promise.all(synced.published.map(record => {
-          if (record.deleted) {
-            // Remote deletion was successful, refect it locally
-            return this.delete(record.id, {virtual: false}).then(res => {
-              // Amend result data with the deleted attribute set
-              return {data: {id: res.data.id, deleted: true}};
-            });
-          } else {
-            // Remote update was successful, refect it locally
-            return this.update(record, {synced: true});
-          }
-        })).then(published => {
-          syncResultObject.add("published", published.map(res => res.data))
-          return syncResultObject;
+    const {toDelete, toSync} = await this.gatherLocalChanges();
+
+    // Delete never synced records marked for deletion
+    for (let deletedRecord of toDelete)
+      await this.delete(deletedRecord.id, {virtual: false});
+
+    // Send batch update requests
+    const synced = await this.api.batch(this.bucket, this.name, toSync, options);
+
+    // Update published local records
+    const published = await Promise.all(synced.published.map(record => {
+      if (record.deleted) {
+        // Remote deletion was successful, refect it locally
+        return this.delete(record.id, {virtual: false}).then(res => {
+          // Amend result data with the deleted attribute set
+          return {data: {id: res.data.id, deleted: true}};
         });
-      });
+      } else {
+        // Remote update was successful, refect it locally
+        return this.update(record, {synced: true});
+      }
+    }));
+    syncResultObject.add("published", published.map(res => res.data))
+    return syncResultObject;
   }
 
 
