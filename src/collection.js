@@ -464,9 +464,10 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  getLastModified() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
+  async getLastModified() {
+    try {
+      await this.open();
+      return await new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare(undefined, "__meta__");
         const request = store.get("lastModified");
         transaction.onerror = event => reject(event.target.error);
@@ -474,7 +475,9 @@ export default class Collection {
           resolve(request.result && request.result.value || null)
         };
       });
-    });
+    } catch(err) {
+      this._handleError("getLastModified")(err);
+    }
   }
 
   /**
