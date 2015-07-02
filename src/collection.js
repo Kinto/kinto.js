@@ -148,7 +148,7 @@ export default class Collection {
   async clear() {
     try {
       await this.open();
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
         transaction.onerror = event => reject(new Error(event.target.error));
@@ -179,7 +179,7 @@ export default class Collection {
       await this.open();
       if (typeof(record) !== "object")
         throw new Error('Record is not an object.');
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         const newRecord = Object.assign({}, record, {
           id:      options.synced ? record.id : uuid4(),
@@ -217,7 +217,7 @@ export default class Collection {
       if (!record.id)
         throw new Error("Cannot update a record missing id.");
       await this.get(record.id);
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         var newStatus = "updated";
         if (record._status === "deleted") {
           newStatus = "deleted";
@@ -265,14 +265,13 @@ export default class Collection {
   async get(id, options={includeDeleted: false}) {
     try {
       await this.open();
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
         const request = store.get(id);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => {
           if (!request.result ||
              (!options.includeDeleted && request.result._status === "deleted")) {
-            // WTF, this doesn't actually reject, the promise is fulfilled
             reject(new Error(`Record with id=${id} not found.`));
           } else {
             resolve({
@@ -281,10 +280,7 @@ export default class Collection {
             });
           }
         };
-      }).catch(err => {
-        console.log(err);
-        throw err;
-      });
+      })
     } catch(err) {
       this._handleError("get")(err);
     }
@@ -301,36 +297,31 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  delete(id, options={virtual: true}) {
-    return this.open().then(() => {
+  async delete(id, options={virtual: true}) {
+    const defaultReturnValue = {data: {id: id}, permissions: {}};
+    try {
+      await this.open();
       // Ensure the record actually exists.
-      return this.get(id, {includeDeleted: true}).then(res => {
-        if (options.virtual) {
-          if (res.data._status === "deleted") {
-            // Record is already deleted
-            return Promise.resolve({
-              data: { id: id },
-              permissions: {}
-            });
-          } else {
-            return this.update(Object.assign({}, res.data, {
-              _status: "deleted"
-            }));
-          }
+      const res = await this.get(id, {includeDeleted: true});
+      if (options.virtual) {
+        if (res.data._status === "deleted") {
+          // Record is already deleted
+          return defaultReturnValue;
+        } else {
+          return await this.update(Object.assign({}, res.data, {
+            _status: "deleted"
+          }));
         }
-        return new Promise((resolve, reject) => {
-          const {transaction, store} = this.prepare("readwrite");
-          store.delete(id);
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => {
-            resolve({
-              data: { id: id },
-              permissions: {}
-            });
-          };
-        });
+      }
+      return await new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite");
+        store.delete(id);
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => resolve(defaultReturnValue);
       });
-    }).catch(this._handleError("delete"));
+    } catch(err) {
+      this._handleError("delete")(err);
+    }
   }
 
   /**
@@ -340,9 +331,10 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  list(params={}, options={includeDeleted: false}) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
+  async list(params={}, options={includeDeleted: false}) {
+    try {
+      await this.open();
+      return await new Promise((resolve, reject) => {
         const results = [];
         const {transaction, store} = this.prepare();
         const request = store.openCursor();
@@ -363,7 +355,9 @@ export default class Collection {
           });
         };
       });
-    }).catch(this._handleError("list"));
+    } catch(err) {
+      this._handleError("list")(err);
+    }
   }
 
   /**

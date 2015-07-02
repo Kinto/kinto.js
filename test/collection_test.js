@@ -185,7 +185,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns("error");
-      return articles.create().should.be.rejectedWith(Error, /^create/);
+      return articles.create().should.be.rejectedWith(Error, /create\(\)/);
     });
   });
 
@@ -232,7 +232,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.update().should.be.rejectedWith(Error, /^update/);
+      return articles.update().should.be.rejectedWith(Error, /update\(\)/);
     });
   });
 
@@ -317,7 +317,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.get().should.be.rejectedWith(Error, /^get/);
+      return articles.get().should.be.rejectedWith(Error, /get\(\)/);
     });
   });
 
@@ -353,7 +353,7 @@ describe("Collection", () => {
 
       it("should prefix error encountered", () => {
         sandbox.stub(articles, "open").returns(Promise.reject("error"));
-        return articles.delete().should.be.rejectedWith(Error, /^delete/);
+        return articles.delete().should.be.rejectedWith(Error, /delete\(\)/);
       });
     });
 
@@ -413,7 +413,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.list().should.be.rejectedWith(Error, /^list/);
+      return articles.list().should.be.rejectedWith(Error, /list\(\)/);
     });
   });
 
@@ -737,36 +737,6 @@ describe("Collection", () => {
       sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
       return articles.sync()
         .should.eventually.become(result);
-    });
-  });
-});
-
-describe.only("tests", function() {
-  describe("fulfillment", function() {
-    async function test() {
-      return Promise.resolve(42);
-    }
-
-    it("should work using should", function() {
-      return test().should.become(42);
-    });
-
-    it("should work using expect", function() {
-      return expect(test()).to.become(42);
-    });
-  });
-
-  describe("rejection", function() {
-    async function test() {
-      return Promise.reject(new Error("plop"));
-    }
-
-    it("should work using should", function() {
-      return test().should.be.rejectedWith(Error, "plop");
-    });
-
-    it("should work using expect", function() {
-      return expect(test()).to.be.rejectedWith(Error, "plop");
     });
   });
 });
