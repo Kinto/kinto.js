@@ -90,7 +90,6 @@ function main() {
         event.target.title.value = "";
         event.target.title.focus();
       })
-      .then(render)
       .catch(function(err) {
         console.error(err);
       });
@@ -184,7 +183,7 @@ Last, switch off your Internet connection, and try adding tasks. It still works,
 
 > #### Notes
 >
-> - The Cliquetis API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). Don't hesitate to learn a but more about them before digging further into this tutorial.
+> - The Cliquetis API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). Don't hesitate to [learn a bit more](http://pouchdb.com/2015/05/18/we-have-a-problem-with-promises.html) about them before digging further into this tutorial.
 
 
 ## Updating a task
@@ -392,7 +391,7 @@ Let's review the different result object properties:
 
 - `ok`: this is set to `false` when any error or conflict has been encountered;
 - `lastModified`: the collection latest modification timestamp;
-- `errors`: the list of encountered error (eg. IndexedDB errors) encountered, if any;
+- `errors`: the list of encountered errors (eg. IndexedDB errors), if any;
 - `created`: the list of records imported locally;
 - `updated`: the list of records updated locally; in our case, the `_status` and `last_modified` values were updated;
 - `deleted`: the list of records deleted locally;
@@ -466,7 +465,7 @@ The conflict entry is rather self-explanatory, though let's dig into the details
 - `local`: The local record version;
 - `remote`: The server record version.
 
-Now it's up to you how you want to resolve the conflict; for exemple, you could:
+Now it's up to you how you want to resolve the conflict; for example, you could:
 
 - override the local version with the remote one;
 - compare the `last_modified` values and decide what to do accordingly;
@@ -507,4 +506,4 @@ We're using `#resolve()` to mark a conflict as resolved: it accepts a conflict o
 
 ## Now what?
 
-That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/mozilla-services/cliquetis/issues/new), learn ho to [contribute](hacking.md), but most of all: have fun.
+That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/mozilla-services/cliquetis/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.
