@@ -440,10 +440,11 @@ export default class Collection {
    * @param  {Object}  options
    * @return {Promise}
    */
-  saveLastModified(lastModified) {
+  async saveLastModified(lastModified) {
     var value = parseInt(lastModified, 10);
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
+    try {
+      await this.open();
+      return await new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
         const request = store.put({name: "lastModified", value: value});
         transaction.onerror = event => reject(event.target.error);
@@ -453,7 +454,9 @@ export default class Collection {
           resolve(value);
         };
       });
-    });
+    } catch(err) {
+      this._handleError("saveLastModified")(err);
+    }
   }
 
   /**
