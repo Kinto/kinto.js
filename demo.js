@@ -1,5 +1,5 @@
 function main() {
-  var db = new Cliquetis({
+  var db = new Kinto({
     remote: "https://kinto.dev.mozaws.net/v1",
     headers: {Authorization: "Basic " + btoa("user:pass")}
   });
