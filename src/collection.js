@@ -488,17 +488,15 @@ export default class Collection {
    *
    * @return {Object}
    */
-  gatherLocalChanges() {
-    return this.list({}, {includeDeleted: true})
-      .then(res => {
-        return res.data.reduce((acc, record) => {
-          if (record._status === "deleted" && !record.last_modified)
-            acc.toDelete.push(record);
-          else if (record._status !== "synced")
-            acc.toSync.push(record);
-          return acc;
-        }, {toDelete: [], toSync: []});
-      });
+  async gatherLocalChanges() {
+    const res = await this.list({}, {includeDeleted: true});
+    return res.data.reduce((acc, record) => {
+      if (record._status === "deleted" && !record.last_modified)
+        acc.toDelete.push(record);
+      else if (record._status !== "synced")
+        acc.toSync.push(record);
+      return acc;
+    }, {toDelete: [], toSync: []});
   }
 
   /**
