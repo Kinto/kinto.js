@@ -574,19 +574,15 @@ export default class Collection {
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
-    // TODO rename options.mode to options.strategy
+  async sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
     const result = new SyncResultObject();
-    return this.getLastModified()
-      .then(lastModified => this._lastModified = lastModified)
-      .then(_ => this.pullChanges(result, options))
-      .then(result => {
-        if (!result.ok) {
-          return result;
-        } else {
-          return this.pushChanges(result, options)
-            .then(result => this.pullChanges(result, options));
-        }
-      });
+    this._lastModified = await this.getLastModified();
+    await this.pullChanges(result, options);
+    if (!result.ok) {
+      return result;
+    } else {
+      await this.pushChanges(result, options)
+      return await this.pullChanges(result, options);
+    }
   }
 }
