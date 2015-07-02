@@ -367,9 +367,9 @@ export default class Collection {
    * @return {Promise}
    */
   async _importChange(change) {
-    var res;
+    var existing;
     try {
-      res = await this.get(change.id, {includeDeleted: true});
+      existing = await this.get(change.id, {includeDeleted: true});
     } catch(err) {
       // Unmatched local record
       if (!(/not found/i).test(err.message))
@@ -378,35 +378,31 @@ export default class Collection {
       // avoid recreation.
       if (change.deleted)
         return {type: "skipped", data: change};
-      return await this.create(change, {synced: true}).then(res => {
-        return {type: "created", data: res.data};
-      });
+      const created = await this.create(change, {synced: true});
+      return {type: "created", data: created.data};
     }
-    if (res.data._status !== "synced") {
+    if (existing.data._status !== "synced") {
       // Locally deleted, unsynced: scheduled for remote deletion.
-      if (res.data._status === "deleted") {
-        return {type: "skipped", data: res.data};
-      } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+      if (existing.data._status === "deleted") {
+        return {type: "skipped", data: existing.data};
+      } else if (deepEquals(cleanRecord(existing.data), cleanRecord(change))) {
         // If records are identical, import anyway, so we bump the
         // local last_modified value from the server and set record
         // status to "synced".
-        return await this.update(change, {synced: true}).then(res => {
-          return {type: "updated", data: res.data};
-        });
+        const updated = await this.update(change, {synced: true});
+        return {type: "updated", data: updated.data};
       } else {
         return {
           type: "conflicts",
-          data: { type: "incoming", local: res.data, remote: change }
+          data: { type: "incoming", local: existing.data, remote: change }
         };
       }
     } else if (change.deleted) {
-      return await this.delete(change.id, {virtual: false}).then(res => {
-        return {type: "deleted", data: res.data};
-      });
+      const deleted = await this.delete(change.id, {virtual: false});
+      return {type: "deleted", data: deleted.data};
     } else {
-      return await this.update(change, {synced: true}).then(res => {
-        return {type: "updated", data: res.data};
-      });
+      const updated = await this.update(change, {synced: true});
+      return {type: "updated", data: updated.data};
     }
   }
 
@@ -429,8 +425,8 @@ export default class Collection {
     if (syncResultObject.conflicts.length > 0)
       return syncResultObject;
     // No conflict occured, persist collection's lastModified value
-    return await this.saveLastModified(syncResultObject.lastModified)
-      .then(_ => syncResultObject);
+    await this.saveLastModified(syncResultObject.lastModified);
+    return syncResultObject;
   }
 
   /**
@@ -510,9 +506,9 @@ export default class Collection {
   async pullChanges(syncResultObject, options={}) {
     options = Object.assign({lastModified: this.lastModified}, options);
     // First fetch remote changes from the server
-    return await this.api.fetchChangesSince(this.bucket, this.name, options)
-      // Reflect these changes locally
-      .then(changes => this.importChanges(syncResultObject, changes));
+    const changes = await this.api.fetchChangesSince(this.bucket, this.name, options);
+    // Reflect these changes locally
+    return await this.importChanges(syncResultObject, changes);
   }
 
   /**
@@ -530,26 +526,30 @@ export default class Collection {
     const {toDelete, toSync} = await this.gatherLocalChanges();
 
     // Delete never synced records marked for deletion
-    for (let deletedRecord of toDelete)
+    for (let deletedRecord of toDelete) {
       await this.delete(deletedRecord.id, {virtual: false});
+    }
 
     // Send batch update requests
     const synced = await this.api.batch(this.bucket, this.name, toSync, options);
 
     // Update published local records
-    const published = await Promise.all(synced.published.map(record => {
+    const published = [];
+    for (let record of synced.published) {
       if (record.deleted) {
-        // Remote deletion was successful, refect it locally
-        return this.delete(record.id, {virtual: false}).then(res => {
-          // Amend result data with the deleted attribute set
-          return {data: {id: res.data.id, deleted: true}};
-        });
+        // Remote deletion was successful, reflect it locally
+        let deleted = await this.delete(record.id, {virtual: false});
+        // Amend result data with the deleted attribute set
+        published.push({data: {id: deleted.data.id, deleted: true}});
       } else {
         // Remote update was successful, refect it locally
-        return this.update(record, {synced: true});
+        let updated = await this.update(record, {synced: true});
+        published.push(updated);
       }
-    }));
+    }
+
     syncResultObject.add("published", published.map(res => res.data))
+
     return syncResultObject;
   }
 
