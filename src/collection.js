@@ -417,25 +417,20 @@ export default class Collection {
    * @param  {Object} changeObject The change object.
    * @return {Promise}
    */
-  importChanges(syncResultObject, changeObject) {
-    return Promise.all(changeObject.changes.map(change => {
+  async importChanges(syncResultObject, changeObject) {
+    const imports = await Promise.all(changeObject.changes.map(change => {
       return this._importChange(change); // XXX direct method ref?
-    }))
-      .then(imports => {
-        for (let imported of imports) {
-          syncResultObject.add(imported.type, imported.data);
-        }
-        return syncResultObject;
-      })
-      .then(syncResultObject => {
-        syncResultObject.lastModified = changeObject.lastModified;
-        // Don't persist lastModified value if conflicts occured
-        if (syncResultObject.conflicts.length > 0)
-          return syncResultObject;
-        // No conflict occured, persist collection's lastModified value
-        return this.saveLastModified(syncResultObject.lastModified)
-          .then(_ => syncResultObject);
-      })
+    }));
+    for (let imported of imports) {
+      syncResultObject.add(imported.type, imported.data);
+    }
+    syncResultObject.lastModified = changeObject.lastModified;
+    // Don't persist lastModified value if conflicts occured
+    if (syncResultObject.conflicts.length > 0)
+      return syncResultObject;
+    // No conflict occured, persist collection's lastModified value
+    return await this.saveLastModified(syncResultObject.lastModified)
+      .then(_ => syncResultObject);
   }
 
   /**
