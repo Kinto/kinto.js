@@ -1,23 +1,23 @@
 {
-  "name": "cliquetis",
+  "name": "kinto",
   "version": "0.0.1",
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
     "demo": "npm run dist && http-server demo",
     "dist": "npm run dist-dev && npm run dist-prod",
-    "dist-dev": "browserify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js",
-    "dist-prod": "browserify -s Cliquetis -x fake-indexeddb -g uglifyify -e src/index.js -o dist/cliquetis.min.js",
+    "dist-dev": "browserify -s Kinto -x fake-indexeddb -d -e src/index.js -o dist/kinto.dev.js",
+    "dist-prod": "browserify -s Kinto -x fake-indexeddb -g uglifyify -e src/index.js -o dist/kinto.min.js",
     "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
     "test": "npm run test-cover && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text --report lcovonly node_modules/.bin/_mocha",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html --report lcovonly node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
-    "watch": "watchify -s Cliquetis -x fake-indexeddb -d -e src/index.js -o dist/cliquetis.dev.js -v"
+    "watch": "watchify -s Kinto -x fake-indexeddb -d -e src/index.js -o dist/kinto.dev.js -v"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mozilla-services/cliquetis.git"
+    "url": "https://github.com/mozilla-services/kinto.js.git"
   },
   "keywords": [
     "sync",
@@ -28,7 +28,7 @@
   "author": "Nicolas Perriault <nperriault@mozilla.com>",
   "license": "MPL",
   "bugs": {
-    "url": "https://github.com/mozilla-services/cliquetis/issues"
+    "url": "https://github.com/mozilla-services/kinto.js/issues"
   },
   "browserify": {
     "transform": [
@@ -40,7 +40,7 @@
       ]
     ]
   },
-  "homepage": "https://github.com/mozilla-services/cliquetis",
+  "homepage": "https://github.com/mozilla-services/kinto.js",
   "devDependencies": {
     "babel": "^5.4.4",
     "babelify": "^6.1.1",
