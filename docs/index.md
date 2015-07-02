@@ -1,6 +1,6 @@
 # Cliquetis [![](https://travis-ci.org/mozilla-services/cliquetis.svg?branch=master)](https://travis-ci.org/mozilla-services/cliquetis) [![](https://coveralls.io/repos/mozilla-services/cliquetis/badge.svg?branch=master)](https://coveralls.io/r/mozilla-services/cliquetis?branch=master) [![](https://readthedocs.org/projects/pip/badge/?version=latest)](http://cliquetis.readthedocs.org/)
 
-> An offline-first JavaScript client for [Cliquet](http://cliquet.readthedocs.org/) and [Kinto](http://kinto.readthedocs.org/).
+> An offline-first JavaScript client for [Kinto](http://kinto.readthedocs.org/).
 
 ## Key concepts
 
