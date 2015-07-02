@@ -366,50 +366,48 @@ export default class Collection {
    * @param  {Object} change
    * @return {Promise}
    */
-  _importChange(change) {
-    return this.get(change.id, {includeDeleted: true})
-      // Matching local record found
-      .then(res => {
-        // Unsynced local data
-        if (res.data._status !== "synced") {
-          // Locally deleted, unsynced: scheduled for remote deletion.
-          if (res.data._status === "deleted") {
-            return {type: "skipped", data: res.data};
-          } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
-            // If records are identical, import anyway, so we bump the
-            // local last_modified value from the server and set record
-            // status to "synced".
-            return this.update(change, {synced: true}).then(res => {
-              return {type: "updated", data: res.data};
-            });
-          } else {
-            return {
-              type: "conflicts",
-              data: { type: "incoming", local: res.data, remote: change }
-            };
-          }
-        } else if (change.deleted) {
-          return this.delete(change.id, {virtual: false}).then(res => {
-            return {type: "deleted", data: res.data};
-          });
-        } else {
-          return this.update(change, {synced: true}).then(res => {
-            return {type: "updated", data: res.data};
-          });
-        }
-      })
-      // Unatched local record
-      .catch(err => {
-        if (!(/not found/i).test(err.message))
-          return {type: "errors", data: err};
-        // Not found locally but remote change is marked as deleted; skip to
-        // avoid recreation.
-        if (change.deleted)
-          return {type: "skipped", data: change};
-        return this.create(change, {synced: true}).then(res => {
-          return {type: "created", data: res.data};
-        });
+  async _importChange(change) {
+    var res;
+    try {
+      res = await this.get(change.id, {includeDeleted: true});
+    } catch(err) {
+      // Unmatched local record
+      if (!(/not found/i).test(err.message))
+        return {type: "errors", data: err};
+      // Not found locally but remote change is marked as deleted; skip to
+      // avoid recreation.
+      if (change.deleted)
+        return {type: "skipped", data: change};
+      return await this.create(change, {synced: true}).then(res => {
+        return {type: "created", data: res.data};
       });
+    }
+    if (res.data._status !== "synced") {
+      // Locally deleted, unsynced: scheduled for remote deletion.
+      if (res.data._status === "deleted") {
+        return {type: "skipped", data: res.data};
+      } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
+        // If records are identical, import anyway, so we bump the
+        // local last_modified value from the server and set record
+        // status to "synced".
+        return await this.update(change, {synced: true}).then(res => {
+          return {type: "updated", data: res.data};
+        });
+      } else {
+        return {
+          type: "conflicts",
+          data: { type: "incoming", local: res.data, remote: change }
+        };
+      }
+    } else if (change.deleted) {
+      return await this.delete(change.id, {virtual: false}).then(res => {
+        return {type: "deleted", data: res.data};
+      });
+    } else {
+      return await this.update(change, {synced: true}).then(res => {
+        return {type: "updated", data: res.data};
+      });
+    }
   }
 
   /**
