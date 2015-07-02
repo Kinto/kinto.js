@@ -184,7 +184,7 @@ describe("Collection", () => {
     });
 
     it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
+      sandbox.stub(articles, "open").returns("error");
       return articles.create().should.be.rejectedWith(Error, /^create/);
     });
   });
@@ -278,9 +278,8 @@ describe("Collection", () => {
 
     it("should isolate records by bucket", () => {
       const otherbucket = new Collection('other', TEST_COLLECTION_NAME, api);
-      return otherbucket.get(uuid)
-        .then(res => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+      expect(otherbucket.get(uuid))
+        .to.be.eventually.rejectedWith(Error, /not found/);
     });
 
     it("should retrieve a record from its id", () => {
@@ -296,9 +295,8 @@ describe("Collection", () => {
     });
 
     it("should reject in case of record not found", () => {
-      return articles.get("non-existent")
-        .then(res => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+      expect(articles.get("non-existent"))
+        .to.be.eventually.rejectedWith(Error, /not found/);
     });
 
     it("should reject on virtually deleted record", () => {
@@ -739,6 +737,36 @@ describe("Collection", () => {
       sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
       return articles.sync()
         .should.eventually.become(result);
+    });
+  });
+});
+
+describe.only("tests", function() {
+  describe("fulfillment", function() {
+    async function test() {
+      return Promise.resolve(42);
+    }
+
+    it("should work using should", function() {
+      return test().should.become(42);
+    });
+
+    it("should work using expect", function() {
+      return expect(test()).to.become(42);
+    });
+  });
+
+  describe("rejection", function() {
+    async function test() {
+      return Promise.reject(new Error("plop"));
+    }
+
+    it("should work using should", function() {
+      return test().should.be.rejectedWith(Error, "plop");
+    });
+
+    it("should work using expect", function() {
+      return expect(test()).to.be.rejectedWith(Error, "plop");
     });
   });
 });

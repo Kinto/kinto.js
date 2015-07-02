@@ -79,7 +79,9 @@ export default class Collection {
   }
 
   _handleError(method) {
-    return err => {throw new Error(method + "() " + err.message)}
+    return err => {
+      throw new Error(method + "() " + err.message);
+    };
   }
 
   /**
@@ -87,9 +89,9 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  open() {
+  async open() {
     if (this._db)
-      return Promise.resolve(this);
+      return this;
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbname, 1);
       request.onupgradeneeded = event => {
@@ -143,8 +145,9 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  clear() {
-    return this.open().then(() => {
+  async clear() {
+    try {
+      await this.open();
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
@@ -156,7 +159,9 @@ export default class Collection {
           });
         };
       });
-    }).catch(this._handleError("clear"));
+    } catch(err) {
+      this._handleError("clear")(err);
+    }
   }
 
   /**
@@ -169,10 +174,11 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options={synced: false}) {
-    return this.open().then(() => {
+  async create(record, options={synced: false}) {
+    try {
+      await this.open();
       if (typeof(record) !== "object")
-        return Promise.reject(new Error('Record is not an object.'));
+        throw new Error('Record is not an object.');
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         const newRecord = Object.assign({}, record, {
@@ -188,7 +194,9 @@ export default class Collection {
           });
         };
       });
-    }).catch(this._handleError("create"));
+    } catch(err) {
+      this._handleError("create")(err);
+    }
   }
 
   /**
@@ -201,33 +209,35 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options={synced: false}) {
-    return this.open().then(() => {
+  async update(record, options={synced: false}) {
+    try {
+      await this.open();
       if (typeof(record) !== "object")
-        return Promise.reject(new Error("Record is not an object."));
+        throw new Error("Record is not an object.");
       if (!record.id)
-        return Promise.reject(new Error("Cannot update a record missing id."));
-      return this.get(record.id).then(_ => {
-        return new Promise((resolve, reject) => {
-          var newStatus = "updated";
-          if (record._status === "deleted") {
-            newStatus = "deleted";
-          } else if (options.synced) {
-            newStatus = "synced";
-          }
-          const {transaction, store} = this.prepare("readwrite");
-          const updatedRecord = Object.assign({}, record, {_status: newStatus});
-          const request = store.put(updatedRecord);
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => {
-            resolve({
-              data: Object.assign({}, updatedRecord, {id: request.result}),
-              permissions: {}
-            });
-          };
-        });
+        throw new Error("Cannot update a record missing id.");
+      await this.get(record.id);
+      return new Promise((resolve, reject) => {
+        var newStatus = "updated";
+        if (record._status === "deleted") {
+          newStatus = "deleted";
+        } else if (options.synced) {
+          newStatus = "synced";
+        }
+        const {transaction, store} = this.prepare("readwrite");
+        const updatedRecord = Object.assign({}, record, {_status: newStatus});
+        const request = store.put(updatedRecord);
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => {
+          resolve({
+            data: Object.assign({}, updatedRecord, {id: request.result}),
+            permissions: {}
+          });
+        };
       });
-    }).catch(this._handleError("update"));
+    } catch(err) {
+      this._handleError("update")(err);
+    }
   }
 
   /**
@@ -239,7 +249,7 @@ export default class Collection {
    * @param  {Object} resolution The proposed record.
    * @return {Promise}
    */
-  resolve(conflict, resolution) {
+  async resolve(conflict, resolution) {
     return this.update(Object.assign({}, resolution, {
       last_modified: conflict.remote.last_modified
     }));
@@ -252,8 +262,9 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  get(id, options={includeDeleted: false}) {
-    return this.open().then(() => {
+  async get(id, options={includeDeleted: false}) {
+    try {
+      await this.open();
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
         const request = store.get(id);
@@ -261,6 +272,7 @@ export default class Collection {
         transaction.oncomplete = event => {
           if (!request.result ||
              (!options.includeDeleted && request.result._status === "deleted")) {
+            // WTF, this doesn't actually reject, the promise is fulfilled
             reject(new Error(`Record with id=${id} not found.`));
           } else {
             resolve({
@@ -269,8 +281,13 @@ export default class Collection {
             });
           }
         };
+      }).catch(err => {
+        console.log(err);
+        throw err;
       });
-    }).catch(this._handleError("get"));
+    } catch(err) {
+      this._handleError("get")(err);
+    }
   }
 
   /**
