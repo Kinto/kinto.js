@@ -507,10 +507,10 @@ export default class Collection {
    * @param  {Object}           options
    * @return {Promise}
    */
-  pullChanges(syncResultObject, options={}) {
+  async pullChanges(syncResultObject, options={}) {
     options = Object.assign({lastModified: this.lastModified}, options);
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.bucket, this.name, options)
+    return await this.api.fetchChangesSince(this.bucket, this.name, options)
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes));
   }
