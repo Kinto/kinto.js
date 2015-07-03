@@ -11,7 +11,7 @@ chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
-describe.only("Integration tests", () => {
+describe("Integration tests", () => {
   var tasks;
 
   beforeEach(() => {
