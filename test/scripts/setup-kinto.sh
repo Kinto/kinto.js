@@ -14,4 +14,4 @@ cd $KINTO_ROOT
 git checkout $KINTO_RELEASE
 cp $REPO_ROOT/test/scripts/kinto.ini $KINTO_ROOT/config/kinto.ini
 
-make serve &>/dev/null
+make serve &

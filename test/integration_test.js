@@ -1,5 +1,6 @@
 "use strict";
 
+import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -11,7 +12,7 @@ chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
-describe("Integration tests", () => {
+describe.only("Integration tests", () => {
   var tasks;
 
   beforeEach(() => {
@@ -58,6 +59,35 @@ describe("Integration tests", () => {
               .include("task1")
               .include("task2")
               .include("task3");
+      });
+
+      describe("Importing new remote records", function() {
+        var syncResult, createdId;
+
+        beforeEach(() => {
+          createdId = uuid4();
+          return tasks.api.batch("default", "tasks", [
+            {id: createdId, title: "task4", done: true}
+          ])
+            .then(_ => tasks.sync())
+            .then(res => syncResult = res);
+        });
+
+        it("should list created records", function() {
+          expect(syncResult.created).to.have.length.of(1);
+          expect(syncResult.created[0].id).eql(createdId);
+          expect(syncResult.created[0].title).eql("task4");
+        });
+
+        it("should import records", function() {
+          return tasks.list()
+            .then(res => res.data.map(r => r.title))
+              .should.eventually
+               .include("task1")
+               .include("task2")
+               .include("task3")
+               .include("task4");
+        });
       });
     });
 
