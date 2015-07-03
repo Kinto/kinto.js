@@ -4,7 +4,7 @@ We'll create a super simple offline-first, remotely synchronized todo list appli
 
 ![](images/final.png)
 
-The final demo code is [available](https://github.com/mozilla-services/cliquetis/tree/master/demo) in the Cliquetis repository.
+The final demo code is [available](https://github.com/mozilla-services/kinto.js/tree/master/demo) in the Kinto.js repository.
 
 > #### Notes
 >
@@ -21,7 +21,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Cliquetis demo</title>
+  <title>Kinto.js demo</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
 </head>
 <body>
@@ -36,7 +36,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
     <hr>
     <ul id="tasks" class="list-group"></ul>
   </div>
-  <script src="https://raw.githubusercontent.com/mozilla-services/cliquetis/master/dist/cliquetis.min.js"></script>
+  <script src="https://raw.githubusercontent.com/mozilla-services/kinto.js/master/dist/kinto.min.js"></script>
   <script src="demo.js"></script>
 </body>
 </html>
@@ -46,7 +46,7 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 }
 
@@ -57,14 +57,14 @@ window.addEventListener("DOMContentLoaded", main);
 > #### Notes
 >
 > - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are reset everyday**;
-> - You'll need to serve this page over HTTP, for Cliquetis to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
+> - You'll need to serve this page over HTTP, for Kinto.js to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
 
 For example, if you're using http-server:
 
     $ pwd
-    /home/niko/cliquetis-tutorial
+    /home/niko/kinto.js-tutorial
     $ npm install -g http-server
-    $ http-server /home/niko/cliquetis-tutorial
+    $ http-server /home/niko/kinto.js-tutorial
 
 And that's it. You should see something like this on `http://localhost:3000`:
 
@@ -76,7 +76,7 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -117,7 +117,7 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Cliquetis({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -183,7 +183,7 @@ Last, switch off your Internet connection, and try adding tasks. It still works,
 
 > #### Notes
 >
-> - The Cliquetis API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). Don't hesitate to [learn a bit more](http://pouchdb.com/2015/05/18/we-have-a-problem-with-promises.html) about them before digging further into this tutorial.
+> - The Kinto.js API heavily relies on [Promises](https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Promise). Don't hesitate to [learn a bit more](http://pouchdb.com/2015/05/18/we-have-a-problem-with-promises.html) about them before digging further into this tutorial.
 
 
 ## Updating a task
@@ -328,10 +328,10 @@ document.getElementById("sync")
   });
 ```
 
-We're passing an `Authorization` header as an option to `#sync()`; that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Cliquetis` constructor:
+We're passing an `Authorization` header as an option to `#sync()`; that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Kinto` constructor:
 
 ```js
-var db = new Cliquetis({
+var db = new Kinto({
   remote: "https://kinto.dev.mozaws.net/v0",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 });
@@ -506,4 +506,4 @@ We're using `#resolve()` to mark a conflict as resolved: it accepts a conflict o
 
 ## Now what?
 
-That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/mozilla-services/cliquetis/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.
+That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/mozilla-services/kinto.js/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.

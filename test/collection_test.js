@@ -12,8 +12,8 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
-const TEST_BUCKET_NAME = "cliquetis-test";
-const TEST_COLLECTION_NAME = "cliquetis-test";
+const TEST_BUCKET_NAME = "kinto-test";
+const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v0"
 
 describe("Collection", () => {

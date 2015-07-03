@@ -10,7 +10,7 @@ import Collection from "./collection";
 const DEFAULT_BUCKET_NAME = "default";
 
 
-export default class Cliquetis {
+export default class Kinto {
   constructor(options = {}) {
     this._options = options;
     this._collections = {};

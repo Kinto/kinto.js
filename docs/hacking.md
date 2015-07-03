@@ -1,13 +1,13 @@
-# Hacking on Cliquetis
+# Hacking on Kinto.js
 
-Hacking on Cliquetis requires to setup a [NodeJS v0.12x environment](https://nodejs.org/download/).
+Hacking on Kinto.js requires to setup a [NodeJS v0.12x environment](https://nodejs.org/download/).
 
 ## Installation
 
-Code is [hosted on Github](https://github.com/mozilla-services/cliquetis).
+Code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
 
-    $ git co https://github.com/mozilla-services/cliquetis
-    $ cd cliquetis
+    $ git co https://github.com/mozilla-services/kinto.js
+    $ cd kinto.js
     $ npm install
 
 ## Tests
@@ -20,7 +20,7 @@ This will also run code coverage and send the report to [Coveralls](http://cover
     $ npm run test-cover      # runs tests, code coverage; doesn't send results
     $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report
 
-Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/cliquetis).
+Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
 
 ### TDD mode
 
@@ -40,14 +40,14 @@ You can also grep to run a subset of tests that way:
 
 This should have created the following assets:
 
--  `dist/cliquetis.dev.js`: Developement version, unminified, embedding source maps;
--  `dist/cliquetis.min.js`: Production version, minified, no source maps.
+-  `dist/kinto.dev.js`: Developement version, unminified, embedding source maps;
+-  `dist/kinto.min.js`: Production version, minified, no source maps.
 
 ## Updating docs
 
 Docs are written in [Markdown](http://daringfireball.net/projects/markdown/syntax) using [mkdocs](http://www.mkdocs.org/), and are hosted on [readthedocs](https://readthedocs.org/).
 
-Document sources are versionned in the Cliquetis repository, under the [docs/ directory](https://github.com/mozilla-services/cliquetis/tree/master/docs). Updates are automatically deployed when pushed to `origin/master`. That means the docs site is automatically updated everytime a PR lands.
+Document sources are versionned in the Kinto.js repository, under the [docs/ directory](https://github.com/mozilla-services/kinto.js/tree/master/docs). Updates are automatically deployed when pushed to `origin/master`. That means the docs site is automatically updated everytime a PR lands.
 
 To build docs locally, ensure mkdocs is [properly installed](http://www.mkdocs.org/#installation), then run:
 

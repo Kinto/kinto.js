@@ -1,9 +1,9 @@
 # API documentation
 
-## The `Cliquetis` constructor
+## The `Kinto` constructor
 
 ```js
-const db = new Cliquetis(options);
+const db = new Kinto(options);
 ```
 
 `options` is an object defining the following option values:
@@ -215,7 +215,7 @@ The `sync()` method accepts a `strategy` option, which itself accepts the follow
 - `Collection.strategy.SERVER_WINS`: Server data will be preserved;
 - `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
 
-You can override default options by passing `#sync()` a new `options` object; Cliquetis will merge these new values with the default ones:
+You can override default options by passing `#sync()` a new `options` object; Kinto will merge these new values with the default ones:
 
 ```js
 articles.sync({

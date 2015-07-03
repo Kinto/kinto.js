@@ -1,4 +1,4 @@
-site_name: Cliquetis documentation
+site_name: Kinto.js documentation
 pages:
 - Home: index.md
 - Tutorial: tutorial.md
