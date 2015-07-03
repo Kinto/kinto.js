@@ -62,43 +62,36 @@ export default class Api {
    * @param  {Object} options     The options object.
    * @return {Promise}
    */
-  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
+  async fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    var newLastModified;
-    var queryString = "";
-    var headers = Object.assign({},
+    const headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
+
+    var newLastModified, changes, queryString = "";
 
     if (options.lastModified) {
       queryString = "?_since=" + options.lastModified;
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {headers})
-      .then(res => {
-        // If HTTP 304, nothing has changed
-        if (res.status === 304) {
-          newLastModified = options.lastModified;
-          return {data: []};
-        } else if (res.status >= 400) {
-          // TODO: attach better error reporting
-          throw new Error("Fetching changes failed: HTTP " + res.status);
-        } else {
-          const etag = res.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          newLastModified = parseInt(unquote(etag), 10);
-          return res.json();
-        }
-      })
-      .then(json => {
-        return {
-          lastModified: newLastModified,
-          changes: json.data
-        };
-      });
+    const res = await fetch(recordsUrl + queryString, {headers});
+    const json = await res.json();
+
+    if (res.status >= 400)
+      throw new Error("Fetching changes failed: HTTP " + res.status);
+
+    if (res.status === 304) {
+      newLastModified = options.lastModified;
+      changes = [];
+    } else {
+      newLastModified = parseInt(unquote(res.headers.get("ETag")), 10);
+      changes = [];
+    }
+
+    return {lastModified: newLastModified, changes: changes};
   }
 
   /**
@@ -138,7 +131,7 @@ export default class Api {
    * @param  {Object} options     The options object.
    * @return {Promise}
    */
-  batch(bucketName, collName, records, options={headers: {}}) {
+  async batch(bucketName, collName, records, options={headers: {}}) {
     const safe = options.safe || true;
     const headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
@@ -151,9 +144,11 @@ export default class Api {
       conflicts: [],
       skipped:   []
     };
+
     if (!records.length)
-      return Promise.resolve(results);
-    return fetch(this.endpoints().batch(), {
+      return results;
+
+    const res = await fetch(this.endpoints().batch(), {
       method: "POST",
       headers: headers,
       body: JSON.stringify({
@@ -164,37 +159,38 @@ export default class Api {
           return this._buildRecordBatchRequest(record, path, safe);
         })
       })
-    })
-      .then(res => res.json())
-      .then(res => {
-        if (res.error)
-          throw Object.keys(res).reduce((err, key) => {
-            if (key !== "message")
-              err[key] = res[key];
-            return err;
-          }, new Error("BATCH request failed: " + res.message));
-        res.responses.forEach(response => {
-          // TODO: handle 409 when unicity rule is violated (ex. POST with
-          // existing id, unique field, etc.)
-          if (response.status && response.status >= 200 && response.status < 400) {
-            results.published.push(response.body.data);
-          } else if (response.status === 404) {
-            results.skipped.push(response.body);
-          } else if (response.status === 412) {
-            results.conflicts.push({
-              type: "outgoing",
-              data: response.body
-            });
-          } else {
-            results.errors.push({
-              // TODO: since responses come in the same order, there should be a
-              // way to get original record id
-              path: response.path, // this is the only way to have the id…
-              error: response.body
-            });
-          }
+    });
+    const json = await res.json();
+
+    if (json.error) {
+      throw Object.keys(res).reduce((err, key) => {
+        if (key !== "message")
+          err[key] = res[key];
+        return err;
+      }, new Error("BATCH request failed: " + json.message));
+    }
+
+    json.responses.forEach(response => {
+      // TODO: handle 409 when unicity rule is violated (ex. POST with
+      // existing id, unique field, etc.)
+      if (response.status && response.status >= 200 && response.status < 400) {
+        results.published.push(response.body.data);
+      } else if (response.status === 404) {
+        results.skipped.push(response.body);
+      } else if (response.status === 412) {
+        results.conflicts.push({
+          type: "outgoing",
+          data: response.body
         });
-        return results;
-      });
+      } else {
+        results.errors.push({
+          // TODO: since responses come in the same order, there should be a
+          // way to get original record id
+          path: response.path, // this is the only way to have the id…
+          error: response.body
+        });
+      }
+    });
+    return results;
   }
 }

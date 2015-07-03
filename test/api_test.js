@@ -212,6 +212,16 @@ describe("Api", () => {
       return api.fetchChangesSince("blog", "articles", {lastModified: 42})
         .should.eventually.be.rejectedWith(Error, /failed: HTTP 401/);
     });
+
+    it("should reject on invalid json", () => {
+      sandbox.stub(root, "fetch").returns(Promise.resolve({
+        status: 500,
+        json: () => Promise.reject("json err")
+      }));
+
+      return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+        .should.eventually.be.rejectedWith("json err");
+    });
   });
 
   describe("#batch", () => {

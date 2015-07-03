@@ -184,8 +184,8 @@ describe("Collection", () => {
     });
 
     it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.create().should.be.rejectedWith(Error, /^create/);
+      sandbox.stub(articles, "open").returns("error");
+      return articles.create().should.be.rejectedWith(Error, /create\(\)/);
     });
   });
 
@@ -232,7 +232,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.update().should.be.rejectedWith(Error, /^update/);
+      return articles.update().should.be.rejectedWith(Error, /update\(\)/);
     });
   });
 
@@ -278,9 +278,8 @@ describe("Collection", () => {
 
     it("should isolate records by bucket", () => {
       const otherbucket = new Collection('other', TEST_COLLECTION_NAME, api);
-      return otherbucket.get(uuid)
-        .then(res => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+      expect(otherbucket.get(uuid))
+        .to.be.eventually.rejectedWith(Error, /not found/);
     });
 
     it("should retrieve a record from its id", () => {
@@ -296,9 +295,8 @@ describe("Collection", () => {
     });
 
     it("should reject in case of record not found", () => {
-      return articles.get("non-existent")
-        .then(res => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+      expect(articles.get("non-existent"))
+        .to.be.eventually.rejectedWith(Error, /not found/);
     });
 
     it("should reject on virtually deleted record", () => {
@@ -319,7 +317,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.get().should.be.rejectedWith(Error, /^get/);
+      return articles.get().should.be.rejectedWith(Error, /get\(\)/);
     });
   });
 
@@ -355,7 +353,7 @@ describe("Collection", () => {
 
       it("should prefix error encountered", () => {
         sandbox.stub(articles, "open").returns(Promise.reject("error"));
-        return articles.delete().should.be.rejectedWith(Error, /^delete/);
+        return articles.delete().should.be.rejectedWith(Error, /delete\(\)/);
       });
     });
 
@@ -415,7 +413,7 @@ describe("Collection", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.list().should.be.rejectedWith(Error, /^list/);
+      return articles.list().should.be.rejectedWith(Error, /list\(\)/);
     });
   });
 
