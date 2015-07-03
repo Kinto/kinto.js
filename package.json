@@ -45,6 +45,7 @@
     "babel": "^5.4.4",
     "babelify": "^6.1.1",
     "browserify": "^10.2.1",
+    "btoa": "^1.1.2",
     "chai": "^2.3.0",
     "chai-as-promised": "^5.0.0",
     "coveralls": "^2.11.2",
