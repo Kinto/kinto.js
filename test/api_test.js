@@ -426,7 +426,8 @@ describe("Api", () => {
             .should.eventually.become({
               conflicts: [{
                 type: "outgoing",
-                data: { invalid: true },
+                local: published[0],
+                remote: { invalid: true }
               }],
               skipped:   [],
               errors:    [],

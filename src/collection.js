@@ -163,20 +163,21 @@ export default class Collection {
    * Adds a record to the local database.
    *
    * Options:
-   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   * - {Boolean} synced: Sets record status to "synced" (default: false);
+   * - {Boolean} forceUUID: Enforces record creation using any provided UUID.
    *
    * @param  {Object} record
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options={synced: false}) {
+  create(record, options={forceUUID: false, synced: false}) {
     return this.open().then(() => {
       if (typeof(record) !== "object")
         return Promise.reject(new Error('Record is not an object.'));
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         const newRecord = Object.assign({}, record, {
-          id:      options.synced ? record.id : uuid4(),
+          id:      options.synced || options.forceUUID ? record.id : uuid4(),
           _status: options.synced ? "synced" : "created"
         });
         store.add(newRecord);
@@ -532,6 +533,11 @@ export default class Collection {
       })
       // Update published local records
       .then(([deleted, synced]) => {
+        // Merge outgoing errors into sync result object
+        syncResultObject.add("errors", synced.errors);
+        // Merge outgoing conflicts into sync result object
+        syncResultObject.add("conflicts", synced.conflicts);
+        // Process local updates following published changes
         return Promise.all(synced.published.map(record => {
           if (record.deleted) {
             // Remote deletion was successful, refect it locally
