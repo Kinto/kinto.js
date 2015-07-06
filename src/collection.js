@@ -163,7 +163,8 @@ export default class Collection {
    * Adds a record to the local database.
    *
    * Options:
-   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   * - {Boolean} synced: Sets record status to "synced" (default: false);
+   * - {Boolean} forceUUID: Enforces record creation using any provided UUID.
    *
    * @param  {Object} record
    * @param  {Object} options
