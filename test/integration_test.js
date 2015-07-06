@@ -1,5 +1,6 @@
 "use strict";
 
+import Collection from "../src/collection";
 import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
@@ -133,7 +134,7 @@ describe("Integration tests", () => {
         expect(syncResult.lastModified).to.be.a("number");
       });
 
-      it("should have the conflict listed", () => {
+      it("should have the incoming conflict listed", () => {
         expect(syncResult.conflicts).to.have.length.of(1);
         expect(syncResult.conflicts[0].type).eql("incoming");
         expect(cleanRecord(syncResult.conflicts[0].local)).eql({
@@ -160,7 +161,74 @@ describe("Integration tests", () => {
         expect(syncResult.published).to.have.length.of(0);
       });
 
-      it("should haven't updated anything", () => {
+      it("should not have updated anything", () => {
+        expect(syncResult.updated).to.have.length.of(0);
+      });
+    });
+
+    describe("Outgoing conflict", () => {
+      var syncResult;
+
+      beforeEach(() => {
+        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
+          method: "POST",
+          headers: {
+            "Accept":        "application/json",
+            "Content-Type":  "application/json",
+            "Authorization": "Basic " + btoa("user:pass"),
+          },
+          body: JSON.stringify({data: {title: "foo"}})
+        })
+          .then(_ => tasks.sync())
+          .then(res => {
+            return tasks.update(Object.assign({}, res.created[0], {
+              last_modified: undefined
+            }));
+          })
+          .then(res => tasks.sync())
+          .then(res => {
+            syncResult = res;
+          });
+      });
+
+      it("should not have an ok status", () => {
+        expect(syncResult.ok).eql(false);
+      });
+
+      it("should contain no errors", () => {
+        expect(syncResult.errors).to.have.length.of(0);
+      });
+
+      it("should have a valid lastModified value", () => {
+        expect(syncResult.lastModified).to.be.a("number");
+      });
+
+      it("should have the outgoing conflict listed", () => {
+        expect(syncResult.conflicts).to.have.length.of(1);
+        expect(syncResult.conflicts[0].type).eql("outgoing");
+        expect(syncResult.conflicts[0].local.title).eql("foo");
+        // TODO: https://github.com/mozilla-services/kinto/issues/122
+        expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
+          "code": 412,
+          "errno": 999,
+          "error": "Precondition Failed",
+          "message": "Failed batch subrequest",
+        });
+      });
+
+      it("should not have skipped records", () => {
+        expect(syncResult.skipped).to.have.length.of(0);
+      });
+
+      it("should not have imported anything", () => {
+        expect(syncResult.created).to.have.length.of(0);
+      });
+
+      it("should not have published anything", () => {
+        expect(syncResult.published).to.have.length.of(0);
+      });
+
+      it("should not have updated anything", () => {
         expect(syncResult.updated).to.have.length.of(0);
       });
     });

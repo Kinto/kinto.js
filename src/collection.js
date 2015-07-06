@@ -532,6 +532,11 @@ export default class Collection {
       })
       // Update published local records
       .then(([deleted, synced]) => {
+        // Merge outgoing errors into sync result object
+        syncResultObject.add("errors", synced.errors);
+        // Merge outgoing conflicts into sync result object
+        syncResultObject.add("conflicts", synced.conflicts);
+        // Process local updates following published changes
         return Promise.all(synced.published.map(record => {
           if (record.deleted) {
             // Remote deletion was successful, refect it locally

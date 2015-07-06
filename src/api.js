@@ -183,7 +183,11 @@ export default class Api {
           } else if (response.status === 412) {
             results.conflicts.push({
               type: "outgoing",
-              data: response.body
+              local: records[index],
+              // TODO: Once we get record information in this response object,
+              // add it; for now, that's the error json body only.
+              // Ref https://github.com/mozilla-services/kinto/issues/122
+              remote: response.body
             });
           } else {
             results.errors.push({
