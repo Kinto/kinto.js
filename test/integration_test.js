@@ -100,5 +100,69 @@ describe("Integration tests", () => {
           .include(testData.localUnsynced[0]);
       });
     });
+
+    describe("Incoming conflict", () => {
+      const conflictingId = uuid4();
+      const testData = {
+        localSynced: [
+          {id: uuid4(), title: "task2", done: false},
+          {id: uuid4(), title: "task3", done: true},
+        ],
+        localUnsynced: [
+          {id: conflictingId, title: "task4-local", done: false},
+        ],
+        server: [
+          {id: conflictingId, title: "task4-remote", done: true},
+        ]
+      };
+      var syncResult;
+
+      beforeEach(() => {
+        return testSync(testData).then(res => syncResult = res);
+      });
+
+      it("should not have an ok status", () => {
+        expect(syncResult.ok).eql(false);
+      });
+
+      it("should contain no errors", () => {
+        expect(syncResult.errors).to.have.length.of(0);
+      });
+
+      it("should have a valid lastModified value", () => {
+        expect(syncResult.lastModified).to.be.a("number");
+      });
+
+      it("should have the conflict listed", () => {
+        expect(syncResult.conflicts).to.have.length.of(1);
+        expect(syncResult.conflicts[0].type).eql("incoming");
+        expect(cleanRecord(syncResult.conflicts[0].local)).eql({
+          id: conflictingId,
+          title: "task4-local",
+          done: false,
+        });
+        expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
+          id: conflictingId,
+          title: "task4-remote",
+          done: true,
+        });
+      });
+
+      it("should not have skipped records", () => {
+        expect(syncResult.skipped).to.have.length.of(0);
+      });
+
+      it("should not have imported anything", () => {
+        expect(syncResult.created).to.have.length.of(0);
+      });
+
+      it("should not have published anything", () => {
+        expect(syncResult.published).to.have.length.of(0);
+      });
+
+      it("should haven't updated anything", () => {
+        expect(syncResult.updated).to.have.length.of(0);
+      });
+    });
   });
 });
