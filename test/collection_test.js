@@ -178,9 +178,17 @@ describe("Collection", () => {
     });
 
     it("should actually persist the record into the collection", () => {
-      return articles.create(article).then(result => {
-        return articles.get(result.data.id).then(res => res.data.title);
-      }).should.become(article.title);
+      return articles.create(article)
+        .then(result => articles.get(result.data.id))
+        .then(res => res.data.title)
+        .should.become(article.title);
+    });
+
+    it("should support the forceUUID option", function() {
+      return articles.create({id: 42, title: "foo"}, {forceUUID: true})
+        .then(result => articles.get(result.data.id))
+        .then(res => res.data.id)
+        .should.become(42);
     });
 
     it("should prefix error encountered", () => {

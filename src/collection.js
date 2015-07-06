@@ -169,14 +169,14 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options={synced: false}) {
+  create(record, options={forceUUID: false, synced: false}) {
     return this.open().then(() => {
       if (typeof(record) !== "object")
         return Promise.reject(new Error('Record is not an object.'));
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         const newRecord = Object.assign({}, record, {
-          id:      options.synced ? record.id : uuid4(),
+          id:      options.synced || options.forceUUID ? record.id : uuid4(),
           _status: options.synced ? "synced" : "created"
         });
         store.add(newRecord);
