@@ -173,7 +173,7 @@ export default class Api {
               err[key] = res[key];
             return err;
           }, new Error("BATCH request failed: " + res.message));
-        res.responses.forEach(response => {
+        res.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
           // existing id, unique field, etc.)
           if (response.status && response.status >= 200 && response.status < 400) {
@@ -187,9 +187,8 @@ export default class Api {
             });
           } else {
             results.errors.push({
-              // TODO: since responses come in the same order, there should be a
-              // way to get original record id
-              path: response.path, // this is the only way to have the id…
+              path: response.path,
+              sent: records[index],
               error: response.body
             });
           }

@@ -405,9 +405,8 @@ describe("Api", () => {
               errors:    [
                 {
                   path: "/v0/buckets/blog/collections/articles/records/1",
-                  error: {
-                    500: true
-                  }
+                  sent: published[0],
+                  error: { 500: true }
                 }
               ],
               published: []
