@@ -1,6 +1,7 @@
 "use strict";
 
 import { quote, unquote } from "./utils.js";
+import ERROR_CODES from "./errors.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 
@@ -18,6 +19,15 @@ const DEFAULT_REQUEST_HEADERS = {
   "Accept":       "application/json",
   "Content-Type": "application/json",
 };
+
+function _handleFetchError(response, json) {
+  var message = `Fetching changes failed: HTTP ${response.status} `;
+  if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
+    message += ERROR_CODES[json.errno];
+  const err = new Error(message.trim());
+  err.data = json;
+  throw err;
+}
 
 export default class Api {
   constructor(remote, options={headers: {}}) {
@@ -64,8 +74,8 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    var newLastModified;
-    var queryString = "";
+    const errPrefix = "Fetching changes failed";
+    var newLastModified, response, queryString = "";
     var headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
@@ -79,21 +89,27 @@ export default class Api {
 
     return fetch(recordsUrl + queryString, {headers})
       .then(res => {
+        response = res;
         // If HTTP 304, nothing has changed
-        if (res.status === 304) {
+        if (response.status === 304) {
           newLastModified = options.lastModified;
           return {data: []};
-        } else if (res.status >= 400) {
-          // TODO: attach better error reporting
-          throw new Error("Fetching changes failed: HTTP " + res.status);
         } else {
-          const etag = res.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          newLastModified = parseInt(unquote(etag), 10);
-          return res.json();
+          return response.json();
         }
       })
+      .catch(err => {
+        throw new Error(`${errPrefix}: HTTP ${response.status}; ${err}`);
+      })
       .then(json => {
+        if (response.status >= 400) {
+          _handleFetchError(response, json);
+        } else {
+          const etag = response.headers.get("ETag");  // e.g. '"42"'
+          // XXX: ETag are supposed to be opaque and stored «as-is».
+          if (etag)
+            newLastModified = parseInt(unquote(etag), 10);
+        }
         return {
           lastModified: newLastModified,
           changes: json.data
