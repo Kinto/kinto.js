@@ -6,7 +6,7 @@ import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
 import Collection, { SyncResultObject } from "../src/collection";
-import Api from "../src/api";
+import Api, { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -184,7 +184,7 @@ describe("Collection", () => {
         .should.become(article.title);
     });
 
-    it("should support the forceUUID option", function() {
+    it("should support the forceUUID option", () => {
       return articles.create({id: 42, title: "foo"}, {forceUUID: true})
         .then(result => articles.get(result.data.id))
         .then(res => res.data.id)
@@ -391,39 +391,142 @@ describe("Collection", () => {
   describe("#list", () => {
     var articles;
 
-    beforeEach(() => {
-      articles = testCollection();
-      return Promise.all([
-        articles.create(article),
-        articles.create({title: "bar", url: "http://bar"})
-      ]);
+    describe("Basic", () => {
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all([
+          articles.create(article),
+          articles.create({title: "bar", url: "http://bar"})
+        ]);
+      });
+
+      it("should retrieve the list of records", () => {
+        return articles.list()
+          .then(res => res.data)
+          .should.eventually.have.length.of(2);
+      });
+
+      it("shouldn't list virtually deleted records", () => {
+        return articles.create({title: "yay"})
+          .then(res => articles.delete(res.data.id))
+          .then(_ => articles.list())
+          .then(res => res.data)
+          .should.eventually.have.length.of(2);
+      });
+
+      it("should support the includeDeleted option", () => {
+        return articles.create({title: "yay"})
+          .then(res => articles.delete(res.data.id))
+          .then(_ => articles.list({}, {includeDeleted: true}))
+          .then(res => res.data)
+          .should.eventually.have.length.of(3);
+      });
+
+      it("should prefix error encountered", () => {
+        sandbox.stub(articles, "open").returns(Promise.reject("error"));
+        return articles.list().should.be.rejectedWith(Error, /^list/);
+      });
     });
 
-    it("should retrieve the list of records", () => {
-      return articles.list()
-        .then(res => res.data)
-        .should.eventually.have.length.of(2);
+    describe("Ordering", () => {
+      const fixtures = [
+        {title: "art1", last_modified: 2, unread: false},
+        {title: "art2", last_modified: 3, unread: true},
+        {title: "art3", last_modified: 1, unread: false},
+      ];
+
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
+
+      it("should order records on last_modified DESC by default", () => {
+        return articles.list()
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art2", "art1", "art3"]);
+      });
+
+      it("should order records on custom field ASC", () => {
+        return articles.list({order: "title"})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art1", "art2", "art3"]);
+      });
+
+      it("should order records on custom field DESC", () => {
+        return articles.list({order: "-title"})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art3", "art2", "art1"]);
+      });
+
+      it("should order records on boolean values ASC", () => {
+        return articles.list({order: "unread"})
+          .then(res => res.data.map(r => r.unread))
+          .should.eventually.become([false, false, true]);
+      });
+
+      it("should order records on boolean values DESC", () => {
+        return articles.list({order: "-unread"})
+          .then(res => res.data.map(r => r.unread))
+          .should.eventually.become([true, false, false]);
+      });
     });
 
-    it("shouldn't list virtually deleted records", () => {
-      return articles.create({title: "yay"})
-        .then(res => articles.delete(res.data.id))
-        .then(_ => articles.list())
-        .then(res => res.data)
-        .should.eventually.have.length.of(2);
+    describe("Filtering", () => {
+      const fixtures = [
+        {title: "art1", last_modified: 3, unread: true, complete: true},
+        {title: "art2", last_modified: 2, unread: false, complete: true},
+        {title: "art3", last_modified: 1, unread: true, complete: false},
+      ];
+
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
+
+      it("should filter records on existing field", () => {
+        return articles.list({filters: {unread: true}})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art1", "art3"]);
+      });
+
+      it("should filter records on missing field", () => {
+        return articles.list({filters: {missing: true}})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become([]);
+      });
+
+      it("should filter records on multiple fields", () => {
+        return articles.list({filters: {unread: true, complete: true}})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art1"]);
+      });
     });
 
-    it("should support the includeDeleted option", () => {
-      return articles.create({title: "yay"})
-        .then(res => articles.delete(res.data.id))
-        .then(_ => articles.list({}, {includeDeleted: true}))
-        .then(res => res.data)
-        .should.eventually.have.length.of(3);
-    });
+    describe("Ordering & Filtering", () => {
+      const fixtures = [
+        {title: "art1", last_modified: 3, unread: true, complete: true},
+        {title: "art2", last_modified: 2, unread: false, complete: true},
+        {title: "art3", last_modified: 1, unread: true, complete: true},
+      ];
 
-    it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.list().should.be.rejectedWith(Error, /^list/);
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
+
+      it("should order and filter records", () => {
+        return articles.list({
+          order:   "-title",
+          filters: {unread: true, complete: true}
+        })
+          .then(res => res.data.map(r => {
+            return {title: r.title, unread: r.unread, complete: r.complete};
+          }))
+          .should.eventually.become([
+            {title: "art3", unread: true, complete: true},
+            {title: "art1", unread: true, complete: true},
+          ]);
+      });
     });
   });
 

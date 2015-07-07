@@ -2,7 +2,14 @@
 
 import chai, { expect } from "chai";
 
-import { attachFakeIDBSymbolsTo, quote, unquote } from "../src/utils";
+import {
+  attachFakeIDBSymbolsTo,
+  quote,
+  unquote,
+  sortObjects,
+  filterObjects,
+  reduceRecords
+} from "../src/utils";
 
 chai.should();
 chai.config.includeStack = true;
@@ -59,5 +66,111 @@ describe("Utils", () => {
       var unquoted = unquote("42");
       expect(unquoted).eql("42")
     })
+  });
+
+  describe("#sortObjects", () => {
+    it("should order on field ASC", () => {
+      expect(sortObjects("title", [
+        {title: "b"},
+        {title: "a"},
+      ])).eql([
+        {title: "a"},
+        {title: "b"},
+      ]);
+    });
+
+    it("should order on field DESC", () => {
+      expect(sortObjects("-title", [
+        {title: "a"},
+        {title: "b"},
+      ])).eql([
+        {title: "b"},
+        {title: "a"},
+      ]);
+    });
+
+    it("should order on mixed undefined values DESC", () => {
+      expect(sortObjects("-title", [
+        {title: undefined},
+        {title: "b"},
+        {title: undefined},
+      ])).eql([
+        {title: "b"},
+        {title: undefined},
+        {title: undefined},
+      ]);
+    });
+
+    it("should order on mixed undefined values ASC", () => {
+      expect(sortObjects("title", [
+        {title: undefined},
+        {title: "b"},
+        {title: undefined},
+      ])).eql([
+        {title: undefined},
+        {title: undefined},
+        {title: "b"},
+      ]);
+    });
+
+    it("should not change order on all fields undefined", () => {
+      expect(sortObjects("-title", [
+        {title: undefined, x: 1},
+        {title: undefined, x: 2},
+      ])).eql([
+        {title: undefined, x: 1},
+        {title: undefined, x: 2},
+      ]);
+    });
+
+    it("should not order the list on missing field", () => {
+      expect(sortObjects("-missing", [
+        {title: "a"},
+        {title: "b"},
+      ])).eql([
+        {title: "a"},
+        {title: "b"},
+      ]);
+    });
+  });
+
+  describe("#filterObjects", () => {
+    it("should filter list on a single field query", () => {
+      expect(filterObjects({title: "a"}, [
+        {title: "b"},
+        {title: "a"},
+      ])).eql([
+        {title: "a"},
+      ]);
+    });
+
+    it("should filter list on a multiple fields query", () => {
+      expect(filterObjects({title: "a", unread: true}, [
+        {title: "b", unread: true},
+        {title: "a", unread: false},
+        {title: "a", unread: true},
+      ])).eql([
+        {title: "a", unread: true},
+      ]);
+    });
+
+    it("should filter list on missing field", () => {
+      expect(filterObjects({missing: true}, [
+        {existing: true},
+      ])).eql([]);
+    });
+  });
+
+  describe("#reduceRecords", () => {
+    it("should filter and order list", () => {
+      expect(reduceRecords({unread: false, complete: true}, "-title", [
+        {title: "a", unread: true, complete: true},
+        {title: "b", unread: false, complete: true},
+        {title: "c", unread: false, complete: true},
+      ])).eql([
+        {title: "c", unread: false, complete: true},
+        {title: "b", unread: false, complete: true},
+      ]);
+    });
   });
 });
