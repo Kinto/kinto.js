@@ -93,8 +93,10 @@ describe("Utils", () => {
       expect(sortObjects("-title", [
         {title: undefined},
         {title: "b"},
+        {title: undefined},
       ])).eql([
         {title: "b"},
+        {title: undefined},
         {title: undefined},
       ]);
     });
@@ -103,7 +105,9 @@ describe("Utils", () => {
       expect(sortObjects("title", [
         {title: undefined},
         {title: "b"},
+        {title: undefined},
       ])).eql([
+        {title: undefined},
         {title: undefined},
         {title: "b"},
       ]);
