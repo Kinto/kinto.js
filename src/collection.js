@@ -3,7 +3,7 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import { attachFakeIDBSymbolsTo, sortObjects } from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords } from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -320,21 +320,19 @@ export default class Collection {
   /**
    * Lists records from the local database.
    *
+   * Params:
+   * - {Object} filters The filters to apply.
+   * - {String} order   The order to apply.
+   *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.
    *
-   * @param  {Object} params
-   * @param  {Object} options
+   * @param  {Object} params  The filters and order to apply to the results.
+   * @param  {Object} options The options object.
    * @return {Promise}
    */
-  list(params={ordering: "-last_modified"}, options={includeDeleted: false}) {
-    if (params.ordering) {
-      return this.list({}, options).then(res => {
-        return Object.assign(res, {
-          data: sortObjects(params.ordering, res.data)
-        });
-      });
-    }
+  list(params={}, options={includeDeleted: false}) {
+    params = Object.assign({order: "-last_modified", filters: {}}, params);
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const results = [];
@@ -352,7 +350,7 @@ export default class Collection {
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => {
           resolve({
-            data: results,
+            data: reduceRecords(params.filters, params.order, results),
             permissions: {}
           });
         };

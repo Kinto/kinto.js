@@ -48,13 +48,38 @@ export function unquote(str) {
  * @param  {Array}  list     The collection to order.
  * @return {Array}
  */
-export function sortObjects(ordering, list) {
-  const hasDash = ordering[0] === "-";
-  const field = hasDash ? ordering.slice(1) : ordering;
+export function sortObjects(order, list) {
+  const hasDash = order[0] === "-";
+  const field = hasDash ? order.slice(1) : order;
   const direction = hasDash ? -1 : 1;
   return list.slice().sort((a, b) => {
     if (!a[field] || !b[field])
       return 0;
     return a[field] > b[field] ? direction : -direction;
   });
+}
+
+/**
+ * Filters records in a list matching all given filters.
+ * @param  {String} filters  The filters object.
+ * @param  {Array}  list     The collection to order.
+ * @return {Array}
+ */
+export function filterObjects(filters, list) {
+  return list.filter(entry => {
+    return Object.keys(filters).every(filter => {
+      return entry[filter] === filters[filter];
+    });
+  });
+}
+
+/**
+ * Filter and sort list against provided filters and order.
+ * @param  {Object} filters  The filters to apply.
+ * @param  {String} order    The order to apply.
+ * @param  {Array}  list     The list to reduce.
+ * @return {Array}
+ */
+export function reduceRecords(filters, order, list) {
+  return sortObjects(order, filterObjects(filters, list));
 }

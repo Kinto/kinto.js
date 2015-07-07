@@ -2,7 +2,14 @@
 
 import chai, { expect } from "chai";
 
-import { attachFakeIDBSymbolsTo, quote, unquote, sortObjects } from "../src/utils";
+import {
+  attachFakeIDBSymbolsTo,
+  quote,
+  unquote,
+  sortObjects,
+  filterObjects,
+  reduceRecords
+} from "../src/utils";
 
 chai.should();
 chai.config.includeStack = true;
@@ -89,6 +96,46 @@ describe("Utils", () => {
       ])).eql([
         {title: "a"},
         {title: "b"},
+      ]);
+    });
+  });
+
+  describe("#filterObjects", () => {
+    it("should filter list on a single field query", () => {
+      expect(filterObjects({title: "a"}, [
+        {title: "b"},
+        {title: "a"},
+      ])).eql([
+        {title: "a"},
+      ]);
+    });
+
+    it("should filter list on a multiple fields query", () => {
+      expect(filterObjects({title: "a", unread: true}, [
+        {title: "b", unread: true},
+        {title: "a", unread: false},
+        {title: "a", unread: true},
+      ])).eql([
+        {title: "a", unread: true},
+      ]);
+    });
+
+    it("should filter list on missing field", () => {
+      expect(filterObjects({missing: true}, [
+        {existing: true},
+      ])).eql([]);
+    });
+  });
+
+  describe("#reduceRecords", () => {
+    it("should filter and order list", () => {
+      expect(reduceRecords({unread: false, complete: true}, "-title", [
+        {title: "a", unread: true, complete: true},
+        {title: "b", unread: false, complete: true},
+        {title: "c", unread: false, complete: true},
+      ])).eql([
+        {title: "c", unread: false, complete: true},
+        {title: "b", unread: false, complete: true},
       ]);
     });
   });
