@@ -134,7 +134,8 @@ describe("Api", () => {
 
   describe("#fetchChangesSince", () => {
     it("should request server for latest changes", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, { data: [] }, { }));
 
       api.fetchChangesSince("blog", "articles");
 
@@ -142,7 +143,8 @@ describe("Api", () => {
     });
 
     it("should merge instance option headers", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, { data: [] }, { }));
       api.optionHeaders = {Foo: "Bar"};
 
       api.fetchChangesSince("blog", "articles");
@@ -154,7 +156,8 @@ describe("Api", () => {
     });
 
     it("should request server changes since last modified", () =>{
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, { data: [] }, { }));
 
       api.fetchChangesSince("blog", "articles", {lastModified: 42});
 
@@ -163,7 +166,8 @@ describe("Api", () => {
     });
 
     it("should attach an If-None-Match header if lastModified is provided", () =>{
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, { data: [] }, { }));
       api.fetchChangesSince("blog", "articles", {lastModified: 42});
 
       sinon.assert.calledOnce(fetch);
@@ -184,7 +188,8 @@ describe("Api", () => {
     });
 
     it("should merge provided headers with default ones", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve());
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, { data: [] }, { }));
 
       const options = {lastModified: 42, headers: {Foo: "bar"}};
       api.fetchChangesSince("blog", "articles", options);
@@ -209,8 +214,46 @@ describe("Api", () => {
     it("should reject on any HTTP status >= 400", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
 
-      return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+      return api.fetchChangesSince("blog", "articles")
         .should.eventually.be.rejectedWith(Error, /failed: HTTP 401/);
+    });
+
+    it("should reject with detailed error message", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {
+        errno: 105
+      }));
+
+      return api.fetchChangesSince("blog", "articles")
+        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401 Invalid Authorization Token/);
+    });
+
+    it("should reject with fallback error message", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
+
+      return api.fetchChangesSince("blog", "articles")
+        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401$/);
+    });
+
+    it("should expose json response body to err object on rejection", () => {
+      const response = {errno: 105, message: "Dude."};
+
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(401, response));
+
+      return api.fetchChangesSince("blog", "articles")
+        .catch(err => err.data)
+        .should.eventually.become(response);
+    });
+
+    it("should reject on on invalid json response body", () => {
+      sandbox.stub(root, "fetch").returns(Promise.resolve({
+        status: 500,
+        json() {
+          return Promise.reject("JSON Error");
+        }
+      }));
+
+      return api.fetchChangesSince("blog", "articles")
+        .should.eventually.be.rejectedWith(Error, /HTTP 500; JSON Error/);
     });
   });
 
