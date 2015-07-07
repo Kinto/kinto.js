@@ -89,6 +89,36 @@ describe("Utils", () => {
       ]);
     });
 
+    it("should order on mixed undefined values DESC", () => {
+      expect(sortObjects("-title", [
+        {title: undefined},
+        {title: "b"},
+      ])).eql([
+        {title: "b"},
+        {title: undefined},
+      ]);
+    });
+
+    it("should order on mixed undefined values ASC", () => {
+      expect(sortObjects("title", [
+        {title: undefined},
+        {title: "b"},
+      ])).eql([
+        {title: undefined},
+        {title: "b"},
+      ]);
+    });
+
+    it("should not change order on all fields undefined", () => {
+      expect(sortObjects("-title", [
+        {title: undefined, x: 1},
+        {title: undefined, x: 2},
+      ])).eql([
+        {title: undefined, x: 1},
+        {title: undefined, x: 2},
+      ]);
+    });
+
     it("should not order the list on missing field", () => {
       expect(sortObjects("-missing", [
         {title: "a"},

@@ -321,8 +321,8 @@ export default class Collection {
    * Lists records from the local database.
    *
    * Params:
-   * - {Object} filters The filters to apply.
-   * - {String} order   The order to apply.
+   * - {Object} filters The filters to apply (default: {}).
+   * - {String} order   The order to apply   (default: "-last_modified").
    *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.

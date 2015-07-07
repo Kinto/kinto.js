@@ -43,7 +43,16 @@ export function unquote(str) {
 }
 
 /**
- * Sorts records in a list according a given ordering.
+ * Checks if a value is undefined.
+ * @param  {Any}  value
+ * @return {Boolean}
+ */
+function _isUndefined(value) {
+  return typeof value === "undefined";
+}
+
+/**
+ * Sorts records in a list according to a given ordering.
  * @param  {String} ordering The ordering.
  * @param  {Array}  list     The collection to order.
  * @return {Array}
@@ -53,7 +62,11 @@ export function sortObjects(order, list) {
   const field = hasDash ? order.slice(1) : order;
   const direction = hasDash ? -1 : 1;
   return list.slice().sort((a, b) => {
-    if (!a[field] || !b[field])
+    if (a[field] && _isUndefined(b[field]))
+      return direction;
+    if (b[field] && _isUndefined(a[field]))
+      return -direction;
+    if (_isUndefined(a[field]) && _isUndefined(b[field]))
       return 0;
     return a[field] > b[field] ? direction : -direction;
   });

@@ -507,8 +507,13 @@ describe("Collection", () => {
           order:   "-title",
           filters: {unread: true, complete: true}
         })
-          .then(res => res.data.map(r => r.title))
-          .should.eventually.become(["art3", "art1"]);
+          .then(res => res.data.map(r => {
+            return {title: r.title, unread: r.unread, complete: r.complete};
+          }))
+          .should.eventually.become([
+            {title: "art3", unread: true, complete: true},
+            {title: "art1", unread: true, complete: true},
+          ]);
       });
     });
   });
