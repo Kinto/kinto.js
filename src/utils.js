@@ -41,3 +41,20 @@ export function quote(str) {
 export function unquote(str) {
   return str.replace(/^"/, "").replace(/"$/, "");
 }
+
+/**
+ * Sorts records in a list according a given ordering.
+ * @param  {String} ordering The ordering.
+ * @param  {Array}  list     The collection to order.
+ * @return {Array}
+ */
+export function sortObjects(ordering, list) {
+  const hasDash = ordering[0] === "-";
+  const field = hasDash ? ordering.slice(1) : ordering;
+  const direction = hasDash ? -1 : 1;
+  return list.slice().sort((a, b) => {
+    if (!a[field] || !b[field])
+      return 0;
+    return a[field] > b[field] ? direction : -direction;
+  });
+}

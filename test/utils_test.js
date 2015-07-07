@@ -2,7 +2,7 @@
 
 import chai, { expect } from "chai";
 
-import { attachFakeIDBSymbolsTo, quote, unquote } from "../src/utils";
+import { attachFakeIDBSymbolsTo, quote, unquote, sortObjects } from "../src/utils";
 
 chai.should();
 chai.config.includeStack = true;
@@ -59,5 +59,37 @@ describe("Utils", () => {
       var unquoted = unquote("42");
       expect(unquoted).eql("42")
     })
+  });
+
+  describe("#sortObjects", () => {
+    it("should order on field ASC", () => {
+      expect(sortObjects("title", [
+        {title: "b"},
+        {title: "a"},
+      ])).eql([
+        {title: "a"},
+        {title: "b"},
+      ]);
+    });
+
+    it("should order on field DESC", () => {
+      expect(sortObjects("-title", [
+        {title: "a"},
+        {title: "b"},
+      ])).eql([
+        {title: "b"},
+        {title: "a"},
+      ]);
+    });
+
+    it("should not order the list on missing field", () => {
+      expect(sortObjects("-missing", [
+        {title: "a"},
+        {title: "b"},
+      ])).eql([
+        {title: "a"},
+        {title: "b"},
+      ]);
+    });
   });
 });

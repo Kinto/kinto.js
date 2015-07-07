@@ -6,7 +6,7 @@ import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
 
 import Collection, { SyncResultObject } from "../src/collection";
-import Api from "../src/api";
+import Api, { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -391,39 +391,72 @@ describe("Collection", () => {
   describe("#list", () => {
     var articles;
 
-    beforeEach(() => {
-      articles = testCollection();
-      return Promise.all([
-        articles.create(article),
-        articles.create({title: "bar", url: "http://bar"})
-      ]);
+    describe("Basic", function() {
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all([
+          articles.create(article),
+          articles.create({title: "bar", url: "http://bar"})
+        ]);
+      });
+
+      it("should retrieve the list of records", () => {
+        return articles.list()
+          .then(res => res.data)
+          .should.eventually.have.length.of(2);
+      });
+
+      it("shouldn't list virtually deleted records", () => {
+        return articles.create({title: "yay"})
+          .then(res => articles.delete(res.data.id))
+          .then(_ => articles.list())
+          .then(res => res.data)
+          .should.eventually.have.length.of(2);
+      });
+
+      it("should support the includeDeleted option", () => {
+        return articles.create({title: "yay"})
+          .then(res => articles.delete(res.data.id))
+          .then(_ => articles.list({}, {includeDeleted: true}))
+          .then(res => res.data)
+          .should.eventually.have.length.of(3);
+      });
+
+      it("should prefix error encountered", () => {
+        sandbox.stub(articles, "open").returns(Promise.reject("error"));
+        return articles.list().should.be.rejectedWith(Error, /^list/);
+      });
     });
 
-    it("should retrieve the list of records", () => {
-      return articles.list()
-        .then(res => res.data)
-        .should.eventually.have.length.of(2);
-    });
+    describe("Ordering", function() {
+      const fixtures = [
+        {title: "art1", last_modified: 2},
+        {title: "art2", last_modified: 3},
+        {title: "art3", last_modified: 1},
+      ];
 
-    it("shouldn't list virtually deleted records", () => {
-      return articles.create({title: "yay"})
-        .then(res => articles.delete(res.data.id))
-        .then(_ => articles.list())
-        .then(res => res.data)
-        .should.eventually.have.length.of(2);
-    });
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
 
-    it("should support the includeDeleted option", () => {
-      return articles.create({title: "yay"})
-        .then(res => articles.delete(res.data.id))
-        .then(_ => articles.list({}, {includeDeleted: true}))
-        .then(res => res.data)
-        .should.eventually.have.length.of(3);
-    });
+      it("should filter records on last_modified DESC by default", function() {
+        return articles.list()
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art2", "art1", "art3"]);
+      });
 
-    it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.list().should.be.rejectedWith(Error, /^list/);
+      it("should filter records on custom field ASC", function() {
+        return articles.list({ordering: "title"})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art1", "art2", "art3"]);
+      });
+
+      it("should filter records on custom field DESC", function() {
+        return articles.list({ordering: "-title"})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art3", "art2", "art1"]);
+      });
     });
   });
 

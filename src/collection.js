@@ -3,7 +3,7 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import { attachFakeIDBSymbolsTo } from "./utils";
+import { attachFakeIDBSymbolsTo, sortObjects } from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -320,11 +320,21 @@ export default class Collection {
   /**
    * Lists records from the local database.
    *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   *
    * @param  {Object} params
    * @param  {Object} options
    * @return {Promise}
    */
-  list(params={}, options={includeDeleted: false}) {
+  list(params={ordering: "-last_modified"}, options={includeDeleted: false}) {
+    if (params.ordering) {
+      return this.list({}, options).then(res => {
+        return Object.assign(res, {
+          data: sortObjects(params.ordering, res.data)
+        });
+      });
+    }
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const results = [];
