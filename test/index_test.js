@@ -4,6 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { v4 as uuid4 } from "uuid";
+import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 
 import Kinto from "../src";
 import Collection from "../src/collection";
@@ -68,18 +69,18 @@ describe("Kinto", () => {
       const db = new Kinto();
       const coll = db.collection("plop");
 
-      expect(coll.api.remote).eql("http://0.0.0.0:8888/v0");
+      expect(coll.api.remote).eql(`http://0.0.0.0:8888/${SPV}`);
     });
 
     it("should setup the Api cient using provided server URL", () => {
-      const db = new Kinto({remote: "http://1.2.3.4:1234/v1"});
+      const db = new Kinto({remote: `http://1.2.3.4:1234/${SPV}`});
       const coll = db.collection("plop");
 
-      expect(coll.api.remote).eql("http://1.2.3.4:1234/v1");
+      expect(coll.api.remote).eql(`http://1.2.3.4:1234/${SPV}`);
     });
 
     it("should pass option headers to the api", () => {
-      const db = new Kinto({remote: "http://1.2.3.4:1234/v1", headers: {
+      const db = new Kinto({remote: `http://1.2.3.4:1234/${SPV}`, headers: {
         Authorization: "Basic plop"
       }});
       const coll = db.collection("plop");

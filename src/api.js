@@ -3,7 +3,12 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const DEFAULT_REQUEST_HEADERS = {
+  "Accept":       "application/json",
+  "Content-Type": "application/json",
+};
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -11,13 +16,6 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
       acc[key] = record[key];
     return acc;
   }, {});
-};
-
-// TODO: This could probably be an attribute of the Api class, so that
-// developers can get a hand on it to add their own headers.
-const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
 };
 
 function _handleFetchError(response, json) {
@@ -40,6 +38,8 @@ export default class Api {
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + remote);
     }
+    if (this.version !== SUPPORTED_PROTOCOL_VERSION)
+      throw new Error(`Unsupported protocol version: ${this.version}`);
   }
 
   /**
@@ -155,7 +155,9 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
+    var response;
     const safe = options.safe || true;
+    const errPrefix = "Batch request failed";
     const headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
@@ -181,15 +183,21 @@ export default class Api {
         })
       })
     })
-      .then(res => res.json())
       .then(res => {
-        if (res.error)
-          throw Object.keys(res).reduce((err, key) => {
+        response = res;
+        return res.json();
+      })
+      .catch(err => {
+        throw new Error(`${errPrefix}: HTTP ${response.status}; ${err}`);
+      })
+      .then(json => {
+        if (json.error)
+          throw Object.keys(json).reduce((err, key) => {
             if (key !== "message")
-              err[key] = res[key];
+              err[key] = json[key];
             return err;
-          }, new Error("BATCH request failed: " + res.message));
-        res.responses.forEach((response, index) => {
+          }, new Error("BATCH request failed: " + json.message));
+        json.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
           // existing id, unique field, etc.)
           if (response.status && response.status >= 200 && response.status < 400) {

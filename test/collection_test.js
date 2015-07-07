@@ -14,7 +14,7 @@ chai.config.includeStack = true;
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
-const FAKE_SERVER_URL = "http://fake-server/v0"
+const FAKE_SERVER_URL = "http://fake-server/v1"
 
 describe("Collection", () => {
   var sandbox, api;

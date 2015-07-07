@@ -3,7 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import Api, { cleanRecord } from "../src/api";
+import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
 import { quote } from "../src/utils";
 
 chai.use(chaiAsPromised);
@@ -11,7 +11,7 @@ chai.should();
 chai.config.includeStack = true;
 
 const root = typeof window === "object" ? window : global;
-const FAKE_SERVER_URL = "http://fake-server/v0"
+const FAKE_SERVER_URL = "http://fake-server/v1"
 
 describe("Api", () => {
   var sandbox, api;
@@ -51,12 +51,17 @@ describe("Api", () => {
     });
 
     it("should assign version value", () => {
-      expect(new Api("http://test/v42").version).eql("v42");
+      expect(new Api(`http://test/${SPV}`).version).eql(SPV);
     });
 
     it("should accept a headers option", () => {
-      expect(new Api("http://test/v42", {headers: {Foo: "Bar"}}).optionHeaders)
+      expect(new Api(`http://test/${SPV}`, {headers: {Foo: "Bar"}}).optionHeaders)
         .eql({Foo: "Bar"});
+    });
+
+    it("should validate protocol version", function() {
+      expect(() =>new Api(`http://test/v999`))
+        .to.Throw(Error, /^Unsupported protocol version/);
     });
   });
 
@@ -72,27 +77,27 @@ describe("Api", () => {
 
       it("should provide batch endpoint", () => {
         expect(endpoints.batch())
-          .eql("http://fake-server/v0/batch");
+          .eql(`http://fake-server/${SPV}/batch`);
       });
 
       it("should provide bucket endpoint", () => {
         expect(endpoints.bucket("foo"))
-          .eql("http://fake-server/v0/buckets/foo");
+          .eql(`http://fake-server/${SPV}/buckets/foo`);
       });
 
       it("should provide collection endpoint", () => {
         expect(endpoints.collection("foo", "bar"))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar`);
       });
 
       it("should provide records endpoint", () => {
         expect(endpoints.records("foo", "bar"))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar/records");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar/records`);
       });
 
       it("should provide record endpoint", () => {
         expect(endpoints.record("foo", "bar", 42))
-          .eql("http://fake-server/v0/buckets/foo/collections/bar/records/42");
+          .eql(`http://fake-server/${SPV}/buckets/foo/collections/bar/records/42`);
       });
     });
 
@@ -102,32 +107,32 @@ describe("Api", () => {
       beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
 
       it("should provide root endpoint", () => {
-        expect(endpoints.root()).eql("/v0");
+        expect(endpoints.root()).eql(`/${SPV}`);
       });
 
       it("should provide batch endpoint", () => {
         expect(endpoints.batch())
-          .eql("/v0/batch");
+          .eql(`/${SPV}/batch`);
       });
 
       it("should provide bucket endpoint", () => {
         expect(endpoints.bucket("foo"))
-          .eql("/v0/buckets/foo");
+          .eql(`/${SPV}/buckets/foo`);
       });
 
       it("should provide collection endpoint", () => {
         expect(endpoints.collection("foo", "bar"))
-          .eql("/v0/buckets/foo/collections/bar");
+          .eql(`/${SPV}/buckets/foo/collections/bar`);
       });
 
       it("should provide records endpoint", () => {
         expect(endpoints.records("foo", "bar", 42))
-          .eql("/v0/buckets/foo/collections/bar/records");
+          .eql(`/${SPV}/buckets/foo/collections/bar/records`);
       });
 
       it("should provide record endpoint", () => {
         expect(endpoints.record("foo", "bar", 42))
-          .eql("/v0/buckets/foo/collections/bar/records/42");
+          .eql(`/${SPV}/buckets/foo/collections/bar/records/42`);
       });
     });
   });
@@ -289,7 +294,7 @@ describe("Api", () => {
         });
 
         it("should call the batch endpoint", () => {
-          sinon.assert.calledWithMatch(fetch, "/v0/batch");
+          sinon.assert.calledWithMatch(fetch, `/${SPV}/batch`);
         });
 
         it("should define batch default headers", () => {
@@ -316,7 +321,7 @@ describe("Api", () => {
             },
             headers: { "If-Match": quote(42) },
             method: "PUT",
-            path: "/v0/buckets/blog/collections/articles/records/1",
+            path: `/${SPV}/buckets/blog/collections/articles/records/1`,
           });
         });
 
@@ -324,13 +329,13 @@ describe("Api", () => {
           expect(requestBody.requests[2]).eql({
             headers: {},
             method: "DELETE",
-            path: "/v0/buckets/blog/collections/articles/records/3",
+            path: `/${SPV}/buckets/blog/collections/articles/records/3`,
           });
         });
 
         it("should map batch update requests for synced records", () => {
           expect(requestBody.requests[0]).eql({
-            path: "/v0/buckets/blog/collections/articles/records/1",
+            path: `/${SPV}/buckets/blog/collections/articles/records/1`,
             method: "PUT",
             headers: { "If-Match": quote(42) },
             body: {
@@ -341,7 +346,7 @@ describe("Api", () => {
 
         it("should map create requests for non-synced records", () => {
           expect(requestBody.requests[1]).eql({
-            path: "/v0/buckets/blog/collections/articles/records/2",
+            path: `/${SPV}/buckets/blog/collections/articles/records/2`,
             method: "PUT",
             headers: {
               "If-None-Match": '*'
@@ -397,10 +402,10 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 201,
-                path: "/v0/buckets/blog/collections/articles/records",
+                path: `/${SPV}/buckets/blog/collections/articles/records`,
                 body: { data: published[0]}},
               { status: 201,
-                path: "/v0/buckets/blog/collections/articles/records",
+                path: `/${SPV}/buckets/blog/collections/articles/records`,
                 body: { data: published[1]}},
             ]
           }));
@@ -418,7 +423,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: { 404: true }},
             ]
           }));
@@ -436,7 +441,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 500,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: { 500: true }},
             ]
           }));
@@ -447,7 +452,7 @@ describe("Api", () => {
               skipped:   [],
               errors:    [
                 {
-                  path: "/v0/buckets/blog/collections/articles/records/1",
+                  path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                   sent: published[0],
                   error: { 500: true }
                 }
@@ -460,7 +465,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 412,
-                path: "/v0/buckets/blog/collections/articles/records/1",
+                path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: { invalid: true }},
             ]
           }));
