@@ -430,9 +430,9 @@ describe("Collection", () => {
 
     describe("Ordering", () => {
       const fixtures = [
-        {title: "art1", last_modified: 2},
-        {title: "art2", last_modified: 3},
-        {title: "art3", last_modified: 1},
+        {title: "art1", last_modified: 2, unread: false},
+        {title: "art2", last_modified: 3, unread: true},
+        {title: "art3", last_modified: 1, unread: false},
       ];
 
       beforeEach(() => {
@@ -440,22 +440,34 @@ describe("Collection", () => {
         return Promise.all(fixtures.map(r => articles.create(r)));
       });
 
-      it("should filter records on last_modified DESC by default", () => {
+      it("should order records on last_modified DESC by default", () => {
         return articles.list()
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art2", "art1", "art3"]);
       });
 
-      it("should filter records on custom field ASC", () => {
+      it("should order records on custom field ASC", () => {
         return articles.list({order: "title"})
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art1", "art2", "art3"]);
       });
 
-      it("should filter records on custom field DESC", () => {
+      it("should order records on custom field DESC", () => {
         return articles.list({order: "-title"})
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art3", "art2", "art1"]);
+      });
+
+      it("should order records on boolean values ASC", () => {
+        return articles.list({order: "unread"})
+          .then(res => res.data.map(r => r.unread))
+          .should.eventually.become([false, false, true]);
+      });
+
+      it("should order records on boolean values DESC", () => {
+        return articles.list({order: "-unread"})
+          .then(res => res.data.map(r => r.unread))
+          .should.eventually.become([true, false, false]);
       });
     });
 
