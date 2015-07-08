@@ -18,8 +18,16 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
-function _handleServerError(response, json) {
-  var message = `HTTP ${response.status} `;
+/**
+ * Handles a server error response; will throw an error with response json body
+ * attached to a `data` property.
+ *
+ * @param  {Response} response The server response object.
+ * @param  {Object}   json     The json response body.
+ * @throws Error
+ */
+function _handleServerError(response, json, options={prefix: ""}) {
+  var message = `${options.prefix} HTTP ${response.status} `;
   if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
     message += ERROR_CODES[json.errno];
   const err = new Error(message.trim());
@@ -74,7 +82,7 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    const errPrefix = "Fetching changes failed";
+    const errPrefix = "Fetching changes failed:";
     var newLastModified, response, queryString = "";
     var headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
@@ -103,7 +111,7 @@ export default class Api {
       })
       .then(json => {
         if (response.status >= 400) {
-          _handleServerError(response, json);
+          _handleServerError(response, json, {prefix: errPrefix});
         } else {
           const etag = response.headers.get("ETag");  // e.g. '"42"'
           // XXX: ETag are supposed to be opaque and stored «as-is».
@@ -157,7 +165,7 @@ export default class Api {
   batch(bucketName, collName, records, options={headers: {}}) {
     var response;
     const safe = options.safe || true;
-    const errPrefix = "Batch request failed";
+    const errPrefix = "BATCH request failed:";
     const headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
@@ -188,15 +196,14 @@ export default class Api {
         return res.json();
       })
       .catch(err => {
-        throw new Error(`${errPrefix}: HTTP ${response.status}; ${err}`);
+        throw new Error(`${errPrefix} HTTP ${response.status}; ${err}`);
       })
       .then(json => {
-        if (json.error)
-          throw Object.keys(json).reduce((err, key) => {
-            if (key !== "message")
-              err[key] = json[key];
-            return err;
-          }, new Error("BATCH request failed: " + json.message));
+        // Handle main request errors
+        if (response.status >= 400) {
+          _handleServerError(response, json, {prefix: errPrefix});
+        }
+        // Handle individual batch subrequests responses
         json.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
           // existing id, unique field, etc.)

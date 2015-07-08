@@ -385,7 +385,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 400/);
+            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 400/);
         });
 
         it("should reject on HTTP error status code", () => {
@@ -395,7 +395,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: http 500/);
+            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500/);
         });
 
         it("should expose succesfully published results", () => {
