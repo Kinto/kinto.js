@@ -18,8 +18,8 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
-function _handleFetchError(response, json) {
-  var message = `Fetching changes failed: HTTP ${response.status} `;
+function _handleServerError(response, json) {
+  var message = `HTTP ${response.status} `;
   if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
     message += ERROR_CODES[json.errno];
   const err = new Error(message.trim());
@@ -34,7 +34,7 @@ export default class Api {
     this.remote = remote;
     this.optionHeaders = options.headers;
     try {
-      this.version = "v" + remote.match(/\/v(\d+)\/?$/)[1];
+      this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + remote);
     }
@@ -103,7 +103,7 @@ export default class Api {
       })
       .then(json => {
         if (response.status >= 400) {
-          _handleFetchError(response, json);
+          _handleServerError(response, json);
         } else {
           const etag = response.headers.get("ETag");  // e.g. '"42"'
           // XXX: ETag are supposed to be opaque and stored «as-is».

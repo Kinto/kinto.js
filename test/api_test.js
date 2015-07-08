@@ -220,7 +220,7 @@ describe("Api", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
 
       return api.fetchChangesSince("blog", "articles")
-        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401/);
+        .should.eventually.be.rejectedWith(Error, /HTTP 401/);
     });
 
     it("should reject with detailed error message", () => {
@@ -229,14 +229,14 @@ describe("Api", () => {
       }));
 
       return api.fetchChangesSince("blog", "articles")
-        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401 Invalid Authorization Token/);
+        .should.eventually.be.rejectedWith(Error, /HTTP 401 Invalid Authorization Token/);
     });
 
     it("should reject with fallback error message", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
 
       return api.fetchChangesSince("blog", "articles")
-        .should.eventually.be.rejectedWith(Error, /failed: HTTP 401$/);
+        .should.eventually.be.rejectedWith(Error, /HTTP 401$/);
     });
 
     it("should expose json response body to err object on rejection", () => {
