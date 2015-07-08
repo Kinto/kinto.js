@@ -5,7 +5,7 @@ import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
-import Cliquetis from "../src";
+import Kinto from "../src";
 import { cleanRecord } from "../src/api";
 
 chai.use(chaiAsPromised);
@@ -18,7 +18,7 @@ describe("Integration tests", () => {
   var tasks;
 
   beforeEach(() => {
-    tasks = new Cliquetis({
+    tasks = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: {Authorization: "Basic " + btoa("user:pass")}
     }).collection("tasks");
