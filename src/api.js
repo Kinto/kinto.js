@@ -107,7 +107,8 @@ export default class Api {
         }
       })
       .catch(err => {
-        throw new Error(`${errPrefix}: HTTP ${response.status}; ${err}`);
+        const httpStatus = response && response.status || 0;
+        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
       })
       .then(json => {
         if (response.status >= 400) {
@@ -196,7 +197,8 @@ export default class Api {
         return res.json();
       })
       .catch(err => {
-        throw new Error(`${errPrefix} HTTP ${response.status}; ${err}`);
+        const httpStatus = response && response.status || 0;
+        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
       })
       .then(json => {
         // Handle main request errors
