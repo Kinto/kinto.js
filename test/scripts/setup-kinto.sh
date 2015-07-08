@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if curl -s -I http://0.0.0.0:9999/v0/ |grep "200 OK" > /dev/null; then
+if curl -s -I http://0.0.0.0:9999/v1/ |grep "200 OK" > /dev/null; then
   echo "A Kinto instance is already running on port 9999, exiting."
   exit 1
 fi

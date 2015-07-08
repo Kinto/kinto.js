@@ -3,7 +3,12 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const DEFAULT_REQUEST_HEADERS = {
+  "Accept":       "application/json",
+  "Content-Type": "application/json",
+};
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -13,15 +18,16 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
-// TODO: This could probably be an attribute of the Api class, so that
-// developers can get a hand on it to add their own headers.
-const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
-};
-
-function _handleFetchError(response, json) {
-  var message = `Fetching changes failed: HTTP ${response.status} `;
+/**
+ * Handles a server error response; will throw an error with response json body
+ * attached to a `data` property.
+ *
+ * @param  {Response} response The server response object.
+ * @param  {Object}   json     The json response body.
+ * @throws Error
+ */
+function _handleServerError(response, json, options={prefix: ""}) {
+  var message = `${options.prefix} HTTP ${response.status} `;
   if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
     message += ERROR_CODES[json.errno];
   const err = new Error(message.trim());
@@ -36,10 +42,12 @@ export default class Api {
     this.remote = remote;
     this.optionHeaders = options.headers;
     try {
-      this.version = "v" + remote.match(/\/v(\d+)\/?$/)[1];
+      this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + remote);
     }
+    if (this.version !== SUPPORTED_PROTOCOL_VERSION)
+      throw new Error(`Unsupported protocol version: ${this.version}`);
   }
 
   /**
@@ -74,7 +82,7 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    const errPrefix = "Fetching changes failed";
+    const errPrefix = "Fetching changes failed:";
     var newLastModified, response, queryString = "";
     var headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
@@ -103,7 +111,7 @@ export default class Api {
       })
       .then(json => {
         if (response.status >= 400) {
-          _handleFetchError(response, json);
+          _handleServerError(response, json, {prefix: errPrefix});
         } else {
           const etag = response.headers.get("ETag");  // e.g. '"42"'
           // XXX: ETag are supposed to be opaque and stored «as-is».
@@ -155,7 +163,9 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
+    var response;
     const safe = options.safe || true;
+    const errPrefix = "BATCH request failed:";
     const headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
@@ -181,15 +191,20 @@ export default class Api {
         })
       })
     })
-      .then(res => res.json())
       .then(res => {
-        if (res.error)
-          throw Object.keys(res).reduce((err, key) => {
-            if (key !== "message")
-              err[key] = res[key];
-            return err;
-          }, new Error("BATCH request failed: " + res.message));
-        res.responses.forEach((response, index) => {
+        response = res;
+        return res.json();
+      })
+      .catch(err => {
+        throw new Error(`${errPrefix} HTTP ${response.status}; ${err}`);
+      })
+      .then(json => {
+        // Handle main request errors
+        if (response.status >= 400) {
+          _handleServerError(response, json, {prefix: errPrefix});
+        }
+        // Handle individual batch subrequests responses
+        json.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
           // existing id, unique field, etc.)
           if (response.status && response.status >= 200 && response.status < 400) {

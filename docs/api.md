@@ -8,7 +8,7 @@ const db = new Kinto(options);
 
 `options` is an object defining the following option values:
 
-- `remote`: The remote Cliquet server endpoint root URL (eg. `"https://server/v1"`);
+- `remote`: The remote Kinto server endpoint root URL (eg. `"https://server/v1"`). Not that you *must* define a URL matching the version of the protocol the client supports, otherwise you'll get an error;
 - `headers`: The default headers to pass for every HTTP request performed to the Cliquet server (eg. `{"Authorization": "Basic bWF0Og=="}`);
 
 ## Collections

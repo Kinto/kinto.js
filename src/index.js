@@ -21,7 +21,7 @@ export default class Kinto {
       throw new Error("missing collection name");
 
     const bucket = this._options.bucket || DEFAULT_BUCKET_NAME;
-    const api = new Api(this._options.remote || "http://0.0.0.0:8888/v0", {
+    const api = new Api(this._options.remote || "http://0.0.0.0:8888/v1", {
       headers: this._options.headers || {}
     });
 

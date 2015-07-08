@@ -1,0 +1,1 @@
+../dist/kinto.dev.js
