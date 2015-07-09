@@ -295,13 +295,28 @@ describe("Api", () => {
       {id: 3, title: "baz", _status: "deleted"},
     ];
 
+    beforeEach(() => {
+      sandbox.stub(api, "fetchServerSettings").returns(Promise.resolve({
+        "cliquet.batch_max_requests": 25
+      }));
+    });
+
     describe("server request", () => {
       var requestBody, requestHeaders;
 
+      beforeEach(() => {
+        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+          responses: []
+        }));
+      });
+
+      it("should ensure server settings are fetched", function() {
+        return api.batch("blog", "articles", [{}])
+          .then(_ => sinon.assert.calledOnce(api.fetchServerSettings));
+      });
+
       describe("empty changes", () => {
         it("should not perform request on empty operation list", () => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-
           api.batch("blog", "articles", []);
 
           sinon.assert.notCalled(fetch);
@@ -310,13 +325,13 @@ describe("Api", () => {
 
       describe("non-empty changes", () => {
         beforeEach(() => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
           api.optionHeaders = {Authorization: "Basic plop"};
-          api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}});
-
-          const request = fetch.getCall(0).args[1];
-          requestHeaders = request.headers;
-          requestBody = JSON.parse(request.body);
+          return api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}})
+            .then(_ => {
+              const request = fetch.getCall(0).args[1];
+              requestHeaders = request.headers;
+              requestBody = JSON.parse(request.body);
+            });
         });
 
         it("should call the batch endpoint", () => {
@@ -388,9 +403,10 @@ describe("Api", () => {
         var requests;
 
         beforeEach(() => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({status: 200}));
-          api.batch("blog", "articles", operations);
-          requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
+          return api.batch("blog", "articles", operations)
+            .then(_ => {
+              requests = JSON.parse(fetch.getCall(0).args[1].body).requests;
+            });
         });
 
         it("should send If-Match headers", () => {

@@ -208,18 +208,21 @@ export default class Api {
     };
     if (!records.length)
       return Promise.resolve(results);
-    return fetch(this.endpoints().batch(), {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        defaults: {headers},
-        requests: records.map(record => {
-          const path = this.endpoints({full: false})
-            .record(bucketName, collName, record.id);
-          return this._buildRecordBatchRequest(record, path, safe);
-        })
+    return this.fetchServerSettings()
+      .then(serverSettings => {
+        return fetch(this.endpoints().batch(), {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            defaults: {headers},
+            requests: records.map(record => {
+              const path = this.endpoints({full: false})
+                .record(bucketName, collName, record.id);
+              return this._buildRecordBatchRequest(record, path, safe);
+            })
+          })
+        });
       })
-    })
       .then(res => {
         response = res;
         return res.json();
