@@ -59,7 +59,7 @@ describe("Api", () => {
         .eql({Foo: "Bar"});
     });
 
-    it("should validate protocol version", function() {
+    it("should validate protocol version", () => {
       expect(() =>new Api(`http://test/v999`))
         .to.Throw(Error, /^Unsupported protocol version/);
     });
@@ -147,7 +147,7 @@ describe("Api", () => {
         .should.eventually.become({"cliquet.batch_max_requests": 25});
     });
 
-    it("should reject on fetch errors", function() {
+    it("should reject on fetch errors", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve({
         status: 500,
         json() {
@@ -176,7 +176,7 @@ describe("Api", () => {
   });
 
   describe("#fetchChangesSince", () => {
-    it("should fetch server settings", function() {
+    it("should fetch server settings", () => {
       sandbox.stub(api, "fetchServerSettings")
         .returns(Promise.resolve({foo: 42}));
 
@@ -185,7 +185,7 @@ describe("Api", () => {
       sinon.assert.calledOnce(api.fetchServerSettings);
     });
 
-    describe("Request", function() {
+    describe("Request", () => {
       beforeEach(() => {
         sandbox.stub(root, "fetch")
           // fetch server Settings
@@ -222,7 +222,7 @@ describe("Api", () => {
       });
     });
 
-    describe("Response", function() {
+    describe("Response", () => {
       it("should resolve with a result object", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {data: []}, {"ETag": quote(41)}));
@@ -310,7 +310,7 @@ describe("Api", () => {
         }));
       });
 
-      it("should ensure server settings are fetched", function() {
+      it("should ensure server settings are fetched", () => {
         return api.batch("blog", "articles", [{}])
           .then(_ => sinon.assert.calledOnce(api.fetchServerSettings));
       });
