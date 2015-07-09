@@ -95,9 +95,8 @@ describe("Integration tests", () => {
       });
 
       it("should mark local records as synced", () => {
-        expect(syncResult.updated).to.have.length.of(2);
+        expect(syncResult.updated).to.have.length.of(1);
         expect(syncResult.updated.map(r => cleanRecord(r))).to
-          .include(testData.server[0])
           .include(testData.localUnsynced[0]);
       });
     });

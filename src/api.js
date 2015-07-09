@@ -73,6 +73,26 @@ export default class Api {
   }
 
   /**
+   * Retrieves Kinto server settings.
+   *
+   * @return {Promise}
+   */
+  fetchServerSettings() {
+    var response;
+    const errPrefix = "Fetching server settings failed";
+    return fetch(this.endpoints().root(), {headers: DEFAULT_REQUEST_HEADERS})
+      .then(res => {
+        response = res;
+        return res.json();
+      })
+      .catch(err => {
+        const httpStatus = response && response.status || 0;
+        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
+      })
+      .then(json => json.settings);
+  }
+
+  /**
    * Fetches latest changes from the remote server.
    *
    * @param  {String} bucketName  The bucket name.

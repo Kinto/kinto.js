@@ -262,6 +262,29 @@ describe("Api", () => {
     });
   });
 
+  describe("#fetchServerSettings", () => {
+    it("should retrieve server settings on first request made", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+        settings: {"cliquet.batch_max_requests": 25}
+      }));
+
+      return api.fetchServerSettings()
+        .should.eventually.become({"cliquet.batch_max_requests": 25});
+    });
+
+    it("should reject on fetch errors", function() {
+      sandbox.stub(root, "fetch").returns(Promise.resolve({
+        status: 500,
+        json() {
+          return Promise.reject("weird error");
+        }
+      }));
+
+      return api.fetchServerSettings()
+        .should.be.rejectedWith(Error, /HTTP 500; weird error/);
+    });
+  });
+
   describe("#batch", () => {
     const operations = [
       {id: 1, title: "foo", last_modified: 42},
