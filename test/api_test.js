@@ -283,6 +283,21 @@ describe("Api", () => {
       return api.fetchServerSettings()
         .should.be.rejectedWith(Error, /HTTP 500; weird error/);
     });
+
+    it("should store server settings into the serverSettings property", () => {
+      api.serverSettings = {a: 1};
+      sandbox.stub(root, "fetch");
+
+      api.fetchServerSettings();
+    });
+
+    it("should not fetch server settings if they're cached already", () => {
+      api.serverSettings = {a: 1};
+      sandbox.stub(root, "fetch");
+
+      api.fetchServerSettings()
+      sinon.assert.notCalled(fetch);
+    });
   });
 
   describe("#batch", () => {

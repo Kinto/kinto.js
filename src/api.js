@@ -41,6 +41,7 @@ export default class Api {
       throw new Error("Invalid remote URL: " + remote);
     this.remote = remote;
     this.optionHeaders = options.headers;
+    this.serverSettings = null;
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -78,6 +79,8 @@ export default class Api {
    * @return {Promise}
    */
   fetchServerSettings() {
+    if (this.serverSettings)
+      return this.serverSettings;
     var response;
     const errPrefix = "Fetching server settings failed";
     return fetch(this.endpoints().root(), {headers: DEFAULT_REQUEST_HEADERS})
@@ -89,7 +92,10 @@ export default class Api {
         const httpStatus = response && response.status || 0;
         throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
       })
-      .then(json => json.settings);
+      .then(json => {
+        this.serverSettings = json.settings;
+        return this.serverSettings;
+      });
   }
 
   /**
