@@ -80,11 +80,12 @@ export default class Api {
    */
   fetchServerSettings() {
     if (this.serverSettings)
-      return this.serverSettings;
+      return Promise.resolve(this.serverSettings);
     var response;
     const errPrefix = "Fetching server settings failed";
-    // FIXME: endpoint is actually /v1/ not /v1
-    return fetch(this.endpoints().root(), {headers: DEFAULT_REQUEST_HEADERS})
+    return fetch(this.endpoints().root() + "/", {
+      headers: DEFAULT_REQUEST_HEADERS
+    })
       .then(res => {
         response = res;
         return res.json();

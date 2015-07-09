@@ -44,6 +44,13 @@ describe("Integration tests", () => {
     });
   }
 
+  describe("Settings", function() {
+    it("should retrieve server settings", function() {
+      return tasks.sync().then(_ => tasks.api.serverSettings)
+        to.eventualy.include.keys("cliquet.batch_max_requests");
+    });
+  });
+
   describe("Synchronization", () => {
     describe("No conflict", () => {
       const testData = {
