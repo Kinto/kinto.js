@@ -83,6 +83,7 @@ export default class Api {
       return this.serverSettings;
     var response;
     const errPrefix = "Fetching server settings failed";
+    // FIXME: endpoint is actually /v1/ not /v1
     return fetch(this.endpoints().root(), {headers: DEFAULT_REQUEST_HEADERS})
       .then(res => {
         response = res;
@@ -121,7 +122,8 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {headers})
+    return this.fetchServerSettings()
+      .then(_ => fetch(recordsUrl + queryString, {headers}))
       .then(res => {
         response = res;
         // If HTTP 304, nothing has changed
