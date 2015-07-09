@@ -430,6 +430,18 @@ describe("Api", () => {
             .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 400/);
         });
 
+        it("should reject on invalid JSON response from the server", () => {
+          sandbox.stub(root, "fetch").returns(Promise.resolve({
+            status: 500,
+            json() {
+              return Promise.reject("bad json");
+            }
+          }));
+
+          return api.batch("blog", "articles", published)
+            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500; bad json/);
+        });
+
         it("should reject on HTTP error status code", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {
             error: true,

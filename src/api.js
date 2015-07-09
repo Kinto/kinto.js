@@ -229,7 +229,7 @@ export default class Api {
       })
       .catch(err => {
         const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
+        throw new Error(`${errPrefix} HTTP ${httpStatus}; ${err}`);
       })
       .then(json => {
         // Handle main request errors
