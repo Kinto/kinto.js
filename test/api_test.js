@@ -72,7 +72,7 @@ describe("Api", () => {
       beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
 
       it("should provide root endpoint", () => {
-        expect(endpoints.root()).eql(FAKE_SERVER_URL);
+        expect(endpoints.root()).eql(`${FAKE_SERVER_URL}/`);
       });
 
       it("should provide batch endpoint", () => {
@@ -107,7 +107,7 @@ describe("Api", () => {
       beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
 
       it("should provide root endpoint", () => {
-        expect(endpoints.root()).eql(`/${SPV}`);
+        expect(endpoints.root()).eql(`/${SPV}/`);
       });
 
       it("should provide batch endpoint", () => {

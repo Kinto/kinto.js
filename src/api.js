@@ -61,11 +61,11 @@ export default class Api {
    * @return {String}
    */
   endpoints(options={fullUrl: true}) {
-    var root = options.fullUrl ? this.remote : `/${this.version}`;
+    var root = options.fullUrl ? `${this.remote}/` : `/${this.version}/`;
     var urls = {
       root:                   () => root,
-      batch:                  () => `${root}/batch`,
-      bucket:           (bucket) => `${root}/buckets/${bucket}`,
+      batch:                  () => `${root}batch`,
+      bucket:           (bucket) => `${root}buckets/${bucket}`,
       collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
       records:    (bucket, coll) => `${urls.collection(bucket, coll)}/records`,
       record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
@@ -83,7 +83,7 @@ export default class Api {
       return Promise.resolve(this.serverSettings);
     var response;
     const errPrefix = "Fetching server settings failed";
-    return fetch(this.endpoints().root() + "/", {
+    return fetch(this.endpoints().root(), {
       headers: DEFAULT_REQUEST_HEADERS
     })
       .then(res => {
