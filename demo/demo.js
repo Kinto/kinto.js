@@ -1,6 +1,6 @@
 function main() {
   var db = new Kinto({
-    remote: "https://kinto.dev.mozaws.net/v1",
+    remote: "http://0.0.0.0:8888/v1",
     headers: {Authorization: "Basic " + btoa("user:pass")}
   });
   var tasks = db.collection("tasks");
