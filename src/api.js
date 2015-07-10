@@ -61,11 +61,11 @@ export default class Api {
    * @return {String}
    */
   endpoints(options={fullUrl: true}) {
-    var root = options.fullUrl ? `${this.remote}/` : `/${this.version}/`;
+    var root = options.fullUrl ? this.remote : `/${this.version}`;
     var urls = {
-      root:                   () => root,
-      batch:                  () => `${root}batch`,
-      bucket:           (bucket) => `${root}buckets/${bucket}`,
+      root:                   () => `${root}/`,
+      batch:                  () => `${root}/batch`,
+      bucket:           (bucket) => `${root}/buckets/${bucket}`,
       collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
       records:    (bucket, coll) => `${urls.collection(bucket, coll)}/records`,
       record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
