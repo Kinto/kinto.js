@@ -440,7 +440,7 @@ describe("Api", () => {
           api.optionHeaders = {Authorization: "Basic plop"};
           return api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}})
             .then(_ => {
-              const request = fetch.getCall(0).args[1];
+              const request = fetch.firstCall.args[1];
               requestHeaders = request.headers;
               requestBody = JSON.parse(request.body);
             });
@@ -450,10 +450,8 @@ describe("Api", () => {
           sinon.assert.calledWithMatch(fetch, `/${SPV}/batch`);
         });
 
-        it("should define batch default headers", () => {
+        it("should define main batch request default headers", () => {
           expect(requestBody.defaults.headers).eql({
-            "Accept": "application/json",
-            "Content-Type": "application/json",
             "Authorization": "Basic plop",
             "Foo": "Bar",
           });
@@ -539,22 +537,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 400/);
-        });
-
-        it("should reject on invalid JSON response from the server", () => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({
-            status: 500,
-            headers: {
-              get() {}
-            },
-            json() {
-              return Promise.reject("bad json");
-            }
-          }));
-
-          return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500; bad json/);
+            .should.eventually.be.rejectedWith(Error, /HTTP 400/);
         });
 
         it("should reject on HTTP error status code", () => {
@@ -564,7 +547,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500/);
+            .should.eventually.be.rejectedWith(Error, /HTTP 500/);
         });
 
         it("should expose succesfully published results", () => {

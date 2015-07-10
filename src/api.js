@@ -19,23 +19,6 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
 };
 
 /**
- * Handles a server error response; will throw an error with response json body
- * attached to a `data` property.
- *
- * @param  {Response} response The server response object.
- * @param  {Object}   json     The json response body.
- * @throws Error
- */
-function _handleServerError(response, json, options={prefix: ""}) {
-  var message = `${options.prefix} HTTP ${response.status} `;
-  if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
-    message += ERROR_CODES[json.errno];
-  const err = new Error(message.trim());
-  err.data = json;
-  throw err;
-}
-
-/**
  * Performs an HTTP request to the Kinto server. Resolves with an objet
  * containing the following properties:
  *
@@ -152,7 +135,6 @@ export default class Api {
     const recordsUrl = this.endpoints().records(bucketName, collName);
     var queryString = "";
     var headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
@@ -222,9 +204,7 @@ export default class Api {
   batch(bucketName, collName, records, options={headers: {}}) {
     var response;
     const safe = options.safe || true;
-    const errPrefix = "BATCH request failed:";
     const headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
@@ -238,7 +218,7 @@ export default class Api {
       return Promise.resolve(results);
     return this.fetchServerSettings()
       .then(serverSettings => {
-        return fetch(this.endpoints().batch(), {
+        return request(this.endpoints().batch(), {
           method: "POST",
           headers: headers,
           body: JSON.stringify({
@@ -251,19 +231,7 @@ export default class Api {
           })
         });
       })
-      .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix} HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        // Handle main request errors
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        }
+      .then(({status, json, headers}) => {
         // Handle individual batch subrequests responses
         json.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
