@@ -35,6 +35,55 @@ function _handleServerError(response, json, options={prefix: ""}) {
   throw err;
 }
 
+/**
+ * Performs an HTTP request to the Kinto server. Resolves with an objet
+ * containing the following properties:
+ *
+ * - {Number}  status  The HTTP status code.
+ * - {Object}  json    The JSON response body.
+ * - {Headers} headers The response headers object.
+ *
+ * @param  {String} url
+ * @param  {Object} options
+ * @return {Promise}
+ */
+export function request(url, options={headers:{}}) {
+  var response, status, statusText, headers;
+  return fetch(url, options)
+    .then(res => {
+      response = res;
+      headers = res.headers;
+      status = res.status;
+      statusText = res.statusText;
+      if (headers.get("Content-Length") == 0) // 0 or "0"
+        return null;
+      return res.json();
+    })
+    .catch(err => {
+      const error = new Error(`HTTP ${status || 0}; ${err}`);
+      error.response = response;
+      error.stack = err.stack;
+      throw error;
+    })
+    .then(json => {
+      if (status >= 400) {
+        var message = `HTTP ${status}; `;
+        if (json.errno && json.errno in ERROR_CODES) {
+          message += ERROR_CODES[json.errno];
+          if (json.message) {
+            message += `: ${json.message}`;
+          }
+        } else {
+          message += statusText;
+        }
+        const error = new Error(message);
+        error.response = response;
+        throw error;
+      }
+      return {status, json, headers};
+    });
+}
+
 export default class Api {
   constructor(remote, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
