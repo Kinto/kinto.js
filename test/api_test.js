@@ -3,8 +3,11 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
 import { quote } from "../src/utils";
+import { fakeServerResponse } from "./test_utils.js";
+import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
+import { DEFAULT_REQUEST_HEADERS as DRH } from "../src/http.js";
+
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -24,20 +27,6 @@ describe("Api", () => {
   afterEach(() => {
     sandbox.restore();
   });
-
-  function fakeServerResponse(status, json, headers={}) {
-    return Promise.resolve({
-      status: status,
-      headers: {
-        get(name) {
-          return headers[name];
-        }
-      },
-      json() {
-        return json;
-      }
-    });
-  }
 
   describe("#constructor", () => {
     it("should check that `remote` is a string", () => {
@@ -150,6 +139,9 @@ describe("Api", () => {
     it("should reject on fetch errors", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve({
         status: 500,
+        headers: {
+          get() {}
+        },
         json() {
           return Promise.reject("weird error");
         }
@@ -254,14 +246,7 @@ describe("Api", () => {
         }));
 
         return api.fetchChangesSince("blog", "articles")
-          .should.eventually.be.rejectedWith(Error, /HTTP 401 Invalid Authorization Token/);
-      });
-
-      it("should reject with fallback error message", () => {
-        sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
-
-        return api.fetchChangesSince("blog", "articles")
-          .should.eventually.be.rejectedWith(Error, /HTTP 401$/);
+          .should.eventually.be.rejectedWith(Error, /HTTP 401; Invalid Authorization Token/);
       });
 
       it("should expose json response body to err object on rejection", () => {
@@ -277,6 +262,9 @@ describe("Api", () => {
       it("should reject on on invalid json response body", () => {
         sandbox.stub(root, "fetch").returns(Promise.resolve({
           status: 500,
+          headers: {
+            get() {}
+          },
           json() {
             return Promise.reject("JSON Error");
           }
@@ -328,7 +316,7 @@ describe("Api", () => {
           api.optionHeaders = {Authorization: "Basic plop"};
           return api.batch("blog", "articles", operations, {headers: {Foo: "Bar"}})
             .then(_ => {
-              const request = fetch.getCall(0).args[1];
+              const request = fetch.firstCall.args[1];
               requestHeaders = request.headers;
               requestBody = JSON.parse(request.body);
             });
@@ -338,10 +326,8 @@ describe("Api", () => {
           sinon.assert.calledWithMatch(fetch, `/${SPV}/batch`);
         });
 
-        it("should define batch default headers", () => {
+        it("should define main batch request default headers", () => {
           expect(requestBody.defaults.headers).eql({
-            "Accept": "application/json",
-            "Content-Type": "application/json",
             "Authorization": "Basic plop",
             "Foo": "Bar",
           });
@@ -427,19 +413,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 400/);
-        });
-
-        it("should reject on invalid JSON response from the server", () => {
-          sandbox.stub(root, "fetch").returns(Promise.resolve({
-            status: 500,
-            json() {
-              return Promise.reject("bad json");
-            }
-          }));
-
-          return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500; bad json/);
+            .should.eventually.be.rejectedWith(Error, /HTTP 400/);
         });
 
         it("should reject on HTTP error status code", () => {
@@ -449,7 +423,7 @@ describe("Api", () => {
           }));
 
           return api.batch("blog", "articles", published)
-            .should.eventually.be.rejectedWith(Error, /BATCH request failed: HTTP 500/);
+            .should.eventually.be.rejectedWith(Error, /HTTP 500/);
         });
 
         it("should expose succesfully published results", () => {

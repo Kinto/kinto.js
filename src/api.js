@@ -2,13 +2,10 @@
 
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
+import request from "./http.js";
 
-export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
-const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
-};
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -17,23 +14,6 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
     return acc;
   }, {});
 };
-
-/**
- * Handles a server error response; will throw an error with response json body
- * attached to a `data` property.
- *
- * @param  {Response} response The server response object.
- * @param  {Object}   json     The json response body.
- * @throws Error
- */
-function _handleServerError(response, json, options={prefix: ""}) {
-  var message = `${options.prefix} HTTP ${response.status} `;
-  if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
-    message += ERROR_CODES[json.errno];
-  const err = new Error(message.trim());
-  err.data = json;
-  throw err;
-}
 
 export default class Api {
   constructor(remote, options={headers: {}}) {
@@ -81,21 +61,9 @@ export default class Api {
   fetchServerSettings() {
     if (this.serverSettings)
       return Promise.resolve(this.serverSettings);
-    var response;
-    const errPrefix = "Fetching server settings failed";
-    return fetch(this.endpoints().root(), {
-      headers: DEFAULT_REQUEST_HEADERS
-    })
+    return request(this.endpoints().root())
       .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        this.serverSettings = json.settings;
+        this.serverSettings = res.json.settings;
         return this.serverSettings;
       });
   }
@@ -110,10 +78,8 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    const errPrefix = "Fetching changes failed:";
-    var newLastModified, response, queryString = "";
+    var queryString = "";
     var headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
@@ -124,33 +90,21 @@ export default class Api {
     }
 
     return this.fetchServerSettings()
-      .then(_ => fetch(recordsUrl + queryString, {headers}))
+      .then(_ => request(recordsUrl + queryString, {headers}))
       .then(res => {
-        response = res;
+        var results;
         // If HTTP 304, nothing has changed
-        if (response.status === 304) {
-          newLastModified = options.lastModified;
-          return {data: []};
-        } else {
-          return response.json();
+        if (res.status === 304) {
+          return {
+            lastModified: options.lastModified,
+            changes: []
+          };
         }
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        } else {
-          const etag = response.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          if (etag)
-            newLastModified = parseInt(unquote(etag), 10);
-        }
+        // XXX: ETag are supposed to be opaque and stored «as-is».
+        const etag = res.headers.get("ETag");  // e.g. '"42"'
         return {
-          lastModified: newLastModified,
-          changes: json.data
+          lastModified: etag ? parseInt(unquote(etag), 10) : options.lastModified,
+          changes: res.json.data
         };
       });
   }
@@ -195,9 +149,7 @@ export default class Api {
   batch(bucketName, collName, records, options={headers: {}}) {
     var response;
     const safe = options.safe || true;
-    const errPrefix = "BATCH request failed:";
     const headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
@@ -211,7 +163,7 @@ export default class Api {
       return Promise.resolve(results);
     return this.fetchServerSettings()
       .then(serverSettings => {
-        return fetch(this.endpoints().batch(), {
+        return request(this.endpoints().batch(), {
           method: "POST",
           headers: headers,
           body: JSON.stringify({
@@ -224,19 +176,7 @@ export default class Api {
           })
         });
       })
-      .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix} HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        // Handle main request errors
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        }
+      .then(({status, json, headers}) => {
         // Handle individual batch subrequests responses
         json.responses.forEach((response, index) => {
           // TODO: handle 409 when unicity rule is violated (ex. POST with
