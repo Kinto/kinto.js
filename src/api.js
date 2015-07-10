@@ -41,6 +41,7 @@ export default class Api {
       throw new Error("Invalid remote URL: " + remote);
     this.remote = remote;
     this.optionHeaders = options.headers;
+    this.serverSettings = null;
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -62,7 +63,7 @@ export default class Api {
   endpoints(options={fullUrl: true}) {
     var root = options.fullUrl ? this.remote : `/${this.version}`;
     var urls = {
-      root:                   () => root,
+      root:                   () => `${root}/`,
       batch:                  () => `${root}/batch`,
       bucket:           (bucket) => `${root}/buckets/${bucket}`,
       collection: (bucket, coll) => `${urls.bucket(bucket)}/collections/${coll}`,
@@ -70,6 +71,33 @@ export default class Api {
       record: (bucket, coll, id) => `${urls.records(bucket, coll)}/${id}`,
     };
     return urls;
+  }
+
+  /**
+   * Retrieves Kinto server settings.
+   *
+   * @return {Promise}
+   */
+  fetchServerSettings() {
+    if (this.serverSettings)
+      return Promise.resolve(this.serverSettings);
+    var response;
+    const errPrefix = "Fetching server settings failed";
+    return fetch(this.endpoints().root(), {
+      headers: DEFAULT_REQUEST_HEADERS
+    })
+      .then(res => {
+        response = res;
+        return res.json();
+      })
+      .catch(err => {
+        const httpStatus = response && response.status || 0;
+        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
+      })
+      .then(json => {
+        this.serverSettings = json.settings;
+        return this.serverSettings;
+      });
   }
 
   /**
@@ -95,7 +123,8 @@ export default class Api {
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
-    return fetch(recordsUrl + queryString, {headers})
+    return this.fetchServerSettings()
+      .then(_ => fetch(recordsUrl + queryString, {headers}))
       .then(res => {
         response = res;
         // If HTTP 304, nothing has changed
@@ -180,25 +209,28 @@ export default class Api {
     };
     if (!records.length)
       return Promise.resolve(results);
-    return fetch(this.endpoints().batch(), {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({
-        defaults: {headers},
-        requests: records.map(record => {
-          const path = this.endpoints({full: false})
-            .record(bucketName, collName, record.id);
-          return this._buildRecordBatchRequest(record, path, safe);
-        })
+    return this.fetchServerSettings()
+      .then(serverSettings => {
+        return fetch(this.endpoints().batch(), {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({
+            defaults: {headers},
+            requests: records.map(record => {
+              const path = this.endpoints({full: false})
+                .record(bucketName, collName, record.id);
+              return this._buildRecordBatchRequest(record, path, safe);
+            })
+          })
+        });
       })
-    })
       .then(res => {
         response = res;
         return res.json();
       })
       .catch(err => {
         const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
+        throw new Error(`${errPrefix} HTTP ${httpStatus}; ${err}`);
       })
       .then(json => {
         // Handle main request errors

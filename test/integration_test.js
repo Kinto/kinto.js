@@ -44,6 +44,13 @@ describe("Integration tests", () => {
     });
   }
 
+  describe("Settings", function() {
+    it("should retrieve server settings", function() {
+      return tasks.sync().then(_ => tasks.api.serverSettings)
+        to.eventualy.include.keys("cliquet.batch_max_requests");
+    });
+  });
+
   describe("Synchronization", () => {
     describe("No conflict", () => {
       const testData = {
@@ -95,9 +102,8 @@ describe("Integration tests", () => {
       });
 
       it("should mark local records as synced", () => {
-        expect(syncResult.updated).to.have.length.of(2);
+        expect(syncResult.updated).to.have.length.of(1);
         expect(syncResult.updated.map(r => cleanRecord(r))).to
-          .include(testData.server[0])
           .include(testData.localUnsynced[0]);
       });
     });
