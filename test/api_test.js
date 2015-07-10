@@ -6,6 +6,7 @@ import sinon from "sinon";
 import { quote } from "../src/utils";
 import Api, {
   SUPPORTED_PROTOCOL_VERSION as SPV,
+  DEFAULT_REQUEST_HEADERS as DRH,
   request,
   cleanRecord
 } from "../src/api";
@@ -44,6 +45,26 @@ describe("Api", () => {
   }
 
   describe("request()", () => {
+    describe("Request headers", () => {
+      it("should set default headers", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {}, {}));
+
+        request("/");
+
+        expect(fetch.firstCall.args[1].headers).eql(DRH);
+      });
+
+      it("should merge custom headers with default ones", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {}, {}));
+
+        request("/", {headers: {Foo: "Bar"}});
+
+        expect(fetch.firstCall.args[1].headers.Foo).eql("Bar");
+      });
+    });
+
     describe("Succesful request", () => {
       beforeEach(() => {
         sandbox.stub(root, "fetch").returns(

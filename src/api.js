@@ -3,9 +3,9 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 
-export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
-const DEFAULT_REQUEST_HEADERS = {
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
+export const DEFAULT_REQUEST_HEADERS = {
   "Accept":       "application/json",
   "Content-Type": "application/json",
 };
@@ -49,6 +49,8 @@ function _handleServerError(response, json, options={prefix: ""}) {
  */
 export function request(url, options={headers:{}}) {
   var response, status, statusText, headers;
+  // Ensure default request headers are always set
+  options.headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
   return fetch(url, options)
     .then(res => {
       response = res;
