@@ -263,6 +263,9 @@ describe("Api", () => {
     it("should reject on fetch errors", () => {
       sandbox.stub(root, "fetch").returns(Promise.resolve({
         status: 500,
+        headers: {
+          get() {}
+        },
         json() {
           return Promise.reject("weird error");
         }
@@ -367,14 +370,7 @@ describe("Api", () => {
         }));
 
         return api.fetchChangesSince("blog", "articles")
-          .should.eventually.be.rejectedWith(Error, /HTTP 401 Invalid Authorization Token/);
-      });
-
-      it("should reject with fallback error message", () => {
-        sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {}));
-
-        return api.fetchChangesSince("blog", "articles")
-          .should.eventually.be.rejectedWith(Error, /HTTP 401$/);
+          .should.eventually.be.rejectedWith(Error, /HTTP 401; Invalid Authorization Token/);
       });
 
       it("should expose json response body to err object on rejection", () => {
@@ -390,6 +386,9 @@ describe("Api", () => {
       it("should reject on on invalid json response body", () => {
         sandbox.stub(root, "fetch").returns(Promise.resolve({
           status: 500,
+          headers: {
+            get() {}
+          },
           json() {
             return Promise.reject("JSON Error");
           }
@@ -546,6 +545,9 @@ describe("Api", () => {
         it("should reject on invalid JSON response from the server", () => {
           sandbox.stub(root, "fetch").returns(Promise.resolve({
             status: 500,
+            headers: {
+              get() {}
+            },
             json() {
               return Promise.reject("bad json");
             }

@@ -41,7 +41,7 @@ function _handleServerError(response, json, options={prefix: ""}) {
  *
  * - {Number}  status  The HTTP status code.
  * - {Object}  json    The JSON response body.
- * - {Headers} headers The response headers object.
+ * - {Headers} headers The response headers object (see ES6 fetch() spec).
  *
  * @param  {String} url
  * @param  {Object} options
@@ -76,10 +76,11 @@ export function request(url, options={headers:{}}) {
             message += `: ${json.message}`;
           }
         } else {
-          message += statusText;
+          message += statusText || "";
         }
-        const error = new Error(message);
+        const error = new Error(message.trim());
         error.response = response;
+        error.data = json;
         throw error;
       }
       return {status, json, headers};
@@ -132,21 +133,9 @@ export default class Api {
   fetchServerSettings() {
     if (this.serverSettings)
       return Promise.resolve(this.serverSettings);
-    var response;
-    const errPrefix = "Fetching server settings failed";
-    return fetch(this.endpoints().root(), {
-      headers: DEFAULT_REQUEST_HEADERS
-    })
+    return request(this.endpoints().root())
       .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        this.serverSettings = json.settings;
+        this.serverSettings = res.json.settings;
         return this.serverSettings;
       });
   }
@@ -161,8 +150,7 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    const errPrefix = "Fetching changes failed:";
-    var newLastModified, response, queryString = "";
+    var queryString = "";
     var headers = Object.assign({},
       DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
@@ -175,33 +163,21 @@ export default class Api {
     }
 
     return this.fetchServerSettings()
-      .then(_ => fetch(recordsUrl + queryString, {headers}))
+      .then(_ => request(recordsUrl + queryString, {headers}))
       .then(res => {
-        response = res;
+        var results;
         // If HTTP 304, nothing has changed
-        if (response.status === 304) {
-          newLastModified = options.lastModified;
-          return {data: []};
-        } else {
-          return response.json();
+        if (res.status === 304) {
+          return {
+            lastModified: options.lastModified,
+            changes: []
+          };
         }
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        } else {
-          const etag = response.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          if (etag)
-            newLastModified = parseInt(unquote(etag), 10);
-        }
+        // XXX: ETag are supposed to be opaque and stored «as-is».
+        const etag = res.headers.get("ETag");  // e.g. '"42"'
         return {
-          lastModified: newLastModified,
-          changes: json.data
+          lastModified: etag ? parseInt(unquote(etag), 10) : options.lastModified,
+          changes: res.json.data
         };
       });
   }
