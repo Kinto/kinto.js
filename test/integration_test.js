@@ -44,8 +44,8 @@ describe("Integration tests", () => {
     });
   }
 
-  describe("Settings", function() {
-    it("should retrieve server settings", function() {
+  describe("Settings", () => {
+    it("should retrieve server settings", () => {
       return tasks.sync().then(_ => tasks.api.serverSettings)
         to.eventualy.include.keys("cliquet.batch_max_requests");
     });
@@ -236,6 +236,33 @@ describe("Integration tests", () => {
 
       it("should not have updated anything", () => {
         expect(syncResult.updated).to.have.length.of(0);
+      });
+    });
+
+    describe("Batch request chunking", () => {
+      var nbFixtures;
+
+      function loadFixtures() {
+        return tasks.api.fetchServerSettings()
+          .then(serverSettings => {
+            nbFixtures = serverSettings["cliquet.batch_max_requests"] + 10;
+            var fixtures = [];
+            for (let i=0; i<nbFixtures; i++) {
+              fixtures.push({title: "title" + i, position: i});
+            }
+            return Promise.all(fixtures.map(f => tasks.create(f)));
+          });
+      }
+
+      beforeEach(() => {
+        return loadFixtures().then(_ => tasks.sync());
+      });
+
+      it("should create the expected number of records", () => {
+        return tasks.list({order: "-position"}).then(res => {
+          expect(res.data.length).eql(nbFixtures);
+          expect(res.data[0].position).eql(nbFixtures - 1);
+        });
       });
     });
   });
