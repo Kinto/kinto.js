@@ -851,5 +851,21 @@ describe("Collection", () => {
       return articles.sync()
         .should.eventually.become(result);
     });
+
+    it("should transfer the headers option", () => {
+      var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+      return articles.sync({headers: {Foo: "Bar"}})
+        .then(() => {
+          expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
+        })
+    });
+
+    it("should transfer the strategy option", () => {
+      var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+      return articles.sync({strategy: Collection.strategy.SERVER_WINS})
+        .then(() => {
+          expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
+        })
+    });
   });
 });
