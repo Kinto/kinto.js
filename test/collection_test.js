@@ -191,6 +191,20 @@ describe("Collection", () => {
         .should.become(42);
     });
 
+    it("should reject on transaction error", function() {
+      sandbox.stub(articles, "prepare").returns({
+        store: {add() {}},
+        transaction: {
+          get onerror() {},
+          set onerror(onerror) {
+            onerror({target: {error: "transaction error"}})
+          }
+        }
+      });
+      return articles.create({foo: "bar"})
+        .should.be.rejectedWith(Error, "transaction error");
+    });
+
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.create().should.be.rejectedWith(Error, /^create/);
@@ -236,6 +250,21 @@ describe("Collection", () => {
     it("should reject updates on a record without an id", () => {
       return articles.update({title: "foo"})
         .should.be.rejectedWith(Error, /missing id/);
+    });
+
+    it("should reject on transaction error", function() {
+      sandbox.stub(articles, "get").returns(Promise.resolve());
+      sandbox.stub(articles, "prepare").returns({
+        store: {get() {}, put() {}},
+        transaction: {
+          get onerror() {},
+          set onerror(onerror) {
+            onerror({target: {error: "transaction error"}})
+          }
+        }
+      });
+      return articles.update({id: 1, foo: "bar"})
+        .should.be.rejectedWith(Error, "transaction error");
     });
 
     it("should prefix error encountered", () => {
@@ -325,6 +354,20 @@ describe("Collection", () => {
       // body...
     });
 
+    it("should reject on transaction error", function() {
+      sandbox.stub(articles, "prepare").returns({
+        store: {get() {}},
+        transaction: {
+          get onerror() {},
+          set onerror(onerror) {
+            onerror({target: {error: "transaction error"}})
+          }
+        }
+      });
+      return articles.get(1)
+        .should.be.rejectedWith(Error, "transaction error");
+    });
+
     it("should prefix error encountered", () => {
       sandbox.stub(articles, "open").returns(Promise.reject("error"));
       return articles.get().should.be.rejectedWith(Error, /^get/);
@@ -385,6 +428,21 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
+    });
+
+    it("should reject on transaction error", function() {
+      sandbox.stub(articles, "get").returns(Promise.resolve());
+      sandbox.stub(articles, "prepare").returns({
+        store: {delete() {}},
+        transaction: {
+          get onerror() {},
+          set onerror(onerror) {
+            onerror({target: {error: "transaction error"}})
+          }
+        }
+      });
+      return articles.delete(1, {virtual: false})
+        .should.be.rejectedWith(Error, "transaction error");
     });
   });
 
@@ -526,6 +584,28 @@ describe("Collection", () => {
             {title: "art3", unread: true, complete: true},
             {title: "art1", unread: true, complete: true},
           ]);
+      });
+    });
+
+    describe("Error handling", function() {
+      var articles;
+
+      beforeEach(() => {
+        articles = testCollection();
+      });
+
+      it("should reject on transaction error", function() {
+        sandbox.stub(articles, "prepare").returns({
+          store: {openCursor() {return {}}},
+          transaction: {
+            get onerror() {},
+            set onerror(onerror) {
+              onerror({target: {error: "transaction error"}})
+            }
+          }
+        });
+        return articles.list({})
+          .should.be.rejectedWith(Error, "transaction error");
       });
     });
   });
