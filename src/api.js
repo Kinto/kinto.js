@@ -3,6 +3,7 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 import request from "./http.js";
+import { partition } from "./utils.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 export const SUPPORTED_PROTOCOL_VERSION = "v1";
@@ -135,6 +136,45 @@ export default class Api {
   }
 
   /**
+   * Process a batch request response.
+   *
+   * @param  {Object}  results          The results object.
+   * @param  {Array}   records          The initial records list.
+   * @param  {Number}  response.status  The response HTTP status.
+   * @param  {Object}  response.json    The response JSON body.
+   * @param  {Headers} response.headers The response headers object.
+   * @return {Promise}
+   */
+  _processBatchResponses(results, records, {status, json, headers}) {
+    // Handle individual batch subrequests responses
+    json.responses.forEach((response, index) => {
+      // TODO: handle 409 when unicity rule is violated (ex. POST with
+      // existing id, unique field, etc.)
+      if (response.status && response.status >= 200 && response.status < 400) {
+        results.published.push(response.body.data);
+      } else if (response.status === 404) {
+        results.skipped.push(response.body);
+      } else if (response.status === 412) {
+        results.conflicts.push({
+          type: "outgoing",
+          local: records[index],
+          // TODO: Once we get record information in this response object,
+          // add it; for now, that's the error json body only.
+          // Ref https://github.com/mozilla-services/kinto/issues/122
+          remote: response.body
+        });
+      } else {
+        results.errors.push({
+          path: response.path,
+          sent: records[index],
+          error: response.body
+        });
+      }
+    });
+    return results;
+  }
+
+  /**
    * Sends batch update requests to the remote server.
    *
    * TODO: If more than X results (default is 25 on server), split in several
@@ -147,12 +187,8 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
-    var response;
     const safe = options.safe || true;
-    const headers = Object.assign({},
-      this.optionHeaders,
-      options.headers
-    );
+    const headers = Object.assign({}, this.optionHeaders, options.headers);
     const results = {
       errors:    [],
       published: [],
@@ -163,6 +199,20 @@ export default class Api {
       return Promise.resolve(results);
     return this.fetchServerSettings()
       .then(serverSettings => {
+        const maxRequests = serverSettings["cliquet.batch_max_requests"];
+        if (records.length > maxRequests) {
+          return Promise.all(partition(records, maxRequests).map(chunk => {
+            return this.batch(bucketName, collName, chunk, options);
+          }))
+            .then(batchResults => {
+              return batchResults.reduce((acc, batchResult) => {
+                Object.keys(batchResult).forEach(key => {
+                  acc[key] = results[key].concat(batchResult[key]);
+                });
+                return acc;
+              }, results);
+            });
+        }
         return request(this.endpoints().batch(), {
           method: "POST",
           headers: headers,
@@ -174,35 +224,8 @@ export default class Api {
               return this._buildRecordBatchRequest(record, path, safe);
             })
           })
-        });
-      })
-      .then(({status, json, headers}) => {
-        // Handle individual batch subrequests responses
-        json.responses.forEach((response, index) => {
-          // TODO: handle 409 when unicity rule is violated (ex. POST with
-          // existing id, unique field, etc.)
-          if (response.status && response.status >= 200 && response.status < 400) {
-            results.published.push(response.body.data);
-          } else if (response.status === 404) {
-            results.skipped.push(response.body);
-          } else if (response.status === 412) {
-            results.conflicts.push({
-              type: "outgoing",
-              local: records[index],
-              // TODO: Once we get record information in this response object,
-              // add it; for now, that's the error json body only.
-              // Ref https://github.com/mozilla-services/kinto/issues/122
-              remote: response.body
-            });
-          } else {
-            results.errors.push({
-              path: response.path,
-              sent: records[index],
-              error: response.body
-            });
-          }
-        });
-        return results;
+        })
+          .then(res => this._processBatchResponses(results, records, res));
       });
   }
 }
