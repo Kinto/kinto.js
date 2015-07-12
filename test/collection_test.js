@@ -716,6 +716,25 @@ describe("Collection", () => {
     });
   });
 
+  describe("#importChanges", () => {
+    var articles, result;
+
+    beforeEach(() => {
+      articles = testCollection();
+      result = new SyncResultObject();
+    });
+
+    it("should return errors when encountered", () => {
+      sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
+
+      return articles.importChanges(result, {changes: [
+        {foo: "bar"}
+      ]})
+        .then(res => res.errors)
+        .should.eventually.become(["unknown error"]);
+    });
+  });
+
   describe("#pushChanges", () => {
     var articles, records, result;
 
