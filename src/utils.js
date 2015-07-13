@@ -1,6 +1,6 @@
 "use strict";
 
-const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
@@ -124,6 +124,6 @@ export function partition(array, n) {
  * @param  {String} uuid The uuid to validate.
  * @return {Boolean}
  */
-export function isUUID(uuid) {
+export function isUUID4(uuid) {
   return RE_UUID.test(uuid);
 }

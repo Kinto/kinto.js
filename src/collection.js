@@ -3,7 +3,7 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import { attachFakeIDBSymbolsTo, reduceRecords, isUUID } from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -180,7 +180,7 @@ export default class Collection {
           id:      options.synced || options.forceUUID ? record.id : uuid4(),
           _status: options.synced ? "synced" : "created"
         });
-        if (!isUUID(newRecord.id))
+        if (!isUUID4(newRecord.id))
           reject(new Error(`Invalid UUID: ${newRecord.id}`));
         store.add(newRecord);
         transaction.onerror = event => reject(new Error(event.target.error));
@@ -210,7 +210,7 @@ export default class Collection {
         return Promise.reject(new Error("Record is not an object."));
       if (!record.id)
         return Promise.reject(new Error("Cannot update a record missing id."));
-      if (!isUUID(record.id))
+      if (!isUUID4(record.id))
         return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
@@ -259,7 +259,7 @@ export default class Collection {
    */
   get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
-      if (!isUUID(id))
+      if (!isUUID4(id))
         throw new Error(`Invalid UUID: ${id}`);
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
@@ -293,7 +293,7 @@ export default class Collection {
    */
   delete(id, options={virtual: true}) {
     return this.open().then(() => {
-      if (!isUUID(id))
+      if (!isUUID4(id))
         throw new Error(`Invalid UUID: ${id}`);
       // Ensure the record actually exists.
       return this.get(id, {includeDeleted: true}).then(res => {
