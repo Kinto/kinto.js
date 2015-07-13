@@ -9,7 +9,8 @@ import {
   sortObjects,
   filterObjects,
   reduceRecords,
-  partition
+  partition,
+  isUUID
 } from "../src/utils";
 
 chai.should();
@@ -175,17 +176,32 @@ describe("Utils", () => {
     });
   });
 
-  describe("#partition", function() {
-    it("should chunk array", function() {
+  describe("#partition", () => {
+    it("should chunk array", () => {
       expect(partition([1, 2, 3], 2)).eql([[1, 2], [3]]);
       expect(partition([1, 2, 3], 1)).eql([[1], [2], [3]]);
       expect(partition([1, 2, 3, 4, 5], 3)).eql([[1, 2, 3], [4, 5]]);
       expect(partition([1, 2], 2)).eql([[1, 2]]);
     });
 
-    it("should not chunk array with n<=0", function() {
+    it("should not chunk array with n<=0", () => {
       expect(partition([1, 2, 3], 0)).eql([1, 2, 3]);
       expect(partition([1, 2, 3], -1)).eql([1, 2, 3]);
+    });
+  });
+
+  describe("#isUUID", () => {
+    it("should check that a string uses a valid UUID format", () => {
+      expect(isUUID("110ec58a-a0f2-4ac4-8393-c866d813b8d1")).eql(true);
+    });
+
+    it("should check that a string does not use a valid UUID format", () => {
+      expect(isUUID("110ex58a-a0f2-4ac4-8393-c866d813b8d1")).eql(false);
+      expect(isUUID("")).eql(false);
+      expect(isUUID(null)).eql(false);
+      expect(isUUID(undefined)).eql(false);
+      expect(isUUID(42)).eql(false);
+      expect(isUUID({})).eql(false);
     });
   });
 });

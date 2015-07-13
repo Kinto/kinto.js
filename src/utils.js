@@ -1,5 +1,7 @@
 "use strict";
 
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /**
  * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
  * This piece of code will register them with the same names as native API,
@@ -114,4 +116,14 @@ export function partition(array, n) {
       acc[acc.length - 1].push(x);
     return acc;
   }, []);
+}
+
+/**
+ * Checks if a string is an UUID, according to RFC4122.
+ *
+ * @param  {String} uuid The uuid to validate.
+ * @return {Boolean}
+ */
+export function isUUID(uuid) {
+  return RE_UUID.test(uuid);
 }

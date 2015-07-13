@@ -185,13 +185,19 @@ describe("Collection", () => {
     });
 
     it("should support the forceUUID option", () => {
-      return articles.create({id: 42, title: "foo"}, {forceUUID: true})
+      const testUUID = uuid4();
+      return articles.create({id: testUUID, title: "foo"}, {forceUUID: true})
         .then(result => articles.get(result.data.id))
         .then(res => res.data.id)
-        .should.become(42);
+        .should.become(testUUID);
     });
 
-    it("should reject on transaction error", function() {
+    it("should validate record's UUID when provided", () => {
+      return articles.create({id: 42, title: "foo"}, {forceUUID: true})
+        .should.be.rejectedWith(Error, /UUID/);
+    });
+
+    it("should reject on transaction error", () => {
       sandbox.stub(articles, "prepare").returns({
         store: {add() {}},
         transaction: {
@@ -238,7 +244,7 @@ describe("Collection", () => {
     });
 
     it("should reject updates on a non-existent record", () => {
-      return articles.update({id: "non-existent"})
+      return articles.update({id: uuid4()})
         .should.be.rejectedWith(Error, /not found/);
     });
 
@@ -252,7 +258,7 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /missing id/);
     });
 
-    it("should reject on transaction error", function() {
+    it("should reject on transaction error", () => {
       sandbox.stub(articles, "get").returns(Promise.resolve());
       sandbox.stub(articles, "prepare").returns({
         store: {get() {}, put() {}},
@@ -263,7 +269,7 @@ describe("Collection", () => {
           }
         }
       });
-      return articles.update({id: 1, foo: "bar"})
+      return articles.update({id: uuid4(), foo: "bar"})
         .should.be.rejectedWith(Error, "transaction error");
     });
 
@@ -333,7 +339,7 @@ describe("Collection", () => {
     });
 
     it("should reject in case of record not found", () => {
-      return articles.get("non-existent")
+      return articles.get(uuid4())
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);
     });
@@ -354,7 +360,7 @@ describe("Collection", () => {
       // body...
     });
 
-    it("should reject on transaction error", function() {
+    it("should reject on transaction error", () => {
       sandbox.stub(articles, "prepare").returns({
         store: {get() {}},
         transaction: {
@@ -364,7 +370,7 @@ describe("Collection", () => {
           }
         }
       });
-      return articles.get(1)
+      return articles.get(uuid4())
         .should.be.rejectedWith(Error, "transaction error");
     });
 
@@ -399,7 +405,7 @@ describe("Collection", () => {
       });
 
       it("should reject on non-existent record", () => {
-        return articles.delete("non-existent", {virtual: true})
+        return articles.delete(uuid4(), {virtual: true})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
@@ -424,13 +430,13 @@ describe("Collection", () => {
       });
 
       it("should reject on non-existent record", () => {
-        return articles.delete("non-existent", {virtual: false})
+        return articles.delete(uuid4(), {virtual: false})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
     });
 
-    it("should reject on transaction error", function() {
+    it("should reject on transaction error", () => {
       sandbox.stub(articles, "get").returns(Promise.resolve());
       sandbox.stub(articles, "prepare").returns({
         store: {delete() {}},
@@ -441,7 +447,7 @@ describe("Collection", () => {
           }
         }
       });
-      return articles.delete(1, {virtual: false})
+      return articles.delete(uuid4(), {virtual: false})
         .should.be.rejectedWith(Error, "transaction error");
     });
   });
@@ -587,14 +593,14 @@ describe("Collection", () => {
       });
     });
 
-    describe("Error handling", function() {
+    describe("Error handling", () => {
       var articles;
 
       beforeEach(() => {
         articles = testCollection();
       });
 
-      it("should reject on transaction error", function() {
+      it("should reject on transaction error", () => {
         sandbox.stub(articles, "prepare").returns({
           store: {openCursor() {return {}}},
           transaction: {
@@ -619,17 +625,24 @@ describe("Collection", () => {
     });
 
     describe("When no conflicts occured", () => {
+      const uuid_1 = uuid4();
+      const uuid_2 = uuid4();
+      const uuid_3 = uuid4();
+      const uuid_4 = uuid4();
+      const uuid_5 = uuid4();
+      const uuid_6 = uuid4();
+
       const localData = [
-        {id: 1, title: "art1"},
-        {id: 2, title: "art2"},
-        {id: 4, title: "art4"},
-        {id: 5, title: "art5"},
+        {id: uuid_1, title: "art1"},
+        {id: uuid_2, title: "art2"},
+        {id: uuid_4, title: "art4"},
+        {id: uuid_5, title: "art5"},
       ];
       const serverChanges = [
-        {id: 2, title: "art2"}, // existing, should simply be marked as synced
-        {id: 3, title: "art3"}, // to be created
-        {id: 4, deleted: true}, // to be deleted
-        {id: 6, deleted: true}, // remotely deleted, missing locally
+        {id: uuid_2, title: "art2"}, // existing, should simply be marked as synced
+        {id: uuid_3, title: "art3"}, // to be created
+        {id: uuid_4, deleted: true}, // to be deleted
+        {id: uuid_6, deleted: true}, // remotely deleted, missing locally
       ];
 
       beforeEach(() => {
@@ -669,7 +682,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.created)
           .should.eventually.become([
-            {id: 3, title: "art3", _status: "synced"}
+            {id: uuid_3, title: "art3", _status: "synced"}
           ]);
       });
 
@@ -677,7 +690,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.updated)
           .should.eventually.become([
-            {id: 2, title: "art2", _status: "synced"}
+            {id: uuid_2, title: "art2", _status: "synced"}
           ]);
       });
 
@@ -685,7 +698,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
           .should.eventually.become([
-            {id: 4}
+            {id: uuid_4}
           ]);
       });
 
@@ -697,13 +710,13 @@ describe("Collection", () => {
 
       it("should actually import changes into the collection", () => {
         return articles.pullChanges(result)
-          .then(_ => articles.list())
+          .then(_ => articles.list({order: "title"}))
           .then(res => res.data)
           .should.eventually.become([
-            {id: 1, title: "art1", _status: "synced"},
-            {id: 2, title: "art2", _status: "synced"},
-            {id: 3, title: "art3", _status: "synced"},
-            {id: 5, title: "art5", _status: "synced"},
+            {id: uuid_1, title: "art1", _status: "synced"},
+            {id: uuid_2, title: "art2", _status: "synced"},
+            {id: uuid_3, title: "art3", _status: "synced"},
+            {id: uuid_5, title: "art5", _status: "synced"},
           ]);
       });
 
@@ -823,7 +836,7 @@ describe("Collection", () => {
       result = new SyncResultObject();
       return Promise.all([
         articles.create({title: "foo"}),
-        articles.create({id: "fake-uuid", title: "bar"}, {synced: true}),
+        articles.create({id: uuid4(), title: "bar"}, {synced: true}),
       ])
         .then(results => records = results.map(res => res.data));
     });
