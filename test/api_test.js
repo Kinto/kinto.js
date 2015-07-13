@@ -540,6 +540,33 @@ describe("Api", () => {
           .then(res => res.published)
           .should.become([1, 2, 3, 4]);
       });
+
+      it("should chunk batch requests concurrently", () => {
+        sandbox.stub(root, "fetch")
+          .onFirstCall().returns(new Promise(resolve => {
+            setTimeout(() => {
+              resolve(fakeServerResponse(200, {
+                responses: [
+                  {status: 200, body: {data: 1}},
+                  {status: 200, body: {data: 2}},
+                  {status: 200, body: {data: 3}},
+                ]
+              }));
+            }, 100);
+          }))
+          .onSecondCall().returns(new Promise(resolve => {
+            setTimeout(() => {
+              resolve(fakeServerResponse(200, {
+                responses: [
+                  {status: 200, body: {data: 4}},
+                ]
+              }));
+            }, 5);
+          }));
+        return api.batch("blog", "articles", moreOperations)
+          .then(res => res.published)
+          .should.become([1, 2, 3, 4]);
+      });
     });
   });
 
