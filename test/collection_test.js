@@ -258,6 +258,11 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /missing id/);
     });
 
+    it("should validate record's UUID when provided", () => {
+      return articles.update({id: 42})
+        .should.be.rejectedWith(Error, /UUID/);
+    });
+
     it("should reject on transaction error", () => {
       sandbox.stub(articles, "get").returns(Promise.resolve());
       sandbox.stub(articles, "prepare").returns({
