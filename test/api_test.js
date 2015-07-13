@@ -541,6 +541,41 @@ describe("Api", () => {
           .should.become([1, 2, 3, 4]);
       });
 
+      it("should map initial records to conflict objects", () => {
+        sandbox.stub(root, "fetch")
+          .onFirstCall().returns(fakeServerResponse(200, {
+            responses: [
+              {status: 412, body: {data: 1}},
+              {status: 412, body: {data: 2}},
+              {status: 412, body: {data: 3}},
+            ]
+          }))
+          .onSecondCall().returns(fakeServerResponse(200, {
+            responses: [
+              {status: 412, body: {data: 4}},
+            ]
+          }));
+        return api.batch("blog", "articles", moreOperations)
+          .then(res => res.conflicts)
+          .should.become([{
+            type: "outgoing",
+            local: {id: 1, title: "foo"},
+            remote: {data: 1}
+          }, {
+            type: "outgoing",
+            local: {id: 2, title: "bar"},
+            remote: {data: 2}
+          }, {
+            type: "outgoing",
+            local: {id: 3, title: "baz"},
+            remote: {data: 3}
+          }, {
+            type: "outgoing",
+            local: {id: 4, title: "qux"},
+            remote: {data: 4}
+          }]);
+      });
+
       it("should chunk batch requests concurrently", () => {
         sandbox.stub(root, "fetch")
           .onFirstCall().returns(new Promise(resolve => {
