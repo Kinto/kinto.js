@@ -2,13 +2,11 @@
 
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
+import request from "./http.js";
+import { partition } from "./utils.js";
 
-export const SUPPORTED_PROTOCOL_VERSION = "v1";
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
-const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
-};
+export const SUPPORTED_PROTOCOL_VERSION = "v1";
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
@@ -17,23 +15,6 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
     return acc;
   }, {});
 };
-
-/**
- * Handles a server error response; will throw an error with response json body
- * attached to a `data` property.
- *
- * @param  {Response} response The server response object.
- * @param  {Object}   json     The json response body.
- * @throws Error
- */
-function _handleServerError(response, json, options={prefix: ""}) {
-  var message = `${options.prefix} HTTP ${response.status} `;
-  if (json.errno && ERROR_CODES.hasOwnProperty(json.errno))
-    message += ERROR_CODES[json.errno];
-  const err = new Error(message.trim());
-  err.data = json;
-  throw err;
-}
 
 export default class Api {
   constructor(remote, options={headers: {}}) {
@@ -81,21 +62,9 @@ export default class Api {
   fetchServerSettings() {
     if (this.serverSettings)
       return Promise.resolve(this.serverSettings);
-    var response;
-    const errPrefix = "Fetching server settings failed";
-    return fetch(this.endpoints().root(), {
-      headers: DEFAULT_REQUEST_HEADERS
-    })
+    return request(this.endpoints().root())
       .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        this.serverSettings = json.settings;
+        this.serverSettings = res.json.settings;
         return this.serverSettings;
       });
   }
@@ -110,10 +79,8 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    const errPrefix = "Fetching changes failed:";
-    var newLastModified, response, queryString = "";
+    var queryString = "";
     var headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
       this.optionHeaders,
       options.headers
     );
@@ -124,33 +91,21 @@ export default class Api {
     }
 
     return this.fetchServerSettings()
-      .then(_ => fetch(recordsUrl + queryString, {headers}))
+      .then(_ => request(recordsUrl + queryString, {headers}))
       .then(res => {
-        response = res;
+        var results;
         // If HTTP 304, nothing has changed
-        if (response.status === 304) {
-          newLastModified = options.lastModified;
-          return {data: []};
-        } else {
-          return response.json();
+        if (res.status === 304) {
+          return {
+            lastModified: options.lastModified,
+            changes: []
+          };
         }
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix}: HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        } else {
-          const etag = response.headers.get("ETag");  // e.g. '"42"'
-          // XXX: ETag are supposed to be opaque and stored «as-is».
-          if (etag)
-            newLastModified = parseInt(unquote(etag), 10);
-        }
+        // XXX: ETag are supposed to be opaque and stored «as-is».
+        const etag = res.headers.get("ETag");  // e.g. '"42"'
         return {
-          lastModified: newLastModified,
-          changes: json.data
+          lastModified: etag ? parseInt(unquote(etag), 10) : options.lastModified,
+          changes: res.json.data
         };
       });
   }
@@ -181,6 +136,45 @@ export default class Api {
   }
 
   /**
+   * Process a batch request response.
+   *
+   * @param  {Object}  results          The results object.
+   * @param  {Array}   records          The initial records list.
+   * @param  {Number}  response.status  The response HTTP status.
+   * @param  {Object}  response.json    The response JSON body.
+   * @param  {Headers} response.headers The response headers object.
+   * @return {Promise}
+   */
+  _processBatchResponses(results, records, {status, json, headers}) {
+    // Handle individual batch subrequests responses
+    json.responses.forEach((response, index) => {
+      // TODO: handle 409 when unicity rule is violated (ex. POST with
+      // existing id, unique field, etc.)
+      if (response.status && response.status >= 200 && response.status < 400) {
+        results.published.push(response.body.data);
+      } else if (response.status === 404) {
+        results.skipped.push(response.body);
+      } else if (response.status === 412) {
+        results.conflicts.push({
+          type: "outgoing",
+          local: records[index],
+          // TODO: Once we get record information in this response object,
+          // add it; for now, that's the error json body only.
+          // Ref https://github.com/mozilla-services/kinto/issues/122
+          remote: response.body
+        });
+      } else {
+        results.errors.push({
+          path: response.path,
+          sent: records[index],
+          error: response.body
+        });
+      }
+    });
+    return results;
+  }
+
+  /**
    * Sends batch update requests to the remote server.
    *
    * TODO: If more than X results (default is 25 on server), split in several
@@ -193,14 +187,8 @@ export default class Api {
    * @return {Promise}
    */
   batch(bucketName, collName, records, options={headers: {}}) {
-    var response;
     const safe = options.safe || true;
-    const errPrefix = "BATCH request failed:";
-    const headers = Object.assign({},
-      DEFAULT_REQUEST_HEADERS,
-      this.optionHeaders,
-      options.headers
-    );
+    const headers = Object.assign({}, this.optionHeaders, options.headers);
     const results = {
       errors:    [],
       published: [],
@@ -211,7 +199,21 @@ export default class Api {
       return Promise.resolve(results);
     return this.fetchServerSettings()
       .then(serverSettings => {
-        return fetch(this.endpoints().batch(), {
+        const maxRequests = serverSettings["cliquet.batch_max_requests"];
+        if (records.length > maxRequests) {
+          return Promise.all(partition(records, maxRequests).map(chunk => {
+            return this.batch(bucketName, collName, chunk, options);
+          }))
+            .then(batchResults => {
+              return batchResults.reduce((acc, batchResult) => {
+                Object.keys(batchResult).forEach(key => {
+                  acc[key] = results[key].concat(batchResult[key]);
+                });
+                return acc;
+              }, results);
+            });
+        }
+        return request(this.endpoints().batch(), {
           method: "POST",
           headers: headers,
           body: JSON.stringify({
@@ -222,47 +224,8 @@ export default class Api {
               return this._buildRecordBatchRequest(record, path, safe);
             })
           })
-        });
-      })
-      .then(res => {
-        response = res;
-        return res.json();
-      })
-      .catch(err => {
-        const httpStatus = response && response.status || 0;
-        throw new Error(`${errPrefix} HTTP ${httpStatus}; ${err}`);
-      })
-      .then(json => {
-        // Handle main request errors
-        if (response.status >= 400) {
-          _handleServerError(response, json, {prefix: errPrefix});
-        }
-        // Handle individual batch subrequests responses
-        json.responses.forEach((response, index) => {
-          // TODO: handle 409 when unicity rule is violated (ex. POST with
-          // existing id, unique field, etc.)
-          if (response.status && response.status >= 200 && response.status < 400) {
-            results.published.push(response.body.data);
-          } else if (response.status === 404) {
-            results.skipped.push(response.body);
-          } else if (response.status === 412) {
-            results.conflicts.push({
-              type: "outgoing",
-              local: records[index],
-              // TODO: Once we get record information in this response object,
-              // add it; for now, that's the error json body only.
-              // Ref https://github.com/mozilla-services/kinto/issues/122
-              remote: response.body
-            });
-          } else {
-            results.errors.push({
-              path: response.path,
-              sent: records[index],
-              error: response.body
-            });
-          }
-        });
-        return results;
+        })
+          .then(res => this._processBatchResponses(results, records, res));
       });
   }
 }

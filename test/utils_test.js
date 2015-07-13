@@ -8,7 +8,8 @@ import {
   unquote,
   sortObjects,
   filterObjects,
-  reduceRecords
+  reduceRecords,
+  partition
 } from "../src/utils";
 
 chai.should();
@@ -171,6 +172,20 @@ describe("Utils", () => {
         {title: "c", unread: false, complete: true},
         {title: "b", unread: false, complete: true},
       ]);
+    });
+  });
+
+  describe("#partition", function() {
+    it("should chunk array", function() {
+      expect(partition([1, 2, 3], 2)).eql([[1, 2], [3]]);
+      expect(partition([1, 2, 3], 1)).eql([[1], [2], [3]]);
+      expect(partition([1, 2, 3, 4, 5], 3)).eql([[1, 2, 3], [4, 5]]);
+      expect(partition([1, 2], 2)).eql([[1, 2]]);
+    });
+
+    it("should not chunk array with n<=0", function() {
+      expect(partition([1, 2, 3], 0)).eql([1, 2, 3]);
+      expect(partition([1, 2, 3], -1)).eql([1, 2, 3]);
     });
   });
 });

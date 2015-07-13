@@ -96,3 +96,22 @@ export function filterObjects(filters, list) {
 export function reduceRecords(filters, order, list) {
   return sortObjects(order, filterObjects(filters, list));
 }
+
+/**
+ * Chunks an array into n pieces.
+ *
+ * @param  {Array}  array
+ * @param  {Number} n
+ * @return {Array}
+ */
+export function partition(array, n) {
+  if (n <= 0)
+    return array;
+  return array.reduce((acc, x, i) => {
+    if (i === 0 || i % n === 0)
+      acc.push([x]);
+    else
+      acc[acc.length - 1].push(x);
+    return acc;
+  }, []);
+}
