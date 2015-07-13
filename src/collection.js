@@ -3,7 +3,7 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import { attachFakeIDBSymbolsTo, reduceRecords } from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -180,6 +180,8 @@ export default class Collection {
           id:      options.synced || options.forceUUID ? record.id : uuid4(),
           _status: options.synced ? "synced" : "created"
         });
+        if (!isUUID4(newRecord.id))
+          reject(new Error(`Invalid UUID: ${newRecord.id}`));
         store.add(newRecord);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => {
@@ -208,6 +210,8 @@ export default class Collection {
         return Promise.reject(new Error("Record is not an object."));
       if (!record.id)
         return Promise.reject(new Error("Cannot update a record missing id."));
+      if (!isUUID4(record.id))
+        return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
       return this.get(record.id).then(_ => {
         return new Promise((resolve, reject) => {
           var newStatus = "updated";
@@ -247,7 +251,7 @@ export default class Collection {
   }
 
   /**
-   * Retrieve a record by its id from the local database.
+   * Retrieve a record by its uuid from the local database.
    *
    * @param  {String} id
    * @param  {Object} options
@@ -255,6 +259,8 @@ export default class Collection {
    */
   get(id, options={includeDeleted: false}) {
     return this.open().then(() => {
+      if (!isUUID4(id))
+        throw new Error(`Invalid UUID: ${id}`);
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
         const request = store.get(id);
@@ -281,12 +287,14 @@ export default class Collection {
    * - {Boolean} virtual: When set to true, doesn't actually delete the record,
    *                      update its _status attribute to "deleted" instead.
    *
-   * @param  {String} id
-   * @param  {Object} options
+   * @param  {String} id       The record's UUID.
+   * @param  {Object} options  The options object.
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
     return this.open().then(() => {
+      if (!isUUID4(id))
+        throw new Error(`Invalid UUID: ${id}`);
       // Ensure the record actually exists.
       return this.get(id, {includeDeleted: true}).then(res => {
         if (options.virtual) {
