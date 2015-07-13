@@ -7,7 +7,7 @@ fi
 
 REPO_ROOT=`pwd`
 KINTO_ROOT=/var/tmp/kinto
-KINTO_RELEASE=1.2.0
+KINTO_RELEASE=1.3.0
 
 git clone https://github.com/mozilla-services/kinto.git $KINTO_ROOT
 cd $KINTO_ROOT
