@@ -332,6 +332,11 @@ describe("Collection", () => {
         .should.eventually.eql(article.title);
     });
 
+    it("should validate passed id", () => {
+      return articles.get(42)
+        .should.be.rejectedWith(Error, /UUID/);
+    });
+
     it("should have record status info attached", () => {
       return articles.get(uuid)
         .then(res => res.data._status)
@@ -387,6 +392,11 @@ describe("Collection", () => {
       articles = testCollection();
       return articles.create(article)
         .then(result => uuid = result.data.id);
+    });
+
+    it("should validate passed id", () => {
+      return articles.delete(42)
+        .should.be.rejectedWith(Error, /UUID/);
     });
 
     describe("Virtual", () => {
