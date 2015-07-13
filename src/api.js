@@ -205,6 +205,8 @@ export default class Api {
             return this.batch(bucketName, collName, chunk, options);
           }))
             .then(batchResults => {
+              // Assemble responses of chunked batch results into one single
+              // result object
               return batchResults.reduce((acc, batchResult) => {
                 Object.keys(batchResult).forEach(key => {
                   acc[key] = results[key].concat(batchResult[key]);
