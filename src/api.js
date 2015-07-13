@@ -158,10 +158,7 @@ export default class Api {
         results.conflicts.push({
           type: "outgoing",
           local: records[index],
-          // TODO: Once we get record information in this response object,
-          // add it; for now, that's the error json body only.
-          // Ref https://github.com/mozilla-services/kinto/issues/122
-          remote: response.body
+          remote: response.body.details && response.body.details.existing || null
         });
       } else {
         results.errors.push({

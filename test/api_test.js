@@ -494,7 +494,11 @@ describe("Api", () => {
             responses: [
               { status: 412,
                 path: `/${SPV}/buckets/blog/collections/articles/records/1`,
-                body: { invalid: true }},
+                body: {
+                  details: {
+                    existing: {title: "foo"}
+                  }
+                }},
             ]
           }));
 
@@ -503,7 +507,7 @@ describe("Api", () => {
               conflicts: [{
                 type: "outgoing",
                 local: published[0],
-                remote: { invalid: true }
+                remote: {title: "foo"}
               }],
               skipped:   [],
               errors:    [],
@@ -545,34 +549,34 @@ describe("Api", () => {
         sandbox.stub(root, "fetch")
           .onFirstCall().returns(fakeServerResponse(200, {
             responses: [
-              {status: 412, body: {data: 1}},
-              {status: 412, body: {data: 2}},
-              {status: 412, body: {data: 3}},
+              {status: 412, body: {details: {existing: {id: 1}}}},
+              {status: 412, body: {details: {existing: {id: 2}}}},
+              {status: 412, body: {details: {existing: {id: 3}}}},
             ]
           }))
           .onSecondCall().returns(fakeServerResponse(200, {
             responses: [
-              {status: 412, body: {data: 4}},
+              {status: 412, body: {details: {existing: {id: 4}}}},
             ]
           }));
         return api.batch("blog", "articles", moreOperations)
           .then(res => res.conflicts)
           .should.become([{
             type: "outgoing",
-            local: {id: 1, title: "foo"},
-            remote: {data: 1}
+            local:  {id: 1, title: "foo"},
+            remote: {id: 1}
           }, {
             type: "outgoing",
-            local: {id: 2, title: "bar"},
-            remote: {data: 2}
+            local:  {id: 2, title: "bar"},
+            remote: {id: 2}
           }, {
             type: "outgoing",
-            local: {id: 3, title: "baz"},
-            remote: {data: 3}
+            local:  {id: 3, title: "baz"},
+            remote: {id: 3}
           }, {
             type: "outgoing",
-            local: {id: 4, title: "qux"},
-            remote: {data: 4}
+            local:  {id: 4, title: "qux"},
+            remote: {id: 4}
           }]);
       });
 

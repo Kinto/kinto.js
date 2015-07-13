@@ -213,13 +213,7 @@ describe("Integration tests", () => {
         expect(syncResult.conflicts).to.have.length.of(1);
         expect(syncResult.conflicts[0].type).eql("outgoing");
         expect(syncResult.conflicts[0].local.title).eql("foo");
-        // TODO: https://github.com/mozilla-services/kinto/issues/122
-        expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
-          "code": 412,
-          "errno": 999,
-          "error": "Precondition Failed",
-          "message": "Failed batch subrequest",
-        });
+        expect(syncResult.conflicts[0].remote.title).eql("foo");
       });
 
       it("should not have skipped records", () => {
