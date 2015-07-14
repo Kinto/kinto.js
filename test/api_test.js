@@ -551,7 +551,7 @@ describe("Api", () => {
             responses: [
               {status: 412, body: {details: {existing: {id: 1}}}},
               {status: 412, body: {details: {existing: {id: 2}}}},
-              {status: 412, body: {details: {existing: {id: 3}}}},
+              {status: 412, body: {}},
             ]
           }))
           .onSecondCall().returns(fakeServerResponse(200, {
@@ -572,7 +572,7 @@ describe("Api", () => {
           }, {
             type: "outgoing",
             local:  {id: 3, title: "baz"},
-            remote: {id: 3}
+            remote: null
           }, {
             type: "outgoing",
             local:  {id: 4, title: "qux"},
