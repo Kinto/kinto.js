@@ -20,6 +20,8 @@ export default class Api {
   constructor(remote, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
+    if (remote[remote.length-1] === "/")
+      remote = remote.slice(0, -1);
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
