@@ -199,7 +199,7 @@ export default class Api {
     return this.fetchServerSettings()
       .then(serverSettings => {
         const maxRequests = serverSettings["cliquet.batch_max_requests"];
-        if (records.length > maxRequests) {
+        if (maxRequests && records.length > maxRequests) {
           return Promise.all(partition(records, maxRequests).map(chunk => {
             return this.batch(bucketName, collName, chunk, options);
           }))
