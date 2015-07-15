@@ -141,21 +141,6 @@ describe("Api", () => {
         .should.eventually.become({"cliquet.batch_max_requests": 25});
     });
 
-    it("should reject on fetch errors", () => {
-      sandbox.stub(root, "fetch").returns(Promise.resolve({
-        status: 500,
-        headers: {
-          get() {}
-        },
-        json() {
-          return Promise.reject("weird error");
-        }
-      }));
-
-      return api.fetchServerSettings()
-        .should.be.rejectedWith(Error, /HTTP 500; weird error/);
-    });
-
     it("should store server settings into the serverSettings property", () => {
       api.serverSettings = {a: 1};
       sandbox.stub(root, "fetch");
@@ -262,21 +247,6 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles")
           .catch(err => err.data)
           .should.eventually.become(response);
-      });
-
-      it("should reject on on invalid json response body", () => {
-        sandbox.stub(root, "fetch").returns(Promise.resolve({
-          status: 500,
-          headers: {
-            get() {}
-          },
-          json() {
-            return Promise.reject("JSON Error");
-          }
-        }));
-
-        return api.fetchChangesSince("blog", "articles")
-          .should.eventually.be.rejectedWith(Error, /HTTP 500; JSON Error/);
       });
     });
   });

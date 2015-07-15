@@ -67,6 +67,15 @@ describe("request()", () => {
   });
 
   describe("No content response", () => {
+    it("should resolve with null JSON if Content-Length header is missing", () => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, "", {"Content-Length": undefined}));
+
+      return request("/")
+        .then(res => res.json)
+        .should.eventually.become(null);
+    });
+
     it("should resolve with null JSON if Content-Length is 0", () => {
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, "", {"Content-Length": 0}));

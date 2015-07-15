@@ -29,7 +29,8 @@ export default function request(url, options={headers:{}}) {
       headers = res.headers;
       status = res.status;
       statusText = res.statusText;
-      if (headers.get("Content-Length") == 0) // 0 or "0"
+      const contentLength = headers.get("Content-Length");
+      if (!contentLength || contentLength == 0)
         return null;
       return res.json();
     })
