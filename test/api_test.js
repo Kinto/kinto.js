@@ -39,8 +39,13 @@ describe("Api", () => {
         .to.Throw(Error, /The remote URL must contain the version/);
     });
 
+    it("should strip any trailing slash", () => {
+      expect(new Api(`http://test/${SPV}/`).remote).eql(`http://test/${SPV}`);
+    });
+
     it("should assign version value", () => {
       expect(new Api(`http://test/${SPV}`).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}/`).version).eql(SPV);
     });
 
     it("should accept a headers option", () => {
