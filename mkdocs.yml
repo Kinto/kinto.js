@@ -4,4 +4,5 @@ pages:
 - Tutorial: tutorial.md
 - Api: api.md
 - Hacking: hacking.md
+- Limitations: limitations.md
 theme: readthedocs
