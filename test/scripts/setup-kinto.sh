@@ -15,3 +15,7 @@ git checkout $KINTO_RELEASE
 cp $REPO_ROOT/test/scripts/kinto.ini $KINTO_ROOT/config/kinto.ini
 
 make serve &
+
+#Prevent race condition where integration tests start while server 
+# isn't running yet.
+sleep 3

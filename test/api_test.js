@@ -545,6 +545,17 @@ describe("Api", () => {
           .should.become([1, 2, 3, 4]);
       });
 
+      it("should not chunk batch requests if setting is falsy", () => {
+        api.fetchServerSettings.returns(Promise.resolve({
+          "cliquet.batch_max_requests": null
+        }));
+        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+          responses: []
+        }));
+        return api.batch("blog", "articles", moreOperations)
+          .then(_ => sinon.assert.calledOnce(fetch));
+      });
+
       it("should map initial records to conflict objects", () => {
         sandbox.stub(root, "fetch")
           .onFirstCall().returns(fakeServerResponse(200, {
