@@ -14,13 +14,11 @@ Code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
 
     $ npm test
 
-This will also run code coverage and send the report to [Coveralls](http://coveralls.io/). Alternatives:
+Code coverage reporting:
 
-    $ npm run test-nocover    # runs tests skipping code coverage
-    $ npm run test-cover      # runs tests, code coverage; doesn't send results
-    $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report
-
-Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
+    $ npm run test-cover       # runs tests, code coverage
+    $ npm run test-cover-html  # runs tests, code coverage and generates a html report
+    $ open coverage/index.html # opens that fancy html report
 
 ### TDD mode
 
