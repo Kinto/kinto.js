@@ -10,7 +10,7 @@
     "dist-prod": "browserify -s Kinto -x fake-indexeddb -g uglifyify -e src/index.js -o dist/kinto.min.js && cp dist/kinto.min.js demo/",
     "report-coverage": "./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "tdd": "mocha -w --compilers js:babel/register test/*_test.js",
-    "test": "make test",
+    "test": "make tests",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha && open coverage/index.html",
     "test-nocover": "mocha --compilers js:babel/register test/*_test.js",
