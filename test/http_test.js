@@ -101,7 +101,8 @@ describe("request()", () => {
         status: 200,
         headers: {
           get(name) {
-            return "fake";
+            if (name !== "Alert")
+              return "fake";
           }
         },
         json() {
@@ -133,6 +134,41 @@ describe("request()", () => {
 
       return request("/")
         .should.be.rejectedWith(Error, /HTTP 400; Invalid request parameter: data is missing/);
+    });
+  });
+
+  describe("Deprecation header", () => {
+    beforeEach(() => {
+      sandbox.stub(console, "warn");
+    });
+
+    it("should handle deprecation header", () => {
+      const eolObject = {
+        code:    "soft-eol",
+        url:     "http://eos-url",
+        message: "This service will soon be decommissioned",
+      };
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {}, {Alert: JSON.stringify(eolObject)}));
+
+      return request("/")
+        .then(_ => {
+          sinon.assert.calledOnce(console.warn);
+          sinon.assert.calledWithExactly(
+            console.warn, eolObject.message, eolObject.url);
+        });
+    });
+
+    it("should handle deprecation header parse error", () => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {}, {Alert: "dafuq"}));
+
+      return request("/")
+        .then(_ => {
+          sinon.assert.calledOnce(console.warn);
+          sinon.assert.calledWithExactly(
+            console.warn, "Unable to parse Alert header message", "dafuq");
+        });
     });
   });
 });
