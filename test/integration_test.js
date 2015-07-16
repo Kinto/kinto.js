@@ -16,19 +16,35 @@ const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
 describe("Integration tests", () => {
   var tasks;
+  const MAX_ATTEMPTS = 50;
 
-  beforeEach(() => {
+  function flushServer(attempt=1) {
+    return fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"})
+      .then(res => {
+        if (res.status !== 202)
+          throw new Error("Unable to flush test server.");
+      })
+      .catch(err => {
+        // Prevent race condition where integration tests start while server
+        // isn't running yet.
+        if (/ECONNREFUSED/.test(err.message) && attempt < MAX_ATTEMPTS) {
+          return new Promise(resolve => {
+            setTimeout(_ => resolve(flushServer(attempt++)), 250);
+          });
+        }
+        throw err;
+      });
+  }
+
+  beforeEach(function() {
+    this.timeout(12500);
+
     tasks = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: {Authorization: "Basic " + btoa("user:pass")}
     }).collection("tasks");
 
-    return tasks.clear()
-      .then(_ => fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"}))
-      .then(res => {
-        if (res.status !== 202)
-          throw new Error("Unable to flush test server.");
-      });
+    return tasks.clear().then(_ => flushServer());
   });
 
   function testSync(data) {
