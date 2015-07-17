@@ -7,6 +7,18 @@ export const DEFAULT_REQUEST_HEADERS = {
   "Content-Type": "application/json",
 };
 
+function checkForDeprecationHeader(headers) {
+  const alertHeader = headers.get("Alert");
+  if (!alertHeader)
+    return;
+  try {
+    const {message, url} = JSON.parse(alertHeader);
+    console.warn(message, url);
+  } catch(err) {
+    console.warn("Unable to parse Alert header message", alertHeader);
+  }
+}
+
 /**
  * Performs an HTTP request to the Kinto server. Resolves with an objet
  * containing the following properties:
@@ -32,6 +44,7 @@ export default function request(url, options={headers:{}}) {
       const contentLength = headers.get("Content-Length");
       if (!contentLength || contentLength == 0)
         return null;
+      checkForDeprecationHeader(headers);
       return res.json();
     })
     .catch(err => {
