@@ -127,3 +127,12 @@ export function partition(array, n) {
 export function isUUID4(uuid) {
   return RE_UUID.test(uuid);
 }
+
+/**
+ * Returns the current UNIX timestamp.
+ *
+ * @return {Number}
+ */
+export function getUnixTime() {
+  return Math.floor(new Date().getTime() / 1000);
+}

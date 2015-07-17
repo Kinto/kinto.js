@@ -2,7 +2,7 @@
 
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
-import request from "./http.js";
+import HTTP from "./http.js";
 import { partition } from "./utils.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
@@ -32,6 +32,7 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
+    this.http = new HTTP();
   }
 
   /**
@@ -64,7 +65,7 @@ export default class Api {
   fetchServerSettings() {
     if (this.serverSettings)
       return Promise.resolve(this.serverSettings);
-    return request(this.endpoints().root())
+    return this.http.request(this.endpoints().root())
       .then(res => {
         this.serverSettings = res.json.settings;
         return this.serverSettings;
@@ -82,10 +83,7 @@ export default class Api {
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
     var queryString = "";
-    var headers = Object.assign({},
-      this.optionHeaders,
-      options.headers
-    );
+    var headers = Object.assign({}, this.optionHeaders, options.headers);
 
     if (options.lastModified) {
       queryString = "?_since=" + options.lastModified;
@@ -93,7 +91,7 @@ export default class Api {
     }
 
     return this.fetchServerSettings()
-      .then(_ => request(recordsUrl + queryString, {headers}))
+      .then(_ => this.http.request(recordsUrl + queryString, {headers}))
       .then(res => {
         var results;
         // If HTTP 304, nothing has changed
@@ -176,8 +174,9 @@ export default class Api {
   /**
    * Sends batch update requests to the remote server.
    *
-   * TODO: If more than X results (default is 25 on server), split in several
-   * calls. Related: https://github.com/mozilla-services/cliquet/issues/318
+   * Options:
+   * - {Object}  headers  Headers to attach to main and all subrequests.
+   * - {Boolean} safe     Safe update (default: true)
    *
    * @param  {String} bucketName  The bucket name.
    * @param  {String} collName    The collection name.
@@ -214,7 +213,7 @@ export default class Api {
               }, results);
             });
         }
-        return request(this.endpoints().batch(), {
+        return this.http.request(this.endpoints().batch(), {
           method: "POST",
           headers: headers,
           body: JSON.stringify({
