@@ -16,7 +16,9 @@ const root = typeof window === "object" ? window : global;
 describe("HTTP class", () => {
   var sandbox;
 
-  beforeEach(() => sandbox = sinon.sandbox.create());
+  beforeEach(() => {
+    sandbox = sinon.sandbox.create();
+  });
 
   afterEach(() => sandbox.restore());
 
@@ -213,20 +215,22 @@ describe("HTTP class", () => {
   });
 
   describe("#delayedRequest()", () => {
-    it("should delay the execution of a request", () => {
-      sandbox.stub(root, "setTimeout");
+    var http;
 
-      new HTTP().delayedRequest(100, "/");
-
-      expect(root.setTimeout.firstCall.args[1]).eql(100);
+    beforeEach(() => {
+      sandbox.useFakeTimers();
+      http = new HTTP();
+      sandbox.stub(http, "request");
     });
 
-    it("should execute the request after the delay is elapsed", () => {
-      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
+    it("should delay the execution of a request", () => {
+      http.delayedRequest(100, "/", {});
 
-      return new HTTP().delayedRequest(100, "/")
-        .then(res => res.status)
-        .should.become(200);
+      sinon.assert.notCalled(http.request);
+
+      sandbox.clock.tick(100);
+
+      sinon.assert.calledWithExactly(http.request, "/", {});
     });
   });
 });
