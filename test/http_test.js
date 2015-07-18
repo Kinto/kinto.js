@@ -3,7 +3,6 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import { DEFAULT_REQUEST_HEADERS as DRH } from "../src/http.js";
 import { fakeServerResponse } from "./test_utils.js";
 import HTTP from "../src/http.js";
 
@@ -37,7 +36,8 @@ describe("HTTP class", () => {
       it("should set default headers", () => {
         new HTTP().request("/");
 
-        expect(fetch.firstCall.args[1].headers).eql(DRH);
+        expect(fetch.firstCall.args[1].headers)
+          .eql(HTTP.DEFAULT_REQUEST_HEADERS);
       });
 
       it("should merge custom headers with default ones", () => {

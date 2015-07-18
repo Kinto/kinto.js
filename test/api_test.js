@@ -6,8 +6,6 @@ import sinon from "sinon";
 import { quote } from "../src/utils";
 import { fakeServerResponse } from "./test_utils.js";
 import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
-import { DEFAULT_REQUEST_HEADERS as DRH } from "../src/http.js";
-
 
 chai.use(chaiAsPromised);
 chai.should();

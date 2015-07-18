@@ -3,13 +3,14 @@
 import { getUnixTime } from "./utils";
 import ERROR_CODES from "./errors.js";
 
-// TODO: attach as static property of the HTTP class
-export const DEFAULT_REQUEST_HEADERS = {
-  "Accept":       "application/json",
-  "Content-Type": "application/json",
-};
-
 export default class HTTP {
+  static get DEFAULT_REQUEST_HEADERS() {
+    return {
+      "Accept":       "application/json",
+      "Content-Type": "application/json",
+    };
+  }
+
   constructor(options={}) {
     this._backoffRelease = options.backoffRelease || null;
   }
@@ -38,7 +39,7 @@ export default class HTTP {
     }
     var response, status, statusText, headers;
     // Ensure default request headers are always set
-    options.headers = Object.assign({}, DEFAULT_REQUEST_HEADERS, options.headers);
+    options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
     return fetch(url, options)
       .then(res => {
         response = res;
