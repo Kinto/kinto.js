@@ -11,10 +11,24 @@ export default class HTTP {
     };
   }
 
-  constructor(options={}) {
-    this._backoffRelease = options.backoffRelease || null;
+  /**
+   * Constructor.
+   *
+   * Options:
+   * - {Number} backoffRelease Backoff release timestamp.
+   *
+   * @param  {Object} options [description]
+   * @return {[type]}         [description]
+   */
+  constructor(options={backoffRelease: null}) {
+    this._backoffRelease = options.backoffRelease;
   }
 
+  /**
+   * Backoff release timestamp, if any.
+   *
+   * @return {Number|null}
+   */
   get backoffRelease() {
     return this._backoffRelease;
   }
