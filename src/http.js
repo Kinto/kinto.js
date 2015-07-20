@@ -21,18 +21,8 @@ export default class HTTP extends EventEmitter {
    * @param  {Object} options [description]
    * @return {[type]}         [description]
    */
-  constructor(options={backoffRelease: null}) {
+  constructor() {
     super();
-    this._backoffRelease = options.backoffRelease;
-  }
-
-  /**
-   * Backoff release timestamp, if any.
-   *
-   * @return {Number|null}
-   */
-  get backoffRelease() {
-    return this._backoffRelease;
   }
 
   /**
@@ -104,7 +94,6 @@ export default class HTTP extends EventEmitter {
 
   _checkForBackoffHeader(headers) {
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
-    this._backoffRelease = backoffSeconds > 0 ? getUnixTime() + backoffSeconds : null;
-    this.emit("backoff", this._backoffRelease);
+    this.emit("backoff", backoffSeconds > 0 ? getUnixTime() + backoffSeconds : null);
   }
 }

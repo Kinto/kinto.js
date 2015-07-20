@@ -3,7 +3,7 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 import HTTP from "./http.js";
-import { partition } from "./utils.js";
+import { partition, getUnixTime } from "./utils.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 export const SUPPORTED_PROTOCOL_VERSION = "v1";
@@ -25,6 +25,7 @@ export default class Api {
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
+    this._backoffReleaseTime = null;
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -32,7 +33,30 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
-    this.http = new HTTP();
+    this.http = this._registerHTTPEvents(new HTTP());
+  }
+
+  /**
+   * Backoff remaining time, in seconds. Defaults to zero if no backoff is
+   * ongoing.
+   *
+   * @return {Number}
+   */
+  get backoff() {
+    const currentTime = getUnixTime();
+    if (this._backoffReleaseTime && currentTime < this._backoffReleaseTime)
+      return this._backoffReleaseTime - currentTime;
+    return 0;
+  }
+
+  /**
+   * Registers HTTP events.
+   *
+   * @param  {HTTP} http The HTTP instance.
+   * @return {HTTP}
+   */
+  _registerHTTPEvents(http) {
+    return http.on("backoff", value => this._backoffReleaseTime = value);
   }
 
   /**

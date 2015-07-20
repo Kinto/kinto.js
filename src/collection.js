@@ -3,12 +3,7 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import {
-  attachFakeIDBSymbolsTo,
-  reduceRecords,
-  getUnixTime,
-  isUUID4
-} from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -55,8 +50,8 @@ export default class Collection {
     this._bucket = bucket;
     this._name = name;
     this._db;
-    this.api = api;
     this._lastModified = null;
+    this.api = api;
   }
 
   get name() {
@@ -602,13 +597,9 @@ export default class Collection {
    */
   sync(options={strategy: Collection.strategy.MANUAL, headers: {}, forceBackoff: false}) {
     // Handle server backoff: XXX test
-    if (this.api.backoffRelease && !options.forceBackoff) {
-      const currentTime = getUnixTime();
-      if (currentTime < this.api.backoffRelease) {
-        const seconds = this.api.backoffRelease - currentTime;
-        return Promise.reject(
-          new Error(`Server is backed off; retry in ${seconds}s or use the forceBackoff option.`));
-      }
+    if (!options.forceBackoff && this.api.backoff > 0) {
+      return Promise.reject(
+        new Error(`Server is backed off; retry in ${this.api.backoff}s or use the forceBackoff option.`));
     }
     const result = new SyncResultObject();
     return this.getLastModified()

@@ -176,30 +176,27 @@ describe("HTTP class", () => {
       var http;
 
       beforeEach(() => {
-        http = new HTTP();
         // Make utils.getUnixTime to always return 1000, for easier computation
         sandbox.stub(Date.prototype, "getTime").returns(1000 * 1000);
-        sandbox.stub(http, "emit");
+        http = new HTTP();
       });
 
       it("should emit a backoff event on set Backoff header", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {Backoff: "1000"}));
 
-        return http.request("/").then(_ => {
-          expect(http.emit.firstCall.args[0]).eql("backoff");
-          expect(http.emit.firstCall.args[1]).eql(2000);
-        });
+        return http.on("backoff", value => {
+          expect(value).eql(2000);
+        }).request("/");
       });
 
       it("should emit a backoff event on missing Backoff header", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {}));
 
-        return http.request("/").then(_ => {
-          expect(http.emit.firstCall.args[0]).eql("backoff");
-          expect(http.emit.firstCall.args[1]).eql(null);
-        });
+        return http.on("backoff", value => {
+          expect(value).eql(null);
+        }).request("/");
       });
     });
   });

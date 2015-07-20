@@ -995,8 +995,19 @@ describe("Collection", () => {
         })
     });
 
-    it.skip("should handle server backoff", () => {
-      articles.api.backoffRelease = 1000 * 1000;
+    it("should reject on server backoff by default", () => {
+      articles.api = {backoff: 30};
+      return articles.sync()
+        .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
+    });
+
+    it("should perform sync on server backoff when forceBackoff is true", () => {
+      sandbox.stub(articles, "getLastModified").returns(Promise.resolve({}));
+      sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+      sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
+      articles.api = {backoff: 30};
+      return articles.sync({forceBackoff: true})
+        .then(_ => sinon.assert.calledOnce(articles.getLastModified));
     });
   });
 });

@@ -57,6 +57,25 @@ describe("Api", () => {
     });
   });
 
+  describe("get backoff()", () => {
+    it("should provide the remaining backoff time in seconds if any", () => {
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {}, {Backoff: "1000"}));
+
+      return api.http.on("backoff", value => {
+        expect(api.backoff).eql(1000);
+      }).request("/");
+    });
+
+    it("should provide no remaining backoff time when none is set", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
+
+      return api.http.on("backoff", value => {
+        expect(api.backoff).eql(0);
+      }).request("/");
+    });
+  });
+
   describe("#endpoints", () => {
     describe("full URL", () => {
       var endpoints;
