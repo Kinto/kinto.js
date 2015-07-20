@@ -59,6 +59,8 @@ describe("Api", () => {
 
   describe("get backoff()", () => {
     it("should provide the remaining backoff time in ms if any", () => {
+      // Make Date#getTime always returning 1000000, for predictability
+      sandbox.stub(Date.prototype, "getTime").returns(1000 * 1000);
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, {}, {Backoff: "1000"}));
 

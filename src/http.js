@@ -47,7 +47,7 @@ export default class HTTP extends EventEmitter {
         status = res.status;
         statusText = res.statusText;
         this._checkForDeprecationHeader(headers);
-        this._checkForBackoffHeader(headers);
+        this._checkForBackoffHeader(status, headers);
         const contentLength = headers.get("Content-Length");
         if (!contentLength || contentLength == 0)
           return null;
@@ -91,7 +91,11 @@ export default class HTTP extends EventEmitter {
     }
   }
 
-  _checkForBackoffHeader(headers) {
+  _checkForBackoffHeader(status, headers) {
+    // XXX Temporary fix
+    // see https://github.com/mozilla-services/kinto/issues/148
+    if (status === 304)
+      return;
     var backoffMs;
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
     if (backoffSeconds > 0) {
