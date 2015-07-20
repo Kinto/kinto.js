@@ -589,17 +589,18 @@ export default class Collection {
    *     Conflicting server records will be overriden with local changes.
    *   * `Collection.strategy.MANUAL`:
    *     Conflicts will be reported in a dedicated array.
-   * - {Boolean} forceBackoff: Force synchronization even if server is currently
+   * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
    *
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, forceBackoff: false}) {
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false}) {
     // Handle server backoff: XXX test
-    if (!options.forceBackoff && this.api.backoff > 0) {
+    if (!options.ignoreBackoff && this.api.backoff > 0) {
+      const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
-        new Error(`Server is backed off; retry in ${this.api.backoff}s or use the forceBackoff option.`));
+        new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
     const result = new SyncResultObject();
     return this.getLastModified()

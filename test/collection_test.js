@@ -996,17 +996,17 @@ describe("Collection", () => {
     });
 
     it("should reject on server backoff by default", () => {
-      articles.api = {backoff: 30};
+      articles.api = {backoff: 30000};
       return articles.sync()
         .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
     });
 
-    it("should perform sync on server backoff when forceBackoff is true", () => {
+    it("should perform sync on server backoff when ignoreBackoff is true", () => {
       sandbox.stub(articles, "getLastModified").returns(Promise.resolve({}));
       sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
       sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
       articles.api = {backoff: 30};
-      return articles.sync({forceBackoff: true})
+      return articles.sync({ignoreBackoff: true})
         .then(_ => sinon.assert.calledOnce(articles.getLastModified));
     });
   });

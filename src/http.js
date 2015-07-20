@@ -1,6 +1,5 @@
 "use strict";
 
-import { getUnixTime } from "./utils";
 import ERROR_CODES from "./errors.js";
 import { EventEmitter } from "events";
 
@@ -93,7 +92,13 @@ export default class HTTP extends EventEmitter {
   }
 
   _checkForBackoffHeader(headers) {
+    var backoffMs;
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
-    this.emit("backoff", backoffSeconds > 0 ? getUnixTime() + backoffSeconds : null);
+    if (backoffSeconds > 0) {
+      backoffMs = (new Date().getTime()) + (backoffSeconds * 1000);
+    } else {
+      backoffMs = 0;
+    }
+    this.emit("backoff", backoffMs);
   }
 }

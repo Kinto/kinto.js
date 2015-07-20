@@ -291,4 +291,9 @@ If the Kinto server instance is under heavy load, their admins can [send a Backo
 
 When this happens, Kinto.js will reject calls to `#sync()` with an appropriate error message specifying the number of seconds you need to wait before calling it again.
 
-While not necessarily recommended, if you ever want to bypass this restriction, you can pass the `forceBackoff` option set to `true`.
+While not necessarily recommended, if you ever want to bypass this restriction, you can pass the `ignoreBackoff` option set to `true`:
+
+```js
+articles.sync({ignoreBackoff: true})
+  .then(…)
+```

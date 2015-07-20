@@ -3,7 +3,7 @@
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 import HTTP from "./http.js";
-import { partition, getUnixTime } from "./utils.js";
+import { partition } from "./utils.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 export const SUPPORTED_PROTOCOL_VERSION = "v1";
@@ -37,13 +37,13 @@ export default class Api {
   }
 
   /**
-   * Backoff remaining time, in seconds. Defaults to zero if no backoff is
+   * Backoff remaining time, in milliseconds. Defaults to zero if no backoff is
    * ongoing.
    *
    * @return {Number}
    */
   get backoff() {
-    const currentTime = getUnixTime();
+    const currentTime = new Date().getTime();
     if (this._backoffReleaseTime && currentTime < this._backoffReleaseTime)
       return this._backoffReleaseTime - currentTime;
     return 0;
@@ -56,7 +56,9 @@ export default class Api {
    * @return {HTTP}
    */
   _registerHTTPEvents(http) {
-    return http.on("backoff", value => this._backoffReleaseTime = value);
+    return http.on("backoff", backoffMs => {
+      this._backoffReleaseTime = backoffMs;
+    });
   }
 
   /**

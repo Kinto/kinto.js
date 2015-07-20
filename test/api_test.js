@@ -58,12 +58,12 @@ describe("Api", () => {
   });
 
   describe("get backoff()", () => {
-    it("should provide the remaining backoff time in seconds if any", () => {
+    it("should provide the remaining backoff time in ms if any", () => {
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, {}, {Backoff: "1000"}));
 
       return api.http.on("backoff", value => {
-        expect(api.backoff).eql(1000);
+        expect(api.backoff).eql(1000000);
       }).request("/");
     });
 
