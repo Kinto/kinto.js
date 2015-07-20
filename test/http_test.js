@@ -21,12 +21,6 @@ describe("HTTP class", () => {
 
   afterEach(() => sandbox.restore());
 
-  describe("#constructor()", () => {
-    it("should set the backoffRelease option", () => {
-      expect(new HTTP({backoffRelease: 42}).backoffRelease).eql(42);
-    });
-  });
-
   describe("#request()", () => {
     describe("Request headers", () => {
       beforeEach(() => {
@@ -179,58 +173,34 @@ describe("HTTP class", () => {
     });
 
     describe("Backoff header handling", () => {
+      var http;
+
       beforeEach(() => {
-        // Make utils.getUnixTime to always return 1000
+        http = new HTTP();
+        // Make utils.getUnixTime to always return 1000, for easier computation
         sandbox.stub(Date.prototype, "getTime").returns(1000 * 1000);
+        sandbox.stub(http, "emit");
       });
 
-      it("should set the backoffRelease property on Backoff header", () => {
+      it("should emit a backoff event on set Backoff header", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {Backoff: "1000"}));
-        const http = new HTTP();
 
-        return http.request("/")
-          .then(_ => expect(http.backoffRelease).eql(2000));
+        return http.request("/").then(_ => {
+          expect(http.emit.firstCall.args[0]).eql("backoff");
+          expect(http.emit.firstCall.args[1]).eql(2000);
+        });
       });
 
-      it("should clear the backoffRelease property on no Backoff header", () => {
-        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
-        const http = new HTTP({backoffRelease: 1000});
+      it("should emit a backoff event on missing Backoff header", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {}, {}));
 
-        return http.request("/")
-          .then(_ => expect(http.backoffRelease).eql(null));
+        return http.request("/").then(_ => {
+          expect(http.emit.firstCall.args[0]).eql("backoff");
+          expect(http.emit.firstCall.args[1]).eql(null);
+        });
       });
-
-      it("should delay requests on backoffRelease property set", () => {
-        const http = new HTTP({backoffRelease: 2000});
-        sandbox.stub(http, "delayedRequest");
-
-        http.request("/", {headers: {Foo: "Bar"}});
-
-        sinon.assert.calledOnce(http.delayedRequest);
-        sinon.assert.calledWithExactly(
-          http.delayedRequest, 1000, "/", {headers: {Foo: "Bar"}});
-      });
-    });
-  });
-
-  describe("#delayedRequest()", () => {
-    var http;
-
-    beforeEach(() => {
-      sandbox.useFakeTimers();
-      http = new HTTP();
-      sandbox.stub(http, "request");
-    });
-
-    it("should delay the execution of a request", () => {
-      http.delayedRequest(100, "/", {});
-
-      sinon.assert.notCalled(http.request);
-
-      sandbox.clock.tick(100);
-
-      sinon.assert.calledWithExactly(http.request, "/", {});
     });
   });
 });

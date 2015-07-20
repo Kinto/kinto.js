@@ -3,7 +3,12 @@
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
-import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
+import {
+  attachFakeIDBSymbolsTo,
+  reduceRecords,
+  getUnixTime,
+  isUUID4
+} from "./utils";
 import { cleanRecord } from "./api";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
@@ -574,11 +579,11 @@ export default class Collection {
 
 
   /**
-   * Synchronize remote and local data. The promise will resolve with two lists:
-   * - local imports
-   * - remote exports
-   * The promise will reject if conflicts have been encountered, with the same
-   * result.
+   * Synchronize remote and local data. The promise will resolve with a
+   * SyncResultObject, though will reject:
+   *
+   * - if conflicts have been encountered, with the same result;
+   * - if the server is currently backed off.
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
@@ -589,12 +594,22 @@ export default class Collection {
    *     Conflicting server records will be overriden with local changes.
    *   * `Collection.strategy.MANUAL`:
    *     Conflicts will be reported in a dedicated array.
+   * - {Boolean} forceBackoff: Force synchronization even if server is currently
+   *   backed off.
    *
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
-    // TODO rename options.mode to options.strategy
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, forceBackoff: false}) {
+    // Handle server backoff: XXX test
+    if (this.api.backoffRelease && !options.forceBackoff) {
+      const currentTime = getUnixTime();
+      if (currentTime < this.api.backoffRelease) {
+        const seconds = this.api.backoffRelease - currentTime;
+        return Promise.reject(
+          new Error(`Server is backed off; retry in ${seconds}s or use the forceBackoff option.`));
+      }
+    }
     const result = new SyncResultObject();
     return this.getLastModified()
       .then(lastModified => this._lastModified = lastModified)

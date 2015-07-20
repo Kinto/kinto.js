@@ -994,5 +994,9 @@ describe("Collection", () => {
           expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
         })
     });
+
+    it.skip("should handle server backoff", () => {
+      articles.api.backoffRelease = 1000 * 1000;
+    });
   });
 });

@@ -2,8 +2,9 @@
 
 import { getUnixTime } from "./utils";
 import ERROR_CODES from "./errors.js";
+import { EventEmitter } from "events";
 
-export default class HTTP {
+export default class HTTP extends EventEmitter {
   static get DEFAULT_REQUEST_HEADERS() {
     return {
       "Accept":       "application/json",
@@ -21,6 +22,7 @@ export default class HTTP {
    * @return {[type]}         [description]
    */
   constructor(options={backoffRelease: null}) {
+    super();
     this._backoffRelease = options.backoffRelease;
   }
 
@@ -46,11 +48,6 @@ export default class HTTP {
    * @return {Promise}
    */
   request(url, options={headers:{}}) {
-    // Handle request backoff
-    const currentTime = getUnixTime();
-    if (this.backoffRelease && currentTime < this.backoffRelease) {
-      return this.delayedRequest(this.backoffRelease - currentTime, url, options);
-    }
     var response, status, statusText, headers;
     // Ensure default request headers are always set
     options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
@@ -93,22 +90,6 @@ export default class HTTP {
       });
   }
 
-  /**
-   * Delays the execution of a request.
-   *
-   * @param  {Number} timeout The delay in seconds.
-   * @param  {String} url     The URL.
-   * @param  {Object} options The request otions object.
-   * @return {Promise}
-   */
-  delayedRequest(timeout, url, options) {
-    return new Promise(resolve => {
-      setTimeout(() => {
-        resolve(this.request.call(this, url, options));
-      }, timeout);
-    });
-  }
-
   _checkForDeprecationHeader(headers) {
     const alertHeader = headers.get("Alert");
     if (!alertHeader)
@@ -122,7 +103,8 @@ export default class HTTP {
   }
 
   _checkForBackoffHeader(headers) {
-    const backoffHeader = parseInt(headers.get("Backoff"), 10);
-    this._backoffRelease = backoffHeader > 0 ? getUnixTime() + backoffHeader : null;
+    const backoffSeconds = parseInt(headers.get("Backoff"), 10);
+    this._backoffRelease = backoffSeconds > 0 ? getUnixTime() + backoffSeconds : null;
+    this.emit("backoff", this._backoffRelease);
   }
 }
