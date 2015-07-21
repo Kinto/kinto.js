@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { EventEmitter } from "events";
 import { quote } from "../src/utils";
 import { fakeServerResponse } from "./test_utils.js";
 import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
@@ -15,11 +16,12 @@ const root = typeof window === "object" ? window : global;
 const FAKE_SERVER_URL = "http://fake-server/v1"
 
 describe("Api", () => {
-  var sandbox, api;
+  var sandbox, events, api;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    api = new Api(FAKE_SERVER_URL);
+    events = new EventEmitter();
+    api = new Api(FAKE_SERVER_URL, events);
   });
 
   afterEach(() => {
@@ -28,31 +30,36 @@ describe("Api", () => {
 
   describe("#constructor", () => {
     it("should check that `remote` is a string", () => {
-      expect(() => new Api(42))
+      expect(() => new Api(42, events))
         .to.Throw(Error, /Invalid remote URL/);
     });
 
     it("should validate `remote` arg value", () => {
-      expect(() => new Api("http://nope"))
+      expect(() => new Api("http://nope", events))
         .to.Throw(Error, /The remote URL must contain the version/);
     });
 
     it("should strip any trailing slash", () => {
-      expect(new Api(`http://test/${SPV}/`).remote).eql(`http://test/${SPV}`);
+      expect(new Api(`http://test/${SPV}/`, events).remote).eql(`http://test/${SPV}`);
+    });
+
+    it("should expose an events property", () => {
+      expect(new Api(`http://test/${SPV}`, events).events)
+        .to.be.an.instanceOf(EventEmitter);
     });
 
     it("should assign version value", () => {
-      expect(new Api(`http://test/${SPV}`).version).eql(SPV);
-      expect(new Api(`http://test/${SPV}/`).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}`, events).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}/`, events).version).eql(SPV);
     });
 
     it("should accept a headers option", () => {
-      expect(new Api(`http://test/${SPV}`, {headers: {Foo: "Bar"}}).optionHeaders)
+      expect(new Api(`http://test/${SPV}`, events, {headers: {Foo: "Bar"}}).optionHeaders)
         .eql({Foo: "Bar"});
     });
 
     it("should validate protocol version", () => {
-      expect(() =>new Api(`http://test/v999`))
+      expect(() =>new Api(`http://test/v999`, events))
         .to.Throw(Error, /^Unsupported protocol version/);
     });
   });
@@ -64,17 +71,15 @@ describe("Api", () => {
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, {}, {Backoff: "1000"}));
 
-      return api.http.on("backoff", value => {
-        expect(api.backoff).eql(1000000);
-      }).request("/");
+      return api.fetchChangesSince()
+        .then(_ => expect(api.backoff).eql(1000000));
     });
 
     it("should provide no remaining backoff time when none is set", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
 
-      return api.http.on("backoff", value => {
-        expect(api.backoff).eql(0);
-      }).request("/");
+      return api.fetchChangesSince()
+        .then(_ => expect(api.backoff).eql(0));
     });
   });
 

@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 
@@ -35,6 +36,12 @@ describe("Kinto", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("#constructor", () => {
+    it("should expose an events property", () => {
+      expect(new Kinto().events).to.be.an.instanceOf(EventEmitter);
+    });
   });
 
   describe("#collection()", () => {

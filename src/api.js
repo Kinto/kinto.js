@@ -16,16 +16,28 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
+/**
+ * Api class.
+ */
 export default class Api {
-  constructor(remote, options={headers: {}}) {
+  /**
+   * Constructor.
+   *
+   * @param  {String}       remote  The remote URL.
+   * @param  {EventEmitter} events  The events handler.
+   * @param  {Object}       options The options object.
+   */
+  constructor(remote, events, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
     if (remote[remote.length-1] === "/")
       remote = remote.slice(0, -1);
+    this._backoffReleaseTime = null;
+    // public properties
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
-    this._backoffReleaseTime = null;
+    this.events = events;
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -33,7 +45,8 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
-    this.http = this._registerHTTPEvents(new HTTP());
+    this.http = new HTTP(events);
+    this._registerHTTPEvents();
   }
 
   /**
@@ -51,12 +64,9 @@ export default class Api {
 
   /**
    * Registers HTTP events.
-   *
-   * @param  {HTTP} http The HTTP instance.
-   * @return {HTTP}
    */
-  _registerHTTPEvents(http) {
-    return http.on("backoff", backoffMs => {
+  _registerHTTPEvents() {
+    this.events.on("backoff", backoffMs => {
       this._backoffReleaseTime = backoffMs;
     });
   }

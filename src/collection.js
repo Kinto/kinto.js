@@ -35,23 +35,26 @@ export class SyncResultObject {
   }
 }
 
+/**
+ * Collection class.
+ */
 export default class Collection {
-
   /**
-   * Ensures a connection to the local database has been opened.
+   * Constructor.
    *
-   * @param {String}      bucket  Bucket identifier.
-   * @param {String}      name    Collection name.
-   * @param {Api}         api     Reference to Api instance.
-   *
-   * @return {Promise}
+   * @param  {String}       bucket  Bucket identifier.
+   * @param  {String}       name    Collection name.
+   * @param  {Api}          api     Reference to Api instance.
+   * @param  {EventEmitter} events  Events handler.
    */
-  constructor(bucket, name, api) {
+  constructor(bucket, name, api, events) {
     this._bucket = bucket;
     this._name = name;
     this._db;
     this._lastModified = null;
+    // public properties
     this.api = api;
+    this.events = events;
   }
 
   get name() {

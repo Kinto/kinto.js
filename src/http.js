@@ -1,9 +1,11 @@
 "use strict";
 
 import ERROR_CODES from "./errors.js";
-import { EventEmitter } from "events";
 
-export default class HTTP extends EventEmitter {
+/**
+ * HTTP class.
+ */
+export default class HTTP {
   static get DEFAULT_REQUEST_HEADERS() {
     return {
       "Accept":       "application/json",
@@ -17,11 +19,11 @@ export default class HTTP extends EventEmitter {
    * Options:
    * - {Number} backoffRelease Backoff release timestamp.
    *
-   * @param  {Object} options [description]
-   * @return {[type]}         [description]
+   * @param  {EventEmitter} events Events handler.
    */
-  constructor() {
-    super();
+  constructor(events) {
+    // public properties
+    this.events = events;
   }
 
   /**
@@ -83,12 +85,15 @@ export default class HTTP extends EventEmitter {
     const alertHeader = headers.get("Alert");
     if (!alertHeader)
       return;
+    var alert;
     try {
-      const {message, url} = JSON.parse(alertHeader);
-      console.warn(message, url);
+      alert = JSON.parse(alertHeader);
     } catch(err) {
       console.warn("Unable to parse Alert header message", alertHeader);
+      return;
     }
+    console.warn(alert.message, alert.url);
+    this.events.emit("deprecated", alert);
   }
 
   _checkForBackoffHeader(status, headers) {
@@ -103,6 +108,6 @@ export default class HTTP extends EventEmitter {
     } else {
       backoffMs = 0;
     }
-    this.emit("backoff", backoffMs);
+    this.events.emit("backoff", backoffMs);
   }
 }

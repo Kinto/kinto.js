@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 
 import Collection, { SyncResultObject } from "../src/collection";
@@ -17,12 +18,13 @@ const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v1"
 
 describe("Collection", () => {
-  var sandbox, api;
+  var sandbox, events, api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection() {
-    api = new Api(FAKE_SERVER_URL);
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
+    events = new EventEmitter();
+    api = new Api(FAKE_SERVER_URL, events);
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, events);
   }
 
   beforeEach(() => {
@@ -32,6 +34,12 @@ describe("Collection", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("#constructor", () => {
+    it("should expose an events property", () => {
+      expect(testCollection().events).to.be.an.instanceOf(EventEmitter);
+    });
   });
 
   describe("#open", () => {

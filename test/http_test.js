@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { EventEmitter } from "events";
 import { fakeServerResponse } from "./test_utils.js";
 import HTTP from "../src/http.js";
 
@@ -13,13 +14,21 @@ chai.config.includeStack = true;
 const root = typeof window === "object" ? window : global;
 
 describe("HTTP class", () => {
-  var sandbox;
+  var sandbox, events, http;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
+    events = new EventEmitter();
+    http = new HTTP(events);
   });
 
   afterEach(() => sandbox.restore());
+
+  describe("#constructor", () => {
+    it("should expose an events property", () => {
+      expect(http.events).to.be.an.instanceOf(EventEmitter);
+    });
+  });
 
   describe("#request()", () => {
     describe("Request headers", () => {
@@ -28,14 +37,14 @@ describe("HTTP class", () => {
       });
 
       it("should set default headers", () => {
-        new HTTP().request("/");
+        http.request("/");
 
         expect(fetch.firstCall.args[1].headers)
           .eql(HTTP.DEFAULT_REQUEST_HEADERS);
       });
 
       it("should merge custom headers with default ones", () => {
-        new HTTP().request("/", {headers: {Foo: "Bar"}});
+        http.request("/", {headers: {Foo: "Bar"}});
 
         expect(fetch.firstCall.args[1].headers.Foo).eql("Bar");
       });
@@ -48,19 +57,19 @@ describe("HTTP class", () => {
       });
 
       it("should resolve with HTTP status", () => {
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.status)
           .should.eventually.become(200);
       });
 
       it("should resolve with JSON body", () => {
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.json)
           .should.eventually.become({a: 1});
       });
 
       it("should resolve with headers", () => {
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.headers.get("b"))
           .should.eventually.become(2);
       });
@@ -71,7 +80,7 @@ describe("HTTP class", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, "", {"Content-Length": undefined}));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.json)
           .should.eventually.become(null);
       });
@@ -80,7 +89,7 @@ describe("HTTP class", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, "", {"Content-Length": 0}));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.json)
           .should.eventually.become(null);
       });
@@ -89,7 +98,7 @@ describe("HTTP class", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, "", {"Content-Length": "0"}));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .then(res => res.json)
           .should.eventually.become(null);
       });
@@ -110,7 +119,7 @@ describe("HTTP class", () => {
           }
         }));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .should.be.rejectedWith(Error, /HTTP 200; SyntaxError: Unexpected token/);
       });
     });
@@ -132,26 +141,28 @@ describe("HTTP class", () => {
             message: "data is missing"
         }));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .should.be.rejectedWith(Error, /HTTP 400; Invalid request parameter: data is missing/);
       });
     });
 
     describe("Deprecation header", () => {
+      const eolObject = {
+        code:    "soft-eol",
+        url:     "http://eos-url",
+        message: "This service will soon be decommissioned",
+      };
+
       beforeEach(() => {
         sandbox.stub(console, "warn");
+        sandbox.stub(events, "emit");
       });
 
       it("should handle deprecation header", () => {
-        const eolObject = {
-          code:    "soft-eol",
-          url:     "http://eos-url",
-          message: "This service will soon be decommissioned",
-        };
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {Alert: JSON.stringify(eolObject)}));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .then(_ => {
             sinon.assert.calledOnce(console.warn);
             sinon.assert.calledWithExactly(
@@ -163,39 +174,49 @@ describe("HTTP class", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {Alert: "dafuq"}));
 
-        return new HTTP().request("/")
+        return http.request("/")
           .then(_ => {
             sinon.assert.calledOnce(console.warn);
             sinon.assert.calledWithExactly(
               console.warn, "Unable to parse Alert header message", "dafuq");
           });
       });
+
+      it("should emit a deprecated event on Alert header", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {}, {Alert: JSON.stringify(eolObject)}));
+
+        return http.request("/").then(_ => {
+          expect(events.emit.firstCall.args[0]).eql("deprecated");
+          expect(events.emit.firstCall.args[1]).eql(eolObject);
+        });
+      });
     });
 
     describe("Backoff header handling", () => {
-      var http;
-
       beforeEach(() => {
         // Make Date#getTime always returning 1000000, for predictability
         sandbox.stub(Date.prototype, "getTime").returns(1000 * 1000);
-        http = new HTTP();
+        sandbox.stub(events, "emit");
       });
 
       it("should emit a backoff event on set Backoff header", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {}, {Backoff: "1000"}));
 
-        return http.on("backoff", value => {
-          expect(value).eql(2000000);
-        }).request("/");
+        return http.request("/").then(_ => {
+          expect(events.emit.firstCall.args[0]).eql("backoff");
+          expect(events.emit.firstCall.args[1]).eql(2000000);
+        });
       });
 
       it("should emit a backoff event on missing Backoff header", () => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
 
-        return http.on("backoff", value => {
-          expect(value).eql(0);
-        }).request("/");
+        return http.request("/").then(_ => {
+          expect(events.emit.firstCall.args[0]).eql("backoff");
+          expect(events.emit.firstCall.args[1]).eql(0);
+        });
       });
     });
   });
