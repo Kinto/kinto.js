@@ -6,6 +6,7 @@ import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
+import sinon from "sinon";
 import Kinto from "../src";
 import { cleanRecord } from "../src/api";
 
@@ -18,7 +19,7 @@ const PSERVE_EXECUTABLE = process.env.KINTO_PSERVE_EXECUTABLE || "pserve";
 const KINTO_CONFIG = __dirname + "/kinto.ini";
 
 describe("Integration tests", () => {
-  var server, tasks;
+  var sandbox, server, tasks;
   const MAX_ATTEMPTS = 50;
 
   function startServer(env={}) {
@@ -39,7 +40,7 @@ describe("Integration tests", () => {
   function flushServer(attempt=1) {
     return fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"})
       .then(res => {
-        if (res.status !== 202)
+        if ([202, 410].indexOf(res.status) === -1)
           throw new Error("Unable to flush test server.");
       })
       .catch(err => {
@@ -57,6 +58,8 @@ describe("Integration tests", () => {
   beforeEach(function() {
     this.timeout(12500);
 
+    sandbox = sinon.sandbox.create();
+
     tasks = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: {Authorization: "Basic " + btoa("user:pass")}
@@ -64,6 +67,8 @@ describe("Integration tests", () => {
 
     return tasks.clear().then(_ => flushServer());
   });
+
+  afterEach(() => sandbox.restore());
 
   function testSync(data) {
     return Promise.all([].concat(
@@ -318,6 +323,50 @@ describe("Integration tests", () => {
       // Note: first call receive the Backoff header, second actually rejects.
       return tasks.sync().then(_ => tasks.sync())
         .should.be.rejectedWith(Error, /Server is backed off; retry in 10s/);
+    });
+  });
+
+  describe("Deprecated protocol version", () => {
+    describe("Soft EOL", () => {
+      before(() => {
+        const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
+        startServer({
+          CLIQUET_EOS: tomorrow,
+          CLIQUET_EOS_URL: "http://www.perdu.com",
+          CLIQUET_EOS_MESSAGE: "Boom",
+        });
+      });
+
+      after(() => stopServer());
+
+      beforeEach(() => sandbox.stub(console, "warn"));
+
+      it("should warn when the server sends a deprecation Alert header", () => {
+        return tasks.sync()
+          .then(_ => {
+            sinon.assert.calledWithExactly(console.warn, "Boom", "http://www.perdu.com");
+          });
+      });
+    });
+
+    describe("Hard EOL", () => {
+      before(() => {
+        const lastWeek = new Date(new Date().getTime() - (7 * 86400000)).toJSON().slice(0, 10);
+        startServer({
+          CLIQUET_EOS: lastWeek,
+          CLIQUET_EOS_URL: "http://www.perdu.com",
+          CLIQUET_EOS_MESSAGE: "Boom",
+        });
+      });
+
+      after(() => stopServer());
+
+      beforeEach(() => sandbox.stub(console, "warn"));
+
+      it("should reject with a 410 Gone when hard EOL is received", () => {
+        return tasks.sync()
+          .should.be.rejectedWith(Error, /HTTP 410; Service deprecated/);
+      });
     });
   });
 });
