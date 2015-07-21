@@ -6,8 +6,6 @@ import sinon from "sinon";
 import { quote } from "../src/utils";
 import { fakeServerResponse } from "./test_utils.js";
 import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
-import { DEFAULT_REQUEST_HEADERS as DRH } from "../src/http.js";
-
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -56,6 +54,27 @@ describe("Api", () => {
     it("should validate protocol version", () => {
       expect(() =>new Api(`http://test/v999`))
         .to.Throw(Error, /^Unsupported protocol version/);
+    });
+  });
+
+  describe("get backoff()", () => {
+    it("should provide the remaining backoff time in ms if any", () => {
+      // Make Date#getTime always returning 1000000, for predictability
+      sandbox.stub(Date.prototype, "getTime").returns(1000 * 1000);
+      sandbox.stub(root, "fetch").returns(
+        fakeServerResponse(200, {}, {Backoff: "1000"}));
+
+      return api.http.on("backoff", value => {
+        expect(api.backoff).eql(1000000);
+      }).request("/");
+    });
+
+    it("should provide no remaining backoff time when none is set", () => {
+      sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
+
+      return api.http.on("backoff", value => {
+        expect(api.backoff).eql(0);
+      }).request("/");
     });
   });
 

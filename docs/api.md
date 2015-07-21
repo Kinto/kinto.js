@@ -284,3 +284,16 @@ articles.sync()
 ```
 
 Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again.
+
+## Handling server backoff
+
+If the Kinto server instance is under heavy load, their admins can [send a Backoff header](http://cliquet.readthedocs.org/en/latest/api/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
+
+When this happens, Kinto.js will reject calls to `#sync()` with an appropriate error message specifying the number of seconds you need to wait before calling it again.
+
+While not necessarily recommended, if you ever want to bypass this restriction, you can pass the `ignoreBackoff` option set to `true`:
+
+```js
+articles.sync({ignoreBackoff: true})
+  .then(…)
+```

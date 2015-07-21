@@ -50,8 +50,8 @@ export default class Collection {
     this._bucket = bucket;
     this._name = name;
     this._db;
-    this.api = api;
     this._lastModified = null;
+    this.api = api;
   }
 
   get name() {
@@ -574,11 +574,11 @@ export default class Collection {
 
 
   /**
-   * Synchronize remote and local data. The promise will resolve with two lists:
-   * - local imports
-   * - remote exports
-   * The promise will reject if conflicts have been encountered, with the same
-   * result.
+   * Synchronize remote and local data. The promise will resolve with a
+   * SyncResultObject, though will reject:
+   *
+   * - if conflicts have been encountered, with the same result;
+   * - if the server is currently backed off.
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
@@ -589,12 +589,19 @@ export default class Collection {
    *     Conflicting server records will be overriden with local changes.
    *   * `Collection.strategy.MANUAL`:
    *     Conflicts will be reported in a dedicated array.
+   * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
+   *   backed off.
    *
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}}) {
-    // TODO rename options.mode to options.strategy
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false}) {
+    // Handle server backoff: XXX test
+    if (!options.ignoreBackoff && this.api.backoff > 0) {
+      const seconds = Math.ceil(this.api.backoff / 1000);
+      return Promise.reject(
+        new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
+    }
     const result = new SyncResultObject();
     return this.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
