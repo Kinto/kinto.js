@@ -40,7 +40,7 @@ describe("Integration tests", () => {
   function flushServer(attempt=1) {
     return fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"})
       .then(res => {
-        if (res.status !== 202)
+        if ([202, 410].indexOf(res.status) === -1)
           throw new Error("Unable to flush test server.");
       })
       .catch(err => {
@@ -327,25 +327,46 @@ describe("Integration tests", () => {
   });
 
   describe("Deprecated protocol version", () => {
-    before(() => {
-      const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
-      startServer({
-        CLIQUET_EOS: tomorrow,
-        CLIQUET_EOS_URL: "http://www.perdu.com",
-        CLIQUET_EOS_MESSAGE: "Boom",
+    describe("Soft EOL", () => {
+      before(() => {
+        const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
+        startServer({
+          CLIQUET_EOS: tomorrow,
+          CLIQUET_EOS_URL: "http://www.perdu.com",
+          CLIQUET_EOS_MESSAGE: "Boom",
+        });
+      });
+
+      after(() => stopServer());
+
+      beforeEach(() => sandbox.stub(console, "warn"));
+
+      it("should warn when the server sends a deprecation Alert header", () => {
+        return tasks.sync()
+          .then(_ => {
+            sinon.assert.calledWithExactly(console.warn, "Boom", "http://www.perdu.com");
+          });
       });
     });
 
-    after(() => {
-      return stopServer();
-    });
-
-    it("should reject sync when the server sends a Backoff header", () => {
-      sandbox.stub(console, "warn");
-      return tasks.sync()
-        .then(_ => {
-          sinon.assert.calledWithExactly(console.warn, "Boom", "http://www.perdu.com");
+    describe("Hard EOL", () => {
+      before(() => {
+        const lastWeek = new Date(new Date().getTime() - (7 * 86400000)).toJSON().slice(0, 10);
+        startServer({
+          CLIQUET_EOS: lastWeek,
+          CLIQUET_EOS_URL: "http://www.perdu.com",
+          CLIQUET_EOS_MESSAGE: "Boom",
         });
+      });
+
+      after(() => stopServer());
+
+      beforeEach(() => sandbox.stub(console, "warn"));
+
+      it("should reject with a 410 Gone when hard EOL is received", () => {
+        return tasks.sync()
+          .should.be.rejectedWith(Error, /HTTP 410; Service deprecated/);
+      });
     });
   });
 });
