@@ -23,8 +23,8 @@ describe("Collection", () => {
 
   function testCollection() {
     events = new EventEmitter();
-    api = new Api(FAKE_SERVER_URL, events);
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, events);
+    api = new Api(FAKE_SERVER_URL, {events});
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
   }
 
   beforeEach(() => {
@@ -39,16 +39,24 @@ describe("Collection", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
       expect(collection.events).to.eql(events);
     });
 
     it("should create an events property if none passed", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
       expect(collection.events).to.be.an.instanceOf(EventEmitter);
+    });
+
+    it("should propagate its events property to child dependencies", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, {events});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
+      expect(collection.api.events).eql(collection.events);
+      expect(collection.api.http.events).eql(collection.events);
     });
   });
 
@@ -343,7 +351,8 @@ describe("Collection", () => {
     });
 
     it("should isolate records by bucket", () => {
-      const otherbucket = new Collection('other', TEST_COLLECTION_NAME, api);
+      // FIXME: https://github.com/mozilla-services/kinto.js/issues/89
+      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api);
       return otherbucket.get(uuid)
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);

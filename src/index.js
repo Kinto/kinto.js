@@ -13,11 +13,20 @@ const DEFAULT_BUCKET_NAME = "default";
  * Kinto class.
  */
 export default class Kinto {
-  constructor(options = {}) {
+  /**
+   * Constructor.
+   *
+   * Options:
+   * - {String}       bucket  The collection bucket name.
+   * - {EventEmitter} events  Events handler.
+   *
+   * @param  {Object} options The options object.
+   */
+  constructor(options={}) {
     this._options = options;
     this._collections = {};
     // public properties
-    this.events = new EventEmitter();
+    this.events = options.events || new EventEmitter();
   }
 
   collection(collName) {
@@ -25,12 +34,16 @@ export default class Kinto {
       throw new Error("missing collection name");
 
     const bucket = this._options.bucket || DEFAULT_BUCKET_NAME;
-    const api = new Api(this._options.remote || "http://localhost:8888/v1", this.events, {
-      headers: this._options.headers || {}
+    const api = new Api(this._options.remote || "http://localhost:8888/v1", {
+      headers: this._options.headers || {},
+      events: this.events,
     });
 
-    if (!this._collections.hasOwnProperty(collName))
-      this._collections[collName] = new Collection(bucket, collName, api, this.events);
+    if (!this._collections.hasOwnProperty(collName)) {
+      this._collections[collName] = new Collection(bucket, collName, api, {
+        events: this.events
+      });
+    }
 
     return this._collections[collName];
   }

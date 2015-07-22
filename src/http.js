@@ -18,13 +18,13 @@ export default class HTTP {
    * Constructor.
    *
    * Options:
-   * - {Number} backoffRelease Backoff release timestamp.
+   * - {EventEmitter} events Events handler.
    *
-   * @param  {EventEmitter|undefined} events Events handler.
+   * @param  {Object} options The options object.
    */
-  constructor(events) {
+  constructor(options={}) {
     // public properties
-    this.events = events || new EventEmitter();
+    this.events = options.events || new EventEmitter();
   }
 
   /**

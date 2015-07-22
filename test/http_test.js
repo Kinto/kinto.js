@@ -19,7 +19,7 @@ describe("HTTP class", () => {
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
     events = new EventEmitter();
-    http = new HTTP(events);
+    http = new HTTP({events});
   });
 
   afterEach(() => sandbox.restore());
@@ -27,7 +27,7 @@ describe("HTTP class", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      const http = new HTTP(events);
+      const http = new HTTP({events});
       expect(http.events).to.eql(events);
     });
 

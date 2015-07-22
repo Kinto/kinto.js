@@ -24,11 +24,14 @@ export default class Api {
   /**
    * Constructor.
    *
-   * @param  {String}                 remote  The remote URL.
-   * @param  {EventEmitter|undefined} events  The events handler.
-   * @param  {Object}                 options The options object.
+   * Options:
+   * - {Object}       headers: The key-value headers to pass to each request.
+   * - {EventEmitter} events:  The events handler.
+   *
+   * @param  {String}  remote   The remote URL.
+   * @param  {Object}  options  The options object.
    */
-  constructor(remote, events, options={headers: {}}) {
+  constructor(remote, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
     if (remote[remote.length-1] === "/")
@@ -38,7 +41,7 @@ export default class Api {
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
-    this.events = events || new EventEmitter();
+    this.events = options.events || new EventEmitter();
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -46,7 +49,7 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
-    this.http = new HTTP(events);
+    this.http = new HTTP({events: this.events});
     this._registerHTTPEvents();
   }
 

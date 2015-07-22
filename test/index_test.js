@@ -22,10 +22,7 @@ describe("Kinto", () => {
   var sandbox;
 
   function testCollection() {
-    const db = new Kinto({
-      bucket: TEST_BUCKET_NAME,
-      bucketserverUrl: FAKE_SERVER_URL
-    });
+    const db = new Kinto({bucket: TEST_BUCKET_NAME});
     return db.collection(TEST_COLLECTION_NAME);
   }
 
@@ -39,8 +36,20 @@ describe("Kinto", () => {
   });
 
   describe("#constructor", () => {
-    it("should expose an events property", () => {
+    it("should expose a passed events instance", () => {
+      const events = new EventEmitter();
+      expect(new Kinto({events}).events).to.eql(events);
+    });
+
+    it("should create an events property if none passed", () => {
       expect(new Kinto().events).to.be.an.instanceOf(EventEmitter);
+    });
+
+    it("should propagate its events property to child dependencies", () => {
+      const kinto = new Kinto();
+      expect(kinto.collection("x").events).eql(kinto.events);
+      expect(kinto.collection("x").api.events).eql(kinto.events);
+      expect(kinto.collection("x").api.http.events).eql(kinto.events);
     });
   });
 
@@ -87,9 +96,10 @@ describe("Kinto", () => {
     });
 
     it("should pass option headers to the api", () => {
-      const db = new Kinto({remote: `http://1.2.3.4:1234/${SPV}`, headers: {
-        Authorization: "Basic plop"
-      }});
+      const db = new Kinto({
+        remote: `http://1.2.3.4:1234/${SPV}`,
+        headers: {Authorization: "Basic plop"},
+      });
       const coll = db.collection("plop");
 
       expect(coll.api.optionHeaders).eql({Authorization: "Basic plop"});

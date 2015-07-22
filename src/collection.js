@@ -43,19 +43,19 @@ export default class Collection {
   /**
    * Constructor.
    *
-   * @param  {String}                 bucket  Bucket identifier.
-   * @param  {String}                 name    Collection name.
-   * @param  {Api}                    api     Reference to Api instance.
-   * @param  {EventEmitter|undefined} events  Events handler.
+   * @param  {String} bucket  The bucket identifier.
+   * @param  {String} name    The collection name.
+   * @param  {Api}    api     The Api instance.
+   * @param  {Object} options The options object.
    */
-  constructor(bucket, name, api, events) {
+  constructor(bucket, name, api, options={}) {
     this._bucket = bucket;
     this._name = name;
     this._db;
     this._lastModified = null;
     // public properties
     this.api = api;
-    this.events = events || new EventEmitter();
+    this.events = options.events || new EventEmitter();
   }
 
   get name() {
