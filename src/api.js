@@ -1,5 +1,6 @@
 "use strict";
 
+import { EventEmitter } from "events";
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 import HTTP from "./http.js";
@@ -16,16 +17,31 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   }, {});
 };
 
+/**
+ * Api class.
+ */
 export default class Api {
+  /**
+   * Constructor.
+   *
+   * Options:
+   * - {Object}       headers: The key-value headers to pass to each request.
+   * - {EventEmitter} events:  The events handler.
+   *
+   * @param  {String}  remote   The remote URL.
+   * @param  {Object}  options  The options object.
+   */
   constructor(remote, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
     if (remote[remote.length-1] === "/")
       remote = remote.slice(0, -1);
+    this._backoffReleaseTime = null;
+    // public properties
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
-    this._backoffReleaseTime = null;
+    this.events = options.events || new EventEmitter();
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
@@ -33,7 +49,8 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
-    this.http = this._registerHTTPEvents(new HTTP());
+    this.http = new HTTP({events: this.events});
+    this._registerHTTPEvents();
   }
 
   /**
@@ -51,12 +68,9 @@ export default class Api {
 
   /**
    * Registers HTTP events.
-   *
-   * @param  {HTTP} http The HTTP instance.
-   * @return {HTTP}
    */
-  _registerHTTPEvents(http) {
-    return http.on("backoff", backoffMs => {
+  _registerHTTPEvents() {
+    this.events.on("backoff", backoffMs => {
       this._backoffReleaseTime = backoffMs;
     });
   }

@@ -1,5 +1,6 @@
 "use strict";
 
+import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
@@ -31,27 +32,30 @@ export class SyncResultObject {
     if (!Array.isArray(this[type]))
       return;
     this[type] = this[type].concat(entries);
-    this.ok = this.errors.length + this.conflicts.length === 0
+    this.ok = this.errors.length + this.conflicts.length === 0;
   }
 }
 
+/**
+ * Collection class.
+ */
 export default class Collection {
-
   /**
-   * Ensures a connection to the local database has been opened.
+   * Constructor.
    *
-   * @param {String}      bucket  Bucket identifier.
-   * @param {String}      name    Collection name.
-   * @param {Api}         api     Reference to Api instance.
-   *
-   * @return {Promise}
+   * @param  {String} bucket  The bucket identifier.
+   * @param  {String} name    The collection name.
+   * @param  {Api}    api     The Api instance.
+   * @param  {Object} options The options object.
    */
-  constructor(bucket, name, api) {
+  constructor(bucket, name, api, options={}) {
     this._bucket = bucket;
     this._name = name;
     this._db;
     this._lastModified = null;
+    // public properties
     this.api = api;
+    this.events = options.events || new EventEmitter();
   }
 
   get name() {

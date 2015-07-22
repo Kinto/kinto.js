@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import { EventEmitter } from "events";
 import { quote } from "../src/utils";
 import { fakeServerResponse } from "./test_utils.js";
 import Api, { SUPPORTED_PROTOCOL_VERSION as SPV, cleanRecord } from "../src/api";
@@ -41,6 +42,20 @@ describe("Api", () => {
       expect(new Api(`http://test/${SPV}/`).remote).eql(`http://test/${SPV}`);
     });
 
+    it("should expose a passed events instance option", () => {
+      const events = new EventEmitter();
+      expect(new Api(`http://test/${SPV}`, {events}).events).to.eql(events);
+    });
+
+    it("should create an events property if none passed", () => {
+      expect(new Api(`http://test/${SPV}`).events).to.be.an.instanceOf(EventEmitter);
+    });
+
+    it("should propagate its events property to child dependencies", () => {
+      const api = new Api(`http://test/${SPV}`);
+      expect(api.http.events).eql(api.events);
+    });
+
     it("should assign version value", () => {
       expect(new Api(`http://test/${SPV}`).version).eql(SPV);
       expect(new Api(`http://test/${SPV}/`).version).eql(SPV);
@@ -52,7 +67,7 @@ describe("Api", () => {
     });
 
     it("should validate protocol version", () => {
-      expect(() =>new Api(`http://test/v999`))
+      expect(() => new Api(`http://test/v999`))
         .to.Throw(Error, /^Unsupported protocol version/);
     });
   });
@@ -64,17 +79,15 @@ describe("Api", () => {
       sandbox.stub(root, "fetch").returns(
         fakeServerResponse(200, {}, {Backoff: "1000"}));
 
-      return api.http.on("backoff", value => {
-        expect(api.backoff).eql(1000000);
-      }).request("/");
+      return api.fetchChangesSince()
+        .then(_ => expect(api.backoff).eql(1000000));
     });
 
     it("should provide no remaining backoff time when none is set", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
 
-      return api.http.on("backoff", value => {
-        expect(api.backoff).eql(0);
-      }).request("/");
+      return api.fetchChangesSince()
+        .then(_ => expect(api.backoff).eql(0));
     });
   });
 
