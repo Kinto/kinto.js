@@ -1,5 +1,6 @@
 "use strict";
 
+import { EventEmitter } from "events";
 import { quote, unquote } from "./utils.js";
 import ERROR_CODES from "./errors.js";
 import HTTP from "./http.js";
@@ -23,9 +24,9 @@ export default class Api {
   /**
    * Constructor.
    *
-   * @param  {String}       remote  The remote URL.
-   * @param  {EventEmitter} events  The events handler.
-   * @param  {Object}       options The options object.
+   * @param  {String}                 remote  The remote URL.
+   * @param  {EventEmitter|undefined} events  The events handler.
+   * @param  {Object}                 options The options object.
    */
   constructor(remote, events, options={headers: {}}) {
     if (typeof(remote) !== "string" || !remote.length)
@@ -37,7 +38,7 @@ export default class Api {
     this.remote = remote;
     this.optionHeaders = options.headers;
     this.serverSettings = null;
-    this.events = events;
+    this.events = events || new EventEmitter();
     try {
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {

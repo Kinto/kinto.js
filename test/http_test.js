@@ -25,8 +25,14 @@ describe("HTTP class", () => {
   afterEach(() => sandbox.restore());
 
   describe("#constructor", () => {
-    it("should expose an events property", () => {
-      expect(http.events).to.be.an.instanceOf(EventEmitter);
+    it("should expose a passed events instance", () => {
+      const events = new EventEmitter();
+      const http = new HTTP(events);
+      expect(http.events).to.eql(events);
+    });
+
+    it("should create an events property if none passed", () => {
+      expect(new HTTP().events).to.be.an.instanceOf(EventEmitter);
     });
   });
 

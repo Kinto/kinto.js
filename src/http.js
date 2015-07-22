@@ -1,5 +1,6 @@
 "use strict";
 
+import { EventEmitter } from "events";
 import ERROR_CODES from "./errors.js";
 
 /**
@@ -19,11 +20,11 @@ export default class HTTP {
    * Options:
    * - {Number} backoffRelease Backoff release timestamp.
    *
-   * @param  {EventEmitter} events Events handler.
+   * @param  {EventEmitter|undefined} events Events handler.
    */
   constructor(events) {
     // public properties
-    this.events = events;
+    this.events = events || new EventEmitter();
   }
 
   /**

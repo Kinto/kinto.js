@@ -76,7 +76,7 @@ describe("Kinto", () => {
       const db = new Kinto();
       const coll = db.collection("plop");
 
-      expect(coll.api.remote).eql(`http://0.0.0.0:8888/${SPV}`);
+      expect(coll.api.remote).eql(`http://localhost:8888/${SPV}`);
     });
 
     it("should setup the Api cient using provided server URL", () => {

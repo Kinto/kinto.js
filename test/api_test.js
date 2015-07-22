@@ -43,9 +43,12 @@ describe("Api", () => {
       expect(new Api(`http://test/${SPV}/`, events).remote).eql(`http://test/${SPV}`);
     });
 
-    it("should expose an events property", () => {
-      expect(new Api(`http://test/${SPV}`, events).events)
-        .to.be.an.instanceOf(EventEmitter);
+    it("should expose a passed events instance", () => {
+      expect(new Api(`http://test/${SPV}`, events).events).to.eql(events);
+    });
+
+    it("should create an events property if none passed", () => {
+      expect(new Api(`http://test/${SPV}`).events).to.be.an.instanceOf(EventEmitter);
     });
 
     it("should assign version value", () => {

@@ -37,8 +37,18 @@ describe("Collection", () => {
   });
 
   describe("#constructor", () => {
-    it("should expose an events property", () => {
-      expect(testCollection().events).to.be.an.instanceOf(EventEmitter);
+    it("should expose a passed events instance", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, events);
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, events);
+      expect(collection.events).to.eql(events);
+    });
+
+    it("should create an events property if none passed", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, events);
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
+      expect(collection.events).to.be.an.instanceOf(EventEmitter);
     });
   });
 
