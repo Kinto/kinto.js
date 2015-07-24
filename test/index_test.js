@@ -7,6 +7,7 @@ import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 
+import BaseAdapter from "../src/adapters/base.js";
 import Kinto from "../src";
 import Collection from "../src/collection";
 
@@ -33,6 +34,12 @@ describe("Kinto", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("static properties", () => {
+    it("should provide a BaseAdapter getter", () => {
+      expect(Kinto.BaseAdapter).eql(BaseAdapter);
+    });
   });
 
   describe("#constructor", () => {
@@ -103,6 +110,14 @@ describe("Kinto", () => {
       const coll = db.collection("plop");
 
       expect(coll.api.optionHeaders).eql({Authorization: "Basic plop"});
+    });
+
+    it("should create collection using an optional adapter", () => {
+      const MyAdapter = class extends BaseAdapter {}
+      const db = new Kinto({adapter: MyAdapter});
+      const coll = db.collection("plop");
+
+      expect(coll.db).to.be.an.instanceOf(MyAdapter);
     });
   });
 });

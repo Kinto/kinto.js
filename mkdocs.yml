@@ -3,5 +3,6 @@ pages:
 - Home: index.md
 - Tutorial: tutorial.md
 - Api: api.md
+- Extending: extending.md
 - Hacking: hacking.md
 theme: readthedocs

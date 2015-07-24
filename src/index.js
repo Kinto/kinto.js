@@ -3,9 +3,10 @@
 import "babel/polyfill";
 import "isomorphic-fetch";
 
+import { EventEmitter } from "events";
 import Api from "./api";
 import Collection from "./collection";
-import { EventEmitter } from "events";
+import BaseAdapter from "./adapters/base";
 
 const DEFAULT_BUCKET_NAME = "default";
 
@@ -14,11 +15,21 @@ const DEFAULT_BUCKET_NAME = "default";
  */
 export default class Kinto {
   /**
+   * Provides a public access to the BaseAdapter class, so that users can create
+   * their DB adapter.
+   * @return {BaseAdapter}
+   */
+  static get BaseAdapter() {
+    return BaseAdapter;
+  }
+
+  /**
    * Constructor.
    *
    * Options:
    * - {String}       bucket  The collection bucket name.
    * - {EventEmitter} events  Events handler.
+   * - {BaseAdapter}  adapter The base DB adapter class.
    *
    * @param  {Object} options The options object.
    */
@@ -29,6 +40,12 @@ export default class Kinto {
     this.events = options.events || new EventEmitter();
   }
 
+  /**
+   * Creates or retrieve a Collection instance.
+   *
+   * @param  {String} collName The collection name.
+   * @return {Collection}
+   */
   collection(collName) {
     if (!collName)
       throw new Error("missing collection name");
@@ -41,7 +58,8 @@ export default class Kinto {
 
     if (!this._collections.hasOwnProperty(collName)) {
       this._collections[collName] = new Collection(bucket, collName, api, {
-        events: this.events
+        events: this.events,
+        adapter: this._options.adapter,
       });
     }
 

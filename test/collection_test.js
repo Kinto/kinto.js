@@ -6,6 +6,8 @@ import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 
+import IDB from "../src/adapters/IDB.js";
+import BaseAdapter from "../src/adapters/base.js";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api, { cleanRecord } from "../src/api";
 
@@ -58,14 +60,28 @@ describe("Collection", () => {
       expect(collection.api.events).eql(collection.events);
       expect(collection.api.http.events).eql(collection.events);
     });
-  });
 
-  describe("#open", () => {
-    it("should resolve with current instance", () => {
-      var articles = testCollection();
+    it("should create and expose an IDB database by default", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, {events});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
+      expect(collection.db).instanceOf(IDB);
+    });
 
-      return articles.open()
-        .then(res => expect(res).eql(articles));
+    it("should throw incompatible adapter options", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, {events});
+      expect(() => {
+        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {adapter: function(){}});
+      }).to.Throw(Error, /Unsupported adapter/);
+    });
+
+    it("should allow providing an adapter option", () => {
+      const MyAdapter = class extends BaseAdapter {}
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+        adapter: MyAdapter
+      });
+      expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
   });
 
@@ -137,35 +153,6 @@ describe("Collection", () => {
     });
   });
 
-  describe("#saveLastModified", () => {
-    var articles;
-
-    beforeEach(() => articles = testCollection());
-
-    it("should resolve with lastModified value", () => {
-      return articles.saveLastModified(42)
-        .should.eventually.become(42);
-    });
-
-    it("should save a lastModified value", () => {
-      return articles.saveLastModified(42)
-        .then(_ => articles.getLastModified())
-        .should.eventually.become(42);
-    });
-
-    it("should update instance lastModified property value", () => {
-      return articles.saveLastModified(42)
-        .then(val => expect(articles.lastModified).eql(val));
-    });
-
-    it("should allow updating previous value", () => {
-      return articles.saveLastModified(42)
-        .then(_ => articles.saveLastModified(43))
-        .then(_ => articles.getLastModified())
-        .should.eventually.become(43);
-    });
-  });
-
   describe("#create", () => {
     var articles;
 
@@ -222,25 +209,6 @@ describe("Collection", () => {
       return articles.create({id: 42, title: "foo"}, {forceUUID: true})
         .should.be.rejectedWith(Error, /UUID/);
     });
-
-    it("should reject on transaction error", () => {
-      sandbox.stub(articles, "prepare").returns({
-        store: {add() {}},
-        transaction: {
-          get onerror() {},
-          set onerror(onerror) {
-            onerror({target: {error: "transaction error"}})
-          }
-        }
-      });
-      return articles.create({foo: "bar"})
-        .should.be.rejectedWith(Error, "transaction error");
-    });
-
-    it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.create().should.be.rejectedWith(Error, /^create/);
-    });
   });
 
   describe("#update", () => {
@@ -287,26 +255,6 @@ describe("Collection", () => {
     it("should validate record's UUID when provided", () => {
       return articles.update({id: 42})
         .should.be.rejectedWith(Error, /UUID/);
-    });
-
-    it("should reject on transaction error", () => {
-      sandbox.stub(articles, "get").returns(Promise.resolve());
-      sandbox.stub(articles, "prepare").returns({
-        store: {get() {}, put() {}},
-        transaction: {
-          get onerror() {},
-          set onerror(onerror) {
-            onerror({target: {error: "transaction error"}})
-          }
-        }
-      });
-      return articles.update({id: uuid4(), foo: "bar"})
-        .should.be.rejectedWith(Error, "transaction error");
-    });
-
-    it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.update().should.be.rejectedWith(Error, /^update/);
     });
   });
 
@@ -392,29 +340,6 @@ describe("Collection", () => {
           url: "http://foo",
         });
     });
-
-    it("should support the includeDeleted option", () => {
-      // body...
-    });
-
-    it("should reject on transaction error", () => {
-      sandbox.stub(articles, "prepare").returns({
-        store: {get() {}},
-        transaction: {
-          get onerror() {},
-          set onerror(onerror) {
-            onerror({target: {error: "transaction error"}})
-          }
-        }
-      });
-      return articles.get(uuid4())
-        .should.be.rejectedWith(Error, "transaction error");
-    });
-
-    it("should prefix error encountered", () => {
-      sandbox.stub(articles, "open").returns(Promise.reject("error"));
-      return articles.get().should.be.rejectedWith(Error, /^get/);
-    });
   });
 
   describe("#delete", () => {
@@ -451,11 +376,6 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
-
-      it("should prefix error encountered", () => {
-        sandbox.stub(articles, "open").returns(Promise.reject("error"));
-        return articles.delete().should.be.rejectedWith(Error, /^delete/);
-      });
     });
 
     describe("Factual", () => {
@@ -476,21 +396,6 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
-    });
-
-    it("should reject on transaction error", () => {
-      sandbox.stub(articles, "get").returns(Promise.resolve());
-      sandbox.stub(articles, "prepare").returns({
-        store: {delete() {}},
-        transaction: {
-          get onerror() {},
-          set onerror(onerror) {
-            onerror({target: {error: "transaction error"}})
-          }
-        }
-      });
-      return articles.delete(uuid4(), {virtual: false})
-        .should.be.rejectedWith(Error, "transaction error");
     });
   });
 
@@ -526,11 +431,6 @@ describe("Collection", () => {
           .then(_ => articles.list({}, {includeDeleted: true}))
           .then(res => res.data)
           .should.eventually.have.length.of(3);
-      });
-
-      it("should prefix error encountered", () => {
-        sandbox.stub(articles, "open").returns(Promise.reject("error"));
-        return articles.list().should.be.rejectedWith(Error, /^list/);
       });
     });
 
@@ -632,28 +532,6 @@ describe("Collection", () => {
             {title: "art3", unread: true, complete: true},
             {title: "art1", unread: true, complete: true},
           ]);
-      });
-    });
-
-    describe("Error handling", () => {
-      var articles;
-
-      beforeEach(() => {
-        articles = testCollection();
-      });
-
-      it("should reject on transaction error", () => {
-        sandbox.stub(articles, "prepare").returns({
-          store: {openCursor() {return {}}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}})
-            }
-          }
-        });
-        return articles.list({})
-          .should.be.rejectedWith(Error, "transaction error");
       });
     });
   });
@@ -1029,12 +907,12 @@ describe("Collection", () => {
     });
 
     it("should perform sync on server backoff when ignoreBackoff is true", () => {
-      sandbox.stub(articles, "getLastModified").returns(Promise.resolve({}));
+      sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
       sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
       sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
       articles.api = {backoff: 30};
       return articles.sync({ignoreBackoff: true})
-        .then(_ => sinon.assert.calledOnce(articles.getLastModified));
+        .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
     });
   });
 });
