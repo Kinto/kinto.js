@@ -30,7 +30,7 @@ Fortunately, as in theory records don't carry any relations information, usually
 
 As all local persistence operations are asynchronous, there might be situations where race conditions may occur.
 
-For example, if you're displaying a form for the user to update a record, and in the meanwhile that record is updated from elsewhere in the code, you might just save an obsolete/conflicting version of the record, overriding the last know valid one by "mistake".
+For example, if you're displaying a form for the user to update a record, and in the meanwhile that record is updated from a ServiceWorker, you might just save an obsolete/conflicting version of the record, overriding the last know valid one by "mistake".
 
 This is a [known issue](https://github.com/mozilla-services/kinto.js/issues/34) and we're in the process of finding a decent situation to handle these smoothly.
 
