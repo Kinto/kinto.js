@@ -7,6 +7,8 @@ import { EventEmitter } from "events";
 import Api from "./api";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
+import LocalStorage from "./adapters/LocalStorage";
+import IDB from "./adapters/IDB";
 
 const DEFAULT_BUCKET_NAME = "default";
 
@@ -19,8 +21,12 @@ export default class Kinto {
    * their DB adapter.
    * @return {BaseAdapter}
    */
-  static get BaseAdapter() {
-    return BaseAdapter;
+  static get adapters() {
+    return {
+      BaseAdapter: BaseAdapter,
+      LocalStorage: LocalStorage,
+      IDB: IDB,
+    }
   }
 
   /**
@@ -59,7 +65,7 @@ export default class Kinto {
     if (!this._collections.hasOwnProperty(collName)) {
       this._collections[collName] = new Collection(bucket, collName, api, {
         events: this.events,
-        adapter: this._options.adapter,
+        adapter: this._options.adapter || Kinto.adapters.IDB,
       });
     }
 

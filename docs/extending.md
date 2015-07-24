@@ -8,6 +8,11 @@ Simply create a class extending from `Kinto.BaseAdapter`, which rather acts as a
 
 ```js
 class MyAdapter extends Kinto.BaseAdapter {
+  constructor(dbname) {
+    super();
+    this.dbname = dbname;
+  }
+
   create(record) {
     …
   }
@@ -26,4 +31,4 @@ Then create the Kinto object passing a reference to your adapter class:
 const kinto = new Kinto({adapter: MyAdapter});
 ```
 
-Read the `BaseAdapter` class [source code](https://github.com/mozilla-services/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly.
+Read the `BaseAdapter` class [source code](https://github.com/mozilla-services/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly. [IDB](https://github.com/mozilla-services/kinto.js/blob/master/src/adapters/IDB.js) and [LocalStorage](https://github.com/mozilla-services/kinto.js/blob/master/src/adapters/localStorage.js) adapters are also worth a read if you need guidance writing your own.
