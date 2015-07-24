@@ -4,6 +4,7 @@ import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
+import BaseAdapter from "./adapters/base";
 import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
 import { cleanRecord } from "./api";
 
@@ -45,6 +46,9 @@ export default class Collection {
   /**
    * Constructor.
    *
+   * Options:
+   * - {BaseAdapter} adapter: The DB adapter (default: IDB)
+   *
    * @param  {String} bucket  The bucket identifier.
    * @param  {String} name    The collection name.
    * @param  {Api}    api     The Api instance.
@@ -54,8 +58,12 @@ export default class Collection {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
+    const DBAdapter = options.adapter || IDB;
+    const db = new DBAdapter(`${bucket}/${name}`);
+    if (!(db instanceof BaseAdapter))
+      throw new Error("Unsupported adapter.");
     // public properties
-    this.db = new IDB(`${bucket}/${name}`);
+    this.db = db;
     this.api = api;
     this.events = options.events || new EventEmitter();
   }

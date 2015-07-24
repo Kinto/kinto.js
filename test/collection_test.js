@@ -6,6 +6,8 @@ import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 
+import IDB from "../src/adapters/IDB.js";
+import BaseAdapter from "../src/adapters/base.js";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api, { cleanRecord } from "../src/api";
 
@@ -57,6 +59,29 @@ describe("Collection", () => {
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
       expect(collection.api.events).eql(collection.events);
       expect(collection.api.http.events).eql(collection.events);
+    });
+
+    it("should create and expose an IDB database by default", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, {events});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
+      expect(collection.db).instanceOf(IDB);
+    });
+
+    it("should throw incompatible adapter options", () => {
+      const events = new EventEmitter();
+      const api = new Api(FAKE_SERVER_URL, {events});
+      expect(() => {
+        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {adapter: function(){}});
+      }).to.Throw(Error, /Unsupported adapter/);
+    });
+
+    it("should allow providing an adapter option", () => {
+      const MyAdapter = class extends BaseAdapter {}
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+        adapter: MyAdapter
+      });
+      expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
   });
 

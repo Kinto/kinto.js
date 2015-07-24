@@ -1,11 +1,13 @@
 "use strict";
 
+import BaseAdapter from "./base.js";
 import { attachFakeIDBSymbolsTo } from "./../utils";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
-export default class IDB {
+export default class IDB extends BaseAdapter {
   constructor(dbname) {
+    super();
     this._db = null;
     // public properties
     this.dbname = dbname;
