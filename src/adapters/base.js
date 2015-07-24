@@ -7,7 +7,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   clear() {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -19,7 +19,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -29,7 +29,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -39,7 +39,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   get(id) {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -49,7 +49,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   delete(id) {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -58,7 +58,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   list() {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -69,7 +69,7 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   saveLastModified(lastModified) {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 
   /**
@@ -78,6 +78,6 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   getLastModified() {
-    throw new Error("Implement me.");
+    throw new Error("Not Implemented.");
   }
 }
