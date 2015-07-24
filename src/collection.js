@@ -68,10 +68,6 @@ export default class Collection {
     return this._bucket;
   }
 
-  get dbname() {
-    return `${this.bucket}/${this.name}`;
-  }
-
   get lastModified() {
     return this._lastModified;
   }

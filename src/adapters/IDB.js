@@ -102,7 +102,9 @@ export default class IDB {
   /**
    * Adds a record to the IndexedDB database.
    *
-   * @param  {Object} record
+   * Note: An id value is required.
+   *
+   * @param  {Object} record The record object, including an id.
    * @return {Promise}
    */
   create(record) {
