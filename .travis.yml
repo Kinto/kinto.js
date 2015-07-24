@@ -12,3 +12,5 @@ before_install:
 - .env/bin/pip install kinto==1.3.1
 env:
 - KINTO_PSERVE_EXECUTABLE=.env/bin/pserve
+after_script:
+- npm run report-coverage
