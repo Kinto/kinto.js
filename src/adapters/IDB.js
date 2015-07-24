@@ -5,26 +5,18 @@ import { attachFakeIDBSymbolsTo } from "./../utils";
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 export default class IDB {
-  constructor(bucket, name) {
-    this._bucket = bucket;
-    this._name = name;
+  constructor(dbname) {
     this._db = null;
-  }
-
-  get name() {
-    return this._name;
-  }
-
-  get bucket() {
-    return this._bucket;
-  }
-
-  get dbname() {
-    return `${this.bucket}/${this.name}`;
+    // public properties
+    this.dbname = dbname;
   }
 
   _handleError(method) {
-    return err => {throw new Error(method + "() " + err.message)};
+    return err => {
+      const error = new Error(method + "() " + err.message);
+      error.stack = err.stack;
+      throw error;
+    };
   }
 
   /**

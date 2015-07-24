@@ -55,7 +55,7 @@ export default class Collection {
     this._name = name;
     this._lastModified = null;
     // public properties
-    this.db = new IDB(bucket, name);
+    this.db = new IDB(`${bucket}/${name}`);
     this.api = api;
     this.events = options.events || new EventEmitter();
   }

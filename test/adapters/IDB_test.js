@@ -17,13 +17,11 @@ describe("adapters.IDB", () => {
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    db = new IDB("testBucket", "testColl");
+    db = new IDB("test/foo");
     return db.clear();
   });
 
-  afterEach(() => {
-    sandbox.restore();
-  });
+  afterEach(() => sandbox.restore());
 
   describe("#open", () => {
     it("should resolve with current instance", () => {
