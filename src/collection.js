@@ -7,6 +7,8 @@ import deepEquals from "deep-eql";
 import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
 import { cleanRecord } from "./api";
 
+import IDB from "./adapters/IDB";
+
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 export class SyncResultObject {
@@ -51,9 +53,9 @@ export default class Collection {
   constructor(bucket, name, api, options={}) {
     this._bucket = bucket;
     this._name = name;
-    this._db;
     this._lastModified = null;
     // public properties
+    this.db = new IDB(bucket, name);
     this.api = api;
     this.events = options.events || new EventEmitter();
   }
@@ -82,85 +84,15 @@ export default class Collection {
     }
   }
 
-  _handleError(method) {
-    return err => {throw new Error(method + "() " + err.message)}
-  }
-
-  /**
-   * Ensures a connection to the local database has been opened.
-   *
-   * @return {Promise}
-   */
-  open() {
-    if (this._db)
-      return Promise.resolve(this);
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbname, 1);
-      request.onupgradeneeded = event => {
-        // DB object
-        const db = event.target.result;
-        // Main collection store
-        const collStore = db.createObjectStore(this.dbname, {
-          keyPath: "id"
-        });
-        // Primary key (UUID)
-        collStore.createIndex("id", "id", { unique: true });
-        // Local record status ("synced", "created", "updated", "deleted")
-        collStore.createIndex("_status", "_status");
-        // Last modified field
-        collStore.createIndex("last_modified", "last_modified");
-
-        // Metadata store
-        const metaStore = db.createObjectStore("__meta__", {
-          keyPath: "name"
-        });
-        metaStore.createIndex("name", "name", { unique: true });
-      };
-      request.onerror = event => reject(event.target.error);
-      request.onsuccess = event => {
-        this._db = event.target.result;
-        resolve(this);
-      };
-    });
-  }
-
-  /**
-   * Returns a transaction and a store objects for this collection.
-   *
-   * To determine if a transaction has completed successfully, we should rather
-   * listen to the transaction’s complete event rather than the IDBObjectStore
-   * request’s success event, because the transaction may still fail after the
-   * success event fires.
-   *
-   * @param {String}      mode  Transaction mode ("readwrite" or undefined)
-   * @param {String|null} name  Store name (defaults to coll name)
-   */
-  prepare(mode=undefined, name=null) {
-    const storeName = name || this.dbname;
-    const transaction = this._db.transaction([storeName], mode);
-    const store = transaction.objectStore(storeName);
-    return {transaction, store};
-  }
-
   /**
    * Deletes every records in the current collection.
    *
    * @return {Promise}
    */
   clear() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.clear();
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => {
-          resolve({
-            data: [],
-            permissions: {}
-          });
-        };
-      });
-    }).catch(this._handleError("clear"));
+    return this.db.clear().then(() => {
+      return {data: [], permissions: {}};
+    });
   }
 
   /**
@@ -175,27 +107,17 @@ export default class Collection {
    * @return {Promise}
    */
   create(record, options={forceUUID: false, synced: false}) {
-    return this.open().then(() => {
-      if (typeof(record) !== "object")
-        return Promise.reject(new Error('Record is not an object.'));
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        const newRecord = Object.assign({}, record, {
-          id:      options.synced || options.forceUUID ? record.id : uuid4(),
-          _status: options.synced ? "synced" : "created"
-        });
-        if (!isUUID4(newRecord.id))
-          reject(new Error(`Invalid UUID: ${newRecord.id}`));
-        store.add(newRecord);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => {
-          resolve({
-            data: newRecord,
-            permissions: {}
-          });
-        };
-      });
-    }).catch(this._handleError("create"));
+    if (typeof(record) !== "object")
+      return Promise.reject(new Error("Record is not an object."));
+    const newRecord = Object.assign({}, record, {
+      id:      options.synced || options.forceUUID ? record.id : uuid4(),
+      _status: options.synced ? "synced" : "created"
+    });
+    if (!isUUID4(newRecord.id))
+      return Promise.reject(new Error(`Invalid UUID: ${newRecord.id}`));
+    return this.db.create(newRecord).then(record => {
+      return {data: record, permissions: {}};
+    });
   }
 
   /**
@@ -209,34 +131,24 @@ export default class Collection {
    * @return {Promise}
    */
   update(record, options={synced: false}) {
-    return this.open().then(() => {
-      if (typeof(record) !== "object")
-        return Promise.reject(new Error("Record is not an object."));
-      if (!record.id)
-        return Promise.reject(new Error("Cannot update a record missing id."));
-      if (!isUUID4(record.id))
-        return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
-      return this.get(record.id).then(_ => {
-        return new Promise((resolve, reject) => {
-          var newStatus = "updated";
-          if (record._status === "deleted") {
-            newStatus = "deleted";
-          } else if (options.synced) {
-            newStatus = "synced";
-          }
-          const {transaction, store} = this.prepare("readwrite");
-          const updatedRecord = Object.assign({}, record, {_status: newStatus});
-          const request = store.put(updatedRecord);
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => {
-            resolve({
-              data: Object.assign({}, updatedRecord, {id: request.result}),
-              permissions: {}
-            });
-          };
-        });
+    if (typeof(record) !== "object")
+      return Promise.reject(new Error("Record is not an object."));
+    if (!record.id)
+      return Promise.reject(new Error("Cannot update a record missing id."));
+    if (!isUUID4(record.id))
+      return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
+    return this.get(record.id).then(_ => {
+      var newStatus = "updated";
+      if (record._status === "deleted") {
+        newStatus = "deleted";
+      } else if (options.synced) {
+        newStatus = "synced";
+      }
+      const updatedRecord = Object.assign({}, record, {_status: newStatus});
+      return this.db.update(updatedRecord).then(record => {
+        return {data: record, permissions: {}};
       });
-    }).catch(this._handleError("update"));
+    });
   }
 
   /**
@@ -262,26 +174,16 @@ export default class Collection {
    * @return {Promise}
    */
   get(id, options={includeDeleted: false}) {
-    return this.open().then(() => {
-      if (!isUUID4(id))
-        throw new Error(`Invalid UUID: ${id}`);
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare();
-        const request = store.get(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => {
-          if (!request.result ||
-             (!options.includeDeleted && request.result._status === "deleted")) {
-            reject(new Error(`Record with id=${id} not found.`));
-          } else {
-            resolve({
-              data: request.result,
-              permissions: {}
-            });
-          }
-        };
-      });
-    }).catch(this._handleError("get"));
+    if (!isUUID4(id))
+      return Promise.reject(Error(`Invalid UUID: ${id}`));
+    return this.db.get(id).then(record => {
+      if (!record ||
+         (!options.includeDeleted && record._status === "deleted")) {
+        throw new Error(`Record with id=${id} not found.`);
+      } else {
+        return {data: record, permissions: {}};
+      }
+    });
   }
 
   /**
@@ -296,37 +198,27 @@ export default class Collection {
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
-    return this.open().then(() => {
-      if (!isUUID4(id))
-        throw new Error(`Invalid UUID: ${id}`);
-      // Ensure the record actually exists.
-      return this.get(id, {includeDeleted: true}).then(res => {
-        if (options.virtual) {
-          if (res.data._status === "deleted") {
-            // Record is already deleted
-            return Promise.resolve({
-              data: { id: id },
-              permissions: {}
-            });
-          } else {
-            return this.update(Object.assign({}, res.data, {
-              _status: "deleted"
-            }));
-          }
+    if (!isUUID4(id))
+      return Promise.reject(new Error(`Invalid UUID: ${id}`));
+    // Ensure the record actually exists.
+    return this.get(id, {includeDeleted: true}).then(res => {
+      if (options.virtual) {
+        if (res.data._status === "deleted") {
+          // Record is already deleted
+          return Promise.resolve({
+            data: { id: id },
+            permissions: {}
+          });
+        } else {
+          return this.update(Object.assign({}, res.data, {
+            _status: "deleted"
+          }));
         }
-        return new Promise((resolve, reject) => {
-          const {transaction, store} = this.prepare("readwrite");
-          store.delete(id);
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => {
-            resolve({
-              data: { id: id },
-              permissions: {}
-            });
-          };
-        });
+      }
+      return this.db.delete(id).then(id => {
+        return {data: {id: id}, permissions: {}};
       });
-    }).catch(this._handleError("delete"));
+    });
   }
 
   /**
@@ -345,29 +237,12 @@ export default class Collection {
    */
   list(params={}, options={includeDeleted: false}) {
     params = Object.assign({order: "-last_modified", filters: {}}, params);
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const results = [];
-        const {transaction, store} = this.prepare();
-        const request = store.openCursor();
-        request.onsuccess = function(event) {
-          var cursor = event.target.result;
-          if (cursor) {
-            if (options.includeDeleted || cursor.value._status !== "deleted") {
-              results.push(cursor.value);
-            }
-            cursor.continue();
-          }
-        };
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => {
-          resolve({
-            data: reduceRecords(params.filters, params.order, results),
-            permissions: {}
-          });
-        };
-      });
-    }).catch(this._handleError("list"));
+    return this.db.list().then(results => {
+      var reduced = reduceRecords(params.filters, params.order, results);
+      if (!options.includeDeleted)
+        reduced = reduced.filter(record => record._status !== "deleted");
+      return {data: reduced, permissions: {}};
+    });
   }
 
   /**
@@ -445,50 +320,12 @@ export default class Collection {
         if (syncResultObject.conflicts.length > 0)
           return syncResultObject;
         // No conflict occured, persist collection's lastModified value
-        return this.saveLastModified(syncResultObject.lastModified)
-          .then(_ => syncResultObject);
+        return this.db.saveLastModified(syncResultObject.lastModified)
+          .then(lastModified => {
+            this._lastModified = lastModified;
+            return syncResultObject;
+          });
       })
-  }
-
-  /**
-   * Store the lastModified value into collection's metadata store.
-   *
-   * @param  {Number}  lastModified
-   * @param  {Object}  options
-   * @return {Promise}
-   */
-  saveLastModified(lastModified) {
-    var value = parseInt(lastModified, 10);
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite", "__meta__");
-        const request = store.put({name: "lastModified", value: value});
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => {
-          // update locally cached property
-          this._lastModified = value;
-          resolve(value);
-        };
-      });
-    });
-  }
-
-  /**
-   * Retrieve saved collection's lastModified value.
-   *
-   * @return {Promise}
-   */
-  getLastModified() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare(undefined, "__meta__");
-        const request = store.get("lastModified");
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => {
-          resolve(request.result && request.result.value || null)
-        };
-      });
-    });
   }
 
   /**
@@ -607,7 +444,7 @@ export default class Collection {
         new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
     const result = new SyncResultObject();
-    return this.getLastModified()
+    return this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
       .then(result => {
