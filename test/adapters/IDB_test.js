@@ -4,7 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 
-import IDB from "../../src/adapters/idb.js";
+import IDB from "../../src/adapters/IDB.js";
 
 chai.use(chaiAsPromised);
 chai.should();
