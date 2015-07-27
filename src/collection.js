@@ -452,12 +452,14 @@ export default class Collection {
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
       .then(result => {
-        if (!result.ok) {
+        if (!result.ok)
           return result;
-        } else {
-          return this.pushChanges(result, options)
-            .then(result => this.pullChanges(result, options));
-        }
+        return this.pushChanges(result, options)
+          .then(result => {
+            if (!result.ok)
+              return result;
+            return this.pullChanges(result, options)
+          });
       });
   }
 }
