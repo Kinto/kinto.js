@@ -25,8 +25,9 @@ export default class Api {
    * Constructor.
    *
    * Options:
-   * - {Object}       headers: The key-value headers to pass to each request.
-   * - {EventEmitter} events:  The events handler.
+   * - {Object}       headers The key-value headers to pass to each request.
+   * - {EventEmitter} events  The events handler.
+   * - {String}       events  The HTTP request mode.
    *
    * @param  {String}  remote   The remote URL.
    * @param  {Object}  options  The options object.
@@ -49,7 +50,7 @@ export default class Api {
     }
     if (this.version !== SUPPORTED_PROTOCOL_VERSION)
       throw new Error(`Unsupported protocol version: ${this.version}`);
-    this.http = new HTTP({events: this.events});
+    this.http = new HTTP({events: this.events, requestMode: options.requestMode});
     this._registerHTTPEvents();
   }
 

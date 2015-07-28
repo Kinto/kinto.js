@@ -34,6 +34,10 @@ describe("HTTP class", () => {
     it("should create an events property if none passed", () => {
       expect(new HTTP().events).to.be.an.instanceOf(EventEmitter);
     });
+
+    it("should accept a requestMode option", () => {
+      expect(new HTTP({requestMode: "no-cors"}).requestMode).eql("no-cors");
+    });
   });
 
   describe("#request()", () => {
@@ -53,6 +57,26 @@ describe("HTTP class", () => {
         http.request("/", {headers: {Foo: "Bar"}});
 
         expect(fetch.firstCall.args[1].headers.Foo).eql("Bar");
+      });
+    });
+
+    describe("Request CORS mode", () => {
+      beforeEach(() => {
+        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {}, {}));
+      });
+
+      it("should use default CORS mode", () => {
+        new HTTP().request("/");
+
+        expect(fetch.firstCall.args[1].mode)
+          .eql("cors");
+      });
+
+      it("should use configured custom CORS mode", () => {
+        new HTTP({requestMode: "no-cors"}).request("/");
+
+        expect(fetch.firstCall.args[1].mode)
+          .eql("no-cors");
       });
     });
 

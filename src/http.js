@@ -18,19 +18,24 @@ export default class HTTP {
    * Constructor.
    *
    * Options:
-   * - {EventEmitter} events Events handler.
+   * - {EventEmitter} events       Events handler.
+   * - {String}       requestMode  The HTTP request mode (default: "cors").
    *
    * @param  {Object} options The options object.
    */
-  constructor(options={}) {
+  constructor(options={requestMode: "cors"}) {
     // public properties
     this.events = options.events || new EventEmitter();
+    this.requestMode = options.requestMode;
   }
 
   /**
-   * Performs an HTTP request to the Kinto server. Resolves with an objet
-   * containing the following properties:
+   * Performs an HTTP request to the Kinto server.
    *
+   * Options:
+   * - {Object} headers The request headers object (default: {})
+   *
+   * Resolves with an objet containing the following HTTP response properties:
    * - {Number}  status  The HTTP status code.
    * - {Object}  json    The JSON response body.
    * - {Headers} headers The response headers object; see the ES6 fetch() spec.
@@ -43,6 +48,7 @@ export default class HTTP {
     var response, status, statusText, headers;
     // Ensure default request headers are always set
     options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
+    options.mode = this.requestMode;
     return fetch(url, options)
       .then(res => {
         response = res;

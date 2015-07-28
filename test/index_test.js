@@ -72,6 +72,12 @@ describe("Kinto", () => {
       expect(kinto.collection("x").api.events).eql(kinto.events);
       expect(kinto.collection("x").api.http.events).eql(kinto.events);
     });
+
+    it("should propagate the requestMode option to child dependencies", () => {
+      const requestMode = "no-cors";
+      expect(new Kinto({requestMode}).collection("x").api.http.requestMode)
+        .eql(requestMode);
+    });
   });
 
   describe("#collection()", () => {
