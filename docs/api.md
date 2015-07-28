@@ -196,6 +196,8 @@ Result:
 
 Synchronizing local data with remote ones is performed by calling the `#sync()` method.
 
+![](images/sync-flow.png)
+
 Synopsis:
 
 1. Fetch remote changes since last synchronization;
