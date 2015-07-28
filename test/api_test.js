@@ -70,6 +70,12 @@ describe("Api", () => {
       expect(() => new Api(`http://test/v999`))
         .to.Throw(Error, /^Unsupported protocol version/);
     });
+
+    it("should propagate the requestMode option to the child HTTP instance", () => {
+      const requestMode = "no-cors";
+      expect(new Api(`http://test/${SPV}`, {requestMode}).http.requestMode)
+        .eql(requestMode);
+    });
   });
 
   describe("get backoff()", () => {

@@ -33,9 +33,10 @@ export default class Kinto {
    * Constructor.
    *
    * Options:
-   * - {String}       bucket  The collection bucket name.
-   * - {EventEmitter} events  Events handler.
-   * - {BaseAdapter}  adapter The base DB adapter class.
+   * - {String}       bucket   The collection bucket name.
+   * - {EventEmitter} events   Events handler.
+   * - {BaseAdapter}  adapter  The base DB adapter class.
+   * - {String}       requestMode The HTTP CORS mode to use.
    *
    * @param  {Object} options The options object.
    */
@@ -58,13 +59,14 @@ export default class Kinto {
 
     const bucket = this._options.bucket || DEFAULT_BUCKET_NAME;
     const api = new Api(this._options.remote || "http://localhost:8888/v1", {
-      headers: this._options.headers || {},
-      events: this.events,
+      headers:     this._options.headers || {},
+      events:      this.events,
+      requestMode: this._options.requestMode,
     });
 
     if (!this._collections.hasOwnProperty(collName)) {
       this._collections[collName] = new Collection(bucket, collName, api, {
-        events: this.events,
+        events:  this.events,
         adapter: this._options.adapter || Kinto.adapters.IDB,
       });
     }
