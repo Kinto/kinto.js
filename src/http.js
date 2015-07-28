@@ -43,6 +43,7 @@ export default class HTTP {
     var response, status, statusText, headers;
     // Ensure default request headers are always set
     options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
+    options.mode = "cors";
     return fetch(url, options)
       .then(res => {
         response = res;
