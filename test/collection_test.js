@@ -884,35 +884,49 @@ describe("Collection", () => {
         .should.eventually.become(result);
     });
 
-    it("should transfer the headers option", () => {
-      var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
-      return articles.sync({headers: {Foo: "Bar"}})
-        .then(() => {
-          expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
-        })
-    });
-
-    it("should transfer the strategy option", () => {
-      var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
-      return articles.sync({strategy: Collection.strategy.SERVER_WINS})
-        .then(() => {
-          expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
-        })
-    });
-
-    it("should reject on server backoff by default", () => {
-      articles.api = {backoff: 30000};
+    it("should not execute a last pull on push failure", () => {
+      const pullResult = new SyncResultObject();
+      const pushResult = new SyncResultObject();
+      pushResult.add("conflicts", [1]);
+      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(pullResult));
+      sandbox.stub(articles, "pushChanges").returns(Promise.resolve(pushResult));
       return articles.sync()
-        .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
+        .should.eventually.become(pushResult);
     });
 
-    it("should perform sync on server backoff when ignoreBackoff is true", () => {
-      sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
-      sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
-      sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
-      articles.api = {backoff: 30};
-      return articles.sync({ignoreBackoff: true})
-        .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
+    describe("Options", () => {
+      it("should transfer the headers option", () => {
+        var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+        return articles.sync({headers: {Foo: "Bar"}})
+          .then(() => {
+            expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
+          })
+      });
+
+      it("should transfer the strategy option", () => {
+        var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+        return articles.sync({strategy: Collection.strategy.SERVER_WINS})
+          .then(() => {
+            expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
+          })
+      });
+    });
+
+    describe("Server backoff", () => {
+      it("should reject on server backoff by default", () => {
+        articles.api = {backoff: 30000};
+        return articles.sync()
+          .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
+      });
+
+      it("should perform sync on server backoff when ignoreBackoff is true", () => {
+        sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
+        sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
+        sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
+        articles.api = {backoff: 30};
+        return articles.sync({ignoreBackoff: true})
+          .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
+      });
     });
   });
 });
