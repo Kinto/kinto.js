@@ -59,4 +59,4 @@ To serve them over http locally so you can see your modifications in real time:
 
 ## Publishing to npm
 
-    $ npm run publish
+    $ npm run publish-package
