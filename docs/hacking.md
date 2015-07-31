@@ -56,3 +56,7 @@ To build docs locally, ensure mkdocs is [properly installed](http://www.mkdocs.o
 To serve them over http locally so you can see your modifications in real time:
 
     $ mkdocs serve
+
+## Publishing to npm
+
+    $ npm run publish
