@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "0.0.1",
+  "version": "0.6.0",
   "description": "JavaScript client for Cliquet.",
   "main": "index.js",
   "scripts": {
@@ -18,18 +18,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mozilla-services/kinto.js.git"
+    "url": "https://github.com/Kinto/kinto.js.git"
   },
   "keywords": [
     "sync",
     "api",
     "rest",
-    "cliquet"
+    "kinto",
+    "indexeddb"
   ],
   "author": "Nicolas Perriault <nperriault@mozilla.com>",
-  "license": "MPL",
+  "license": "MPL-2.0",
   "bugs": {
-    "url": "https://github.com/mozilla-services/kinto.js/issues"
+    "url": "https://github.com/Kinto/kinto.js/issues"
   },
   "browserify": {
     "transform": [
