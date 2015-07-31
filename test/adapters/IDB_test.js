@@ -36,7 +36,7 @@ describe("adapter.IDB", () => {
 
       it("should prefix error encountered", () => {
         sandbox.stub(db, "open").returns(Promise.reject("error"));
-        return db.create().should.be.rejectedWith(Error, /^create/);
+        return db.create().should.be.rejectedWith(Error, /^Error: create/);
       });
     });
 
@@ -58,7 +58,7 @@ describe("adapter.IDB", () => {
 
       it("should prefix error encountered", () => {
         sandbox.stub(db, "open").returns(Promise.reject("error"));
-        return db.update().should.be.rejectedWith(Error, /^update/);
+        return db.update().should.be.rejectedWith(Error, /^Error: update/);
       });
     });
 
@@ -100,14 +100,14 @@ describe("adapter.IDB", () => {
 
       it("should prefix error encountered", () => {
         sandbox.stub(db, "open").returns(Promise.reject("error"));
-        return db.delete().should.be.rejectedWith(Error, /^delete/);
+        return db.delete().should.be.rejectedWith(Error, /^Error: delete/);
       });
     });
 
     describe("#list", () => {
       it("should prefix error encountered", () => {
         sandbox.stub(db, "open").returns(Promise.reject("error"));
-        return db.list().should.be.rejectedWith(Error, /^list/);
+        return db.list().should.be.rejectedWith(Error, /^Error: list/);
       });
 
       it("should reject on transaction error", () => {
