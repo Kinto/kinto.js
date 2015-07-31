@@ -14,7 +14,14 @@ $ npm install kinto --save-dev
 
 ## Static assets
 
-Dev and production ready assets are available in the [`dist` folder of the repository](https://github.com/Kinto/kinto.js/tree/master/dist). You can either download an archive of the code and use these file in your own project, or link to static assets hosted on github:
+Dev and production ready assets are available in the [`dist` folder of the repository](https://github.com/Kinto/kinto.js/tree/master/dist). You can either download an archive of the code and use these files in your own project, or link to static assets served through [rawgit](http://rawgit.com/):
 
-- Dev version: [latest master](https://raw.githubusercontent.com/Kinto/kinto.js/master/dist/kinto.dev.js)
-- Production version: [latest master](https://raw.githubusercontent.com/Kinto/kinto.js/master/dist/kinto.min.js)
+### Latest master
+
+- Dev version, including source maps: [kinto.dev.js](https://rawgit.com/Kinto/kinto.js/master/dist/kinto.dev.js)
+- Production version, minified, no source maps: [kinto.dev.js](https://rawgit.com/Kinto/kinto.js/master/dist/kinto.min.js)
+
+### Latest tag
+
+- Dev version, including source maps: [kinto.dev.js](https://cdn.rawgit.com/Kinto/kinto.js/1.0.0-rc.1/dist/kinto.dev.js)
+- Production version, minified, no source maps: [kinto.dev.js](https://cdn.rawgit.com/Kinto/kinto.js/1.0.0-rc.1/dist/kinto.min.js)
