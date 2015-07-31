@@ -35,7 +35,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "clear", thrower("err"));
         return db.clear()
-          .should.be.rejectedWith(Error, /^clear\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: clear\(\) err/);
       });
     });
 
@@ -54,21 +54,21 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "setItem", thrower("err"));
         return db.create({})
-          .should.be.rejectedWith(Error, /^create/);
+          .should.be.rejectedWith(Error, /^Error: create/);
       });
     });
 
     describe("#update", () => {
       it("should reject on id not found", () => {
         return db.update({id: 1})
-          .should.be.rejectedWith(Error, /^Doesn't exist/);
+          .should.be.rejectedWith(Error, /^Error: Doesn't exist/);
       });
 
       it("should reject on generic error", () => {
         db.keys = [1];
         sandbox.stub(localStorage, "setItem", thrower("err"));
         return db.update({id: 1})
-          .should.be.rejectedWith(Error, /^update/);
+          .should.be.rejectedWith(Error, /^Error: update/);
       });
     });
 
@@ -76,7 +76,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "getItem", thrower("err"));
         return db.get(1)
-          .should.be.rejectedWith(Error, /^get\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: get\(\) err/);
       });
     });
 
@@ -90,7 +90,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "removeItem", thrower("err"));
         return db.delete(42)
-          .should.be.rejectedWith(Error, /^delete\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: delete\(\) err/);
       });
     });
 
@@ -98,7 +98,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(JSON, "parse", thrower("err"));
         return db.list()
-          .should.be.rejectedWith(Error, /^list\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: list\(\) err/);
       });
     });
 
@@ -106,7 +106,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "setItem", thrower("err"));
         return db.saveLastModified(42)
-          .should.be.rejectedWith(Error, /^saveLastModified\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: saveLastModified\(\) err/);
       });
     });
 
@@ -114,7 +114,7 @@ describe("adapter.LocalStorage", () => {
       it("should reject on generic error", () => {
         sandbox.stub(JSON, "parse", thrower("err"));
         return db.getLastModified()
-          .should.be.rejectedWith(Error, /^getLastModified\(\) err/);
+          .should.be.rejectedWith(Error, /^Error: getLastModified\(\) err/);
       });
     });
   });
