@@ -9,6 +9,7 @@ import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
 import LocalStorage from "./adapters/LocalStorage";
 import IDB from "./adapters/IDB";
+import RemoteTransformer from "./transformers/remote";
 
 const DEFAULT_BUCKET_NAME = "default";
 
@@ -17,15 +18,28 @@ const DEFAULT_BUCKET_NAME = "default";
  */
 export default class Kinto {
   /**
-   * Provides a public access to the BaseAdapter class, so that users can create
-   * their DB adapter.
-   * @return {BaseAdapter}
+   * Provides a public access to the base adapter classes. Users can create
+   * a custom DB adapter by extending BaseAdapter.
+   *
+   * @return {Object}
    */
   static get adapters() {
     return {
       BaseAdapter: BaseAdapter,
       LocalStorage: LocalStorage,
       IDB: IDB,
+    }
+  }
+
+  /**
+   * Provides a public access to base transformer classes. Users can create
+   * custom transformers by extending these.
+   *
+   * @return {Object}
+   */
+  static get transformers() {
+    return {
+      RemoteTransformer: RemoteTransformer,
     }
   }
 

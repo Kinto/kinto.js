@@ -15,3 +15,11 @@ export function fakeServerResponse(status, json, headers={}) {
     }
   });
 }
+
+export function updateTitleWithDelay(record, str, delay) {
+  return new Promise(resolve => {
+    setTimeout(() => {
+      resolve(Object.assign({}, record, {title: record.title + str}));
+    }, delay);
+  });
+};

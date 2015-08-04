@@ -6,10 +6,12 @@ import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 
-import IDB from "../src/adapters/IDB.js";
-import BaseAdapter from "../src/adapters/base.js";
+import IDB from "../src/adapters/IDB";
+import BaseAdapter from "../src/adapters/base";
+import RemoteTransformer from "../src/transformers/remote";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api, { cleanRecord } from "../src/api";
+import { updateTitleWithDelay } from "./test_utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -27,6 +29,18 @@ describe("Collection", () => {
     events = new EventEmitter();
     api = new Api(FAKE_SERVER_URL, {events});
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
+  }
+
+  class QuestionMarkTransformer extends RemoteTransformer {
+    encode(record) {
+      return updateTitleWithDelay(record, "?", 10);
+    }
+  }
+
+  class ExclamationMarkTransformer extends RemoteTransformer {
+    encode(record) {
+      return updateTitleWithDelay(record, "!", 5);
+    }
   }
 
   beforeEach(() => {
@@ -536,6 +550,29 @@ describe("Collection", () => {
     });
   });
 
+  describe("#gatherLocalChanges", () => {
+    var articles;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return Promise.all([
+        articles.create({title: "abcdef", last_modified: 2}),
+        articles.create({title: "ghijkl", last_modified: 1}),
+      ]);
+    });
+
+    describe("transformers", () => {
+      it("should asynchronously encode records", () => {
+        articles.use(new QuestionMarkTransformer());
+        articles.use(new ExclamationMarkTransformer());
+
+        return articles.gatherLocalChanges()
+          .then(res => res.toSync.map(r => r.title))
+          .should.become(["abcdef?!", "ghijkl?!"]);
+      });
+    });
+  });
+
   describe("#pullChanges", () => {
     var fetchChangesSince, articles, result;
 
@@ -732,6 +769,17 @@ describe("Collection", () => {
   describe("#importChanges", () => {
     var articles, result;
 
+    class CharDecodeTransformer extends RemoteTransformer {
+      constructor(char) {
+        super();
+        this.char = char;
+      }
+
+      decode(record) {
+        return Object.assign({}, record, {title: record.title + this.char});
+      }
+    }
+
     beforeEach(() => {
       articles = testCollection();
       result = new SyncResultObject();
@@ -740,11 +788,26 @@ describe("Collection", () => {
     it("should return errors when encountered", () => {
       sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
 
-      return articles.importChanges(result, {changes: [
-        {foo: "bar"}
-      ]})
+      return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
         .should.eventually.become(["unknown error"]);
+    });
+
+    it("should decode incoming encoded records using a single transformer", () => {
+      articles.use(new CharDecodeTransformer("#"));
+
+      return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
+        .then(res => res.created[0].title)
+        .should.become("bar#");
+    });
+
+    it("should decode incoming encoded records using multiple transformers", () => {
+      articles.use(new CharDecodeTransformer("!"));
+      articles.use(new CharDecodeTransformer("?"));
+
+      return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
+        .then(res => res.created[0].title)
+        .should.become("bar?!"); // reversed because we decode in the opposite order
     });
   });
 
@@ -762,11 +825,12 @@ describe("Collection", () => {
     });
 
     it("should publish local changes to the server", () => {
-      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [],
         errors:    [],
         conflicts: [],
       }));
+
       return articles.pushChanges(result)
         .then(_ => {
           sinon.assert.calledOnce(batch);
@@ -778,8 +842,21 @@ describe("Collection", () => {
         });
     });
 
+    it("should batch send encoded records", () => {
+      articles.use(new QuestionMarkTransformer());
+      articles.use(new ExclamationMarkTransformer());
+      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [],
+        errors:    [],
+        conflicts: [],
+      }));
+
+      return articles.pushChanges(result)
+        .then(_ => expect(batch.firstCall.args[2][0].title).eql("foo?!"));
+    });
+
     it("should update published records local status", () => {
-      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [records[0]]
       }));
       return articles.pushChanges(result)
@@ -801,7 +878,7 @@ describe("Collection", () => {
     });
 
     it("should locally delete remotely deleted records", () => {
-      var batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [Object.assign({}, records[1], {deleted: true})]
       }));
       return articles.pushChanges(result)

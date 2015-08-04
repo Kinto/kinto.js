@@ -10,6 +10,7 @@ import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 import BaseAdapter from "../src/adapters/base";
 import LocalStorage from "../src/adapters/LocalStorage";
 import IDB from "../src/adapters/IDB";
+import RemoteTransformer from "../src/transformers/remote";
 import Kinto from "../src";
 import Collection from "../src/collection";
 
@@ -39,20 +40,32 @@ describe("Kinto", () => {
   });
 
   describe("static properties", () => {
-    it("should provide an adapters static getter", () => {
-      expect(Kinto.adapters).to.be.an("object")
+    describe("get adapters()", () => {
+      it("should provide an adapters static getter", () => {
+        expect(Kinto.adapters).to.be.an("object")
+      });
+
+      it("should provide an adapters.BaseAdapter getter", () => {
+        expect(Kinto.adapters.BaseAdapter).to.eql(BaseAdapter);
+      });
+
+      it("should provide an adapters.LocalStorage getter", () => {
+        expect(Kinto.adapters.LocalStorage).to.eql(LocalStorage);
+      });
+
+      it("should provide an adapters.IDB getter", () => {
+        expect(Kinto.adapters.IDB).to.eql(IDB);
+      });
     });
 
-    it("should provide an adapters.BaseAdapter getter", () => {
-      expect(Kinto.adapters.BaseAdapter).to.eql(BaseAdapter);
-    });
+    describe("get transformers()", () => {
+      it("should provide an transformers static getter", () => {
+        expect(Kinto.transformers).to.be.an("object")
+      });
 
-    it("should provide an adapters.LocalStorage getter", () => {
-      expect(Kinto.adapters.LocalStorage).to.eql(LocalStorage);
-    });
-
-    it("should provide an adapters.IDB getter", () => {
-      expect(Kinto.adapters.IDB).to.eql(IDB);
+      it("should provide an transformers.BaseAdapter getter", () => {
+        expect(Kinto.transformers.RemoteTransformer).to.eql(RemoteTransformer);
+      });
     });
   });
 
