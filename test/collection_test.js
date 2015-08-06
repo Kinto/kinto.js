@@ -847,7 +847,7 @@ describe("Collection", () => {
           changes: []
         }));
       return articles.sync().then(res => {
-        sinon.assert.calledTwice(fetchChangesSince);
+        sinon.assert.calledOnce(fetchChangesSince);
       });
     });
 
@@ -892,6 +892,16 @@ describe("Collection", () => {
       sandbox.stub(articles, "pushChanges").returns(Promise.resolve(pushResult));
       return articles.sync()
         .should.eventually.become(pushResult);
+    });
+
+    it("should not execute a last pull if nothing to push", () => {
+      sandbox.stub(articles, "gatherLocalChanges")
+        .returns(Promise.resolve({toDelete: [], toSync: []}));
+      var pullChanges = sandbox.stub(articles, "pullChanges")
+        .returns(Promise.resolve(new SyncResultObject()));
+      return articles.sync().then(res => {
+        sinon.assert.calledOnce(pullChanges);
+      });
     });
 
     describe("Options", () => {

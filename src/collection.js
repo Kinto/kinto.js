@@ -456,7 +456,7 @@ export default class Collection {
           return result;
         return this.pushChanges(result, options)
           .then(result => {
-            if (!result.ok)
+            if (!result.ok || result.published.length === 0)
               return result;
             return this.pullChanges(result, options)
           });
