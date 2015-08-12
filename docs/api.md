@@ -295,7 +295,7 @@ Here we're solving encountered conflicts by picking all remote versions. After c
 
 ## Handling server backoff
 
-If the Kinto server instance is under heavy load, their admins can [send a Backoff header](http://cliquet.readthedocs.org/en/latest/api/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
+If the Kinto server instance is under heavy load or maintenance, their admins can [send a Backoff header](http://cliquet.readthedocs.org/en/latest/api/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
 
 When this happens, Kinto.js will reject calls to `#sync()` with an appropriate error message specifying the number of seconds you need to wait before calling it again.
 
@@ -312,7 +312,7 @@ The `Kinto` instance and its other dependencies expose an `events` property you 
 
 ### The `backoff` event
 
-Triggered when a `Backoff` HTTP header has been received from the last recevied response from the server, meaning clients should hold on performing further requests during a given amount of time.
+Triggered when a `Backoff` HTTP header has been received from the last received response from the server, meaning clients should hold on performing further requests during a given amount of time.
 
 The `backoff` event notifies what's the backoff release timestamp you should wait until before performing another `#sync()` call:
 
@@ -327,7 +327,7 @@ kinto.events.on("backoff", function(releaseTime) {
 
 ### The `deprecated` event
 
-Triggered when an `Alert` HTTP header is received from the server, meaning that the service has been deprecated; the `event` argument received by the event listener contains the following deprecation information:
+Triggered when an `Alert` HTTP header is received from the server, meaning that a feature has been deprecated; the `event` argument received by the event listener contains the following deprecation information:
 
 - `type`: The type of deprecation, which in ou case is always `soft-eol` (`hard-eol` alerts trigger an `HTTP 410 Gone` error);
 - `message`: The deprecation alert message;
