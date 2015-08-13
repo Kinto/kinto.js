@@ -5,7 +5,7 @@ import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
 import BaseAdapter from "./adapters/base";
-import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4 } from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import IDB from "./adapters/IDB";
@@ -58,6 +58,7 @@ export default class Collection {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
+    this._transformers = {remote: []};
     const DBAdapter = options.adapter || IDB;
     const db = new DBAdapter(`${bucket}/${name}`);
     if (!(db instanceof BaseAdapter))
@@ -99,12 +100,47 @@ export default class Collection {
     });
   }
 
+  use(transfomer) {
+    this._transformers[transfomer.type].push(transfomer);
+  }
+
+  /**
+   * Encodes a record.
+   *
+   * @param  {String} type   Either "remote" or "local".
+   * @param  {Object} record The record object to encode.
+   * @return {Promise}
+   */
+  _encodeRecord(type, record) {
+    if (!this._transformers[type].length)
+      return Promise.resolve(record);
+    return waterfall(this._transformers[type].map(transfomer => {
+      return record => transfomer.encode(record);
+    }), record);
+  }
+
+  /**
+   * Decodes a record.
+   *
+   * @param  {String} type   Either "remote" or "local".
+   * @param  {Object} record The record object to decode.
+   * @return {Promise}
+   */
+  _decodeRecord(type, record) {
+    if (!this._transformers[type].length)
+      return Promise.resolve(record);
+    return waterfall(this._transformers[type].reverse().map(transformer => {
+      return record => transformer.decode(record);
+    }), record);
+  }
+
   /**
    * Adds a record to the local database.
    *
    * Options:
-   * - {Boolean} synced: Sets record status to "synced" (default: false);
-   * - {Boolean} forceUUID: Enforces record creation using any provided UUID.
+   * - {Boolean} synced     Sets record status to "synced" (default: false).
+   * - {Boolean} forceUUID  Enforces record creation using any provided UUID
+   *                        (default: false).
    *
    * @param  {Object} record
    * @param  {Object} options
@@ -250,52 +286,70 @@ export default class Collection {
   }
 
   /**
+   * Attempts to apply a remote change to its local matching record.
+   *
+   * @param  {Object} local  The local record object.
+   * @param  {Object} remote The remote change object.
+   * @return {Promise}
+   */
+  _processChangeImport(local, remote) {
+    if (local._status !== "synced") {
+      // Locally deleted, unsynced: scheduled for remote deletion.
+      if (local._status === "deleted") {
+        return {type: "skipped", data: local};
+      }
+      if (deepEquals(cleanRecord(local), cleanRecord(remote))) {
+        // If records are identical, import anyway, so we bump the
+        // local last_modified value from the server and set record
+        // status to "synced".
+        return this.update(remote, {synced: true}).then(res => {
+          return {type: "updated", data: res.data};
+        });
+      }
+      return {
+        type: "conflicts",
+        data: {type: "incoming", local: local, remote: remote}
+      };
+    }
+    if (remote.deleted) {
+      return this.delete(remote.id, {virtual: false}).then(res => {
+        return {type: "deleted", data: res.data};
+      });
+    }
+    return this.update(remote, {synced: true}).then(res => {
+      return {type: "updated", data: local};
+    });
+  }
+
+  /**
    * Import a single change into the local database.
    *
    * @param  {Object} change
    * @return {Promise}
    */
   _importChange(change) {
-    return this.get(change.id, {includeDeleted: true})
-      // Matching local record found
-      .then(res => {
-        // Unsynced local data
-        if (res.data._status !== "synced") {
-          // Locally deleted, unsynced: scheduled for remote deletion.
-          if (res.data._status === "deleted") {
-            return {type: "skipped", data: res.data};
-          } else if (deepEquals(cleanRecord(res.data), cleanRecord(change))) {
-            // If records are identical, import anyway, so we bump the
-            // local last_modified value from the server and set record
-            // status to "synced".
-            return this.update(change, {synced: true}).then(res => {
-              return {type: "updated", data: res.data};
-            });
-          } else {
-            return {
-              type: "conflicts",
-              data: { type: "incoming", local: res.data, remote: change }
-            };
-          }
-        } else if (change.deleted) {
-          return this.delete(change.id, {virtual: false}).then(res => {
-            return {type: "deleted", data: res.data};
-          });
-        } else {
-          return this.update(change, {synced: true}).then(res => {
-            return {type: "updated", data: res.data};
-          });
-        }
+    var _decodedChange, decodePromise;
+    // if change is a deletion, skip decoding
+    if (change.deleted) {
+      decodePromise = Promise.resolve(change);
+    } else {
+      decodePromise = this._decodeRecord("remote", change);
+    }
+    return decodePromise
+      .then(change => {
+        _decodedChange = change;
+        return this.get(_decodedChange.id, {includeDeleted: true});
       })
-      // Unatched local record
+      // Matching local record found
+      .then(res => this._processChangeImport(res.data, _decodedChange))
       .catch(err => {
         if (!(/not found/i).test(err.message))
           return {type: "errors", data: err};
         // Not found locally but remote change is marked as deleted; skip to
         // avoid recreation.
-        if (change.deleted)
-          return {type: "skipped", data: change};
-        return this.create(change, {synced: true}).then(res => {
+        if (_decodedChange.deleted)
+          return {type: "skipped", data: _decodedChange};
+        return this.create(_decodedChange, {synced: true}).then(res => {
           return {type: "created", data: res.data};
         });
       });
@@ -341,6 +395,7 @@ export default class Collection {
    * @return {Object}
    */
   gatherLocalChanges() {
+    var _toDelete;
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return res.data.reduce((acc, record) => {
@@ -349,8 +404,14 @@ export default class Collection {
           else if (record._status !== "synced")
             acc.toSync.push(record);
           return acc;
+          // rename toSync to toPush or toPublish
         }, {toDelete: [], toSync: []});
-      });
+      })
+      .then(({toDelete, toSync}) => {
+        _toDelete = toDelete;
+        return Promise.all(toSync.map(this._encodeRecord.bind(this, "remote")));
+      })
+      .then(toSync => ({toDelete: _toDelete, toSync}));
   }
 
   /**
@@ -441,7 +502,6 @@ export default class Collection {
    * @return {Promise}
    */
   sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false}) {
-    // Handle server backoff: XXX test
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(

@@ -127,3 +127,19 @@ export function partition(array, n) {
 export function isUUID4(uuid) {
   return RE_UUID.test(uuid);
 }
+
+/**
+ * Resolves a list of functions sequentially, which can be sync or async; in
+ * case of async, functions must return a promise.
+ *
+ * @param  {Array} fns  The list of functions.
+ * @param  {Any}   init The initial value.
+ * @return {Promise}
+ */
+export function waterfall(fns, init) {
+  if (!fns.length)
+    return Promise.resolve(init);
+  return fns.reduce((promise, nextFn) => {
+    return promise.then(nextFn);
+  }, Promise.resolve(init));
+}

@@ -4,10 +4,10 @@
 
 By default, Kinto.js performs all local persistence operations using IndexedDB; though if you want to create and use you own, that's definitely possible.
 
-Simply create a class extending from `Kinto.BaseAdapter`, which rather acts as an interface than anything else here:
+Simply create a class extending from `Kinto.adapters.BaseAdapter`, which rather acts as an interface than anything else here:
 
 ```js
-class MyAdapter extends Kinto.BaseAdapter {
+class MyAdapter extends Kinto.adapters.BaseAdapter {
   constructor(dbname) {
     super();
     this.dbname = dbname;

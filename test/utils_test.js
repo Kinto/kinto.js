@@ -10,7 +10,8 @@ import {
   filterObjects,
   reduceRecords,
   partition,
-  isUUID4
+  isUUID4,
+  waterfall
 } from "../src/utils";
 
 chai.should();
@@ -204,6 +205,37 @@ describe("Utils", () => {
       expect(isUUID4({})).eql(false);
       expect(isUUID4("00000000-0000-5000-a000-000000000000")).eql(false);
       expect(isUUID4("00000000-0000-4000-e000-000000000000")).eql(false);
+    });
+  });
+
+  describe("#waterfall", () => {
+    it("should resolve with init value when list is empty", () => {
+      return waterfall([], 42)
+        .should.become(42);
+    });
+
+    it("should resolve executing a single sync function", () => {
+      return waterfall([x => x + 1], 42)
+        .should.become(43);
+    });
+
+    it("should resolve executing multiple sync functions", () => {
+      return waterfall([
+        x => x + 1,
+        x => x * 2,
+      ], 42).should.become(86);
+    });
+
+    it("should resolve using a single promise returning function", () => {
+      return waterfall([() => Promise.resolve(42)])
+        .should.become(42);
+    });
+
+    it("should resolve using multiple promise returning functions", () => {
+      return waterfall([
+        x => Promise.resolve(x + 1),
+        x => Promise.resolve(x * 2),
+      ], 42).should.become(86);
     });
   });
 });

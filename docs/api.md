@@ -340,3 +340,113 @@ kinto.events.on("deprecated", function(event) {
   console.log(event.message);
 });
 ```
+
+## Transformers
+
+Transformers are basically hooks for encoding and decoding records.
+
+### Remote transformers
+
+Remote transformers aim at encoding records before pushing them to the remote server, and decoding them back when pulling changes. Remote transformers are registered by calling the `Collection#use()` method, which accepts a `Kinto.transformers.RemoteTransformer`-derived object instance:
+
+```js
+import Kinto from "kinto";
+
+function update(obj1, obj2) {
+  return Object.assign({}, obj1, obj2);
+}
+
+class MyRemoteTransformer extends Kinto.transformers.RemoteTransformer {
+  encode(record) {
+    return update(record, {title: record.title + "!"});
+  }
+
+  decode(record) {
+    return update(record, {title: record.title.slice(0, -1)});
+  }
+}
+
+const kinto = new Kinto({remote: "https://my.server.tld/v1"});
+coll = kinto.collection("articles");
+coll.use(new MyRemoteTransformer());
+```
+
+Notice that the `decode` method should be the strict reverse version of `encode`. Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
+
+```js
+coll.create({title: "foo"}).then(_ => coll.sync())
+// remotely saved:
+// {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo!"}
+// locally saved:
+// {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
+```
+
+#### Notes
+
+> *This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.*
+
+### Local transformers
+
+In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally; you'll have to extend from `LocalTransformer` though.
+
+### Async transformers
+
+Transformers can also work asynchronously by returning a Promise:
+
+```js
+class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
+  encode(record) {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(update(record, {title: record.title + "!"}));
+      }, 10);
+    });
+  }
+
+  decode(record) {
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(update(record, {title: record.title.slice(0, -1)}));
+      }, 10);
+    });
+  }
+}
+
+coll.use(new MyAsyncRemoteTransformer());
+```
+
+### Multiple transformers
+
+Transformers are stacked when `#use()` is called multiple times, in the order of the calls; that means you can chain multiple encoding operations, with the decoding ones being processed in the reverse order:
+
+```js
+class TitleCharTransformer extends Kinto.transformers.RemoteTransformer {
+  constructor(char) {
+    super();
+    this.char = char;
+  }
+
+  encode(record) {
+    return update(record, {title: record.title + this.char});
+  }
+
+  decode(record) {
+    return update(record, {title: record.title.slice(0, -1)});
+  }
+}
+
+coll.use(new TitleCharTransformer("!"));
+coll.use(new TitleCharTransformer("?"));
+
+coll.create({title: "foo"}).then(_ => coll.sync())
+// remotely saved:
+// {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo!?"}
+// locally saved:
+// {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
+```
+
+### Limitations
+
+There's currently no way to deal with adding tranformers to an already filled remote database; that would mean remote data migrations, and both Kinto and Kinto.js don't provide this feature just yet.
+
+**As a rule of thumb, you should only start using transformers on an empty remote collection.**
