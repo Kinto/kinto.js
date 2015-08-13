@@ -174,6 +174,37 @@ Result is:
 >
 > - Records with `last_modified` attribute were sync'ed on a server.
 
+### Filtering
+
+Records can be filtered using the `filters` parameter mentioning field names and their expected value:
+
+```js
+articles.list({filters: {unread: true}})
+  .then(console.log.bind(console));
+```
+
+> #### Notes
+>
+> - If several fields are specified, an implicit *and* is used.
+> - As mentioned in the [limitations](limitations.md) section, until [local DB indices are implemented](https://github.com/Kinto/kinto.js/issues/66), the filter is performed in memory.
+
+
+### Sorting
+
+Records can be sorted using the `sort` parameter:
+
+```js
+articles.list({sort: "-title"})
+  .then(console.log.bind(console));
+```
+
+> #### Notes
+>
+> - Prefix field name with `-` for descending order.
+> - By default, the records are sorted on `last_modified` in descending order.
+> - As mentioned in the [limitations](limitations.md) section, the sort is performed in memory.
+
+
 ## Clearing the collection
 
 This will remove all existing records from the collection:
