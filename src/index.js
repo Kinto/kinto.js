@@ -28,7 +28,7 @@ export default class Kinto {
       BaseAdapter: BaseAdapter,
       LocalStorage: LocalStorage,
       IDB: IDB,
-    }
+    };
   }
 
   /**
@@ -39,8 +39,8 @@ export default class Kinto {
    */
   static get transformers() {
     return {
-      RemoteTransformer: RemoteTransformer,
-    }
+      RemoteTransformer: RemoteTransformer
+    };
   }
 
   /**

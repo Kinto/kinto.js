@@ -22,7 +22,7 @@ export function attachFakeIDBSymbolsTo(obj) {
   iDBSymbols.forEach(symbol => {
     let fakeSymbol = symbol.replace("IDB", "FDB");
     obj[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
-  })
+  });
   obj.indexedDB = require("fake-indexeddb");
 }
 
