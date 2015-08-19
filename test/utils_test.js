@@ -55,20 +55,20 @@ describe("Utils", () => {
   describe("#quote", () => {
     it("should add quotes to provided string", () => {
       var quoted = quote("42");
-      expect(quoted).eql('"42"');
+      expect(quoted).eql("\"42\"");
     });
   });
 
   describe("#unquote", () => {
     it("should remove quotes to provided string", () => {
-      var unquoted = unquote('"42"');
+      var unquoted = unquote("\"42\"");
       expect(unquoted).eql("42");
     });
 
     it("should return the same string is not quoted", () => {
       var unquoted = unquote("42");
-      expect(unquoted).eql("42")
-    })
+      expect(unquoted).eql("42");
+    });
   });
 
   describe("#sortObjects", () => {

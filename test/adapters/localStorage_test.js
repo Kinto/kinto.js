@@ -13,7 +13,7 @@ chai.config.includeStack = true;
 
 function thrower(msg) {
   return () => {
-    throw new Error(msg)
+    throw new Error(msg);
   };
 }
 
@@ -42,7 +42,7 @@ describe("adapter.LocalStorage", () => {
     describe("#create", () => {
       it("should add created key to the key list", () => {
         return db.create({id: 1})
-          then(_ => expect(db.keys).eql([1]));
+          .then(_ => expect(db.keys).eql([1]));
       });
 
       it("should reject on existing id", () => {

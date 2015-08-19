@@ -1,7 +1,6 @@
 "use strict";
 
-import sinon from "sinon";
-import chai, { expect } from "chai";
+import { expect } from "chai";
 
 import BaseAdapter from "../../src/adapters/base";
 

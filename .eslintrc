@@ -5,6 +5,7 @@
         "quotes": [2, "double"],
         "linebreak-style": [2, "unix"],
         "semi": [2, "always"],
+        "comma-dangle": [0],
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
         "no-console": [1]
     },
@@ -12,6 +13,14 @@
         "es6": true,
         "browser": true,
         "node": true
+    },
+    "globals": {
+        "it": true,
+        "describe": true,
+        "before": true,
+        "after": true,
+        "beforeEach": true,
+        "afterEach": true,
     },
     "extends": "eslint:recommended"
 }

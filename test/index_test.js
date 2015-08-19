@@ -4,7 +4,6 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { v4 as uuid4 } from "uuid";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 
 import BaseAdapter from "../src/adapters/base";
@@ -12,7 +11,6 @@ import LocalStorage from "../src/adapters/LocalStorage";
 import IDB from "../src/adapters/IDB";
 import RemoteTransformer from "../src/transformers/remote";
 import Kinto from "../src";
-import Collection from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -20,7 +18,6 @@ chai.config.includeStack = true;
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
-const FAKE_SERVER_URL = "http://fake-server"
 
 describe("Kinto", () => {
   var sandbox;
@@ -42,7 +39,7 @@ describe("Kinto", () => {
   describe("static properties", () => {
     describe("get adapters()", () => {
       it("should provide an adapters static getter", () => {
-        expect(Kinto.adapters).to.be.an("object")
+        expect(Kinto.adapters).to.be.an("object");
       });
 
       it("should provide an adapters.BaseAdapter getter", () => {
@@ -60,7 +57,7 @@ describe("Kinto", () => {
 
     describe("get transformers()", () => {
       it("should provide an transformers static getter", () => {
-        expect(Kinto.transformers).to.be.an("object")
+        expect(Kinto.transformers).to.be.an("object");
       });
 
       it("should provide an transformers.BaseAdapter getter", () => {
@@ -104,12 +101,12 @@ describe("Kinto", () => {
 
     it("should use specified bucket name if specified", () => {
       expect(testCollection().bucket).eql(TEST_BUCKET_NAME);
-    })
+    });
 
     it("should use default bucket if not specified", () => {
       const coll = new Kinto().collection(TEST_COLLECTION_NAME);
       expect(coll.bucket).eql("default");
-    })
+    });
 
     it("should cache collection instance", () => {
       const db = new Kinto();
@@ -146,7 +143,7 @@ describe("Kinto", () => {
     });
 
     it("should create collection using an optional adapter", () => {
-      const MyAdapter = class extends BaseAdapter {}
+      const MyAdapter = class extends BaseAdapter {};
       const db = new Kinto({adapter: MyAdapter});
       const coll = db.collection("plop");
 

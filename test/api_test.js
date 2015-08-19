@@ -13,7 +13,7 @@ chai.should();
 chai.config.includeStack = true;
 
 const root = typeof window === "object" ? window : global;
-const FAKE_SERVER_URL = "http://fake-server/v1"
+const FAKE_SERVER_URL = "http://fake-server/v1";
 
 describe("Api", () => {
   var sandbox, api;
@@ -101,7 +101,7 @@ describe("Api", () => {
     describe("full URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: true}))
+      beforeEach(() => endpoints = api.endpoints({fullUrl: true}));
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(`${FAKE_SERVER_URL}/`);
@@ -136,7 +136,7 @@ describe("Api", () => {
     describe("absolute URL", () => {
       var endpoints;
 
-      beforeEach(() => endpoints = api.endpoints({fullUrl: false}))
+      beforeEach(() => endpoints = api.endpoints({fullUrl: false}));
 
       it("should provide root endpoint", () => {
         expect(endpoints.root()).eql(`/${SPV}/`);
@@ -190,7 +190,7 @@ describe("Api", () => {
       api.serverSettings = {a: 1};
       sandbox.stub(root, "fetch");
 
-      api.fetchServerSettings()
+      api.fetchServerSettings();
       sinon.assert.notCalled(fetch);
     });
   });
@@ -389,7 +389,7 @@ describe("Api", () => {
             path: `/${SPV}/buckets/blog/collections/articles/records/2`,
             method: "PUT",
             headers: {
-              "If-None-Match": '*'
+              "If-None-Match": "*"
             },
             body: {
               data: { id: 2, title: "bar" },

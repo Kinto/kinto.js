@@ -169,7 +169,7 @@ describe("HTTP class", () => {
             errno: 107,
             error: "Invalid parameters",
             message: "data is missing"
-        }));
+          }));
 
         return http.request("/")
           .should.be.rejectedWith(Error, /HTTP 400; Invalid request parameter: data is missing/);

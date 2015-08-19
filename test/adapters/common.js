@@ -1,7 +1,7 @@
 "use strict";
 
 import sinon from "sinon";
-import chai, { expect } from "chai";
+import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 
 chai.use(chaiAsPromised);
@@ -36,7 +36,7 @@ export function adapterTestSuite(createDB, options={only: false}) {
         return db.create(data)
           .then(res => db.get(res.id))
           .then(existing => {
-            return db.update(Object.assign({}, existing, {foo: "baz"}))
+            return db.update(Object.assign({}, existing, {foo: "baz"}));
           })
           .then(res => db.get(res.id))
           .then(res => res.foo)

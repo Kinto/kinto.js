@@ -1,7 +1,6 @@
 "use strict";
 
 import { spawn } from "child_process";
-import Collection from "../src/collection";
 import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
@@ -96,7 +95,7 @@ describe("Integration tests", () => {
     describe("Settings", () => {
       it("should retrieve server settings", () => {
         return tasks.sync().then(_ => tasks.api.serverSettings)
-          to.eventualy.include.keys("cliquet.batch_max_requests");
+          .to.eventualy.include.keys("cliquet.batch_max_requests");
       });
     });
 

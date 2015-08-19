@@ -26,7 +26,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}})
+              onerror({target: {error: "transaction error"}});
             }
           }
         });
@@ -48,7 +48,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}})
+              onerror({target: {error: "transaction error"}});
             }
           }
         });
@@ -63,11 +63,8 @@ describe("adapter.IDB", () => {
     });
 
     describe("#get", () => {
-      var id;
-
       beforeEach(() => {
-        return db.create({id: 1, foo: "bar"})
-          .then(res => id = res.id);
+        return db.create({id: 1, foo: "bar"});
       });
 
       it("should return undefined when record is not found", () => {
@@ -77,11 +74,8 @@ describe("adapter.IDB", () => {
     });
 
     describe("#delete", () => {
-      var id;
-
       beforeEach(() => {
-        return db.create({id: 1, foo: "bar"})
-          .then(res => id = res.id);
+        return db.create({id: 1, foo: "bar"});
       });
 
       it("should reject on transaction error", () => {
@@ -90,7 +84,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}})
+              onerror({target: {error: "transaction error"}});
             }
           }
         });
@@ -112,11 +106,11 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {openCursor() {return {}}},
+          store: {openCursor() {return {};}},
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}})
+              onerror({target: {error: "transaction error"}});
             }
           }
         });
