@@ -94,8 +94,9 @@ describe("Integration tests", () => {
 
     describe("Settings", () => {
       it("should retrieve server settings", () => {
-        return tasks.sync().then(_ => tasks.api.serverSettings)
-          .to.eventualy.include.keys("cliquet.batch_max_requests");
+        return tasks.sync()
+          .then(_ => tasks.api.serverSettings)
+          .should.become({"cliquet.batch_max_requests": 25});
       });
     });
 
