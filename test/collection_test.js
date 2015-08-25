@@ -10,7 +10,7 @@ import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import RemoteTransformer from "../src/transformers/remote";
 import Collection, { SyncResultObject } from "../src/collection";
-import Api, { cleanRecord } from "../src/api";
+import Api from "../src/api";
 import { updateTitleWithDelay } from "./test_utils";
 
 chai.use(chaiAsPromised);
@@ -19,7 +19,7 @@ chai.config.includeStack = true;
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
-const FAKE_SERVER_URL = "http://fake-server/v1"
+const FAKE_SERVER_URL = "http://fake-server/v1";
 
 describe("Collection", () => {
   var sandbox, events, api;
@@ -91,7 +91,7 @@ describe("Collection", () => {
     });
 
     it("should allow providing an adapter option", () => {
-      const MyAdapter = class extends BaseAdapter {}
+      const MyAdapter = class extends BaseAdapter {};
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
         adapter: MyAdapter
       });
@@ -236,7 +236,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.update(
-            Object.assign({}, existing, {title: "new title"}))
+            Object.assign({}, existing, {title: "new title"}));
         })
         .then(res => articles.get(res.data.id))
         .then(res => res.data.title)
@@ -856,7 +856,7 @@ describe("Collection", () => {
     });
 
     it("should update published records local status", () => {
-      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [records[0]]
       }));
       return articles.pushChanges(result)
@@ -878,7 +878,7 @@ describe("Collection", () => {
     });
 
     it("should locally delete remotely deleted records", () => {
-      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [Object.assign({}, records[1], {deleted: true})]
       }));
       return articles.pushChanges(result)
@@ -987,7 +987,7 @@ describe("Collection", () => {
         return articles.sync({headers: {Foo: "Bar"}})
           .then(() => {
             expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
-          })
+          });
       });
 
       it("should transfer the strategy option", () => {
@@ -995,7 +995,7 @@ describe("Collection", () => {
         return articles.sync({strategy: Collection.strategy.SERVER_WINS})
           .then(() => {
             expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
-          })
+          });
       });
     });
 

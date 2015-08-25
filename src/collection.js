@@ -86,7 +86,7 @@ export default class Collection {
       CLIENT_WINS: "client_wins",
       SERVER_WINS: "server_wins",
       MANUAL:      "manual",
-    }
+    };
   }
 
   /**
@@ -316,7 +316,7 @@ export default class Collection {
         return {type: "deleted", data: res.data};
       });
     }
-    return this.update(remote, {synced: true}).then(res => {
+    return this.update(remote, {synced: true}).then(_ => {
       return {type: "updated", data: local};
     });
   }
@@ -383,7 +383,7 @@ export default class Collection {
             this._lastModified = lastModified;
             return syncResultObject;
           });
-      })
+      });
   }
 
   /**
@@ -472,7 +472,7 @@ export default class Collection {
             return this.update(record, {synced: true});
           }
         })).then(published => {
-          syncResultObject.add("published", published.map(res => res.data))
+          syncResultObject.add("published", published.map(res => res.data));
           return syncResultObject;
         });
       });
@@ -518,7 +518,7 @@ export default class Collection {
           .then(result => {
             if (!result.ok || result.published.length === 0)
               return result;
-            return this.pullChanges(result, options)
+            return this.pullChanges(result, options);
           });
       });
   }

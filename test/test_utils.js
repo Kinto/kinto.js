@@ -22,4 +22,4 @@ export function updateTitleWithDelay(record, str, delay) {
       resolve(Object.assign({}, record, {title: record.title + str}));
     }, delay);
   });
-};
+}

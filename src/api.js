@@ -2,7 +2,6 @@
 
 import { EventEmitter } from "events";
 import { quote, unquote } from "./utils.js";
-import ERROR_CODES from "./errors.js";
 import HTTP from "./http.js";
 import { partition } from "./utils.js";
 
@@ -15,7 +14,7 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
       acc[key] = record[key];
     return acc;
   }, {});
-};
+}
 
 /**
  * Api class.
@@ -134,7 +133,6 @@ export default class Api {
     return this.fetchServerSettings()
       .then(_ => this.http.request(recordsUrl + queryString, {headers}))
       .then(res => {
-        var results;
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
           return {
@@ -181,14 +179,12 @@ export default class Api {
    *
    * @param  {Object}  results          The results object.
    * @param  {Array}   records          The initial records list.
-   * @param  {Number}  response.status  The response HTTP status.
-   * @param  {Object}  response.json    The response JSON body.
-   * @param  {Headers} response.headers The response headers object.
+   * @param  {Object}  response         The response HTTP object.
    * @return {Promise}
    */
-  _processBatchResponses(results, records, {status, json, headers}) {
+  _processBatchResponses(results, records, response) {
     // Handle individual batch subrequests responses
-    json.responses.forEach((response, index) => {
+    response.json.responses.forEach((response, index) => {
       // TODO: handle 409 when unicity rule is violated (ex. POST with
       // existing id, unique field, etc.)
       if (response.status && response.status >= 200 && response.status < 400) {

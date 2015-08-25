@@ -122,7 +122,7 @@ export default class IDB extends BaseAdapter {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
-        const request = store.put(record);
+        store.put(record);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve(record);
       });
@@ -199,7 +199,7 @@ export default class IDB extends BaseAdapter {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
-        const request = store.put({name: "lastModified", value: value});
+        store.put({name: "lastModified", value: value});
         transaction.onerror = event => reject(event.target.error);
         transaction.oncomplete = event => resolve(value);
       });
@@ -218,7 +218,7 @@ export default class IDB extends BaseAdapter {
         const request = store.get("lastModified");
         transaction.onerror = event => reject(event.target.error);
         transaction.oncomplete = event => {
-          resolve(request.result && request.result.value || null)
+          resolve(request.result && request.result.value || null);
         };
       });
     });
