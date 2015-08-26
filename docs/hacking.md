@@ -12,21 +12,6 @@ Code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
 
 ## Tests
 
-In order to run the functional tests (which are part of the test-suite), you
-will need to install Kinto locally and export the location of `pserve`
-accordingly.
-
-The best way to install kinto is in a virtual environment:
-
-    $ virtualenv venv
-    $ ./venv/bin/pip install kinto
-
-Then, you should export the location of the `pserve` executable in the
-`KINTO_PSERVE_EXECUTABLE` environment variable.
-
-With bash:
-
-    $ export KINTO_PSERVE_EXECUTABLE="`pwd`/venv/bin/pserve"
 
 Then, you can run the tests by running:
 
@@ -39,6 +24,26 @@ This will also run code coverage and send the report to [Coveralls](http://cover
     $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report
 
 Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
+
+### Functional tests
+
+In order to run the functional tests (which are part of the test-suite), you
+will need to install Kinto locally and export the location of `pserve`
+accordingly.
+
+The best way to install kinto is in a virtual environment and activate it.
+
+    $ virtualenv venv
+    $ ./venv/bin/pip install kinto
+    $ source ./venv/bin/activate
+
+In case you don't want to activate your venv each time, you can also export the
+location of the `pserve` executable in the `KINTO_PSERVE_EXECUTABLE`
+environment variable.
+
+With bash:
+
+    $ export KINTO_PSERVE_EXECUTABLE="`pwd`/venv/bin/pserve"
 
 ### TDD mode
 
