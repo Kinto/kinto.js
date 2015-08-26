@@ -243,7 +243,11 @@ Synopsis:
 ```js
 articles.sync()
   .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+  .catch(err => {
+    if (err.data === 401) {
+      console.error('HTTP status code indicates auth problem');
+    }
+  });
 ```
 
 ### Synchronization strategies
