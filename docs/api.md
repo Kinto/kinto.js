@@ -243,8 +243,20 @@ Synopsis:
 ```js
 articles.sync()
   .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+  .catch(err => {
+    if (err.response && err.response.status === 401) {
+      console.error('HTTP status code indicates auth problem');
+    }
+  });
 ```
+
+### Error handling
+
+If anything goes wrong during sync, `colllection.sync()` will reject its promise with an `error` object, as follows:
+* If an unexpected HTTP status is received from the server, `error.response` will contain that response, for you to inspect
+    (see the example above for detecting 401 Unauthorized errors).
+* If the server is unreachable, `error.response` will be undefined, but `error.message` will equal
+    `'HTTP 0; TypeError: NetworkError when attempting to fetch resource.'`.
 
 ### Synchronization strategies
 
