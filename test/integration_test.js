@@ -22,7 +22,11 @@ describe("Integration tests", () => {
   var sandbox, server, tasks;
   const MAX_ATTEMPTS = 50;
 
-  function startServer(env={}) {
+  function startServer(env) {
+    // Add the provided environment variables to the child process environment.
+    // Keeping parent's environment is needed so that pserve's executable 
+    // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
+    env = Object.assign({}, process.env, env);
     server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env});
     server.stderr.on("data", function(data) {
       // Uncomment the line below to have server logs printed.
