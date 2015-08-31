@@ -493,16 +493,16 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive transformers in an ES5 fashion using `Kinto.createRemoteTransformer` static helper:
 
 ```js
-const TitleCharTransformer = Kinto.createRemoteTransformer({
-  constructor(char) {
+var TitleCharTransformer = Kinto.createRemoteTransformer({
+  constructor: function(char) {
     this.char = char;
   },
 
-  encode(record) {
+  encode: function(record) {
     return update(record, {title: record.title + this.char});
   },
 
-  decode(record) {
+  decode: function(record) {
     return update(record, {title: record.title.slice(0, -1)});
   }
 });

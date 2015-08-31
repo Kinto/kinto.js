@@ -368,13 +368,13 @@ describe("Integration tests", () => {
 
       describe("ES5 transformers", function() {
         const TitleCharTransformer = Kinto.createRemoteTransformer({
-          constructor(char) {
+          constructor: function(char) {
             this.char = char;
           },
-          encode(record) {
+          encode: function(record) {
             return Object.assign({}, record, {title: record.title + this.char});
           },
-          decode(record) {
+          decode: function(record) {
             return Object.assign({}, record, {title: record.title.slice(0, -1)});
           }
         });
