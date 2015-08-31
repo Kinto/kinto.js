@@ -44,6 +44,27 @@ export default class Kinto {
   }
 
   /**
+   * Creates a remote transformer constructor, the ES5 way.
+   *
+   * @return {RemoteTransformer}
+   */
+  static createRemoteTransformer(proto) {
+    if (!proto || typeof proto !== "object")
+      throw new Error("Expected prototype object.");
+
+    class _RemoteTransformer extends RemoteTransformer {
+      constructor() {
+        super();
+        // If a constructor is passed from the proto object, apply it.
+        if (proto.constructor)
+          proto.constructor.apply(this, arguments);
+      }
+    }
+    _RemoteTransformer.prototype = Object.assign(_RemoteTransformer.prototype, proto);
+    return _RemoteTransformer;
+  }
+
+  /**
    * Constructor.
    *
    * Options:

@@ -17,8 +17,8 @@ const db = new Kinto(options);
 
 By default, collections are persisted locally in IndexedDB.
 
-#### Notes
-
+> #### Notes
+>
 > A `localStorage` adapter is also available, though we suggest to stick with IndexedDB whenever you can, as it's faster, more reliable and accepts greater data quotas withouth requiring specific configuration.
 
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
@@ -487,6 +487,33 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 // locally saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
 ```
+
+### Creating transformers in ES5
+
+If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive transformers in an ES5 fashion using `Kinto.createRemoteTransformer` static helper:
+
+```js
+const TitleCharTransformer = Kinto.createRemoteTransformer({
+  constructor(char) {
+    this.char = char;
+  },
+
+  encode(record) {
+    return update(record, {title: record.title + this.char});
+  },
+
+  decode(record) {
+    return update(record, {title: record.title.slice(0, -1)});
+  }
+});
+
+coll.use(new TitleCharTransformer("!"));
+coll.use(new TitleCharTransformer("?"));
+```
+
+> #### Notes
+>
+> Notice you can define a `constructor` method, though you don't need (and must not) call `super()` within it, unlike with ES6 classes.
 
 ### Limitations
 
