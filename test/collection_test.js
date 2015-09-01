@@ -75,6 +75,13 @@ describe("Collection", () => {
       expect(collection.api.http.events).eql(collection.events);
     });
 
+    it("should allow providing a prefix for the db name", () => {
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+        dbPrefix: "user-x/"
+      });
+      expect(collection.db.dbname).eql("user-x/kinto-test/kinto-test");
+    });
+
     it("should create and expose an IDB database by default", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, {events});

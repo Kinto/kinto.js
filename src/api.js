@@ -31,7 +31,7 @@ export default class Api {
    * @param  {String}  remote   The remote URL.
    * @param  {Object}  options  The options object.
    */
-  constructor(remote, options={headers: {}}) {
+  constructor(remote, options={}) {
     if (typeof(remote) !== "string" || !remote.length)
       throw new Error("Invalid remote URL: " + remote);
     if (remote[remote.length-1] === "/")
@@ -39,7 +39,7 @@ export default class Api {
     this._backoffReleaseTime = null;
     // public properties
     this.remote = remote;
-    this.optionHeaders = options.headers;
+    this.optionHeaders = options.headers || {};
     this.serverSettings = null;
     this.events = options.events || new EventEmitter();
     try {

@@ -47,7 +47,8 @@ export default class Collection {
    * Constructor.
    *
    * Options:
-   * - {BaseAdapter} adapter: The DB adapter (default: IDB)
+   * - {BaseAdapter} adapter  The DB adapter (default: IDB)
+   * - {String}      dbPrefix The DB name prefix (default: "")
    *
    * @param  {String} bucket  The bucket identifier.
    * @param  {String} name    The collection name.
@@ -60,7 +61,8 @@ export default class Collection {
     this._lastModified = null;
     this._transformers = {remote: []};
     const DBAdapter = options.adapter || IDB;
-    const db = new DBAdapter(`${bucket}/${name}`);
+    const dbPrefix = options.dbPrefix || "";
+    const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
     if (!(db instanceof BaseAdapter))
       throw new Error("Unsupported adapter.");
     // public properties

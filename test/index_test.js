@@ -129,6 +129,11 @@ describe("Kinto", () => {
       expect(new Kinto({requestMode}).collection("x").api.http.requestMode)
         .eql(requestMode);
     });
+
+    it("should propagate the dbPrefix option to child dependencies", () => {
+      expect(new Kinto({dbPrefix: "app--"}).collection("x").db.dbname)
+        .eql("app--default/x");
+    });
   });
 
   describe("#collection()", () => {

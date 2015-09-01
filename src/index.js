@@ -12,6 +12,7 @@ import IDB from "./adapters/IDB";
 import RemoteTransformer from "./transformers/remote";
 
 const DEFAULT_BUCKET_NAME = "default";
+const DEFAULT_REMOTE = "http://localhost:8888/v1";
 
 /**
  * Kinto class.
@@ -70,18 +71,27 @@ export default class Kinto {
    * Constructor.
    *
    * Options:
+   * - {String}       remote   The server URL to use.
    * - {String}       bucket   The collection bucket name.
    * - {EventEmitter} events   Events handler.
    * - {BaseAdapter}  adapter  The base DB adapter class.
+   * - {String}       dbPrefix The DB name prefix.
+   * - {Object}       headers  The HTTP headers to use.
    * - {String}       requestMode The HTTP CORS mode to use.
    *
    * @param  {Object} options The options object.
    */
   constructor(options={}) {
-    this._options = options;
+    const defaults = {
+      adapter: Kinto.adapters.IDB,
+      bucket: DEFAULT_BUCKET_NAME,
+      events: new EventEmitter(),
+      remote: DEFAULT_REMOTE,
+    };
+    this._options = Object.assign(defaults, options);
     this._collections = {};
     // public properties
-    this.events = options.events || new EventEmitter();
+    this.events = this._options.events;
   }
 
   /**
@@ -94,17 +104,19 @@ export default class Kinto {
     if (!collName)
       throw new Error("missing collection name");
 
-    const bucket = this._options.bucket || DEFAULT_BUCKET_NAME;
-    const api = new Api(this._options.remote || "http://localhost:8888/v1", {
-      headers:     this._options.headers || {},
-      events:      this.events,
+    const remote = this._options.remote;
+    const api = new Api(remote, {
+      headers:     this._options.headers,
+      events:      this._options.events,
       requestMode: this._options.requestMode,
     });
 
     if (!this._collections.hasOwnProperty(collName)) {
+      const bucket = this._options.bucket;
       this._collections[collName] = new Collection(bucket, collName, api, {
-        events:  this.events,
-        adapter: this._options.adapter || Kinto.adapters.IDB,
+        events:   this._options.events,
+        adapter:  this._options.adapter,
+        dbPrefix: this._options.dbPrefix,
       });
     }
 
