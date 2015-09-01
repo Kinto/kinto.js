@@ -77,7 +77,7 @@ describe("Collection", () => {
 
     it("should allow providing a prefix for the db name", () => {
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        prefixDB: "user-x/"
+        dbPrefix: "user-x/"
       });
       expect(collection.db.dbname).eql("user-x/kinto-test/kinto-test");
     });

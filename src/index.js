@@ -75,7 +75,7 @@ export default class Kinto {
    * - {String}       bucket   The collection bucket name.
    * - {EventEmitter} events   Events handler.
    * - {BaseAdapter}  adapter  The base DB adapter class.
-   * - {String}       prefixDB The DB name prefix.
+   * - {String}       dbPrefix The DB name prefix.
    * - {Object}       headers  The HTTP headers to use.
    * - {String}       requestMode The HTTP CORS mode to use.
    *
@@ -116,7 +116,7 @@ export default class Kinto {
       this._collections[collName] = new Collection(bucket, collName, api, {
         events:   this._options.events,
         adapter:  this._options.adapter,
-        prefixDB: this._options.prefixDB,
+        dbPrefix: this._options.dbPrefix,
       });
     }
 

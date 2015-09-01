@@ -130,8 +130,8 @@ describe("Kinto", () => {
         .eql(requestMode);
     });
 
-    it("should propagate the prefixDB option to child dependencies", () => {
-      expect(new Kinto({prefixDB: "app--"}).collection("x").db.dbname)
+    it("should propagate the dbPrefix option to child dependencies", () => {
+      expect(new Kinto({dbPrefix: "app--"}).collection("x").db.dbname)
         .eql("app--default/x");
     });
   });
