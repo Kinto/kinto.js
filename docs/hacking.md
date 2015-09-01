@@ -1,49 +1,50 @@
 # Hacking on Kinto.js
 
-Hacking on Kinto.js requires to setup a [NodeJS v0.12x environment](https://nodejs.org/download/).
+Hacking on Kinto.js requires a working [NodeJS v0.12x environment](https://nodejs.org/download/).
 
 ## Installation
 
-Code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
+Source code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
 
     $ git co https://github.com/mozilla-services/kinto.js
     $ cd kinto.js
     $ npm install
 
+> #### Notes
+>
+> Tagged versions are also available from [npm](https://www.npmjs.com/package/kinto), though cloning the repository is the prefered way for hacking and contributing code.
+
 ## Tests
 
+In order to run the tests, you'll need:
 
-Then, you can run the tests by running:
+1. to have [Python](http://python.org/) available on your system;
+2. to [install Kinto locally](http://kinto.readthedocs.org/en/latest/configuration/installation.html);
+3. to export the location of the installed `pserve` accordingly.
 
-    $ npm test
-
-This will also run code coverage and send the report to [Coveralls](http://coveralls.io/). Alternatives:
-
-    $ npm run test-nocover    # runs tests skipping code coverage
-    $ npm run test-cover      # runs tests, code coverage; doesn't send results
-    $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report
-
-Note that code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
-
-### Functional tests
-
-In order to run the functional tests (which are part of the test-suite), you
-will need to install Kinto locally and export the location of `pserve`
-accordingly.
-
-The best way to install kinto is in a virtual environment and activate it.
+The simplest way to install Kinto is to do so in a [virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and activate it:
 
     $ virtualenv venv
     $ ./venv/bin/pip install kinto
     $ source ./venv/bin/activate
 
-In case you don't want to activate your venv each time, you can also export the
-location of the `pserve` executable in the `KINTO_PSERVE_EXECUTABLE`
-environment variable.
+Then you can run the tests by running:
 
-With bash:
+    $ npm test
 
-    $ export KINTO_PSERVE_EXECUTABLE="`pwd`/venv/bin/pserve"
+You can alternatively run the tests in a more explicit fashion by passing the `KINTO_PSERVE_EXECUTABLE` environment variable, which can be found in the virtual environment's `bin` directory:
+
+    $ KINTO_PSERVE_EXECUTABLE="/path/to/venv/bin/pserve" npm run test
+
+Alternative test commands are also available:
+
+    $ npm run test-nocover    # runs tests skipping code coverage
+    $ npm run test-cover      # runs tests, code coverage; doesn't send results
+    $ npm run test-cover-html # runs tests, code coverage and opens a fancy html report
+
+> #### Notes
+>
+> Code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
 
 ### TDD mode
 
@@ -56,6 +57,10 @@ Note that it won't perform code coverage analysis.
 You can also grep to run a subset of tests that way:
 
     $ npm run tdd -- -g Api # only runs Api-related tests
+
+Of course, as for `npm test`, you can explictely pass the pass to the Kinto server `pserve` executable to use to execute integration tests:
+
+    $ KINTO_PSERVE_EXECUTABLE="/path/to/venv/bin/pserve" npm run tdd
 
 ## Generating dist files
 
