@@ -17,8 +17,8 @@ const db = new Kinto(options);
 
 By default, collections are persisted locally in IndexedDB.
 
-#### Notes
-
+> #### Notes
+>
 > A `localStorage` adapter is also available, though we suggest to stick with IndexedDB whenever you can, as it's faster, more reliable and accepts greater data quotas withouth requiring specific configuration.
 
 Selecting a collection is done by calling the `collection()` method, passing it the resource name:
@@ -386,7 +386,7 @@ kinto.events.on("deprecated", function(event) {
 
 ## Transformers
 
-Transformers are basically hooks for encoding and decoding records.
+Transformers are basically hooks for encoding and decoding records, which can work synchronously or asynchronously.
 
 ### Remote transformers
 
@@ -414,7 +414,12 @@ coll = kinto.collection("articles");
 coll.use(new MyRemoteTransformer());
 ```
 
-Notice that the `decode` method should be the strict reverse version of `encode`. Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
+> #### Notes
+>
+> - The `decode` method should be the strict reverse version of `encode`;
+> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
+
+Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
 
 ```js
 coll.create({title: "foo"}).then(_ => coll.sync())
@@ -424,9 +429,9 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
 ```
 
-#### Notes
-
-> *This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.*
+> #### Notes
+>
+> This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.
 
 ### Local transformers
 
@@ -434,7 +439,7 @@ In a near future, Kinto.js will provide transfomers aimed at providing facilitie
 
 ### Async transformers
 
-Transformers can also work asynchronously by returning a Promise:
+Transformers can also work asynchronously by returning a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise):
 
 ```js
 class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
@@ -487,6 +492,33 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 // locally saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
 ```
+
+### Creating transformers in ES5
+
+If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive transformers in an ES5 fashion using `Kinto.createRemoteTransformer` static helper:
+
+```js
+var TitleCharTransformer = Kinto.createRemoteTransformer({
+  constructor: function(char) {
+    this.char = char;
+  },
+
+  encode: function(record) {
+    return update(record, {title: record.title + this.char});
+  },
+
+  decode: function(record) {
+    return update(record, {title: record.title.slice(0, -1)});
+  }
+});
+
+coll.use(new TitleCharTransformer("!"));
+coll.use(new TitleCharTransformer("?"));
+```
+
+> #### Notes
+>
+> Notice you can define a `constructor` method, though you don't need (and must not) call `super()` within it, unlike with ES6 classes.
 
 ### Limitations
 

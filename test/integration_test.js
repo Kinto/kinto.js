@@ -315,58 +315,72 @@ describe("Integration tests", () => {
     });
 
     describe("Transformers", () => {
-      class QuestionMarkTransformer extends RemoteTransformer {
+      class ES6TitleCharTransformer extends RemoteTransformer {
+        constructor(char) {
+          super();
+          this.char = char;
+        }
         encode(record) {
-          return Object.assign({}, record, {title: record.title + "?"});
+          return Object.assign({}, record, {title: record.title + this.char});
         }
         decode(record) {
           return Object.assign({}, record, {title: record.title.slice(0, -1)});
         }
       }
 
-      class ExclamationMarkTransformer extends RemoteTransformer {
-        encode(record) {
-          return Object.assign({}, record, {title: record.title + "!"});
-        }
-        decode(record) {
+      const ES5TitleCharTransformer = Kinto.createRemoteTransformer({
+        constructor: function(char) {
+          this.char = char;
+        },
+        encode: function(record) {
+          return Object.assign({}, record, {title: record.title + this.char});
+        },
+        decode: function(record) {
           return Object.assign({}, record, {title: record.title.slice(0, -1)});
         }
+      });
+
+      function testTransformer(name, Transformer) {
+        describe(name, () => {
+          beforeEach(() => {
+            tasks.use(new Transformer("!"));
+            tasks.use(new Transformer("?"));
+
+            return Promise.all([
+              tasks.create({id: uuid4(), title: "abc"}),
+              tasks.create({id: uuid4(), title: "def"}),
+            ]);
+          });
+
+          it("should encode records when pushed to the server", () => {
+            return tasks.sync()
+              .then(res => res.published.map(x => x.title).sort())
+              .should.become(["abc!?", "def!?"]);
+          });
+
+          it("should store encoded data remotely", () => {
+            return tasks.sync()
+              .then(_ => {
+                return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
+                  headers: {"Authorization": "Basic " + btoa("user:pass")}
+                });
+              })
+              .then(res => res.json())
+              .then(res => res.data.map(x => x.title).sort())
+              .should.become(["abc!?", "def!?"]);
+          });
+
+          it("should keep local data decoded", () => {
+            return tasks.sync()
+              .then(_ => tasks.list())
+              .then(res => res.data.map(x => x.title).sort())
+              .should.become(["abc", "def"]);
+          });
+        });
       }
 
-      beforeEach(() => {
-        tasks.use(new ExclamationMarkTransformer());
-        tasks.use(new QuestionMarkTransformer());
-
-        return Promise.all([
-          tasks.create({id: uuid4(), title: "abc"}),
-          tasks.create({id: uuid4(), title: "def"}),
-        ]);
-      });
-
-      it("should encode records when pushed to the server", () => {
-        return tasks.sync()
-          .then(res => res.published.map(x => x.title).sort())
-          .should.become(["abc!?", "def!?"]);
-      });
-
-      it("should store encoded data remotely", () => {
-        return tasks.sync()
-          .then(_ => {
-            return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
-              headers: {"Authorization": "Basic " + btoa("user:pass")}
-            });
-          })
-          .then(res => res.json())
-          .then(res => res.data.map(x => x.title).sort())
-          .should.become(["abc!?", "def!?"]);
-      });
-
-      it("should keep local data decoded", () => {
-        return tasks.sync()
-          .then(_ => tasks.list())
-          .then(res => res.data.map(x => x.title).sort())
-          .should.become(["abc", "def"]);
-      });
+      testTransformer("ES6 transformers", ES6TitleCharTransformer);
+      testTransformer("ES5 transformers", ES5TitleCharTransformer);
     });
   });
 

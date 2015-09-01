@@ -66,6 +66,47 @@ describe("Kinto", () => {
     });
   });
 
+  describe("static methods", () => {
+    describe("createRemoteTransformer", () => {
+      it("should require a prototype object", () => {
+        expect(() => Kinto.createRemoteTransformer()).to.Throw(Error, /prototype/);
+      });
+
+      it("should allow defining a remote transformer", () => {
+        const Transformer = Kinto.createRemoteTransformer({});
+
+        expect(new Transformer()).to.be.an.instanceOf(RemoteTransformer);
+      });
+
+      it("should expose custom remote transformer prototype", () => {
+        const encode = function(){};
+        const Transformer = Kinto.createRemoteTransformer({encode: encode});
+
+        expect(new Transformer().encode).eql(encode);
+      });
+
+      it("should not share custom prototypes across transformers", () => {
+        const encodeA = function(){};
+        const encodeB = function(){};
+        const TransformerA = Kinto.createRemoteTransformer({encode: encodeA});
+        const TransformerB = Kinto.createRemoteTransformer({encode: encodeB});
+
+        expect(new TransformerA().encode).eql(encodeA);
+        expect(new TransformerB().encode).eql(encodeB);
+      });
+
+      it("should use custom prototype constructor", () => {
+        const Transformer = Kinto.createRemoteTransformer({
+          constructor: function(x) {
+            this.x = x;
+          }
+        });
+
+        expect(new Transformer(42).x).eql(42);
+      });
+    });
+  });
+
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
