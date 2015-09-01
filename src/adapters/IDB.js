@@ -72,7 +72,9 @@ export default class IDB extends BaseAdapter {
    */
   prepare(mode=undefined, name=null) {
     const storeName = name || this.dbname;
-    const transaction = this._db.transaction([storeName], mode);
+    // On Safari, calling IDBDatabase.transaction with mode == undefined raises a TypeError.
+    const transaction = mode ? this._db.transaction([storeName], mode)
+                             : this._db.transaction([storeName]);
     const store = transaction.objectStore(storeName);
     return {transaction, store};
   }
