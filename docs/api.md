@@ -386,7 +386,7 @@ kinto.events.on("deprecated", function(event) {
 
 ## Transformers
 
-Transformers are basically hooks for encoding and decoding records.
+Transformers are basically hooks for encoding and decoding records, which can work synchronously or asynchronously.
 
 ### Remote transformers
 
@@ -414,7 +414,12 @@ coll = kinto.collection("articles");
 coll.use(new MyRemoteTransformer());
 ```
 
-Notice that the `decode` method should be the strict reverse version of `encode`. Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
+> #### Notes
+>
+> - The `decode` method should be the strict reverse version of `encode`;
+> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
+
+Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
 
 ```js
 coll.create({title: "foo"}).then(_ => coll.sync())
@@ -424,9 +429,9 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
 ```
 
-#### Notes
-
-> *This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.*
+> #### Notes
+>
+> This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.
 
 ### Local transformers
 
@@ -434,7 +439,7 @@ In a near future, Kinto.js will provide transfomers aimed at providing facilitie
 
 ### Async transformers
 
-Transformers can also work asynchronously by returning a Promise:
+Transformers can also work asynchronously by returning a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise):
 
 ```js
 class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
