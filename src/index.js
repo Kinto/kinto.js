@@ -49,15 +49,17 @@ export default class Kinto {
    * @return {RemoteTransformer}
    */
   static createRemoteTransformer(proto) {
-    if (!proto || typeof proto !== "object")
+    if (!proto || typeof proto !== "object") {
       throw new Error("Expected prototype object.");
+    }
 
     class _RemoteTransformer extends RemoteTransformer {
       constructor() {
         super();
         // If a constructor is passed from the proto object, apply it.
-        if (proto.constructor)
+        if (proto.constructor) {
           proto.constructor.apply(this, arguments);
+        }
       }
     }
     _RemoteTransformer.prototype = Object.assign(_RemoteTransformer.prototype, proto);
