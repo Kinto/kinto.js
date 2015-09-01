@@ -58,8 +58,9 @@ export default class HTTP {
         this._checkForDeprecationHeader(headers);
         this._checkForBackoffHeader(status, headers);
         const contentLength = headers.get("Content-Length");
-        if (!contentLength || contentLength == 0)
+        if (!contentLength || contentLength == 0) {
           return null;
+        }
         return res.json();
       })
       .catch(err => {
@@ -90,8 +91,9 @@ export default class HTTP {
 
   _checkForDeprecationHeader(headers) {
     const alertHeader = headers.get("Alert");
-    if (!alertHeader)
+    if (!alertHeader) {
       return;
+    }
     var alert;
     try {
       alert = JSON.parse(alertHeader);
@@ -106,8 +108,9 @@ export default class HTTP {
   _checkForBackoffHeader(status, headers) {
     // XXX Temporary fix
     // see https://github.com/mozilla-services/kinto/issues/148
-    if (status === 304)
+    if (status === 304) {
       return;
+    }
     var backoffMs;
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
     if (backoffSeconds > 0) {

@@ -101,8 +101,9 @@ export default class Kinto {
    * @return {Collection}
    */
   collection(collName) {
-    if (!collName)
+    if (!collName) {
       throw new Error("missing collection name");
+    }
 
     const remote = this._options.remote;
     const api = new Api(remote, {

@@ -24,7 +24,7 @@ describe("Integration tests", () => {
 
   function startServer(env) {
     // Add the provided environment variables to the child process environment.
-    // Keeping parent's environment is needed so that pserve's executable 
+    // Keeping parent's environment is needed so that pserve's executable
     // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
     env = Object.assign({}, process.env, env);
     server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env});
@@ -44,8 +44,9 @@ describe("Integration tests", () => {
   function flushServer(attempt=1) {
     return fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"})
       .then(res => {
-        if ([202, 410].indexOf(res.status) === -1)
+        if ([202, 410].indexOf(res.status) === -1) {
           throw new Error("Unable to flush test server.");
+        }
       })
       .catch(err => {
         // Prevent race condition where integration tests start while server

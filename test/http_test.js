@@ -140,8 +140,9 @@ describe("HTTP class", () => {
           status: 200,
           headers: {
             get(name) {
-              if (name !== "Alert")
+              if (name !== "Alert") {
                 return "fake";
+              }
             }
           },
           json() {

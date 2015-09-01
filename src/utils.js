@@ -64,12 +64,15 @@ export function sortObjects(order, list) {
   const field = hasDash ? order.slice(1) : order;
   const direction = hasDash ? -1 : 1;
   return list.slice().sort((a, b) => {
-    if (a[field] && _isUndefined(b[field]))
+    if (a[field] && _isUndefined(b[field])) {
       return direction;
-    if (b[field] && _isUndefined(a[field]))
+    }
+    if (b[field] && _isUndefined(a[field])) {
       return -direction;
-    if (_isUndefined(a[field]) && _isUndefined(b[field]))
+    }
+    if (_isUndefined(a[field]) && _isUndefined(b[field])) {
       return 0;
+    }
     return a[field] > b[field] ? direction : -direction;
   });
 }
@@ -107,13 +110,15 @@ export function reduceRecords(filters, order, list) {
  * @return {Array}
  */
 export function partition(array, n) {
-  if (n <= 0)
+  if (n <= 0) {
     return array;
+  }
   return array.reduce((acc, x, i) => {
-    if (i === 0 || i % n === 0)
+    if (i === 0 || i % n === 0) {
       acc.push([x]);
-    else
+    } else {
       acc[acc.length - 1].push(x);
+    }
     return acc;
   }, []);
 }
@@ -137,8 +142,9 @@ export function isUUID4(uuid) {
  * @return {Promise}
  */
 export function waterfall(fns, init) {
-  if (!fns.length)
+  if (!fns.length) {
     return Promise.resolve(init);
+  }
   return fns.reduce((promise, nextFn) => {
     return promise.then(nextFn);
   }, Promise.resolve(init));

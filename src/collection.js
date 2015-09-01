@@ -32,8 +32,9 @@ export class SyncResultObject {
   }
 
   add(type, entries) {
-    if (!Array.isArray(this[type]))
+    if (!Array.isArray(this[type])) {
       return;
+    }
     this[type] = this[type].concat(entries);
     this.ok = this.errors.length + this.conflicts.length === 0;
   }
@@ -63,8 +64,9 @@ export default class Collection {
     const DBAdapter = options.adapter || IDB;
     const dbPrefix = options.dbPrefix || "";
     const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
-    if (!(db instanceof BaseAdapter))
+    if (!(db instanceof BaseAdapter)) {
       throw new Error("Unsupported adapter.");
+    }
     // public properties
     this.db = db;
     this.api = api;
@@ -114,8 +116,9 @@ export default class Collection {
    * @return {Promise}
    */
   _encodeRecord(type, record) {
-    if (!this._transformers[type].length)
+    if (!this._transformers[type].length) {
       return Promise.resolve(record);
+    }
     return waterfall(this._transformers[type].map(transfomer => {
       return record => transfomer.encode(record);
     }), record);
@@ -129,8 +132,9 @@ export default class Collection {
    * @return {Promise}
    */
   _decodeRecord(type, record) {
-    if (!this._transformers[type].length)
+    if (!this._transformers[type].length) {
       return Promise.resolve(record);
+    }
     return waterfall(this._transformers[type].reverse().map(transformer => {
       return record => transformer.decode(record);
     }), record);
@@ -149,14 +153,16 @@ export default class Collection {
    * @return {Promise}
    */
   create(record, options={forceUUID: false, synced: false}) {
-    if (typeof(record) !== "object")
+    if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
+    }
     const newRecord = Object.assign({}, record, {
       id:      options.synced || options.forceUUID ? record.id : uuid4(),
       _status: options.synced ? "synced" : "created"
     });
-    if (!isUUID4(newRecord.id))
+    if (!isUUID4(newRecord.id)) {
       return Promise.reject(new Error(`Invalid UUID: ${newRecord.id}`));
+    }
     return this.db.create(newRecord).then(record => {
       return {data: record, permissions: {}};
     });
@@ -173,12 +179,15 @@ export default class Collection {
    * @return {Promise}
    */
   update(record, options={synced: false}) {
-    if (typeof(record) !== "object")
+    if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
-    if (!record.id)
+    }
+    if (!record.id) {
       return Promise.reject(new Error("Cannot update a record missing id."));
-    if (!isUUID4(record.id))
+    }
+    if (!isUUID4(record.id)) {
       return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
+    }
     return this.get(record.id).then(_ => {
       var newStatus = "updated";
       if (record._status === "deleted") {
@@ -216,8 +225,9 @@ export default class Collection {
    * @return {Promise}
    */
   get(id, options={includeDeleted: false}) {
-    if (!isUUID4(id))
+    if (!isUUID4(id)) {
       return Promise.reject(Error(`Invalid UUID: ${id}`));
+    }
     return this.db.get(id).then(record => {
       if (!record ||
          (!options.includeDeleted && record._status === "deleted")) {
@@ -240,8 +250,9 @@ export default class Collection {
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
-    if (!isUUID4(id))
+    if (!isUUID4(id)) {
       return Promise.reject(new Error(`Invalid UUID: ${id}`));
+    }
     // Ensure the record actually exists.
     return this.get(id, {includeDeleted: true}).then(res => {
       if (options.virtual) {
@@ -281,8 +292,9 @@ export default class Collection {
     params = Object.assign({order: "-last_modified", filters: {}}, params);
     return this.db.list().then(results => {
       var reduced = reduceRecords(params.filters, params.order, results);
-      if (!options.includeDeleted)
+      if (!options.includeDeleted) {
         reduced = reduced.filter(record => record._status !== "deleted");
+      }
       return {data: reduced, permissions: {}};
     });
   }
@@ -345,12 +357,14 @@ export default class Collection {
       // Matching local record found
       .then(res => this._processChangeImport(res.data, _decodedChange))
       .catch(err => {
-        if (!(/not found/i).test(err.message))
+        if (!(/not found/i).test(err.message)) {
           return {type: "errors", data: err};
+        }
         // Not found locally but remote change is marked as deleted; skip to
         // avoid recreation.
-        if (_decodedChange.deleted)
+        if (_decodedChange.deleted) {
           return {type: "skipped", data: _decodedChange};
+        }
         return this.create(_decodedChange, {synced: true}).then(res => {
           return {type: "created", data: res.data};
         });
@@ -377,8 +391,9 @@ export default class Collection {
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
         // Don't persist lastModified value if conflicts occured
-        if (syncResultObject.conflicts.length > 0)
+        if (syncResultObject.conflicts.length > 0) {
           return syncResultObject;
+        }
         // No conflict occured, persist collection's lastModified value
         return this.db.saveLastModified(syncResultObject.lastModified)
           .then(lastModified => {
@@ -401,10 +416,11 @@ export default class Collection {
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return res.data.reduce((acc, record) => {
-          if (record._status === "deleted" && !record.last_modified)
+          if (record._status === "deleted" && !record.last_modified) {
             acc.toDelete.push(record);
-          else if (record._status !== "synced")
+          } else if (record._status !== "synced") {
             acc.toSync.push(record);
+          }
           return acc;
           // rename toSync to toPush or toPublish
         }, {toDelete: [], toSync: []});
@@ -514,12 +530,14 @@ export default class Collection {
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
       .then(result => {
-        if (!result.ok)
+        if (!result.ok) {
           return result;
+        }
         return this.pushChanges(result, options)
           .then(result => {
-            if (!result.ok || result.published.length === 0)
+            if (!result.ok || result.published.length === 0) {
               return result;
+            }
             return this.pullChanges(result, options);
           });
       });

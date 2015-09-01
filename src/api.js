@@ -10,8 +10,9 @@ export const SUPPORTED_PROTOCOL_VERSION = "v1";
 
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
-    if (excludeFields.indexOf(key) === -1)
+    if (excludeFields.indexOf(key) === -1) {
       acc[key] = record[key];
+    }
     return acc;
   }, {});
 }
@@ -32,10 +33,12 @@ export default class Api {
    * @param  {Object}  options  The options object.
    */
   constructor(remote, options={}) {
-    if (typeof(remote) !== "string" || !remote.length)
+    if (typeof(remote) !== "string" || !remote.length) {
       throw new Error("Invalid remote URL: " + remote);
-    if (remote[remote.length-1] === "/")
+    }
+    if (remote[remote.length-1] === "/") {
       remote = remote.slice(0, -1);
+    }
     this._backoffReleaseTime = null;
     // public properties
     this.remote = remote;
@@ -47,8 +50,9 @@ export default class Api {
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + remote);
     }
-    if (this.version !== SUPPORTED_PROTOCOL_VERSION)
+    if (this.version !== SUPPORTED_PROTOCOL_VERSION) {
       throw new Error(`Unsupported protocol version: ${this.version}`);
+    }
     this.http = new HTTP({events: this.events, requestMode: options.requestMode});
     this._registerHTTPEvents();
   }
@@ -61,8 +65,9 @@ export default class Api {
    */
   get backoff() {
     const currentTime = new Date().getTime();
-    if (this._backoffReleaseTime && currentTime < this._backoffReleaseTime)
+    if (this._backoffReleaseTime && currentTime < this._backoffReleaseTime) {
       return this._backoffReleaseTime - currentTime;
+    }
     return 0;
   }
 
@@ -103,8 +108,9 @@ export default class Api {
    * @return {Promise}
    */
   fetchServerSettings() {
-    if (this.serverSettings)
+    if (this.serverSettings) {
       return Promise.resolve(this.serverSettings);
+    }
     return this.http.request(this.endpoints().root())
       .then(res => {
         this.serverSettings = res.json.settings;
@@ -230,8 +236,9 @@ export default class Api {
       conflicts: [],
       skipped:   []
     };
-    if (!records.length)
+    if (!records.length) {
       return Promise.resolve(results);
+    }
     return this.fetchServerSettings()
       .then(serverSettings => {
         const maxRequests = serverSettings["cliquet.batch_max_requests"];

@@ -66,8 +66,9 @@ export default class LocalStorage extends BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    if (this.keys.indexOf(record.id) !== -1)
+    if (this.keys.indexOf(record.id) !== -1) {
       return Promise.reject(new Error("Exists."));
+    }
     try {
       localStorage.setItem(`${this.dbname}/${record.id}`, JSON.stringify(record));
       this.keys = this.keys.concat(record.id);
@@ -84,8 +85,9 @@ export default class LocalStorage extends BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    if (this.keys.indexOf(record.id) === -1)
+    if (this.keys.indexOf(record.id) === -1) {
       return Promise.reject(new Error("Doesn't exist."));
+    }
     try {
       localStorage.setItem(`${this.dbname}/${record.id}`, JSON.stringify(record));
       return Promise.resolve(record);

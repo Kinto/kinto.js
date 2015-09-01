@@ -27,8 +27,9 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   open() {
-    if (this._db)
+    if (this._db) {
       return Promise.resolve(this);
+    }
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbname, 1);
       request.onupgradeneeded = event => {
