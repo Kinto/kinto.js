@@ -60,7 +60,8 @@ Result is:
 
 > #### Notes
 >
-> - Records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29).
+> - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29),
+but you can also define a [custom ID schema](#id-schemas)).
 
 ## Retrieving a single record
 
@@ -85,7 +86,7 @@ Result:
 
 > #### Notes
 >
-> - The promise will be rejected if no record is found for that id.
+> - The promise will be rejected if no record is found for that ID.
 
 ## Updating a record
 
@@ -117,7 +118,7 @@ Result is:
 
 > #### Notes
 >
-> - An id is required, otherwise the promise will be rejected.
+> - An ID is required, otherwise the promise will be rejected.
 
 ## Deleting records
 
@@ -144,7 +145,7 @@ Result:
 
 > #### Notes
 >
-> - An id is required, otherwise the promise will be rejected;
+> - An ID is required, otherwise the promise will be rejected;
 > - Virtual deletions aren't retrieved when calling `#get()` and `#list()`.
 
 ## Listing records
@@ -558,3 +559,70 @@ coll = kinto.collection("articles", {
 There's currently no way to deal with adding transformers to an already filled remote database; that would mean remote data migrations, and both Kinto and Kinto.js don't provide this feature just yet.
 
 **As a rule of thumb, you should only start using transformers on an empty remote collection.**
+
+## ID schemas
+
+By default, kinto.js uses UUID4 strings for record ID's. If you want to work with an existing body of data, this may not be what you want.
+
+You can define a custom ID schema on a collection by passing it to `Kinto#collection`:
+
+```js
+import Kinto from "kinto";
+
+class IntegerIdSchema extends IdSchema {
+  constructor() {
+    super();
+    this._next = 0;
+  }
+  generate() {
+    return this._next++;
+  }
+  validate(id) {
+    return (typeof id == "number");
+  }
+}
+
+const kinto = new Kinto({remote: "https://my.server.tld/v1"});
+coll = kinto.collection("articles", {
+  idSchema: new IntegerIdSchema()
+});
+```
+
+> #### Notes
+>
+> - The `generate` method should generate unique ID's;
+> - The `validate` method should return a boolean, where `true` means valid.
+> - In a real application, you want to make sure you do not generate twice the same record ID on a collection. This dummy example doesn't take care of ID unicity. In case of ID conflict you may loose data.
+
+### Creating ID schemas in ES5
+
+If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive ID schemas in an ES5 fashion using `Kinto.createIdSchema` static helper:
+
+```js
+var IntegerIdSchema = Kinto.createIdSchema({
+  constructor() {
+    this._next = 0;
+  }
+  generate() {
+    return this._next++;
+  }
+  validate(id) {
+    return ((id == parseInt(id, 10)) && (id >= 0));
+  }
+});
+
+coll = kinto.collection("articles", {
+  idSchema: new IntegerIdSchema()
+});
+```
+
+> #### Notes
+>
+> Notice you can define a `constructor` method, though you don't need (and must not) call `super()` within it, unlike with ES6 classes.
+
+### Limitations
+
+There's currently no way to deal with changing the ID schema of an already filled local database; that would mean existing records would fail the new validation check, and can no longer be updated.
+
+**As a rule of thumb, you should only start using a custom ID schema on an empty remote collection.**
+###

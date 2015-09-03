@@ -8,6 +8,7 @@ import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
+import IdSchema from "../src/schemas/idschema";
 import RemoteTransformer from "../src/transformers/remote";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "../src/api";
@@ -22,15 +23,17 @@ const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
 describe("Collection", () => {
-  var sandbox, events, remoteTransformers, api;
+  var sandbox, events, idSchema, remoteTransformers, api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
     events = new EventEmitter();
+    idSchema = options.idSchema;
     remoteTransformers = options.remoteTransformers;
     api = new Api(FAKE_SERVER_URL, {events});
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
       events,
+      idSchema,
       remoteTransformers
     });
   }
@@ -44,6 +47,19 @@ describe("Collection", () => {
   class ExclamationMarkTransformer extends RemoteTransformer {
     encode(record) {
       return updateTitleWithDelay(record, "!", 5);
+    }
+  }
+
+  class IntegerIdSchema extends IdSchema {
+    constructor() {
+      super();
+      this._next = 0;
+    }
+    generate() {
+      return this._next++;
+    }
+    validate(id) {
+      return ((id == parseInt(id, 10)) && (id >= 0));
     }
   }
 
@@ -221,6 +237,16 @@ describe("Collection", () => {
         .should.eventually.be.a("string");
     });
 
+    it("should assign an id to the created record (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: new IntegerIdSchema()
+      });
+
+      return articles.create(article)
+        .then(result => result.data.id)
+        .should.eventually.be.a("number");
+    });
+
     it("should not alter original record", () => {
       return articles.create(article)
         .should.eventually.not.eql(article);
@@ -244,17 +270,26 @@ describe("Collection", () => {
         .should.become(article.title);
     });
 
-    it("should support the forceUUID option", () => {
-      const testUUID = uuid4();
-      return articles.create({id: testUUID, title: "foo"}, {forceUUID: true})
+    it("should support the useRecordId option", () => {
+      const testId = uuid4();
+      return articles.create({id: testId, title: "foo"}, {useRecordId: true})
         .then(result => articles.get(result.data.id))
         .then(res => res.data.id)
-        .should.become(testUUID);
+        .should.become(testId);
     });
 
-    it("should validate record's UUID when provided", () => {
-      return articles.create({id: 42, title: "foo"}, {forceUUID: true})
-        .should.be.rejectedWith(Error, /UUID/);
+    it("should validate record's Id when provided", () => {
+      return articles.create({id: 42, title: "foo"}, {useRecordId: true})
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should validate record's Id when provided (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: new IntegerIdSchema()
+      });
+
+      return articles.create({id: "deadbeef", title: "foo"}, {useRecordId: true})
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
   });
 
@@ -299,9 +334,18 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /missing id/);
     });
 
-    it("should validate record's UUID when provided", () => {
+    it("should validate record's id when provided", () => {
       return articles.update({id: 42})
-        .should.be.rejectedWith(Error, /UUID/);
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should validate record's id when provided (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: new IntegerIdSchema()
+      });
+
+      return articles.update({id: "deadbeef"})
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
   });
 
@@ -337,34 +381,50 @@ describe("Collection", () => {
   });
 
   describe("#get", () => {
-    var articles, uuid;
+    var articles, id;
 
     beforeEach(() => {
       articles = testCollection();
       return articles.create(article)
-        .then(result => uuid = result.data.id);
+        .then(result => id = result.data.id);
     });
 
     it("should isolate records by bucket", () => {
       const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api);
-      return otherbucket.get(uuid)
+      return otherbucket.get(id)
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);
     });
 
     it("should retrieve a record from its id", () => {
-      return articles.get(uuid)
+      return articles.get(id)
+        .then(res => res.data.title)
+        .should.eventually.eql(article.title);
+    });
+
+    it("should retrieve a record from its id (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: new IntegerIdSchema()
+      });
+
+      return articles.create(article)
+        .then(result => articles.get(result.data.id))
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
     });
 
     it("should validate passed id", () => {
       return articles.get(42)
-        .should.be.rejectedWith(Error, /UUID/);
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should validate passed id (custom IdSchema)", () => {
+      return articles.get("deadbeef")
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
     it("should have record status info attached", () => {
-      return articles.get(uuid)
+      return articles.get(id)
         .then(res => res.data._status)
         .should.eventually.eql("created");
     });
@@ -376,12 +436,12 @@ describe("Collection", () => {
     });
 
     it("should reject on virtually deleted record", () => {
-      return articles.delete(uuid)
-        .then(res => articles.get(uuid, {includeDeleted: true}))
+      return articles.delete(id)
+        .then(res => articles.get(id, {includeDeleted: true}))
         .then(res => res.data)
         .should.eventually.become({
           _status: "deleted",
-          id: uuid,
+          id: id,
           title: "foo",
           url: "http://foo",
         });
@@ -389,32 +449,37 @@ describe("Collection", () => {
   });
 
   describe("#delete", () => {
-    var articles, uuid;
+    var articles, id;
 
     beforeEach(() => {
       articles = testCollection();
       return articles.create(article)
-        .then(result => uuid = result.data.id);
+        .then(result => id = result.data.id);
     });
 
     it("should validate passed id", () => {
       return articles.delete(42)
-        .should.be.rejectedWith(Error, /UUID/);
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should validate passed id (custom IdSchema)", () => {
+      return articles.delete("deadbeef")
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
     describe("Virtual", () => {
       it("should virtually delete a record", () => {
-        return articles.delete(uuid, {virtual: true})
+        return articles.delete(id, {virtual: true})
           .then(res => articles.get(res.data.id, {includeDeleted: true}))
           .then(res => res.data._status)
           .should.eventually.eql("deleted");
       });
 
       it("should resolve with an already deleted record data", () => {
-        return articles.delete(uuid, {virtual: true})
-          .then(res => articles.delete(uuid, {virtual: true}))
+        return articles.delete(id, {virtual: true})
+          .then(res => articles.delete(id, {virtual: true}))
           .then(res => res.data.id)
-          .should.eventually.eql(uuid);
+          .should.eventually.eql(id);
       });
 
       it("should reject on non-existent record", () => {
@@ -426,15 +491,15 @@ describe("Collection", () => {
 
     describe("Factual", () => {
       it("should factually delete a record", () => {
-        return articles.delete(uuid, {virtual: false})
+        return articles.delete(id, {virtual: false})
           .then(res => articles.get(res.data.id))
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
 
       it("should resolve with deletion information", () => {
-        return articles.delete(uuid, {virtual: false})
+        return articles.delete(id, {virtual: false})
           .then(res => res.data)
-          .should.eventually.eql({id: uuid});
+          .should.eventually.eql({id: id});
       });
 
       it("should reject on non-existent record", () => {
@@ -618,24 +683,24 @@ describe("Collection", () => {
     });
 
     describe("When no conflicts occured", () => {
-      const uuid_1 = uuid4();
-      const uuid_2 = uuid4();
-      const uuid_3 = uuid4();
-      const uuid_4 = uuid4();
-      const uuid_5 = uuid4();
-      const uuid_6 = uuid4();
+      const id_1 = uuid4();
+      const id_2 = uuid4();
+      const id_3 = uuid4();
+      const id_4 = uuid4();
+      const id_5 = uuid4();
+      const id_6 = uuid4();
 
       const localData = [
-        {id: uuid_1, title: "art1"},
-        {id: uuid_2, title: "art2"},
-        {id: uuid_4, title: "art4"},
-        {id: uuid_5, title: "art5"},
+        {id: id_1, title: "art1"},
+        {id: id_2, title: "art2"},
+        {id: id_4, title: "art4"},
+        {id: id_5, title: "art5"},
       ];
       const serverChanges = [
-        {id: uuid_2, title: "art2"}, // existing, should simply be marked as synced
-        {id: uuid_3, title: "art3"}, // to be created
-        {id: uuid_4, deleted: true}, // to be deleted
-        {id: uuid_6, deleted: true}, // remotely deleted, missing locally
+        {id: id_2, title: "art2"}, // existing, should simply be marked as synced
+        {id: id_3, title: "art3"}, // to be created
+        {id: id_4, deleted: true}, // to be deleted
+        {id: id_6, deleted: true}, // remotely deleted, missing locally
       ];
 
       beforeEach(() => {
@@ -675,7 +740,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.created)
           .should.eventually.become([
-            {id: uuid_3, title: "art3", _status: "synced"}
+            {id: id_3, title: "art3", _status: "synced"}
           ]);
       });
 
@@ -683,7 +748,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.updated)
           .should.eventually.become([
-            {id: uuid_2, title: "art2", _status: "synced"}
+            {id: id_2, title: "art2", _status: "synced"}
           ]);
       });
 
@@ -691,7 +756,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
           .should.eventually.become([
-            {id: uuid_4}
+            {id: id_4}
           ]);
       });
 
@@ -706,10 +771,10 @@ describe("Collection", () => {
           .then(_ => articles.list({order: "title"}))
           .then(res => res.data)
           .should.eventually.become([
-            {id: uuid_1, title: "art1", _status: "synced"},
-            {id: uuid_2, title: "art2", _status: "synced"},
-            {id: uuid_3, title: "art3", _status: "synced"},
-            {id: uuid_5, title: "art5", _status: "synced"},
+            {id: id_1, title: "art1", _status: "synced"},
+            {id: id_2, title: "art2", _status: "synced"},
+            {id: id_3, title: "art3", _status: "synced"},
+            {id: id_5, title: "art5", _status: "synced"},
           ]);
       });
 

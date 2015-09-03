@@ -10,6 +10,7 @@ import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
 import LocalStorage from "../src/adapters/LocalStorage";
 import IDB from "../src/adapters/IDB";
+import IdSchema from "../src/schemas/idschema";
 import RemoteTransformer from "../src/transformers/remote";
 import Kinto from "../src";
 
@@ -53,6 +54,12 @@ describe("Kinto", () => {
 
       it("should provide an adapters.IDB getter", () => {
         expect(Kinto.adapters.IDB).to.eql(IDB);
+      });
+    });
+
+    describe("get IdSchema()", () => {
+      it("should provide an IdSchema static getter", () => {
+        expect(Kinto.IdSchema).eql(IdSchema);
       });
     });
 
@@ -110,6 +117,45 @@ describe("Kinto", () => {
         });
 
         expect(new Transformer(42).x).eql(42);
+      });
+    });
+
+    describe("createIdSchema", () => {
+      it("should require a prototype object", () => {
+        expect(() => Kinto.createIdSchema()).to.Throw(Error, /prototype/);
+      });
+
+      it("should allow defining an id schema", () => {
+        const Schema = Kinto.createIdSchema({});
+
+        expect(new Schema()).to.be.an.instanceOf(IdSchema);
+      });
+
+      it("should expose custom schema prototype", () => {
+        const generate = function(){};
+        const Schema = Kinto.createIdSchema({generate: generate});
+
+        expect(new Schema().generate).eql(generate);
+      });
+
+      it("should not share custom prototypes across Schemas", () => {
+        const generateA = function(){};
+        const generateB = function(){};
+        const SchemaA = Kinto.createIdSchema({generate: generateA});
+        const SchemaB = Kinto.createIdSchema({generate: generateB});
+
+        expect(new SchemaA().generate).eql(generateA);
+        expect(new SchemaB().generate).eql(generateB);
+      });
+
+      it("should use custom prototype constructor", () => {
+        const Schema = Kinto.createIdSchema({
+          constructor: function(x) {
+            this.x = x;
+          }
+        });
+
+        expect(new Schema(42).x).eql(42);
       });
     });
   });

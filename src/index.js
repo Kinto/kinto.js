@@ -9,6 +9,7 @@ import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
 import LocalStorage from "./adapters/LocalStorage";
 import IDB from "./adapters/IDB";
+import IdSchema from "./schemas/idschema";
 import RemoteTransformer from "./transformers/remote";
 
 const DEFAULT_BUCKET_NAME = "default";
@@ -58,6 +59,17 @@ export default class Kinto {
   }
 
   /**
+   * Provides a public access to base IdSchema class. Users can create
+   * custom id schemas by extending these.
+   *
+   * @return {Class}
+   */
+  static get IdSchema() {
+    return IdSchema;
+  }
+
+
+  /**
    * Creates a remote transformer constructor, the ES5 way.
    *
    * @return {RemoteTransformer}
@@ -78,6 +90,29 @@ export default class Kinto {
     }
     _RemoteTransformer.prototype = Object.assign(_RemoteTransformer.prototype, proto);
     return _RemoteTransformer;
+  }
+
+  /**
+   * Creates an id schema constructor, the ES5 way.
+   *
+   * @return {IdSchema}
+   */
+  static createIdSchema(proto) {
+    if (!proto || typeof proto !== "object") {
+      throw new Error("Expected prototype object.");
+    }
+
+    class _IdSchema extends IdSchema {
+      constructor() {
+        super();
+        // If a constructor is passed from the proto object, apply it.
+        if (proto.constructor) {
+          proto.constructor.apply(this, arguments);
+        }
+      }
+    }
+    _IdSchema.prototype = Object.assign(_IdSchema.prototype, proto);
+    return _IdSchema;
   }
 
   /**
@@ -131,6 +166,7 @@ export default class Kinto {
       events:              this._options.events,
       adapter:             this._options.adapter,
       dbPrefix:            this._options.dbPrefix,
+      idSchema:            options.idSchema,
       remoteTransformers:  options.remoteTransformers
     });
   }
