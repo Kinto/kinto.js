@@ -1,7 +1,7 @@
 {
   "name": "kinto",
   "version": "1.0.0-rc.3",
-  "description": "JavaScript client for Cliquet.",
+  "description": "JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
     "build": "babel -d lib/ src/",

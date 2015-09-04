@@ -8,7 +8,7 @@ Kinto.js doesn't track modification history in a form of a revision tree. Instea
 
 This allows covering 80% of common synchronization use cases, while being super-lightweight implementation wise.
 
-You can read more about the rationale [here](http://cliquet.readthedocs.org/en/latest/rationale.html).
+You can read more about Kinto features [here](http://kinto.readthedocs.org).
 
 ### No automatic confict handling
 
@@ -59,7 +59,7 @@ For now only a few standard fields are indexed by default in IndexedDB collectio
 Here's what's planned for future versions, outside of fixing the known limitations listed above:
 
 - Adding a **client-side crypto layer** to the API in order to bring secure & privacy-safe remote storage of user data;
-- Adding support for [**sharing & permissions**](http://cliquet.readthedocs.org/en/latest/reference/permission.html);
+- Adding support for [**sharing & permissions**](http://kinto.readthedocs.org/en/latest/api/permissions.html);
 - Allowing to use **other local storage backend than IndexedDB** (localStorage, WebSQL) in the form of alternative drivers/adapters;
 - Providing an **admin Web UI** allowing easy management of your Kinto buckets and collections.
 
