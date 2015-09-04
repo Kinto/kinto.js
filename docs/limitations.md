@@ -59,7 +59,7 @@ For now only a few standard fields are indexed by default in IndexedDB collectio
 Here's what's planned for future versions, outside of fixing the known limitations listed above:
 
 - Adding a **client-side crypto layer** to the API in order to bring secure & privacy-safe remote storage of user data;
-- Adding support for [**sharing & permissions**](http://kinto.readthedocs.org/en/latest/permissions.html);
+- Adding support for [**sharing & permissions**](http://kinto.readthedocs.org/en/latest/api/permissions.html);
 - Allowing to use **other local storage backend than IndexedDB** (localStorage, WebSQL) in the form of alternative drivers/adapters;
 - Providing an **admin Web UI** allowing easy management of your Kinto buckets and collections.
 
