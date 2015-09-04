@@ -106,11 +106,6 @@ export default class HTTP {
   }
 
   _checkForBackoffHeader(status, headers) {
-    // XXX Temporary fix
-    // see https://github.com/mozilla-services/kinto/issues/148
-    if (status === 304) {
-      return;
-    }
     var backoffMs;
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
     if (backoffSeconds > 0) {
