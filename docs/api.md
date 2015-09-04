@@ -240,7 +240,9 @@ articles.sync({
   .then(result => {
     console.log(result);
   })
-  .catch(console.error.bind(console));
+  .catch(error => {
+    console.error(error);
+  });
 ```
 
 The synchronization updates the local data, and provides information about performed operations.
@@ -302,7 +304,9 @@ function sync() {
       }))
       .then(_ => sync());
     })
-    .catch(console.error.bind(console));
+    .catch(error => {
+      console.error(error);
+    });
 }
 ```
 
