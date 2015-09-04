@@ -57,11 +57,15 @@ export default class HTTP {
         statusText = res.statusText;
         this._checkForDeprecationHeader(headers);
         this._checkForBackoffHeader(status, headers);
-        const contentLength = headers.get("Content-Length");
-        if (!contentLength || contentLength == 0) {
+        return res.text();
+      })
+      // Check if we have a body; if so parse it as JSON.
+      .then(text => {
+        if (text.length === 0) {
           return null;
         }
-        return res.json();
+        // Note: we can't consume the response body twice.
+        return JSON.parse(text);
       })
       .catch(err => {
         const error = new Error(`HTTP ${status || 0}; ${err}`);
@@ -70,7 +74,7 @@ export default class HTTP {
         throw error;
       })
       .then(json => {
-        if (status >= 400) {
+        if (json && status >= 400) {
           var message = `HTTP ${status}; `;
           if (json.errno && json.errno in ERROR_CODES) {
             message += ERROR_CODES[json.errno];
