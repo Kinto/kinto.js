@@ -11,8 +11,8 @@ export function fakeServerResponse(status, json, headers={}) {
         return headers[name];
       }
     },
-    json() {
-      return json;
+    text() {
+      return JSON.stringify(json);
     }
   });
 }

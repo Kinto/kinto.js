@@ -108,25 +108,7 @@ describe("HTTP class", () => {
     describe("No content response", () => {
       it("should resolve with null JSON if Content-Length header is missing", () => {
         sandbox.stub(root, "fetch").returns(
-          fakeServerResponse(200, "", {"Content-Length": undefined}));
-
-        return http.request("/")
-          .then(res => res.json)
-          .should.eventually.become(null);
-      });
-
-      it("should resolve with null JSON if Content-Length is 0", () => {
-        sandbox.stub(root, "fetch").returns(
-          fakeServerResponse(200, "", {"Content-Length": 0}));
-
-        return http.request("/")
-          .then(res => res.json)
-          .should.eventually.become(null);
-      });
-
-      it("should resolve with null JSON if Content-Length is '0'", () => {
-        sandbox.stub(root, "fetch").returns(
-          fakeServerResponse(200, "", {"Content-Length": "0"}));
+          fakeServerResponse(200, null, {}));
 
         return http.request("/")
           .then(res => res.json)
@@ -145,8 +127,8 @@ describe("HTTP class", () => {
               }
             }
           },
-          json() {
-            return JSON.parse("malformed json");
+          text() {
+            return "invalid JSON";
           }
         }));
 
