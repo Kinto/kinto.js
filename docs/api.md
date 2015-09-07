@@ -237,9 +237,9 @@ Synopsis:
     - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts), and call `#sync()` again when done;
 3. If everything went fine, publish local changes;
     - Fail on any publication conflict detected;
-        * If `strategy` is set to `Collection.strategy.SERVER_WINS`, no remote data override will be performed by the server;
-        * If `strategy` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overriden with local changes;
-        * If `strategy` is set to `Collection.strategy.MANUAL`, conflicts will be reported in a dedicated array.
+        * If `strategy` is set to `Collection.strategy.SERVER_WINS`, no client data will overwrite the remote data;
+        * If `strategy` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overwritten with local changes;
+        * If `strategy` is set to `Collection.strategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
 
 ```js
 articles.sync()
@@ -261,38 +261,52 @@ If anything goes wrong during sync, `colllection.sync()` will reject its promise
 
 ### Synchronization strategies
 
-The `sync()` method accepts a `strategy` option, which itself accepts the following values:
+For publication conflicts, the `sync()` method accepts a `strategy` option, which itself accepts the following values:
 
-- `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually.
+- `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually;
 - `Collection.strategy.SERVER_WINS`: Server data will be preserved;
 - `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
+
+> Note:
+> `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
+> be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts).
+
 
 You can override default options by passing `#sync()` a new `options` object; Kinto will merge these new values with the default ones:
 
 ```js
+import Collection from "kinto/lib/collection";
+
 articles.sync({
   strategy: Collection.strategy.CLIENT_WINS,
   headers: {Authorization: "Basic bWF0Og=="}
 })
-  .then(console.log.bind(console));
-  .catch(console.error.bind(console));
+  .then(result => {
+    console.log(result);
+  })
+  .catch(error => {
+    console.error(error);
+  });
 ```
 
+The synchronization updates the local data, and provides information about performed operations.
 Sample result:
 
 ```js
 {
   ok: true,
   lastModified: 1434270764485,
+  conflicts: [], // Outgoing and incoming conflicts
   errors:    [], // Errors encountered, if any
   created:   [], // Created locally
   updated:   [], // Updated locally
   deleted:   [], // Deleted locally
-  conflicts: [], // Import conflicts
   skipped:   [], // Skipped imports
   published: []  // Successfully published
 }
 ```
+
+## Resolving conflicts
 
 If conflicts occured, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
 
@@ -303,7 +317,7 @@ The `conflicts` array is in this form:
   // …
   conflicts: [
     {
-      type: "incoming", // can also be "outgoing"
+      type: "incoming", // can also be "outgoing" if stategy is MANUAL
       local: {
         _status: "created",
         id: "233a018a-fd2b-4d39-ba85-8bf3e13d73ec",
@@ -318,24 +332,30 @@ The `conflicts` array is in this form:
 }
 ```
 
-## Resolving conflicts
-
-Conflict resolution is achieved using the `#resolve()` method:
+Once the developer is done with merging records, conflicts are marked as
+resolved using the `#resolve()` method of the collection:
 
 ```js
-articles.sync()
-  .then(res => {
-    if (!conflicts.length)
-      return res;
-    return Promise.all(conflicts.map(conflict => {
-      return articles.resolve(conflict, conflict.remote);
-    }));
-  })
-  .then(_ => articles.sync())
-  .catch(console.error.bind(console));
+function sync() {
+  return articles.sync()
+    .then(res => {
+      if (res.ok)
+        return res;
+
+      // If conflicts, take remote version and sync again.
+      return Promise.all(res.conflicts.map(conflict => {
+        return articles.resolve(conflict, conflict.remote);
+      }))
+      .then(_ => sync());
+    })
+    .catch(error => {
+      console.error(error);
+    });
+}
 ```
 
-Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again.
+Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again, until no conflicts occur.
+
 
 ## Handling server backoff
 

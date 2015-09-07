@@ -6,7 +6,7 @@
 
 Kinto.js doesn't track modification history in a form of a revision tree. Instead, it provides information about what eventually changed since the last time you asked, and only that.
 
-This allows covering 80% of common synchronization use cases, while being super-lightweight implementation wise.
+This allows covering most synchronization use cases, while being super-lightweight implementation wise.
 
 You can read more about Kinto features [here](http://kinto.readthedocs.org).
 
