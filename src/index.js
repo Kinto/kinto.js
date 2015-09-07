@@ -102,18 +102,20 @@ export default class Kinto {
       remote: DEFAULT_REMOTE,
     };
     this._options = Object.assign(defaults, options);
-    this._collections = {};
     // public properties
     this.events = this._options.events;
   }
 
   /**
-   * Creates or retrieve a Collection instance.
+   * Creates a Collection instance. The second (optional) parameter
+   * will set collection-level options like e.g. remoteTransformers.
    *
    * @param  {String} collName The collection name.
+   * @param  {Object} options May contain the following fields:
+   *                          remoteTransformers: Array of RemoteTransformers
    * @return {Collection}
    */
-  collection(collName) {
+  collection(collName, options = {}) {
     if (!collName) {
       throw new Error("missing collection name");
     }
@@ -124,16 +126,12 @@ export default class Kinto {
       events:      this._options.events,
       requestMode: this._options.requestMode,
     });
-
-    if (!this._collections.hasOwnProperty(collName)) {
-      const bucket = this._options.bucket;
-      this._collections[collName] = new Collection(bucket, collName, api, {
-        events:   this._options.events,
-        adapter:  this._options.adapter,
-        dbPrefix: this._options.dbPrefix,
-      });
-    }
-
-    return this._collections[collName];
+    const bucket = this._options.bucket;
+    return new Collection(bucket, collName, api, {
+      events:              this._options.events,
+      adapter:             this._options.adapter,
+      dbPrefix:            this._options.dbPrefix,
+      remoteTransformers:  options.remoteTransformers
+    });
   }
 }

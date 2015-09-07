@@ -19,7 +19,7 @@ const PSERVE_EXECUTABLE = process.env.KINTO_PSERVE_EXECUTABLE || "pserve";
 const KINTO_CONFIG = __dirname + "/kinto.ini";
 
 describe("Integration tests", () => {
-  var sandbox, server, tasks;
+  var sandbox, server, kinto, tasks;
   const MAX_ATTEMPTS = 50;
 
   function startServer(env) {
@@ -65,10 +65,11 @@ describe("Integration tests", () => {
 
     sandbox = sinon.sandbox.create();
 
-    tasks = new Kinto({
+    kinto = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: {Authorization: "Basic " + btoa("user:pass")}
-    }).collection("tasks");
+    });
+    tasks = kinto.collection("tasks");
 
     return tasks.clear().then(_ => flushServer());
   });
@@ -344,8 +345,12 @@ describe("Integration tests", () => {
       function testTransformer(name, Transformer) {
         describe(name, () => {
           beforeEach(() => {
-            tasks.use(new Transformer("!"));
-            tasks.use(new Transformer("?"));
+            tasks = kinto.collection("tasks", {
+              remoteTransformers: [
+                new Transformer("!"),
+                new Transformer("?")
+              ]
+            });
 
             return Promise.all([
               tasks.create({id: uuid4(), title: "abc"}),

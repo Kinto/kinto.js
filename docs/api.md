@@ -412,7 +412,7 @@ Transformers are basically hooks for encoding and decoding records, which can wo
 
 ### Remote transformers
 
-Remote transformers aim at encoding records before pushing them to the remote server, and decoding them back when pulling changes. Remote transformers are registered by calling the `Collection#use()` method, which accepts a `Kinto.transformers.RemoteTransformer`-derived object instance:
+Remote transformers aim at encoding records before pushing them to the remote server, and decoding them back when pulling changes. Remote transformers are registered through the optional second argument of `Kinto#collection()`, which accepts `Kinto.transformers.RemoteTransformer`-derived object instances in its `remoteTransformers` array.
 
 ```js
 import Kinto from "kinto";
@@ -432,8 +432,9 @@ class MyRemoteTransformer extends Kinto.transformers.RemoteTransformer {
 }
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
-coll = kinto.collection("articles");
-coll.use(new MyRemoteTransformer());
+coll = kinto.collection("articles", {
+  remoteTransformers: [ new MyRemoteTransformer() ]
+});
 ```
 
 > #### Notes
@@ -482,12 +483,14 @@ class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
   }
 }
 
-coll.use(new MyAsyncRemoteTransformer());
+coll = kinto.collection("articles", {
+  remoteTransformers: [ new MyAsyncRemoteTransformer() ]
+});
 ```
 
 ### Multiple transformers
 
-Transformers are stacked when `#use()` is called multiple times, in the order of the calls; that means you can chain multiple encoding operations, with the decoding ones being processed in the reverse order:
+The remoteTransformers field of the options object passed to `Kinto#collection` is an Array. That means you can chain multiple encoding operations, with the decoding ones being processed in the reverse order:
 
 ```js
 class TitleCharTransformer extends Kinto.transformers.RemoteTransformer {
@@ -505,8 +508,12 @@ class TitleCharTransformer extends Kinto.transformers.RemoteTransformer {
   }
 }
 
-coll.use(new TitleCharTransformer("!"));
-coll.use(new TitleCharTransformer("?"));
+coll = kinto.collection("articles", {
+  remoteTransformers: [
+    new TitleCharTransformer("!"),
+    new TitleCharTransformer("?")
+  ]
+});
 
 coll.create({title: "foo"}).then(_ => coll.sync())
 // remotely saved:
@@ -534,8 +541,12 @@ var TitleCharTransformer = Kinto.createRemoteTransformer({
   }
 });
 
-coll.use(new TitleCharTransformer("!"));
-coll.use(new TitleCharTransformer("?"));
+coll = kinto.collection("articles", {
+  remoteTransformers: [
+    new TitleCharTransformer("!"),
+    new TitleCharTransformer("?")
+  ]
+});
 ```
 
 > #### Notes
@@ -544,6 +555,6 @@ coll.use(new TitleCharTransformer("?"));
 
 ### Limitations
 
-There's currently no way to deal with adding tranformers to an already filled remote database; that would mean remote data migrations, and both Kinto and Kinto.js don't provide this feature just yet.
+There's currently no way to deal with adding transformers to an already filled remote database; that would mean remote data migrations, and both Kinto and Kinto.js don't provide this feature just yet.
 
 **As a rule of thumb, you should only start using transformers on an empty remote collection.**
