@@ -31,7 +31,7 @@
     "indexeddb"
   ],
   "author": "Nicolas Perriault <nperriault@mozilla.com>",
-  "license": "MPL-2.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/Kinto/kinto.js/issues"
   },
