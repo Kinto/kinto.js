@@ -85,6 +85,15 @@ export default class Collection {
     return this._lastModified;
   }
 
+  /**
+   * Synchronization strategies. Available strategies are:
+   *
+   * - `MANUAL`: Conflicts will be reported in a dedicated array.
+   * - `SERVER_WINS`: Conflicts are resolved using remote data.
+   * - `CLIENT_WINS`: Conflicts are resolved using local data.
+   *
+   * @return {Object}
+   */
   static get strategy() {
     return {
       CLIENT_WINS: "client_wins",
@@ -506,13 +515,7 @@ export default class Collection {
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
-   * - {Collection.strategy} strategy: The synchronization strategy:
-   *   * `Collection.strategy.SERVER_WINS`:
-   *     No remote data override will be performed by the server.
-   *   * `Collection.strategy.CLIENT_WINS`:
-   *     Conflicting server records will be overriden with local changes.
-   *   * `Collection.strategy.MANUAL`:
-   *     Conflicts will be reported in a dedicated array.
+   * - {Collection.strategy} strategy: See `Collection.strategy`.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
    *
@@ -531,12 +534,26 @@ export default class Collection {
       .then(_ => this.pullChanges(result, options))
       .then(result => {
         if (!result.ok) {
+          // if strategy is MANUAL
           return result;
+          // else if strategy is CLIENT_WINS
+          //   override incoming conflicts with local versions (ignore imports)
+          //   and return sync() again
+          // else if strategy is SERVER_WINS
+          //   override incoming conflicts with remote versions (force import all)
+          //   and return sync() again
         }
         return this.pushChanges(result, options)
           .then(result => {
             if (!result.ok || result.published.length === 0) {
+              // if strategy is MANUAL
               return result;
+              // else if strategy is CLIENT_WINS
+              //   override outgoing conflicts with local versions (ignore imports)
+              //   and return sync() again
+              // else if strategy is SERVER_WINS
+              //   override outgoing conflicts with remote versions (force import all)
+              //   and return sync() again
             }
             return this.pullChanges(result, options);
           });

@@ -45,6 +45,19 @@ export default class Kinto {
   }
 
   /**
+   * Synchronization strategies. Available strategies are:
+   *
+   * - `MANUAL`: Conflicts will be reported in a dedicated array.
+   * - `SERVER_WINS`: Conflicts are resolved using remote data.
+   * - `CLIENT_WINS`: Conflicts are resolved using local data.
+   *
+   * @return {Object}
+   */
+  static get syncStrategy() {
+    return Collection.strategy;
+  }
+
+  /**
    * Creates a remote transformer constructor, the ES5 way.
    *
    * @return {RemoteTransformer}
