@@ -238,9 +238,9 @@ Synopsis:
     - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts), and call `#sync()` again when done;
 3. If everything went fine, publish local changes;
     - Fail on any publication conflict detected;
-        * If `strategy` is set to `Collection.strategy.SERVER_WINS`, no client data will overwrite the remote data;
-        * If `strategy` is set to `Collection.strategy.CLIENT_WINS`, conflicting server records will be overwritten with local changes;
-        * If `strategy` is set to `Collection.strategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
+        * If `strategy` is set to `Kinto.syncStrategy.SERVER_WINS`, no client data will overwrite the remote data;
+        * If `strategy` is set to `Kinto.syncStrategy.CLIENT_WINS`, conflicting server records will be overwritten with local changes;
+        * If `strategy` is set to `Kinto.syncStrategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
 
 ```js
 articles.sync()
