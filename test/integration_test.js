@@ -76,19 +76,6 @@ describe("Integration tests", () => {
 
   afterEach(() => sandbox.restore());
 
-  function testSync(data) {
-    return Promise.all([].concat(
-      // Create local unsynced records
-      data.localUnsynced.map(record => tasks.create(record, {forceUUID: true})),
-      // Create local synced records
-      data.localSynced.map(record => tasks.create(record, {synced: true})),
-      // Create remote records
-      tasks.api.batch("default", "tasks", data.server)
-    )).then(_ => {
-      return tasks.sync();
-    });
-  }
-
   describe("Default server configuration", () => {
     before(() => {
       return startServer();
@@ -107,6 +94,30 @@ describe("Integration tests", () => {
     });
 
     describe("Synchronization", () => {
+      function testSync(data, options={}) {
+        return Promise.all([].concat(
+          // Create local unsynced records
+          data.localUnsynced.map(record => tasks.create(record, {forceUUID: true})),
+          // Create local synced records
+          data.localSynced.map(record => tasks.create(record, {synced: true})),
+          // Create remote records
+          tasks.api.batch("default", "tasks", data.server)
+        )).then(_ => {
+          return tasks.sync(options);
+        });
+      }
+
+      function getRemoteList() {
+        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records?_sort=title`, {
+          headers: {"Authorization": "Basic " + btoa("user:pass")}
+        })
+          .then(res => res.json())
+          .then(json => json.data.map(record => ({
+            title: record.title,
+            done: record.done,
+          })));
+      }
+
       describe("No conflict", () => {
         const testData = {
           localSynced: [
@@ -142,16 +153,16 @@ describe("Integration tests", () => {
           expect(syncResult.conflicts).to.have.length.of(0);
         });
 
-        it("should not have skipped records", () => {
+        it("should not skip records", () => {
           expect(syncResult.skipped).to.have.length.of(0);
         });
 
-        it("should have imported server data", () => {
+        it("should import server data", () => {
           expect(syncResult.created).to.have.length.of(1);
           expect(cleanRecord(syncResult.created[0])).eql(testData.server[0]);
         });
 
-        it("should have published local unsynced records", () => {
+        it("should publish local unsynced records", () => {
           expect(syncResult.published).to.have.length.of(1);
           expect(cleanRecord(syncResult.published[0])).eql(testData.localUnsynced[0]);
         });
@@ -161,12 +172,39 @@ describe("Integration tests", () => {
           expect(syncResult.updated.map(r => cleanRecord(r))).to
             .include(testData.localUnsynced[0]);
         });
+
+        it("should put local database in the expected state", () => {
+          return tasks.list({order: "title"})
+            .then(res => res.data.map(record => ({
+              title: record.title,
+              done: record.done,
+              _status: record._status,
+            })))
+            .should.become([
+              {title: "task1", _status: "synced", done: true},
+              {title: "task2", _status: "synced", done: false},
+              {title: "task3", _status: "synced", done: true},
+              {title: "task4", _status: "synced", done: false},
+            ]);
+        });
+
+        it("should put remote test server data in the expected state", () => {
+          return getRemoteList().should.become([
+            // task1 and task4 are actually published to the server:
+            // task1 was preexisting, task4 has been published through sync.
+            // Note: task2 and task3 aren't listed because their synced local
+            // status was faked, so they were not actually synced remotely.
+            {title: "task1", done: true},
+            {title: "task4", done: false},
+          ]);
+        });
       });
 
       describe("Incoming conflict", () => {
         const conflictingId = uuid4();
         const testData = {
           localSynced: [
+            {id: uuid4(), title: "task1", done: true},
             {id: uuid4(), title: "task2", done: false},
             {id: uuid4(), title: "task3", done: true},
           ],
@@ -179,51 +217,244 @@ describe("Integration tests", () => {
         };
         var syncResult;
 
-        beforeEach(() => {
-          return testSync(testData).then(res => syncResult = res);
-        });
-
-        it("should not have an ok status", () => {
-          expect(syncResult.ok).eql(false);
-        });
-
-        it("should contain no errors", () => {
-          expect(syncResult.errors).to.have.length.of(0);
-        });
-
-        it("should have a valid lastModified value", () => {
-          expect(syncResult.lastModified).to.be.a("number");
-        });
-
-        it("should have the incoming conflict listed", () => {
-          expect(syncResult.conflicts).to.have.length.of(1);
-          expect(syncResult.conflicts[0].type).eql("incoming");
-          expect(cleanRecord(syncResult.conflicts[0].local)).eql({
-            id: conflictingId,
-            title: "task4-local",
-            done: false,
+        describe("MANUAL strategy (default)", () => {
+          beforeEach(() => {
+            return testSync(testData).then(res => syncResult = res);
           });
-          expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
-            id: conflictingId,
-            title: "task4-remote",
-            done: true,
+
+          it("should not have an ok status", () => {
+            expect(syncResult.ok).eql(false);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have the incoming conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(1);
+            expect(syncResult.conflicts[0].type).eql("incoming");
+            expect(cleanRecord(syncResult.conflicts[0].local)).eql({
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            });
+            expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
+              id: conflictingId,
+              title: "task4-remote",
+              done: true,
+            });
+          });
+
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should not publish anything", () => {
+            expect(syncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should not merge anything", () => {
+            expect(syncResult.resolved).to.have.length.of(0);
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              })))
+              .should.become([
+                {title: "task1", _status: "synced", done: true},
+                {title: "task2", _status: "synced", done: false},
+                {title: "task3", _status: "synced", done: true},
+                // For MANUAL strategy, local conficting record is left intact
+                {title: "task4-local", _status: "created", done: false},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              // Remote record should have been left intact.
+              {title: "task4-remote", done: true},
+            ]);
           });
         });
 
-        it("should not have skipped records", () => {
-          expect(syncResult.skipped).to.have.length.of(0);
+        describe("CLIENT_WINS strategy", () => {
+          beforeEach(() => {
+            return testSync(testData, {
+              strategy: Kinto.syncStrategy.CLIENT_WINS
+            }).then(res => syncResult = res);
+          });
+
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have no incoming conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+          });
+
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should publish resolved conflict using local version", () => {
+            expect(syncResult.published).to.have.length.of(1);
+            expect(cleanRecord(syncResult.published[0])).eql({
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            });
+          });
+
+          it("should update conflict with local version", () => {
+            expect(syncResult.updated).to.have.length.of(1);
+            expect(cleanRecord(syncResult.updated[0])).eql({
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            });
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(cleanRecord(syncResult.updated[0])).eql({
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            });
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              })))
+              .should.become([
+                {title: "task1", _status: "synced", done: true},
+                {title: "task2", _status: "synced", done: false},
+                {title: "task3", _status: "synced", done: true},
+                // For CLIENT_WINS strategy, local record is marked as synced
+                {title: "task4-local", _status: "synced", done: false},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              // local task4 should have been published to the server.
+              {title: "task4-local", done: false},
+            ]);
+          });
         });
 
-        it("should not have imported anything", () => {
-          expect(syncResult.created).to.have.length.of(0);
-        });
+        describe("SERVER_WINS strategy", () => {
+          beforeEach(() => {
+            return testSync(testData, {
+              strategy: Kinto.syncStrategy.SERVER_WINS
+            }).then(res => syncResult = res);
+          });
 
-        it("should not have published anything", () => {
-          expect(syncResult.published).to.have.length.of(0);
-        });
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
 
-        it("should not have updated anything", () => {
-          expect(syncResult.updated).to.have.length.of(0);
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have no incoming conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+          });
+
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should publish resolved conflict using remote version", () => {
+            expect(syncResult.published).to.have.length.of(1);
+            expect(cleanRecord(syncResult.published[0])).eql({
+              id: conflictingId,
+              title: "task4-remote",
+              done: true,
+            });
+          });
+
+          it("should update conflict with remote version", () => {
+            expect(syncResult.updated).to.have.length.of(1);
+            expect(cleanRecord(syncResult.updated[0])).eql({
+              id: conflictingId,
+              title: "task4-remote",
+              done: true,
+            });
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(cleanRecord(syncResult.updated[0])).eql({
+              id: conflictingId,
+              title: "task4-remote",
+              done: true,
+            });
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              })))
+              .should.become([
+                {title: "task1", _status: "synced", done: true},
+                {title: "task2", _status: "synced", done: false},
+                {title: "task3", _status: "synced", done: true},
+                // For SERVER_WINS strategy, remote record is marked as synced
+                {title: "task4-remote", _status: "synced", done: true},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              // remote task4 should have been published to the server.
+              {title: "task4-remote", done: true},
+            ]);
+          });
         });
       });
 
@@ -238,53 +469,215 @@ describe("Integration tests", () => {
               "Content-Type":  "application/json",
               "Authorization": "Basic " + btoa("user:pass"),
             },
-            body: JSON.stringify({data: {title: "foo"}})
+            body: JSON.stringify({data: {title: "task1-remote", done: true}})
           })
             .then(_ => tasks.sync())
             .then(res => {
               return tasks.update(Object.assign({}, res.created[0], {
+                title: "task1-local",
+                done: false,
                 last_modified: undefined
               }));
-            })
-            .then(res => tasks.sync())
-            .then(res => {
-              syncResult = res;
             });
         });
 
-        it("should not have an ok status", () => {
-          expect(syncResult.ok).eql(false);
+        describe("MANUAL strategy (default)", () => {
+          beforeEach(() => {
+            return tasks.sync()
+            .then(res => {
+              syncResult = res;
+            });
+          });
+
+          it("should not have an ok status", () => {
+            expect(syncResult.ok).eql(false);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have the outgoing conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(1);
+            expect(syncResult.conflicts[0].type).eql("outgoing");
+            expect(syncResult.conflicts[0].local.title).eql("task1-local");
+            expect(syncResult.conflicts[0].remote.title).eql("task1-remote");
+          });
+
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should not publish anything", () => {
+            expect(syncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should not merge anything", () => {
+            expect(syncResult.resolved).to.have.length.of(0);
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For MANUAL strategy, local conficting record is left intact
+                {title: "task1-local", _status: "updated"},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              // local version should have been published to the server.
+              {title: "task1-remote", done: true},
+            ]);
+          });
         });
 
-        it("should contain no errors", () => {
-          expect(syncResult.errors).to.have.length.of(0);
+        describe("CLIENT_WINS strategy", () => {
+          beforeEach(() => {
+            return tasks.sync({strategy: Kinto.syncStrategy.CLIENT_WINS})
+            .then(res => {
+              syncResult = res;
+            });
+          });
+
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have the outgoing conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+          });
+
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should publish resolved conflicts to the server", () => {
+            expect(syncResult.published).to.have.length.of(1);
+            expect(syncResult.published[0].title).eql("task1-local");
+            expect(syncResult.published[0].done).eql(false);
+          });
+
+          it("should update conflict with local version", () => {
+            expect(syncResult.updated).to.have.length.of(1);
+            expect(syncResult.updated[0].title).eql("task1-local");
+            expect(syncResult.updated[0].done).eql(false);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved[0].title).eql("task1-local");
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For CLIENT_WINS strategy, local version is marked as synced
+                {title: "task1-local", _status: "synced"},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              {title: "task1-local", done: false},
+            ]);
+          });
         });
 
-        it("should have a valid lastModified value", () => {
-          expect(syncResult.lastModified).to.be.a("number");
-        });
+        describe("SERVER_WINS strategy", () => {
+          beforeEach(() => {
+            return tasks.sync({strategy: Kinto.syncStrategy.SERVER_WINS})
+            .then(res => {
+              syncResult = res;
+            });
+          });
 
-        it("should have the outgoing conflict listed", () => {
-          expect(syncResult.conflicts).to.have.length.of(1);
-          expect(syncResult.conflicts[0].type).eql("outgoing");
-          expect(syncResult.conflicts[0].local.title).eql("foo");
-          expect(syncResult.conflicts[0].remote.title).eql("foo");
-        });
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
 
-        it("should not have skipped records", () => {
-          expect(syncResult.skipped).to.have.length.of(0);
-        });
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
 
-        it("should not have imported anything", () => {
-          expect(syncResult.created).to.have.length.of(0);
-        });
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
 
-        it("should not have published anything", () => {
-          expect(syncResult.published).to.have.length.of(0);
-        });
+          it("should have the outgoing conflict listed", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+          });
 
-        it("should not have updated anything", () => {
-          expect(syncResult.updated).to.have.length.of(0);
+          it("should not skip records", () => {
+            expect(syncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(syncResult.created).to.have.length.of(0);
+          });
+
+          it("should not publish anything", () => {
+            expect(syncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved[0].title).eql("task1-remote");
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasks.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For SERVER_WINS strategy, local version is marked as synced
+                {title: "task1-remote", _status: "synced"},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList().should.become([
+              {title: "task1-remote", done: true},
+            ]);
+          });
         });
       });
 
