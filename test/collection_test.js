@@ -175,6 +175,28 @@ describe("Collection", () => {
 
         expect(result.ok).eql(true);
       });
+
+      it("should return the current result object", () => {
+        const result = new SyncResultObject();
+
+        expect(result.add("resolved", [])).eql(result);
+      });
+    });
+
+    describe("#reset", () => {
+      it("should reset to array prop to its default value", () => {
+        const result = new SyncResultObject()
+          .add("resolved", [1, 2, 3])
+          .reset("resolved");
+
+        expect(result.resolved).eql([]);
+      });
+
+      it("should return the current result object", () => {
+        const result = new SyncResultObject();
+
+        expect(result.reset("resolved")).eql(result);
+      });
     });
   });
 
@@ -324,7 +346,6 @@ describe("Collection", () => {
     });
 
     it("should isolate records by bucket", () => {
-      // FIXME: https://github.com/mozilla-services/kinto.js/issues/89
       const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api);
       return otherbucket.get(uuid)
         .then(res => res.data)
@@ -635,7 +656,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: null});
+              {lastModified: null, headers: {}});
           });
       });
 
@@ -646,7 +667,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: 42});
+              {lastModified: 42, headers: {}});
           });
       });
 
@@ -706,19 +727,18 @@ describe("Collection", () => {
 
       beforeEach(() => {
         return articles.create({title: "art2"})
-          .then(res => {
-            createdId = res.data.id;
-            sandbox.stub(Api.prototype, "fetchChangesSince").returns(
-              Promise.resolve({
-                lastModified: 42,
-                changes: [
-                  {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
-                ]
-              }));
-          });
+          .then(res => createdId = res.data.id);
       });
 
-      it("should resolve listing conflicting changes", () => {
+      it("should resolve listing conflicting changes with MANUAL strategy", () => {
+        sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+          Promise.resolve({
+            lastModified: 42,
+            changes: [
+              {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
+            ]
+          }));
+
         return articles.pullChanges(result)
           .should.eventually.become({
             ok: false,
@@ -740,7 +760,9 @@ describe("Collection", () => {
                 id: createdId,
                 title: "art2mod",
               }
-            }]});
+            }],
+            resolved:  [],
+          });
       });
     });
 
@@ -769,14 +791,16 @@ describe("Collection", () => {
             errors:    [],
             created:   [],
             published: [],
-            updated: [{
+            updated:   [{
               id: createdId,
               title: "art2",
               _status: "synced",
             }],
-            skipped: [],
-            deleted: [],
-            conflicts: []});
+            skipped:   [],
+            deleted:   [],
+            conflicts: [],
+            resolved:  [],
+          });
       });
     });
   });
@@ -1010,8 +1034,14 @@ describe("Collection", () => {
     });
 
     describe("Options", () => {
+      var pullChanges;
+
+      beforeEach(() => {
+        pullChanges = sandbox.stub(articles, "pullChanges")
+          .returns(Promise.resolve(new SyncResultObject()));
+      });
+
       it("should transfer the headers option", () => {
-        var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
         return articles.sync({headers: {Foo: "Bar"}})
           .then(() => {
             expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
@@ -1019,7 +1049,6 @@ describe("Collection", () => {
       });
 
       it("should transfer the strategy option", () => {
-        var pullChanges = sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
         return articles.sync({strategy: Collection.strategy.SERVER_WINS})
           .then(() => {
             expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
@@ -1035,9 +1064,10 @@ describe("Collection", () => {
       });
 
       it("should perform sync on server backoff when ignoreBackoff is true", () => {
+        const result = new SyncResultObject();
         sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
-        sandbox.stub(articles, "pullChanges").returns(Promise.resolve({}));
-        sandbox.stub(articles, "pushChanges").returns(Promise.resolve({}));
+        sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
+        sandbox.stub(articles, "pushChanges").returns(Promise.resolve(result));
         articles.api = {backoff: 30};
         return articles.sync({ignoreBackoff: true})
           .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));

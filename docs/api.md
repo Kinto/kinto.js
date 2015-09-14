@@ -255,6 +255,7 @@ articles.sync()
 ### Error handling
 
 If anything goes wrong during sync, `colllection.sync()` will reject its promise with an `error` object, as follows:
+
 * If an unexpected HTTP status is received from the server, `error.response` will contain that response, for you to inspect
     (see the example above for detecting 401 Unauthorized errors).
 * If the server is unreachable, `error.response` will be undefined, but `error.message` will equal
@@ -264,14 +265,13 @@ If anything goes wrong during sync, `colllection.sync()` will reject its promise
 
 For publication conflicts, the `sync()` method accepts a `strategy` option, which itself accepts the following values:
 
-- `Collection.strategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually;
-- `Collection.strategy.SERVER_WINS`: Server data will be preserved;
-- `Collection.strategy.CLIENT_WINS`: Client data will be preserved.
+- `Kinto.syncStrategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually;
+- `Kinto.syncStrategy.SERVER_WINS`: Server data will always be preserved;
+- `Kinto.syncStrategy.CLIENT_WINS`: Client data will always be preserved.
 
 > Note:
 > `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
 > be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts).
-
 
 You can override default options by passing `#sync()` a new `options` object; Kinto will merge these new values with the default ones:
 
@@ -279,7 +279,7 @@ You can override default options by passing `#sync()` a new `options` object; Ki
 import Collection from "kinto/lib/collection";
 
 articles.sync({
-  strategy: Collection.strategy.CLIENT_WINS,
+  strategy: Kinto.syncStrategy.CLIENT_WINS,
   headers: {Authorization: "Basic bWF0Og=="}
 })
   .then(result => {
@@ -303,13 +303,14 @@ Sample result:
   updated:   [], // Updated locally
   deleted:   [], // Deleted locally
   skipped:   [], // Skipped imports
-  published: []  // Successfully published
+  published: [], // Successfully published
+  resolved:  [], // Resolved conflicts, according to selected strategy
 }
 ```
 
-## Resolving conflicts
+## Resolving conflicts manually
 
-If conflicts occured, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
+When using `Kinto.syncStrategy.MANUAL`, if conflicts occur, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
 
 The `conflicts` array is in this form:
 
@@ -356,7 +357,6 @@ function sync() {
 ```
 
 Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again, until no conflicts occur.
-
 
 ## Handling server backoff
 

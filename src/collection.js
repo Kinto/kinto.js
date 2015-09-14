@@ -24,6 +24,7 @@ export class SyncResultObject {
       published:    [],
       conflicts:    [],
       skipped:      [],
+      resolved:     [],
     };
   }
 
@@ -37,6 +38,13 @@ export class SyncResultObject {
     }
     this[type] = this[type].concat(entries);
     this.ok = this.errors.length + this.conflicts.length === 0;
+    return this;
+  }
+
+  reset(type) {
+    this[type] = SyncResultObject.defaults[type];
+    this.ok = this.errors.length + this.conflicts.length === 0;
+    return this;
   }
 }
 
@@ -206,21 +214,6 @@ export default class Collection {
         return {data: record, permissions: {}};
       });
     });
-  }
-
-  /**
-   * Resolves a conflict, updating local record according to proposed
-   * resolution — keeping remote record last_modified value as a reference for
-   * further batch sending.
-   *
-   * @param  {Object} conflict   The conflict object.
-   * @param  {Object} resolution The proposed record.
-   * @return {Promise}
-   */
-  resolve(conflict, resolution) {
-    return this.update(Object.assign({}, resolution, {
-      last_modified: conflict.remote.last_modified
-    }));
   }
 
   /**
@@ -447,11 +440,23 @@ export default class Collection {
    * @return {Promise}
    */
   pullChanges(syncResultObject, options={}) {
-    options = Object.assign({lastModified: this.lastModified}, options);
+    if (!syncResultObject.ok) {
+      return Promise.resolve(syncResultObject);
+    }
+    options = Object.assign({
+      strategy: Collection.strategy.MANUAL,
+      lastModified: this.lastModified,
+      headers: {},
+    }, options);
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.bucket, this.name, options)
+    return this.api.fetchChangesSince(this.bucket, this.name, {
+      lastModified: options.lastModified,
+      headers: options.headers
+    })
       // Reflect these changes locally
-      .then(changes => this.importChanges(syncResultObject, changes));
+      .then(changes => this.importChanges(syncResultObject, changes))
+      // Handle conflicts, if any
+      .then(result => this._handleConflicts(result, options.strategy));
   }
 
   /**
@@ -462,6 +467,9 @@ export default class Collection {
    * @return {Promise}
    */
   pushChanges(syncResultObject, options={}) {
+    if (!syncResultObject.ok) {
+      return Promise.resolve(syncResultObject);
+    }
     const safe = options.strategy === Collection.SERVER_WINS;
     options = Object.assign({safe}, options);
 
@@ -492,16 +500,72 @@ export default class Collection {
               return {data: {id: res.data.id, deleted: true}};
             });
           } else {
-            // Remote update was successful, refect it locally
+            // Remote update was successful, reflect it locally
             return this.update(record, {synced: true});
           }
         })).then(published => {
           syncResultObject.add("published", published.map(res => res.data));
           return syncResultObject;
         });
+      })
+      // Handle conflicts, if any
+      .then(result => this._handleConflicts(result, options.strategy))
+      .then(result => {
+        const resolvedUnsynced = result.resolved
+          .filter(record => record._status !== "synced");
+        // No resolved conflict to reflect anywhere
+        if (resolvedUnsynced.length === 0 || options.resolved) {
+          return result;
+        } else if (options.strategy === Collection.strategy.CLIENT_WINS && !options.resolved) {
+          // We need to push local versions of the records to the server
+          return this.pushChanges(result, Object.assign({}, options, {resolved: true}));
+        } else if (options.strategy === Collection.strategy.SERVER_WINS) {
+          // If records have been automatically resolved according to strategy and
+          // are in non-synced status, mark them as synced.
+          return Promise.all(resolvedUnsynced.map(record => {
+            return this.update(record, {synced: true});
+          })).then(_ => result);
+        }
       });
   }
 
+  /**
+   * Resolves a conflict, updating local record according to proposed
+   * resolution — keeping remote record last_modified value as a reference for
+   * further batch sending.
+   *
+   * @param  {Object} conflict   The conflict object.
+   * @param  {Object} resolution The proposed record.
+   * @return {Promise}
+   */
+  resolve(conflict, resolution) {
+    return this.update(Object.assign({}, resolution, {
+      // Ensure local record has the latest authoritative timestamp
+      last_modified: conflict.remote.last_modified
+    }));
+  }
+
+  /**
+   * Handles synchronization conflicts according to specified strategy.
+   *
+   * @param  {SyncResultObject} result    The sync result object.
+   * @param  {String}           strategy  The sync strategy.
+   * @return {Promise}
+   */
+  _handleConflicts(result, strategy=Collection.strategy.MANUAL) {
+    if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
+      return Promise.resolve(result);
+    }
+    return Promise.all(result.conflicts.map(conflict => {
+      const resolution = strategy === Collection.strategy.CLIENT_WINS ?
+                         conflict.local : conflict.remote;
+      return this.resolve(conflict, resolution);
+    })).then(imports => {
+      return result
+        .reset("conflicts")
+        .add("resolved", imports.map(res => res.data));
+    });
+  }
 
   /**
    * Synchronize remote and local data. The promise will resolve with a
@@ -529,31 +593,13 @@ export default class Collection {
     return this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
+      .then(result => this.pushChanges(result, options))
       .then(result => {
-        if (!result.ok) {
-          // if strategy is MANUAL
+        // Avoid performing a last pull if nothing has been published.
+        if (result.published.length === 0) {
           return result;
-          // else if strategy is CLIENT_WINS
-          //   override incoming conflicts with local versions (ignore imports)
-          //   and return sync() again
-          // else if strategy is SERVER_WINS
-          //   override incoming conflicts with remote versions (force import all)
-          //   and return sync() again
         }
-        return this.pushChanges(result, options)
-          .then(result => {
-            if (!result.ok || result.published.length === 0) {
-              // if strategy is MANUAL
-              return result;
-              // else if strategy is CLIENT_WINS
-              //   override outgoing conflicts with local versions (ignore imports)
-              //   and return sync() again
-              // else if strategy is SERVER_WINS
-              //   override outgoing conflicts with remote versions (force import all)
-              //   and return sync() again
-            }
-            return this.pullChanges(result, options);
-          });
+        return this.pullChanges(result, options);
       });
   }
 }
