@@ -22,13 +22,17 @@ const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
 describe("Collection", () => {
-  var sandbox, events, api;
+  var sandbox, events, remoteTransformers, api;
   const article = {title: "foo", url: "http://foo"};
 
-  function testCollection() {
+  function testCollection(options={}) {
     events = new EventEmitter();
+    remoteTransformers = options.remoteTransformers;
     api = new Api(FAKE_SERVER_URL, {events});
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+      events,
+      remoteTransformers
+    });
   }
 
   class QuestionMarkTransformer extends RemoteTransformer {
@@ -570,8 +574,12 @@ describe("Collection", () => {
 
     describe("transformers", () => {
       it("should asynchronously encode records", () => {
-        articles.use(new QuestionMarkTransformer());
-        articles.use(new ExclamationMarkTransformer());
+        articles = testCollection({
+          remoteTransformers: [
+            new QuestionMarkTransformer(),
+            new ExclamationMarkTransformer()
+          ]
+        });
 
         return articles.gatherLocalChanges()
           .then(res => res.toSync.map(r => r.title))
@@ -801,7 +809,11 @@ describe("Collection", () => {
     });
 
     it("should decode incoming encoded records using a single transformer", () => {
-      articles.use(new CharDecodeTransformer("#"));
+      articles = testCollection({
+        remoteTransformers: [
+          new CharDecodeTransformer("#")
+        ]
+      });
 
       return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
         .then(res => res.created[0].title)
@@ -809,8 +821,12 @@ describe("Collection", () => {
     });
 
     it("should decode incoming encoded records using multiple transformers", () => {
-      articles.use(new CharDecodeTransformer("!"));
-      articles.use(new CharDecodeTransformer("?"));
+      articles = testCollection({
+        remoteTransformers: [
+          new CharDecodeTransformer("!"),
+          new CharDecodeTransformer("?")
+        ]
+      });
 
       return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
         .then(res => res.created[0].title)
@@ -850,8 +866,13 @@ describe("Collection", () => {
     });
 
     it("should batch send encoded records", () => {
-      articles.use(new QuestionMarkTransformer());
-      articles.use(new ExclamationMarkTransformer());
+      articles = testCollection({
+        remoteTransformers: [
+          new QuestionMarkTransformer(),
+          new ExclamationMarkTransformer()
+        ]
+      });
+
       const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
         published: [],
         errors:    [],

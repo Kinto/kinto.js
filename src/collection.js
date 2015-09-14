@@ -60,7 +60,7 @@ export default class Collection {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
-    this._transformers = {remote: []};
+
     const DBAdapter = options.adapter || IDB;
     const dbPrefix = options.dbPrefix || "";
     const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
@@ -71,6 +71,7 @@ export default class Collection {
     this.db = db;
     this.api = api;
     this.events = options.events || new EventEmitter();
+    this.remoteTransformers = options.remoteTransformers ||  [];
   }
 
   get name() {
@@ -113,10 +114,6 @@ export default class Collection {
     });
   }
 
-  use(transfomer) {
-    this._transformers[transfomer.type].push(transfomer);
-  }
-
   /**
    * Encodes a record.
    *
@@ -125,11 +122,11 @@ export default class Collection {
    * @return {Promise}
    */
   _encodeRecord(type, record) {
-    if (!this._transformers[type].length) {
+    if (!this[`${type}Transformers`].length) {
       return Promise.resolve(record);
     }
-    return waterfall(this._transformers[type].map(transfomer => {
-      return record => transfomer.encode(record);
+    return waterfall(this[`${type}Transformers`].map(transformer => {
+      return record => transformer.encode(record);
     }), record);
   }
 
@@ -141,10 +138,10 @@ export default class Collection {
    * @return {Promise}
    */
   _decodeRecord(type, record) {
-    if (!this._transformers[type].length) {
+    if (!this[`${type}Transformers`].length) {
       return Promise.resolve(record);
     }
-    return waterfall(this._transformers[type].reverse().map(transformer => {
+    return waterfall(this[`${type}Transformers`].reverse().map(transformer => {
       return record => transformer.decode(record);
     }), record);
   }

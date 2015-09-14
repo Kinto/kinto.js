@@ -161,11 +161,6 @@ describe("Kinto", () => {
       expect(coll.bucket).eql("default");
     });
 
-    it("should cache collection instance", () => {
-      const db = new Kinto();
-      expect(db.collection("a") == db.collection("a")).eql(true);
-    });
-
     it("should reject on missing collection name", () => {
       expect(() => new Kinto().collection())
         .to.Throw(Error, /missing collection name/);
@@ -201,6 +196,24 @@ describe("Kinto", () => {
       const coll = db.collection("plop");
 
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
+    });
+
+    it("should make the collection's remoteTransformers default to []", () => {
+      const db = new Kinto();
+      const coll = db.collection("plop");
+
+      expect(coll.remoteTransformers).to.deep.equal([]);
+    });
+
+    it("should set collection's remoteTransformers", () => {
+      const MyRemoteTransformer = class extends RemoteTransformer {};
+      const db = new Kinto();
+      const options = {
+        remoteTransformers: [ new MyRemoteTransformer() ]
+      };
+      const coll = db.collection("plop", options);
+
+      expect(coll.remoteTransformers).to.deep.equal(options.remoteTransformers);
     });
   });
 });
