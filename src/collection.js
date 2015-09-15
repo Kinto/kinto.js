@@ -1,12 +1,13 @@
 "use strict";
 
 import { EventEmitter } from "events";
-import { v4 as uuid4 } from "uuid";
 import deepEquals from "deep-eql";
 
 import BaseAdapter from "./adapters/base";
-import { attachFakeIDBSymbolsTo, reduceRecords, isUUID4, waterfall } from "./utils";
+import { attachFakeIDBSymbolsTo, reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
+
+import UUIDSchema from "./schemas/uuidschema";
 
 import IDB from "./adapters/IDB";
 
@@ -79,6 +80,7 @@ export default class Collection {
     this.db = db;
     this.api = api;
     this.events = options.events || new EventEmitter();
+    this.idSchema = options.idSchema ||  new UUIDSchema();
     this.remoteTransformers = options.remoteTransformers ||  [];
   }
 
@@ -158,24 +160,27 @@ export default class Collection {
    * Adds a record to the local database.
    *
    * Options:
-   * - {Boolean} synced     Sets record status to "synced" (default: false).
-   * - {Boolean} forceUUID  Enforces record creation using any provided UUID
-   *                        (default: false).
+   * - {Boolean} synced       Sets record status to "synced" (default: false).
+   * - {Boolean} useRecordId  Forces the id field from the record to be used,
+   *                          instead of one that is generated automatically
+   *                          (default: false).
    *
    * @param  {Object} record
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options={forceUUID: false, synced: false}) {
+  create(record, options={useRecordId: false, synced: false}) {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
     const newRecord = Object.assign({}, record, {
-      id:      options.synced || options.forceUUID ? record.id : uuid4(),
+      id:      options.synced ||
+                   options.useRecordId ? record.id :
+                                     this.idSchema.generate(),
       _status: options.synced ? "synced" : "created"
     });
-    if (!isUUID4(newRecord.id)) {
-      return Promise.reject(new Error(`Invalid UUID: ${newRecord.id}`));
+    if (!this.idSchema.validate(newRecord.id)) {
+      return Promise.reject(new Error(`Invalid Id: ${newRecord.id}`));
     }
     return this.db.create(newRecord).then(record => {
       return {data: record, permissions: {}};
@@ -199,8 +204,8 @@ export default class Collection {
     if (!record.id) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
-    if (!isUUID4(record.id)) {
-      return Promise.reject(new Error(`Invalid UUID: ${record.id}`));
+    if (!this.idSchema.validate(record.id)) {
+      return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
     return this.get(record.id).then(_ => {
       var newStatus = "updated";
@@ -217,15 +222,15 @@ export default class Collection {
   }
 
   /**
-   * Retrieve a record by its uuid from the local database.
+   * Retrieve a record by its id from the local database.
    *
    * @param  {String} id
    * @param  {Object} options
    * @return {Promise}
    */
   get(id, options={includeDeleted: false}) {
-    if (!isUUID4(id)) {
-      return Promise.reject(Error(`Invalid UUID: ${id}`));
+    if (!this.idSchema.validate(id)) {
+      return Promise.reject(Error(`Invalid Id: ${id}`));
     }
     return this.db.get(id).then(record => {
       if (!record ||
@@ -244,13 +249,13 @@ export default class Collection {
    * - {Boolean} virtual: When set to true, doesn't actually delete the record,
    *                      update its _status attribute to "deleted" instead.
    *
-   * @param  {String} id       The record's UUID.
+   * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
-    if (!isUUID4(id)) {
-      return Promise.reject(new Error(`Invalid UUID: ${id}`));
+    if (!this.idSchema.validate(id)) {
+      return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
     return this.get(id, {includeDeleted: true}).then(res => {

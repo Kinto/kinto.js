@@ -97,7 +97,7 @@ describe("Integration tests", () => {
       function testSync(data, options={}) {
         return Promise.all([].concat(
           // Create local unsynced records
-          data.localUnsynced.map(record => tasks.create(record, {forceUUID: true})),
+          data.localUnsynced.map(record => tasks.create(record, {useRecordId: true})),
           // Create local synced records
           data.localSynced.map(record => tasks.create(record, {synced: true})),
           // Create remote records
@@ -705,6 +705,34 @@ describe("Integration tests", () => {
             expect(res.data.length).eql(nbFixtures);
             expect(res.data[0].position).eql(nbFixtures - 1);
           });
+        });
+      });
+    });
+
+    describe("Schemas", () => {
+      class IntegerIdSchema extends Kinto.IdSchema {
+        constructor() {
+          super();
+          this._next = 0;
+        }
+        generate() {
+          return this._next++;
+        }
+        validate(id) {
+          return ((id == parseInt(id, 10)) && (id >= 0));
+        }
+      }
+      describe("IdSchema", () => {
+        beforeEach(() => {
+          tasks = kinto.collection("tasks", {
+            idSchema: new IntegerIdSchema()
+          });
+        });
+
+        it("should generate id's using the IdSchema", () => {
+          return tasks.create({ foo: "bar"}).then(record => {
+            return record.data.id;
+          }).should.become(0);
         });
       });
     });
