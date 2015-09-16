@@ -236,7 +236,7 @@ Synopsis:
 
 1. Fetch remote changes since last synchronization;
 2. Fail on any conflict encountered;
-    - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts), and call `#sync()` again when done;
+    - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts-manually), and call `#sync()` again when done;
 3. If everything went fine, publish local changes;
     - Fail on any publication conflict detected;
         * If `strategy` is set to `Kinto.syncStrategy.SERVER_WINS`, no client data will overwrite the remote data;
@@ -272,7 +272,7 @@ For publication conflicts, the `sync()` method accepts a `strategy` option, whic
 
 > Note:
 > `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
-> be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts).
+> be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts-manually).
 
 You can override default options by passing `#sync()` a new `options` object; Kinto will merge these new values with the default ones:
 
