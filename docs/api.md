@@ -274,7 +274,7 @@ For publication conflicts, the `sync()` method accepts a `strategy` option, whic
 > `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
 > be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts-manually).
 
-You can override default options by passing `#sync()` a new `options` object; Kinto will merge these new values with the default ones:
+You can override default options by passing `#sync()` a new `options` object; Kinto.js will merge these new values with the default ones:
 
 ```js
 import Collection from "kinto/lib/collection";
@@ -291,23 +291,39 @@ articles.sync({
   });
 ```
 
-The synchronization updates the local data, and provides information about performed operations.
-Sample result:
+## The synchronization result object
+
+When the `#sync()` promise is fulfilled, a result object is returned, providing information about the performed operations.
+
+Here's a sample result object:
 
 ```js
 {
   ok: true,
   lastModified: 1434270764485,
-  conflicts: [], // Outgoing and incoming conflicts
-  errors:    [], // Errors encountered, if any
-  created:   [], // Created locally
-  updated:   [], // Updated locally
-  deleted:   [], // Deleted locally
-  skipped:   [], // Skipped imports
-  published: [], // Successfully published
-  resolved:  [], // Resolved conflicts, according to selected strategy
+  conflicts: [],
+  errors:    [],
+  created:   [],
+  updated:   [],
+  deleted:   [],
+  skipped:   [],
+  published: [],
+  resolved:  [],
 }
 ```
+
+The synchronization result object exposes the following properties:
+
+- `ok`: The boolean status of the synchronization operation; `true` if no unresolved conflicts and no errors were encountered.
+- `lastModified`: The timestamp of the latest known successful synchronization operation (no error and no conflict encountered).
+- `conflicts`: The list of unresolved conflicts encountered during both import and export operations (see *[Resolving conflicts manually](#resolving-conflicts-manually)*);
+- `errors`:    The list of encountered errors, if any.
+- `created`:   The list of remote records which have been successfully imported into the local database.
+- `updated`:   The list of remote record updates which have been successfully reflected into the local database.
+- `deleted`:   The list of remotely deleted records which have been successfully deleted as well locally.
+- `skipped`:   The list of remotely deleted records missing locally.
+- `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
+- `resolved`:  The list of conflicting records which have been successfully resolved according to the selected [strategy](#synchronization-strategies) (note that when using the default `MANUAL` strategy, this list is always empty).
 
 ## Resolving conflicts manually
 
