@@ -443,8 +443,8 @@ export default class Collection {
   }
 
   /**
-   * Import remote changes to the local database. Will reject on encountered
-   * conflicts.
+   * Fetch remote changes, import them to the local database,
+   * and (according to `options.strategy`) handle conflicts.
    *
    * @param  {SyncResultObject} syncResultObject
    * @param  {Object}           options
