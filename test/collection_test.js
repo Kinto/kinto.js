@@ -1090,6 +1090,22 @@ describe("Collection", () => {
       });
     });
 
+    it("shouldn't store latest lastModified on errors", () => {
+      sandbox.stub(articles.api, "fetchChangesSince")
+        .returns(Promise.resolve({
+          lastModified: 43,
+          changes: [{
+            id: ids[0],
+            title: "art1mod",
+          }]
+        }));
+      sandbox.stub(articles, "_processChangeImport")
+        .returns(Promise.reject(new Error("import error")));
+      return articles.sync().then(res => {
+        expect(articles.lastModified).eql(42);
+      });
+    });
+
     it("should resolve early on pull failure", () => {
       const result = new SyncResultObject();
       result.add("conflicts", [1]);
