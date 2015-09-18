@@ -689,18 +689,21 @@ describe("Collection", () => {
       const id_4 = uuid4();
       const id_5 = uuid4();
       const id_6 = uuid4();
+      const id_7 = uuid4();
 
       const localData = [
         {id: id_1, title: "art1"},
         {id: id_2, title: "art2"},
         {id: id_4, title: "art4"},
         {id: id_5, title: "art5"},
+        {id: id_7, title: "art7-a"},
       ];
       const serverChanges = [
-        {id: id_2, title: "art2"}, // existing, should simply be marked as synced
+        {id: id_2, title: "art2"}, // existing & untouched, skipped
         {id: id_3, title: "art3"}, // to be created
         {id: id_4, deleted: true}, // to be deleted
-        {id: id_6, deleted: true}, // remotely deleted, missing locally
+        {id: id_6, deleted: true}, // remotely deleted & missing locally, skipped
+        {id: id_7, title: "art7-b"},
       ];
 
       beforeEach(() => {
@@ -712,6 +715,12 @@ describe("Collection", () => {
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
         }));
+      });
+
+      it("should not fetch remote records if result status isn't ok", () => {
+        result.ok = false;
+        return articles.pullChanges(result)
+          .then(_ => sinon.assert.notCalled(fetchChangesSince));
       });
 
       it("should fetch remote changes from the server", () => {
@@ -748,7 +757,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.updated)
           .should.eventually.become([
-            {id: id_2, title: "art2", _status: "synced"}
+            {id: id_7, title: "art7-b", _status: "synced"}
           ]);
       });
 
@@ -775,6 +784,7 @@ describe("Collection", () => {
             {id: id_2, title: "art2", _status: "synced"},
             {id: id_3, title: "art3", _status: "synced"},
             {id: id_5, title: "art5", _status: "synced"},
+            {id: id_7, title: "art7-b", _status: "synced"},
           ]);
       });
 
@@ -784,6 +794,16 @@ describe("Collection", () => {
           .then(res => articles._importChange({id: res.data.id, deleted: true}))
           .then(res => res.data.title)
           .should.eventually.become("foo");
+      });
+
+      it("should not list identical records as skipped", () => {
+        return articles.pullChanges(result)
+          .then(res => res.skipped)
+          .should.eventually.not.contain({
+            id: id_2,
+            title: "art2",
+            _status: "synced"
+          });
       });
     });
 

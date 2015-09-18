@@ -304,19 +304,21 @@ export default class Collection {
   }
 
   /**
-   * Attempts to apply a remote change to its local matching record.
+   * Attempts to apply a remote change to its local matching record. Note that
+   * at this point, remote record data are already decoded.
    *
    * @param  {Object} local  The local record object.
    * @param  {Object} remote The remote change object.
    * @return {Promise}
    */
   _processChangeImport(local, remote) {
+    const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
     if (local._status !== "synced") {
       // Locally deleted, unsynced: scheduled for remote deletion.
       if (local._status === "deleted") {
         return {type: "skipped", data: local};
       }
-      if (deepEquals(cleanRecord(local), cleanRecord(remote))) {
+      if (identical) {
         // If records are identical, import anyway, so we bump the
         // local last_modified value from the server and set record
         // status to "synced".
@@ -334,8 +336,10 @@ export default class Collection {
         return {type: "deleted", data: res.data};
       });
     }
-    return this.update(remote, {synced: true}).then(_ => {
-      return {type: "updated", data: local};
+    return this.update(remote, {synced: true}).then(updated => {
+      // if identical, simply exclude it from all lists
+      const type = identical ? "void" : "updated";
+      return {type, data: updated.data};
     });
   }
 
@@ -388,7 +392,9 @@ export default class Collection {
     }))
       .then(imports => {
         for (let imported of imports) {
-          syncResultObject.add(imported.type, imported.data);
+          if (imported.type !== "void") {
+            syncResultObject.add(imported.type, imported.data);
+          }
         }
         return syncResultObject;
       })
@@ -505,8 +511,9 @@ export default class Collection {
               return {data: {id: res.data.id, deleted: true}};
             });
           } else {
-            // Remote update was successful, reflect it locally
-            return this.update(record, {synced: true});
+            // Remote create/update was successful, reflect it locally
+            return this._decodeRecord("remote", record)
+              .then(record => this.update(record, {synced: true}));
           }
         })).then(published => {
           syncResultObject.add("published", published.map(res => res.data));

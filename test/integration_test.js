@@ -167,10 +167,8 @@ describe("Integration tests", () => {
           expect(cleanRecord(syncResult.published[0])).eql(testData.localUnsynced[0]);
         });
 
-        it("should mark local records as synced", () => {
-          expect(syncResult.updated).to.have.length.of(1);
-          expect(syncResult.updated.map(r => cleanRecord(r))).to
-            .include(testData.localUnsynced[0]);
+        it("should not update anything", () => {
+          expect(syncResult.updated).to.have.length.of(0);
         });
 
         it("should put local database in the expected state", () => {
@@ -197,6 +195,48 @@ describe("Integration tests", () => {
             {title: "task1", done: true},
             {title: "task4", done: false},
           ]);
+        });
+
+        describe("On next MANUAL sync", () => {
+          var nextSyncResult;
+
+          beforeEach(() => {
+            return tasks.sync().then(result => {
+              nextSyncResult = result;
+            });
+          });
+
+          it("should have an ok status", () => {
+            expect(nextSyncResult.ok).eql(true);
+          });
+
+          it("should contain no errors", () => {
+            expect(nextSyncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have the same lastModified value", () => {
+            expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+          });
+
+          it("should not contain conflicts", () => {
+            expect(nextSyncResult.conflicts).to.have.length.of(0);
+          });
+
+          it("should not skip anything", () => {
+            expect(nextSyncResult.skipped).to.have.length.of(0);
+          });
+
+          it("should not import anything", () => {
+            expect(nextSyncResult.created).to.have.length.of(0);
+          });
+
+          it("should not publish anything", () => {
+            expect(nextSyncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(nextSyncResult.updated).to.have.length.of(0);
+          });
         });
       });
 
@@ -291,6 +331,48 @@ describe("Integration tests", () => {
               {title: "task4-remote", done: true},
             ]);
           });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should not have an ok status", () => {
+              expect(nextSyncResult.ok).eql(false);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should not have bumped the lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should preserve unresolved conflicts", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(1);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
+          });
         });
 
         describe("CLIENT_WINS strategy", () => {
@@ -333,18 +415,13 @@ describe("Integration tests", () => {
             });
           });
 
-          it("should update conflict with local version", () => {
-            expect(syncResult.updated).to.have.length.of(1);
-            expect(cleanRecord(syncResult.updated[0])).eql({
-              id: conflictingId,
-              title: "task4-local",
-              done: false,
-            });
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
           });
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(cleanRecord(syncResult.updated[0])).eql({
+            expect(cleanRecord(syncResult.resolved[0])).eql({
               id: conflictingId,
               title: "task4-local",
               done: false,
@@ -372,6 +449,48 @@ describe("Integration tests", () => {
               // local task4 should have been published to the server.
               {title: "task4-local", done: false},
             ]);
+          });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should have an ok status", () => {
+              expect(nextSyncResult.ok).eql(true);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should have the same lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should not contain conflicts anymore", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(0);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
           });
         });
 
@@ -415,18 +534,13 @@ describe("Integration tests", () => {
             });
           });
 
-          it("should update conflict with remote version", () => {
-            expect(syncResult.updated).to.have.length.of(1);
-            expect(cleanRecord(syncResult.updated[0])).eql({
-              id: conflictingId,
-              title: "task4-remote",
-              done: true,
-            });
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
           });
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(cleanRecord(syncResult.updated[0])).eql({
+            expect(cleanRecord(syncResult.resolved[0])).eql({
               id: conflictingId,
               title: "task4-remote",
               done: true,
@@ -454,6 +568,48 @@ describe("Integration tests", () => {
               // remote task4 should have been published to the server.
               {title: "task4-remote", done: true},
             ]);
+          });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should have an ok status", () => {
+              expect(nextSyncResult.ok).eql(true);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should have the same lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should not contain conflicts anymore", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(0);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
           });
         });
       });
@@ -546,6 +702,48 @@ describe("Integration tests", () => {
               {title: "task1-remote", done: true},
             ]);
           });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should not have an ok status", () => {
+              expect(nextSyncResult.ok).eql(false);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should not have bumped the lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should preserve unresolved conflicts", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(1);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
+          });
         });
 
         describe("CLIENT_WINS strategy", () => {
@@ -586,10 +784,8 @@ describe("Integration tests", () => {
             expect(syncResult.published[0].done).eql(false);
           });
 
-          it("should update conflict with local version", () => {
-            expect(syncResult.updated).to.have.length.of(1);
-            expect(syncResult.updated[0].title).eql("task1-local");
-            expect(syncResult.updated[0].done).eql(false);
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
           });
 
           it("should list resolved records", () => {
@@ -613,6 +809,48 @@ describe("Integration tests", () => {
             return getRemoteList().should.become([
               {title: "task1-local", done: false},
             ]);
+          });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should have an ok status", () => {
+              expect(nextSyncResult.ok).eql(true);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should have the same lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should not contain conflicts anymore", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(0);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
           });
         });
 
@@ -677,6 +915,48 @@ describe("Integration tests", () => {
             return getRemoteList().should.become([
               {title: "task1-remote", done: true},
             ]);
+          });
+
+          describe("On next MANUAL sync", () => {
+            var nextSyncResult;
+
+            beforeEach(() => {
+              return tasks.sync().then(result => {
+                nextSyncResult = result;
+              });
+            });
+
+            it("should have an ok status", () => {
+              expect(nextSyncResult.ok).eql(true);
+            });
+
+            it("should contain no errors", () => {
+              expect(nextSyncResult.errors).to.have.length.of(0);
+            });
+
+            it("should have the same lastModified value", () => {
+              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
+            });
+
+            it("should not contain conflicts anymore", () => {
+              expect(nextSyncResult.conflicts).to.have.length.of(0);
+            });
+
+            it("should not skip anything", () => {
+              expect(nextSyncResult.skipped).to.have.length.of(0);
+            });
+
+            it("should not import anything", () => {
+              expect(nextSyncResult.created).to.have.length.of(0);
+            });
+
+            it("should not publish anything", () => {
+              expect(nextSyncResult.published).to.have.length.of(0);
+            });
+
+            it("should not update anything", () => {
+              expect(nextSyncResult.updated).to.have.length.of(0);
+            });
           });
         });
       });
@@ -779,10 +1059,10 @@ describe("Integration tests", () => {
             ]);
           });
 
-          it("should encode records when pushed to the server", () => {
+          it("should list published records unencoded", () => {
             return tasks.sync()
               .then(res => res.published.map(x => x.title).sort())
-              .should.become(["abc!?", "def!?"]);
+              .should.become(["abc", "def"]);
           });
 
           it("should store encoded data remotely", () => {
