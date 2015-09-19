@@ -400,8 +400,8 @@ export default class Collection {
       })
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
-        // Don't persist lastModified value if conflicts occured
-        if (syncResultObject.conflicts.length > 0) {
+        // Don't persist lastModified value if any conflict or error occured
+        if (!syncResultObject.ok) {
           return syncResultObject;
         }
         // No conflict occured, persist collection's lastModified value
