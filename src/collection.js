@@ -7,7 +7,8 @@ import BaseAdapter from "./adapters/base";
 import { attachFakeIDBSymbolsTo, reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
-import UUIDSchema from "./schemas/uuidschema";
+import { v4 as uuid4 } from "uuid";
+import { isUUID4 } from "./utils";
 
 import IDB from "./adapters/IDB";
 
@@ -49,6 +50,18 @@ export class SyncResultObject {
   }
 }
 
+function createUUIDSchema() {
+  return {
+    generate() {
+      return uuid4();
+    },
+
+    validate(id) {
+      return isUUID4(id);
+    }
+  };
+}
+
 /**
  * Collection class.
  */
@@ -80,8 +93,8 @@ export default class Collection {
     this.db = db;
     this.api = api;
     this.events = options.events || new EventEmitter();
-    this.idSchema = options.idSchema ||  new UUIDSchema();
-    this.remoteTransformers = options.remoteTransformers ||  [];
+    this.idSchema = this._validateIdSchema(options.idSchema);
+    this.remoteTransformers = this._validateRemoteTransformers(options.remoteTransformers);
   }
 
   get name() {
@@ -111,6 +124,51 @@ export default class Collection {
       SERVER_WINS: "server_wins",
       MANUAL:      "manual",
     };
+  }
+
+  /**
+   * Validates an idSchema.
+   *
+   * @param  {Object|undefined} idSchema
+   * @return {Object}
+   */
+  _validateIdSchema(idSchema) {
+    if (typeof idSchema === "undefined") {
+      return createUUIDSchema();
+    }
+    if (typeof idSchema !== "object") {
+      throw new Error("idSchema must be an object.");
+    } else if (typeof idSchema.generate !== "function") {
+      throw new Error("idSchema must provide a generate function.");
+    } else if (typeof idSchema.validate !== "function") {
+      throw new Error("idSchema must provide a validate function.");
+    }
+    return idSchema;
+  }
+
+  /**
+   * Validates a list of remote transformers.
+   *
+   * @param  {Array|undefined} remoteTransformers
+   * @return {Array}
+   */
+  _validateRemoteTransformers(remoteTransformers) {
+    if (typeof remoteTransformers === "undefined") {
+      return [];
+    }
+    if (!Array.isArray(remoteTransformers)) {
+      throw new Error("remoteTransformers should be an array.");
+    }
+    return remoteTransformers.map(transformer => {
+      if (typeof transformer !== "object") {
+        throw new Error("A transformer must be an object.");
+      } else if (typeof transformer.encode !== "function") {
+        throw new Error("A transformer must provide an encode function.");
+      } else if (typeof transformer.decode !== "function") {
+        throw new Error("A transformer must provide a decode function.");
+      }
+      return transformer;
+    });
   }
 
   /**

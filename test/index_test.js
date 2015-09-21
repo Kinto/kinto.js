@@ -10,8 +10,6 @@ import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
 import LocalStorage from "../src/adapters/LocalStorage";
 import IDB from "../src/adapters/IDB";
-import IdSchema from "../src/schemas/idschema";
-import RemoteTransformer from "../src/transformers/remote";
 import Kinto from "../src";
 
 chai.use(chaiAsPromised);
@@ -57,105 +55,9 @@ describe("Kinto", () => {
       });
     });
 
-    describe("get IdSchema()", () => {
-      it("should provide an IdSchema static getter", () => {
-        expect(Kinto.IdSchema).eql(IdSchema);
-      });
-    });
-
-    describe("get transformers()", () => {
-      it("should provide a transformers static getter", () => {
-        expect(Kinto.transformers).to.be.an("object");
-      });
-
-      it("should provide a transformers.BaseAdapter getter", () => {
-        expect(Kinto.transformers.RemoteTransformer).to.eql(RemoteTransformer);
-      });
-    });
-
     describe("get syncStrategy()", () => {
       it("should provide a syncStrategy static getter", () => {
         expect(Kinto.syncStrategy).eql(Collection.strategy);
-      });
-    });
-  });
-
-  describe("static methods", () => {
-    describe("createRemoteTransformer", () => {
-      it("should require a prototype object", () => {
-        expect(() => Kinto.createRemoteTransformer()).to.Throw(Error, /prototype/);
-      });
-
-      it("should allow defining a remote transformer", () => {
-        const Transformer = Kinto.createRemoteTransformer({});
-
-        expect(new Transformer()).to.be.an.instanceOf(RemoteTransformer);
-      });
-
-      it("should expose custom remote transformer prototype", () => {
-        const encode = function(){};
-        const Transformer = Kinto.createRemoteTransformer({encode: encode});
-
-        expect(new Transformer().encode).eql(encode);
-      });
-
-      it("should not share custom prototypes across transformers", () => {
-        const encodeA = function(){};
-        const encodeB = function(){};
-        const TransformerA = Kinto.createRemoteTransformer({encode: encodeA});
-        const TransformerB = Kinto.createRemoteTransformer({encode: encodeB});
-
-        expect(new TransformerA().encode).eql(encodeA);
-        expect(new TransformerB().encode).eql(encodeB);
-      });
-
-      it("should use custom prototype constructor", () => {
-        const Transformer = Kinto.createRemoteTransformer({
-          constructor: function(x) {
-            this.x = x;
-          }
-        });
-
-        expect(new Transformer(42).x).eql(42);
-      });
-    });
-
-    describe("createIdSchema", () => {
-      it("should require a prototype object", () => {
-        expect(() => Kinto.createIdSchema()).to.Throw(Error, /prototype/);
-      });
-
-      it("should allow defining an id schema", () => {
-        const Schema = Kinto.createIdSchema({});
-
-        expect(new Schema()).to.be.an.instanceOf(IdSchema);
-      });
-
-      it("should expose custom schema prototype", () => {
-        const generate = function(){};
-        const Schema = Kinto.createIdSchema({generate: generate});
-
-        expect(new Schema().generate).eql(generate);
-      });
-
-      it("should not share custom prototypes across Schemas", () => {
-        const generateA = function(){};
-        const generateB = function(){};
-        const SchemaA = Kinto.createIdSchema({generate: generateA});
-        const SchemaB = Kinto.createIdSchema({generate: generateB});
-
-        expect(new SchemaA().generate).eql(generateA);
-        expect(new SchemaB().generate).eql(generateB);
-      });
-
-      it("should use custom prototype constructor", () => {
-        const Schema = Kinto.createIdSchema({
-          constructor: function(x) {
-            this.x = x;
-          }
-        });
-
-        expect(new Schema(42).x).eql(42);
       });
     });
   });
@@ -252,10 +154,10 @@ describe("Kinto", () => {
     });
 
     it("should set collection's remoteTransformers", () => {
-      const MyRemoteTransformer = class extends RemoteTransformer {};
+      const transformer = {encode(){}, decode(){}};
       const db = new Kinto();
       const options = {
-        remoteTransformers: [ new MyRemoteTransformer() ]
+        remoteTransformers: [ transformer ]
       };
       const coll = db.collection("plop", options);
 
