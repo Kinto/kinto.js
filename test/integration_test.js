@@ -1054,8 +1054,8 @@ describe("Integration tests", () => {
             });
 
             return Promise.all([
-              tasks.create({id: uuid4(), title: "abc"}),
-              tasks.create({id: uuid4(), title: "def"}),
+              tasks.create({id: uuid4(), title: "abc"}, {useRecordId: true}),
+              tasks.create({id: uuid4(), title: "def"}, {useRecordId: true}),
             ]);
           });
 
