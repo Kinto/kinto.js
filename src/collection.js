@@ -159,6 +159,11 @@ export default class Collection {
   /**
    * Adds a record to the local database.
    *
+   * Note: If either the `useRecordId` or `synced` options are true, then the
+   * record object must contain the id field to be validated. If none of these
+   * options are true, an id is generated using the current IdSchema; in this
+   * case, the record passed must not have an id.
+   *
    * Options:
    * - {Boolean} synced       Sets record status to "synced" (default: false).
    * - {Boolean} useRecordId  Forces the id field from the record to be used,
@@ -170,8 +175,16 @@ export default class Collection {
    * @return {Promise}
    */
   create(record, options={useRecordId: false, synced: false}) {
+    const reject = msg => Promise.reject(new Error(msg));
     if (typeof(record) !== "object") {
-      return Promise.reject(new Error("Record is not an object."));
+      return reject("Record is not an object.");
+    }
+    if ((options.synced || options.useRecordId) && !record.id) {
+      return reject(
+        "Missing required Id; synced and useRecordId options require one");
+    }
+    if (!options.synced && !options.useRecordId && record.id) {
+      return reject("Extraneous Id; can't create a record having one set.");
     }
     const newRecord = Object.assign({}, record, {
       id:      options.synced ||
@@ -180,7 +193,7 @@ export default class Collection {
       _status: options.synced ? "synced" : "created"
     });
     if (!this.idSchema.validate(newRecord.id)) {
-      return Promise.reject(new Error(`Invalid Id: ${newRecord.id}`));
+      return reject(`Invalid Id: ${newRecord.id}`);
     }
     return this.db.create(newRecord).then(record => {
       return {data: record, permissions: {}};

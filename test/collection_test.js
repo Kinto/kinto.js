@@ -247,6 +247,21 @@ describe("Collection", () => {
         .should.eventually.be.a("number");
     });
 
+    it("should reject when useRecordId is true and record is missing an id", () => {
+      return articles.create({title: "foo"}, {useRecordId: true})
+        .should.be.rejectedWith(Error, /Missing required Id/);
+    });
+
+    it("should reject when synced is true and record is missing an id", () => {
+      return articles.create({title: "foo"}, {synced: true})
+        .should.be.rejectedWith(Error, /Missing required Id/);
+    });
+
+    it("should reject when passed an id and synced and useRecordId are false", () => {
+      return articles.create({id: uuid4()}, {synced: false, useRecordId: false})
+        .should.be.rejectedWith(Error, /Extraneous Id/);
+    });
+
     it("should not alter original record", () => {
       return articles.create(article)
         .should.eventually.not.eql(article);
