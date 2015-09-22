@@ -8,8 +8,6 @@ import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
-import IdSchema from "../src/schemas/idschema";
-import RemoteTransformer from "../src/transformers/remote";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "../src/api";
 import { updateTitleWithDelay } from "./test_utils";
@@ -38,29 +36,25 @@ describe("Collection", () => {
     });
   }
 
-  class QuestionMarkTransformer extends RemoteTransformer {
-    encode(record) {
-      return updateTitleWithDelay(record, "?", 10);
-    }
+  function createEncodeTransformer(char, delay) {
+    return {
+      encode(record) {
+        return updateTitleWithDelay(record, char, delay);
+      },
+      decode(record) {}
+    };
   }
 
-  class ExclamationMarkTransformer extends RemoteTransformer {
-    encode(record) {
-      return updateTitleWithDelay(record, "!", 5);
-    }
-  }
-
-  class IntegerIdSchema extends IdSchema {
-    constructor() {
-      super();
-      this._next = 0;
-    }
-    generate() {
-      return this._next++;
-    }
-    validate(id) {
-      return ((id == parseInt(id, 10)) && (id >= 0));
-    }
+  function createIntegerIdSchema() {
+    var _next = 0;
+    return {
+      generate() {
+        return _next++;
+      },
+      validate(id) {
+        return ((id == parseInt(id, 10)) && (id >= 0));
+      }
+    };
   }
 
   beforeEach(() => {
@@ -123,6 +117,57 @@ describe("Collection", () => {
         adapter: MyAdapter
       });
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
+    });
+
+    describe("transformers registration", () => {
+      function registerTransformers(transformers) {
+        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+          remoteTransformers: transformers
+        });
+      }
+
+      it("should throw an error on non-array remoteTransformers", () => {
+        expect(registerTransformers.bind(null, {}))
+          .to.Throw(Error, /remoteTransformers should be an array/);
+      });
+
+      it("should throw an error on non-object transformer", () => {
+        expect(registerTransformers.bind(null, ["invalid"]))
+          .to.Throw(Error, /transformer must be an object/);
+      });
+
+      it("should throw an error on encode method missing", () => {
+        expect(registerTransformers.bind(null, [{decode(){}}]))
+          .to.Throw(Error, /transformer must provide an encode function/);
+      });
+
+      it("should throw an error on decode method missing", () => {
+        expect(registerTransformers.bind(null, [{encode(){}}]))
+          .to.Throw(Error, /transformer must provide a decode function/);
+      });
+    });
+
+    describe("idSchema registration", () => {
+      function registerIdSchema(idSchema) {
+        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+          idSchema: idSchema
+        });
+      }
+
+      it("should throw an error on non-object transformer", () => {
+        expect(registerIdSchema.bind(null, "invalid"))
+          .to.Throw(Error, /idSchema must be an object/);
+      });
+
+      it("should throw an error on generate method missing", () => {
+        expect(registerIdSchema.bind(null, {validate(){}}))
+          .to.Throw(Error, /idSchema must provide a generate function/);
+      });
+
+      it("should throw an error on validate method missing", () => {
+        expect(registerIdSchema.bind(null, {generate(){}}))
+          .to.Throw(Error, /idSchema must provide a validate function/);
+      });
     });
   });
 
@@ -239,7 +284,7 @@ describe("Collection", () => {
 
     it("should assign an id to the created record (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: new IntegerIdSchema()
+        idSchema: createIntegerIdSchema()
       });
 
       return articles.create(article)
@@ -300,7 +345,7 @@ describe("Collection", () => {
 
     it("should validate record's Id when provided (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: new IntegerIdSchema()
+        idSchema: createIntegerIdSchema()
       });
 
       return articles.create({id: "deadbeef", title: "foo"}, {useRecordId: true})
@@ -356,7 +401,7 @@ describe("Collection", () => {
 
     it("should validate record's id when provided (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: new IntegerIdSchema()
+        idSchema: createIntegerIdSchema()
       });
 
       return articles.update({id: "deadbeef"})
@@ -419,7 +464,7 @@ describe("Collection", () => {
 
     it("should retrieve a record from its id (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: new IntegerIdSchema()
+        idSchema: createIntegerIdSchema()
       });
 
       return articles.create(article)
@@ -677,8 +722,8 @@ describe("Collection", () => {
       it("should asynchronously encode records", () => {
         articles = testCollection({
           remoteTransformers: [
-            new QuestionMarkTransformer(),
-            new ExclamationMarkTransformer()
+            createEncodeTransformer("?", 10),
+            createEncodeTransformer("!", 5),
           ]
         });
 
@@ -908,15 +953,13 @@ describe("Collection", () => {
   describe("#importChanges", () => {
     var articles, result;
 
-    class CharDecodeTransformer extends RemoteTransformer {
-      constructor(char) {
-        super();
-        this.char = char;
-      }
-
-      decode(record) {
-        return Object.assign({}, record, {title: record.title + this.char});
-      }
+    function createDecodeTransformer(char) {
+      return {
+        encode() {},
+        decode(record) {
+          return Object.assign({}, record, {title: record.title + char});
+        }
+      };
     }
 
     beforeEach(() => {
@@ -935,7 +978,7 @@ describe("Collection", () => {
     it("should decode incoming encoded records using a single transformer", () => {
       articles = testCollection({
         remoteTransformers: [
-          new CharDecodeTransformer("#")
+          createDecodeTransformer("#")
         ]
       });
 
@@ -947,8 +990,8 @@ describe("Collection", () => {
     it("should decode incoming encoded records using multiple transformers", () => {
       articles = testCollection({
         remoteTransformers: [
-          new CharDecodeTransformer("!"),
-          new CharDecodeTransformer("?")
+          createDecodeTransformer("!"),
+          createDecodeTransformer("?"),
         ]
       });
 
@@ -992,8 +1035,8 @@ describe("Collection", () => {
     it("should batch send encoded records", () => {
       articles = testCollection({
         remoteTransformers: [
-          new QuestionMarkTransformer(),
-          new ExclamationMarkTransformer()
+          createEncodeTransformer("?", 10),
+          createEncodeTransformer("!", 5),
         ]
       });
 

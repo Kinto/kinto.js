@@ -9,8 +9,6 @@ import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
 import LocalStorage from "./adapters/LocalStorage";
 import IDB from "./adapters/IDB";
-import IdSchema from "./schemas/idschema";
-import RemoteTransformer from "./transformers/remote";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
@@ -34,18 +32,6 @@ export default class Kinto {
   }
 
   /**
-   * Provides a public access to base transformer classes. Users can create
-   * custom transformers by extending these.
-   *
-   * @return {Object}
-   */
-  static get transformers() {
-    return {
-      RemoteTransformer: RemoteTransformer
-    };
-  }
-
-  /**
    * Synchronization strategies. Available strategies are:
    *
    * - `MANUAL`: Conflicts will be reported in a dedicated array.
@@ -56,63 +42,6 @@ export default class Kinto {
    */
   static get syncStrategy() {
     return Collection.strategy;
-  }
-
-  /**
-   * Provides a public access to base IdSchema class. Users can create
-   * custom id schemas by extending these.
-   *
-   * @return {Class}
-   */
-  static get IdSchema() {
-    return IdSchema;
-  }
-
-
-  /**
-   * Creates a remote transformer constructor, the ES5 way.
-   *
-   * @return {RemoteTransformer}
-   */
-  static createRemoteTransformer(proto) {
-    if (!proto || typeof proto !== "object") {
-      throw new Error("Expected prototype object.");
-    }
-
-    class _RemoteTransformer extends RemoteTransformer {
-      constructor() {
-        super();
-        // If a constructor is passed from the proto object, apply it.
-        if (proto.constructor) {
-          proto.constructor.apply(this, arguments);
-        }
-      }
-    }
-    _RemoteTransformer.prototype = Object.assign(_RemoteTransformer.prototype, proto);
-    return _RemoteTransformer;
-  }
-
-  /**
-   * Creates an id schema constructor, the ES5 way.
-   *
-   * @return {IdSchema}
-   */
-  static createIdSchema(proto) {
-    if (!proto || typeof proto !== "object") {
-      throw new Error("Expected prototype object.");
-    }
-
-    class _IdSchema extends IdSchema {
-      constructor() {
-        super();
-        // If a constructor is passed from the proto object, apply it.
-        if (proto.constructor) {
-          proto.constructor.apply(this, arguments);
-        }
-      }
-    }
-    _IdSchema.prototype = Object.assign(_IdSchema.prototype, proto);
-    return _IdSchema;
   }
 
   /**

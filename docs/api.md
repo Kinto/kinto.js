@@ -427,9 +427,13 @@ kinto.events.on("deprecated", function(event) {
 
 Transformers are basically hooks for encoding and decoding records, which can work synchronously or asynchronously.
 
+For now, only *remote transformers* have been implemented, but there are plans to implement local transformers and collection transformers in a next version.
+
 ### Remote transformers
 
-Remote transformers aim at encoding records before pushing them to the remote server, and decoding them back when pulling changes. Remote transformers are registered through the optional second argument of `Kinto#collection()`, which accepts `Kinto.transformers.RemoteTransformer`-derived object instances in its `remoteTransformers` array.
+Remote transformers aim at encoding records before pushing them to the remote server, and decoding them back when pulling changes. Remote transformers are registered through the optional second argument of `Kinto#collection()`, which accepts a list of transformer objects in its `remoteTransformers` array.
+
+A transformer object is basically an object literal having and `encode` and a `decode` method, both accepting a `record` object and returning that record transformed, or a Promise resolving with that record transformed:
 
 ```js
 import Kinto from "kinto";
@@ -438,26 +442,27 @@ function update(obj1, obj2) {
   return Object.assign({}, obj1, obj2);
 }
 
-class MyRemoteTransformer extends Kinto.transformers.RemoteTransformer {
+const exclamationMarkTransformer = {
   encode(record) {
     return update(record, {title: record.title + "!"});
-  }
+  },
 
   decode(record) {
     return update(record, {title: record.title.slice(0, -1)});
   }
-}
+};
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
 coll = kinto.collection("articles", {
-  remoteTransformers: [ new MyRemoteTransformer() ]
+  remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
 
 > #### Notes
 >
 > - The `decode` method should be the strict reverse version of `encode`;
-> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
+> - `record.id` should *always* be left unchanged by a transformer;
+> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
 
 Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
 
@@ -475,21 +480,21 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 
 ### Local transformers
 
-In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally; you'll have to extend from `LocalTransformer` though.
+In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally.
 
 ### Async transformers
 
 Transformers can also work asynchronously by returning a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise):
 
 ```js
-class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
+const exclamationMarkTransformer = {
   encode(record) {
     return new Promise(resolve => {
       setTimeout(() => {
         resolve(update(record, {title: record.title + "!"}));
       }, 10);
     });
-  }
+  },
 
   decode(record) {
     return new Promise(resolve => {
@@ -498,10 +503,10 @@ class MyAsyncRemoteTransformer extends Kinto.transformers.RemoteTransformer {
       }, 10);
     });
   }
-}
+};
 
 coll = kinto.collection("articles", {
-  remoteTransformers: [ new MyAsyncRemoteTransformer() ]
+  remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
 
@@ -510,15 +515,10 @@ coll = kinto.collection("articles", {
 The remoteTransformers field of the options object passed to `Kinto#collection` is an Array. That means you can chain multiple encoding operations, with the decoding ones being processed in the reverse order:
 
 ```js
-class TitleCharTransformer extends Kinto.transformers.RemoteTransformer {
-  constructor(char) {
-    super();
-    this.char = char;
-  }
-
+function createTitleCharTransformer(char) {
   encode(record) {
-    return update(record, {title: record.title + this.char});
-  }
+    return update(record, {title: record.title + char});
+  },
 
   decode(record) {
     return update(record, {title: record.title.slice(0, -1)});
@@ -527,8 +527,8 @@ class TitleCharTransformer extends Kinto.transformers.RemoteTransformer {
 
 coll = kinto.collection("articles", {
   remoteTransformers: [
-    new TitleCharTransformer("!"),
-    new TitleCharTransformer("?")
+    createTitleCharTransformer("!"),
+    createTitleCharTransformer("?")
   ]
 });
 
@@ -538,37 +538,6 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 // locally saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo"}
 ```
-
-### Creating transformers in ES5
-
-If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive transformers in an ES5 fashion using `Kinto.createRemoteTransformer` static helper:
-
-```js
-var TitleCharTransformer = Kinto.createRemoteTransformer({
-  constructor: function(char) {
-    this.char = char;
-  },
-
-  encode: function(record) {
-    return update(record, {title: record.title + this.char});
-  },
-
-  decode: function(record) {
-    return update(record, {title: record.title.slice(0, -1)});
-  }
-});
-
-coll = kinto.collection("articles", {
-  remoteTransformers: [
-    new TitleCharTransformer("!"),
-    new TitleCharTransformer("?")
-  ]
-});
-```
-
-> #### Notes
->
-> Notice you can define a `constructor` method, though you don't need (and must not) call `super()` within it, unlike with ES6 classes.
 
 ### Limitations
 
@@ -585,22 +554,19 @@ You can define a custom ID schema on a collection by passing it to `Kinto#collec
 ```js
 import Kinto from "kinto";
 
-class IntegerIdSchema extends IdSchema {
-  constructor() {
-    super();
-    this._next = 0;
-  }
+function createIntegerIdSchema() {
   generate() {
-    return this._next++;
-  }
+    return _next++;
+  },
+
   validate(id) {
     return (typeof id == "number");
   }
-}
+};
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
 coll = kinto.collection("articles", {
-  idSchema: new IntegerIdSchema()
+  idSchema: createIntegerIdSchema()
 });
 ```
 
@@ -610,35 +576,8 @@ coll = kinto.collection("articles", {
 > - The `validate` method should return a boolean, where `true` means valid.
 > - In a real application, you want to make sure you do not generate twice the same record ID on a collection. This dummy example doesn't take care of ID unicity. In case of ID conflict you may loose data.
 
-### Creating ID schemas in ES5
-
-If your JavaScript environment doesn't suppport [ES6 classes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) just yet, you can derive ID schemas in an ES5 fashion using `Kinto.createIdSchema` static helper:
-
-```js
-var IntegerIdSchema = Kinto.createIdSchema({
-  constructor() {
-    this._next = 0;
-  }
-  generate() {
-    return this._next++;
-  }
-  validate(id) {
-    return ((id == parseInt(id, 10)) && (id >= 0));
-  }
-});
-
-coll = kinto.collection("articles", {
-  idSchema: new IntegerIdSchema()
-});
-```
-
-> #### Notes
->
-> Notice you can define a `constructor` method, though you don't need (and must not) call `super()` within it, unlike with ES6 classes.
-
 ### Limitations
 
 There's currently no way to deal with changing the ID schema of an already filled local database; that would mean existing records would fail the new validation check, and can no longer be updated.
 
 **As a rule of thumb, you should only start using a custom ID schema on an empty remote collection.**
-###
