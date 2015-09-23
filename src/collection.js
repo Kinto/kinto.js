@@ -444,9 +444,11 @@ export default class Collection {
         if (_decodedChange.deleted) {
           return {type: "skipped", data: _decodedChange};
         }
-        return this.create(_decodedChange, {synced: true}).then(res => {
-          return {type: "created", data: res.data};
-        });
+        return this.create(_decodedChange, {synced: true})
+          // If everything went fine, expose created record data
+          .then(res => ({type: "created", data: res.data}))
+          // Expose individual creation errors
+          .catch(err => ({type: "errors", data: err}));
       });
   }
 
@@ -459,7 +461,7 @@ export default class Collection {
    */
   importChanges(syncResultObject, changeObject) {
     return Promise.all(changeObject.changes.map(change => {
-      return this._importChange(change); // XXX direct method ref?
+      return this._importChange(change);
     }))
       .then(imports => {
         for (let imported of imports) {

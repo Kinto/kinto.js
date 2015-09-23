@@ -750,6 +750,7 @@ describe("Collection", () => {
       const id_5 = uuid4();
       const id_6 = uuid4();
       const id_7 = uuid4();
+      const id_8 = uuid4();
 
       const localData = [
         {id: id_1, title: "art1"},
@@ -759,11 +760,12 @@ describe("Collection", () => {
         {id: id_7, title: "art7-a"},
       ];
       const serverChanges = [
-        {id: id_2, title: "art2"}, // existing & untouched, skipped
-        {id: id_3, title: "art3"}, // to be created
-        {id: id_4, deleted: true}, // to be deleted
-        {id: id_6, deleted: true}, // remotely deleted & missing locally, skipped
-        {id: id_7, title: "art7-b"},
+        {id: id_2, title: "art2"},   // existing & untouched, skipped
+        {id: id_3, title: "art3"},   // to be created
+        {id: id_4, deleted: true},   // to be deleted
+        {id: id_6, deleted: true},   // remotely deleted & missing locally, skipped
+        {id: id_7, title: "art7-b"}, // remotely conflicting
+        {id: id_8, title: "art8"},   // to be created
       ];
 
       beforeEach(() => {
@@ -809,7 +811,8 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.created)
           .should.eventually.become([
-            {id: id_3, title: "art3", _status: "synced"}
+            {id: id_3, title: "art3", _status: "synced"},
+            {id: id_8, title: "art8", _status: "synced"},
           ]);
       });
 
@@ -845,6 +848,7 @@ describe("Collection", () => {
             {id: id_3, title: "art3", _status: "synced"},
             {id: id_5, title: "art5", _status: "synced"},
             {id: id_7, title: "art7-b", _status: "synced"},
+            {id: id_8, title: "art8", _status: "synced"},
           ]);
       });
 
@@ -864,6 +868,20 @@ describe("Collection", () => {
             title: "art2",
             _status: "synced"
           });
+      });
+
+      describe("Error handling", () => {
+        it("should expose per-record import errors", () => {
+          const err1 = new Error("err1");
+          const err2 = new Error("err2");
+          sandbox.stub(articles, "create")
+            .onCall(0).returns(Promise.reject(err1))
+            .onCall(1).returns(Promise.reject(err2));
+
+          return articles.pullChanges(result)
+          .then(res => res.errors)
+          .should.become([err1, err2]);
+        });
       });
     });
 
