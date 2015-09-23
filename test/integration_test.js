@@ -90,6 +90,11 @@ describe("Integration tests", () => {
           .then(_ => tasks.api.serverSettings)
           .should.become({"cliquet.batch_max_requests": 25});
       });
+      it("should share server settings across collections", function() {
+        return tasks.sync()
+          .then(_ => kinto.collection("articles").api.serverSettings)
+          .should.become({"cliquet.batch_max_requests": 25});
+      });
     });
 
     describe("Synchronization", () => {
