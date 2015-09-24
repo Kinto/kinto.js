@@ -2,6 +2,12 @@
 
 import BaseAdapter from "./base.js";
 
+const BATCH_STORE_METHODS = {
+  create: "add",
+  update: "put",
+  delete: "delete"
+};
+
 /**
  * IndexedDB adapter.
  */
@@ -88,6 +94,45 @@ export default class IDB extends BaseAdapter {
                              : this._db.transaction([storeName]);
     const store = transaction.objectStore(storeName);
     return {transaction, store};
+  }
+
+  /**
+   * Batch operations.
+   *
+   * @return {Promise}
+   */
+  batch() {
+    const _operations = [], errors = [];
+    const batchFn = operations => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite");
+        operations.forEach(operation => {
+          const storeMethod = BATCH_STORE_METHODS[operation.type];
+          try {
+            store[storeMethod](operation.data);
+          } catch(error) {
+            errors.push({type: "error", error, operation});
+          }
+        });
+        transaction.onerror = event => {
+          resolve({operations, errors});
+        };
+        transaction.onabort = event => {
+          resolve({operations, errors});
+        };
+        transaction.oncomplete = event => {
+          resolve({operations, errors});
+        };
+      });
+    };
+    for (let type of Object.keys(BATCH_STORE_METHODS)) {
+      batchFn[type] = data => {
+        const operation = {type, data};
+        _operations.push(operation);
+        return operation;
+      };
+    }
+    return batchFn;
   }
 
   /**

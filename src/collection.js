@@ -520,6 +520,8 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
+    // XXX: Ensure all imports are done within a single transaction
+    // Remove this and replace by batch(changes.map(change => batch[action](change)))
     return Promise.all(changeObject.changes.map(change => {
       return this._importChange(change);
     }))
@@ -639,6 +641,7 @@ export default class Collection {
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", synced.conflicts);
         // Process local updates following published changes
+        // XXX: Ensure all updates are done within a single transaction
         return Promise.all(synced.published.map(record => {
           if (record.deleted) {
             // Remote deletion was successful, refect it locally
@@ -670,6 +673,7 @@ export default class Collection {
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
+          // XXX: Ensure all updates are done within a single transaction
           return Promise.all(resolvedUnsynced.map(record => {
             return this.update(record, {synced: true});
           })).then(_ => result);
@@ -704,6 +708,7 @@ export default class Collection {
     if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
       return Promise.resolve(result);
     }
+    // XXX: Ensure all updates are done within a single transaction
     return Promise.all(result.conflicts.map(conflict => {
       const resolution = strategy === Collection.strategy.CLIENT_WINS ?
                          conflict.local : conflict.remote;
