@@ -103,48 +103,55 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   batch(fn) {
-    const errors = [], operations = [];
-    const {transaction, store} = this.prepare("readwrite");
-    const batchObject = {
-      get(id) {
-        return new Promise((resolve, reject) => {
-          const request = store.get(id);
-          request.onerror = event => reject(new Error(event.target.error));
-          request.onsuccess = () => resolve(request.result);
-        });
-      }
-    };
-    for (let type of Object.keys(BATCH_STORE_METHODS)) {
-      batchObject[type] = data => {
-        const operation = {type, data};
-        operations.push(operation);
-        return operation;
-      };
-    }
-    let result = fn(batchObject);
-    if (!(result instanceof Promise)) {
-      result = Promise.resolve(result);
-    }
-    return result.then(_ => {
-      return new Promise((resolve, reject) => {
-        operations.forEach(operation => {
-          const storeMethod = BATCH_STORE_METHODS[operation.type];
-          try {
-            store[storeMethod](operation.data);
-          } catch(error) {
-            errors.push({type: "error", error, operation});
+    return this.open().then(() => {
+      const errors = [], operations = [];
+      const {transaction, store} = this.prepare("readwrite");
+      const batchObject = {
+        get(id) {
+          if (!id) {
+            return Promise.reject(new Error("Id not provided."));
           }
-        });
-        transaction.onerror = event => {
-          resolve({operations, errors});
+          return new Promise((resolve, reject) => {
+            const request = store.get(id);
+            request.onerror = event => reject(new Error(event.target.error));
+            request.onsuccess = () => resolve(request.result);
+          });
+        }
+      };
+      for (let type of Object.keys(BATCH_STORE_METHODS)) {
+        batchObject[type] = data => {
+          const operation = {type, data};
+          operations.push(operation);
+          return operation;
         };
-        transaction.onabort = event => {
-          resolve({operations, errors});
-        };
-        transaction.oncomplete = event => {
-          resolve({operations, errors});
-        };
-      });
+      }
+      let result = fn(batchObject);
+      if (!(result instanceof Promise)) {
+        result = Promise.resolve(result);
+      }
+      return result
+        .then(_ => {
+          return new Promise((resolve, reject) => {
+            operations.forEach(operation => {
+              const storeMethod = BATCH_STORE_METHODS[operation.type];
+              try {
+                store[storeMethod](operation.data);
+              } catch(error) {
+                errors.push({type: "error", error, operation});
+              }
+            });
+            transaction.onerror = event => {
+              resolve({operations, errors});
+            };
+            transaction.onabort = event => {
+              resolve({operations, errors});
+            };
+            transaction.oncomplete = event => {
+              resolve({operations, errors});
+            };
+          });
+        })
+        .catch(err => ({operations, errors: errors.concat(err)}));
     });
   }
 

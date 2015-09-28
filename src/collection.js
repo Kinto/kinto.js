@@ -440,38 +440,33 @@ export default class Collection {
    *
    * @param  {Object} local  The local record object.
    * @param  {Object} remote The remote change object.
-   * @return {Promise}
+   * @return {Object}
    */
-  _processChangeImport(local, remote) {
+  _processChangeImport(batch, local, remote) {
     const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
     if (local._status !== "synced") {
       // Locally deleted, unsynced: scheduled for remote deletion.
       if (local._status === "deleted") {
         return {type: "skipped", data: local};
-      }
-      if (identical) {
+      } else if (identical) {
         // If records are identical, import anyway, so we bump the
         // local last_modified value from the server and set record
         // status to "synced".
-        return this.update(remote, {synced: true}).then(res => {
-          return {type: "updated", data: res.data};
-        });
+        return batch.update(Object.assign({}, remote, {_status: "synced"}));
+      } else {
+        return {
+          type: "conflicts",
+          data: {type: "incoming", local: local, remote: remote}
+        };
       }
-      return {
-        type: "conflicts",
-        data: {type: "incoming", local: local, remote: remote}
-      };
-    }
-    if (remote.deleted) {
-      return this.delete(remote.id, {virtual: false}).then(res => {
-        return {type: "deleted", data: res.data};
-      });
-    }
-    return this.update(remote, {synced: true}).then(updated => {
+    } else if (remote.deleted) {
+      return batch.delete(remote.id);
+    } else if (identical) {
       // if identical, simply exclude it from all lists
-      const type = identical ? "void" : "updated";
-      return {type, data: updated.data};
-    });
+      return {type: "void", data: remote};
+    } else {
+      return batch.update(Object.assign({}, remote, {_status: "synced"}));
+    }
   }
 
   /**
@@ -480,7 +475,7 @@ export default class Collection {
    * @param  {Object} change
    * @return {Promise}
    */
-  _importChange(change) {
+  _importChange(batch, change) {
     var _decodedChange, decodePromise;
     // if change is a deletion, skip decoding
     if (change.deleted) {
@@ -491,24 +486,16 @@ export default class Collection {
     return decodePromise
       .then(change => {
         _decodedChange = change;
-        return this.get(_decodedChange.id, {includeDeleted: true});
+        return batch.get(_decodedChange.id);
       })
-      // Matching local record found
-      .then(res => this._processChangeImport(res.data, _decodedChange))
-      .catch(err => {
-        if (!(/not found/i).test(err.message)) {
-          return {type: "errors", data: err};
+      .then(local => {
+        if (local) {
+          return this._processChangeImport(batch, local, _decodedChange);
+        } else if (_decodedChange.deleted) {
+          return Promise.resolve({type: "skipped", data: _decodedChange});
+        } else {
+          return Promise.resolve(batch.create(Object.assign({}, _decodedChange, {_status: "synced"})));
         }
-        // Not found locally but remote change is marked as deleted; skip to
-        // avoid recreation.
-        if (_decodedChange.deleted) {
-          return {type: "skipped", data: _decodedChange};
-        }
-        return this.create(_decodedChange, {synced: true})
-          // If everything went fine, expose created record data
-          .then(res => ({type: "created", data: res.data}))
-          // Expose individual creation errors
-          .catch(err => ({type: "errors", data: err}));
       });
   }
 
@@ -520,17 +507,35 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
-    // XXX: Ensure all imports are done within a single transaction
-    // Remove this and replace by batch(changes.map(change => batch[action](change)))
-    return Promise.all(changeObject.changes.map(change => {
-      return this._importChange(change);
-    }))
-      .then(imports => {
-        for (let imported of imports) {
-          if (imported.type !== "void") {
-            syncResultObject.add(imported.type, imported.data);
+    // Ensure all imports are done within a single transaction
+    const conflicts = [];
+    const res = this.db.batch(batch => {
+      return Promise.all(changeObject.changes.map(change => {
+        return this._importChange(batch, change).then(res => {
+          if (res.type === "conflicts") {
+            conflicts.push(res.data);
           }
-        }
+          return res;
+        });
+      }));
+    });
+    return res
+      .then(({operations, errors}) => {
+        syncResultObject.add("conflicts", conflicts);
+        syncResultObject.add("errors", errors);
+        operations.forEach(operation => {
+          if (operation.type !== "void") {
+            var type;
+            if (operation.type === "create") {
+              type = "created";
+            } else if (operation.type === "update") {
+              type = "updated";
+            } else if (operation.type === "delete") {
+              type = "deleted";
+            }
+            syncResultObject.add(type, operation.data);
+          }
+        });
         return syncResultObject;
       })
       .then(syncResultObject => {

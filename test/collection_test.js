@@ -777,7 +777,7 @@ describe("Collection", () => {
         {id: id_3, title: "art3"},   // to be created
         {id: id_4, deleted: true},   // to be deleted
         {id: id_6, deleted: true},   // remotely deleted & missing locally, skipped
-        {id: id_7, title: "art7-b"}, // remotely conflicting
+        {id: id_7, title: "art7-b"}, // remotely updated
         {id: id_8, title: "art8"},   // to be created
       ];
 
@@ -840,9 +840,7 @@ describe("Collection", () => {
       it("should resolve with imported deletions", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
-          .should.eventually.become([
-            {id: id_4}
-          ]);
+          .should.eventually.become([id_4]);
       });
 
       it("should resolve with no conflicts detected", () => {
@@ -868,9 +866,11 @@ describe("Collection", () => {
       it("should skip already locally deleted data", () => {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
-          .then(res => articles._importChange({id: res.data.id, deleted: true}))
-          .then(res => res.data.title)
-          .should.eventually.become("foo");
+          .then(res => articles.importChanges(result, {
+            changes: [{id: res.data.id, deleted: true}]
+          }))
+          .then(res => res.deleted)
+          .should.eventually.have.length.of(0);
       });
 
       it("should not list identical records as skipped", () => {
@@ -881,20 +881,6 @@ describe("Collection", () => {
             title: "art2",
             _status: "synced"
           });
-      });
-
-      describe("Error handling", () => {
-        it("should expose per-record import errors", () => {
-          const err1 = new Error("err1");
-          const err2 = new Error("err2");
-          sandbox.stub(articles, "create")
-            .onCall(0).returns(Promise.reject(err1))
-            .onCall(1).returns(Promise.reject(err2));
-
-          return articles.pullChanges(result)
-          .then(res => res.errors)
-          .should.become([err1, err2]);
-        });
       });
     });
 
@@ -1000,11 +986,9 @@ describe("Collection", () => {
     });
 
     it("should return errors when encountered", () => {
-      sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
-
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
-        .should.eventually.become(["unknown error"]);
+        .should.eventually.become([new Error("Id not provided.")]);
     });
 
     it("should decode incoming encoded records using a single transformer", () => {
