@@ -99,13 +99,34 @@ export default class IDB extends BaseAdapter {
   /**
    * Batch operations.
    *
+   * @param  {Function} fn The operation function, which must return a Promise.
    * @return {Promise}
    */
-  batch() {
-    const _operations = [], errors = [];
-    const batchFn = operations => {
+  batch(fn) {
+    const errors = [], operations = [];
+    const {transaction, store} = this.prepare("readwrite");
+    const batchObject = {
+      get(id) {
+        return new Promise((resolve, reject) => {
+          const request = store.get(id);
+          request.onerror = event => reject(new Error(event.target.error));
+          request.onsuccess = () => resolve(request.result);
+        });
+      }
+    };
+    for (let type of Object.keys(BATCH_STORE_METHODS)) {
+      batchObject[type] = data => {
+        const operation = {type, data};
+        operations.push(operation);
+        return operation;
+      };
+    }
+    let result = fn(batchObject);
+    if (!(result instanceof Promise)) {
+      result = Promise.resolve(result);
+    }
+    return result.then(_ => {
       return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
         operations.forEach(operation => {
           const storeMethod = BATCH_STORE_METHODS[operation.type];
           try {
@@ -124,15 +145,7 @@ export default class IDB extends BaseAdapter {
           resolve({operations, errors});
         };
       });
-    };
-    for (let type of Object.keys(BATCH_STORE_METHODS)) {
-      batchFn[type] = data => {
-        const operation = {type, data};
-        _operations.push(operation);
-        return operation;
-      };
-    }
-    return batchFn;
+    });
   }
 
   /**
