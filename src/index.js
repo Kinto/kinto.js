@@ -66,6 +66,12 @@ export default class Kinto {
       remote: DEFAULT_REMOTE,
     };
     this._options = Object.assign(defaults, options);
+    this._api = new Api(this._options.remote, {
+      headers:     this._options.headers,
+      events:      this._options.events,
+      requestMode: this._options.requestMode,
+    });
+
     // public properties
     this.events = this._options.events;
   }
@@ -84,14 +90,8 @@ export default class Kinto {
       throw new Error("missing collection name");
     }
 
-    const remote = this._options.remote;
-    const api = new Api(remote, {
-      headers:     this._options.headers,
-      events:      this._options.events,
-      requestMode: this._options.requestMode,
-    });
     const bucket = this._options.bucket;
-    return new Collection(bucket, collName, api, {
+    return new Collection(bucket, collName, this._api, {
       events:              this._options.events,
       adapter:             this._options.adapter,
       dbPrefix:            this._options.dbPrefix,
