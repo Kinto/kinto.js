@@ -6,7 +6,7 @@ Hacking on Kinto.js requires a working [NodeJS v0.12x environment](https://nodej
 
 Source code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
 
-    $ git co https://github.com/mozilla-services/kinto.js
+    $ git clone https://github.com/mozilla-services/kinto.js
     $ cd kinto.js
     $ npm install
 
@@ -34,7 +34,7 @@ Then you can run the tests by running:
 
 You can alternatively run the tests in a more explicit fashion by passing the `KINTO_PSERVE_EXECUTABLE` environment variable, which can be found in the virtual environment's `bin` directory:
 
-    $ KINTO_PSERVE_EXECUTABLE="/path/to/venv/bin/pserve" npm run test
+    $ KINTO_PSERVE_EXECUTABLE="`pwd`/venv/bin/pserve" npm run test
 
 Alternative test commands are also available:
 
