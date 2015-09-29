@@ -30,7 +30,7 @@ describe("Integration tests", () => {
     server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env});
     server.stderr.on("data", function(data) {
       // Uncomment the line below to have server logs printed.
-      // process.stdout.write(data);
+      process.stdout.write(data);
     });
   }
 
