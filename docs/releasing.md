@@ -56,7 +56,13 @@ Check that the demo has been [published](http://kinto.github.io/kinto.js/) and w
 
 ### Update docs
 
-Update CDN URL in `docs/tutorial.md` and `docs/installation.md`.
+- Update CDN URL in `docs/tutorial.md`
+- Update CDN URL in `docs/installation.md`.
+- Obtain the new sub-resource integrity hashes with:
+
+    $ npm run compute-sri
+
+- Update the table in `docs/installation.md`.
 
 ### Publish updated esdoc
 
