@@ -20,16 +20,22 @@ const KINTO_CONFIG = __dirname + "/kinto.ini";
 describe("Integration tests", () => {
   var sandbox, server, kinto, tasks;
   const MAX_ATTEMPTS = 50;
+  const serverLogs = [];
 
   function startServer(env) {
     // Add the provided environment variables to the child process environment.
     // Keeping parent's environment is needed so that pserve's executable
     // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
     env = Object.assign({}, process.env, env);
-    server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env});
-    server.stderr.on("data", function(data) {
-      // Uncomment the line below to have server logs printed.
-      // process.stdout.write(data);
+    server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env, detached: true});
+    server.stderr.on("data", data => {
+      serverLogs.push(data);
+    });
+    server.on("close", code => {
+      if (code && code > 0) {
+        throw new Error("Server errors encountered:\n" +
+          serverLogs.map(line => line.toString()).join(""));
+      }
     });
   }
 
