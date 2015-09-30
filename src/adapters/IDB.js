@@ -126,9 +126,9 @@ export default class IDB extends BaseAdapter {
           return operation;
         };
       }
-      const result = operationsFn(batchObject);
-      return Promise.resolve(result)
-        .then(_ => { // XXX should we leverage retrieved result?
+      // Ensure that the result
+      return Promise.resolve(operationsFn(batchObject))
+        .then(result => {
           return new Promise((resolve, reject) => {
             operations.forEach(operation => {
               const storeMethod = BATCH_STORE_METHODS[operation.type];
@@ -140,6 +140,7 @@ export default class IDB extends BaseAdapter {
             });
             transaction.onerror = event => {
               resolve({
+                result,
                 operations,
                 errors: errors.concat({
                   type: "error",
@@ -148,14 +149,18 @@ export default class IDB extends BaseAdapter {
               });
             };
             transaction.onabort = event => {
-              resolve({operations, errors});
+              resolve({result, operations, errors});
             };
             transaction.oncomplete = event => {
-              resolve({operations, errors});
+              resolve({result, operations, errors});
             };
           });
         })
-        .catch(err => ({operations, errors: errors.concat(err)}));
+        .catch(err => ({
+          result: undefined,
+          operations,
+          errors: errors.concat(err),
+        }));
     });
   }
 
@@ -218,13 +223,12 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   get(id) {
-    var _record;
-    return this.batch(batch => batch.get(id).then(record => _record = record))
+    return this.batch(batch => batch.get(id))
       .then(res => {
         if (res.errors.length > 0) {
           throw res.errors[0];
         }
-        return _record;
+        return res.result;
       })
       .catch(this._handleError("get"));
   }
