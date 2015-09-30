@@ -524,7 +524,7 @@ export default class Collection {
   importChanges(syncResultObject, changeObject) {
     const conflicts = [], skipped = [];
     // Ensure all imports are done within a single transaction
-    const batchResult = this.db.batch(batch => {
+    return this.db.batch(batch => {
       return Promise.all(changeObject.changes.map(change => {
         return this._importChange(batch, change).then(importResult => {
           if (importResult.type === "conflicts") {
@@ -535,8 +535,7 @@ export default class Collection {
           return importResult;
         });
       }));
-    });
-    return batchResult
+    })
       .then(({operations, errors}) => {
         syncResultObject.add("skipped", skipped);
         syncResultObject.add("conflicts", conflicts);

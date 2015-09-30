@@ -100,18 +100,17 @@ describe("adapter.IDB", () => {
           return db.create({id: 1, name: "foo"})
             .then(_ => {
               return db.batch(batch => {
-                batch.create({id: 2, name: "bar"});
                 return batch.get(1)
                   .then(res => {
-                    expect(res).eql({id: 1, name: "foo"});
+                    batch.update({id: 1, name: `Hello ${res.name}`});
                   });
               });
             })
             .then(res => expect(res).eql({
               errors: [],
               operations: [{
-                type: "create",
-                data: {id: 2, name: "bar"}
+                type: "update",
+                data: {id: 1, name: "Hello foo"}
               }],
             }));
         });
