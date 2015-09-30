@@ -220,7 +220,12 @@ export default class IDB extends BaseAdapter {
   get(id) {
     var _record;
     return this.batch(batch => batch.get(id).then(record => _record = record))
-      .then(_ => _record)
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0].error;
+        }
+        return _record;
+      })
       .catch(this._handleError("get"));
   }
 
