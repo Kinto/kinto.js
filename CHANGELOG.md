@@ -1,5 +1,13 @@
 # Change Log
 
+## [Unreleased](https://github.com/Kinto/kinto.js/tree/HEAD)
+
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.4...HEAD)
+
+**Merged pull requests:**
+
+- Bump 1.0.0-rc.4. [\#187](https://github.com/Kinto/kinto.js/pull/187) ([n1k0](https://github.com/n1k0))
+
 ## [v1.0.0-rc.4](https://github.com/Kinto/kinto.js/tree/v1.0.0-rc.4) (2015-09-29)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/1.0.0-rc.3...v1.0.0-rc.4)
 
