@@ -139,7 +139,13 @@ export default class IDB extends BaseAdapter {
               }
             });
             transaction.onerror = event => {
-              resolve({operations, errors});
+              resolve({
+                operations,
+                errors: errors.concat({
+                  type: "error",
+                  error: event.target.error
+                })
+              });
             };
             transaction.onabort = event => {
               resolve({operations, errors});
@@ -178,14 +184,14 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.add(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("create"));
+    return this.batch(batch => batch.create(record))
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0].error;
+        }
+        return record;
+      })
+      .catch(this._handleError("create"));
   }
 
   /**
@@ -195,14 +201,14 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.put(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("update"));
+    return this.batch(batch => batch.update(record))
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0].error;
+        }
+        return record;
+      })
+      .catch(this._handleError("update"));
   }
 
   /**
@@ -212,14 +218,10 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   get(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare();
-        const request = store.get(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(request.result);
-      });
-    }).catch(this._handleError("get"));
+    var _record;
+    return this.batch(batch => batch.get(id).then(record => _record = record))
+      .then(_ => _record)
+      .catch(this._handleError("get"));
   }
 
   /**
@@ -229,14 +231,14 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   delete(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.delete(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(id);
-      });
-    }).catch(this._handleError("delete"));
+    return this.batch(batch => batch.delete(id))
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0].error;
+        }
+        return id;
+      })
+      .catch(this._handleError("delete"));
   }
 
   /**
