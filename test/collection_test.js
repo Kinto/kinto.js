@@ -892,6 +892,19 @@ describe("Collection", () => {
             _status: "synced"
           });
       });
+
+      describe("Error handling", () => {
+        it("should expose batch operation errors", () => {
+          const err1 = new Error("err1");
+          const err2 = new Error("err2");
+          sandbox.stub(articles.db, "batch")
+            .returns(Promise.resolve({operations: [], errors: [err1, err2]}));
+
+          return articles.pullChanges(result)
+            .then(res => res.errors)
+            .should.become([err1, err2]);
+        });
+      });
     });
 
     describe("When a conflict occured", () => {
