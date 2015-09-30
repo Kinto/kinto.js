@@ -640,24 +640,24 @@ export default class Collection {
 
     // Fetch local changes
     return this.gatherLocalChanges()
-      .then(({toDelete, toSync}) => {
-        return Promise.all([
-          // Delete never synced records marked for deletion
-          Promise.all(toDelete.map(record => {
-            return this.delete(record.id, {virtual: false});
-          })),
+      .then(localChanges => {
+        // Delete never synced records marked for deletion
+        return this.db.batch(batch => {
+          for (let record of localChanges.toDelete) {
+            batch.delete(record.id);
+          }
+        }).then(_ => {
           // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options)
-        ]);
+          return this.api.batch(this.bucket, this.name, localChanges.toSync, options);
+        });
       })
       // Update published local records
-      .then(([deleted, synced]) => {
+      .then(synced => {
         // Merge outgoing errors into sync result object
         syncResultObject.add("errors", synced.errors);
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", synced.conflicts);
         // Process local updates following published changes
-        // XXX: Ensure all updates are done within a single transaction
         return Promise.all(synced.published.map(record => {
           if (record.deleted) {
             // Remote deletion was successful, refect it locally
