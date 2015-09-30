@@ -472,12 +472,13 @@ export default class Collection {
   /**
    * Import a single change into the local database.
    *
-   * @param  {Object} change
+   * @param  {Object} batch   The adapter's batch object.
+   * @param  {Object} change  The change object.
    * @return {Promise}
    */
   _importChange(batch, change) {
     var _decodedChange, decodePromise;
-    // if change is a deletion, skip decoding
+    // If change is a deletion, skip decoding
     if (change.deleted) {
       decodePromise = Promise.resolve(change);
     } else {
@@ -490,11 +491,14 @@ export default class Collection {
       })
       .then(local => {
         if (local) {
+          // Local version found; process updating.
           return this._processChangeImport(batch, local, _decodedChange);
         } else if (_decodedChange.deleted) {
-          return Promise.resolve({type: "skipped", data: _decodedChange});
+          // Remotely deleted, missing locally; skipping.
+          return {type: "skipped", data: _decodedChange};
         } else {
-          return Promise.resolve(batch.create(Object.assign({}, _decodedChange, {_status: "synced"})));
+          // Missing locally, remotely created; importing locally.
+          return batch.create(Object.assign({}, _decodedChange, {_status: "synced"}));
         }
       });
   }
@@ -507,33 +511,33 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
-    // Ensure all imports are done within a single transaction
     const conflicts = [];
-    const res = this.db.batch(batch => {
+    // Ensure all imports are done within a single transaction
+    const batchResult = this.db.batch(batch => {
       return Promise.all(changeObject.changes.map(change => {
-        return this._importChange(batch, change).then(res => {
-          if (res.type === "conflicts") {
-            conflicts.push(res.data);
+        return this._importChange(batch, change).then(importResult => {
+          if (importResult.type === "conflicts") {
+            conflicts.push(importResult.data);
           }
-          return res;
+          return importResult;
         });
       }));
     });
-    return res
+    return batchResult
       .then(({operations, errors}) => {
         syncResultObject.add("conflicts", conflicts);
         syncResultObject.add("errors", errors);
         operations.forEach(operation => {
           if (operation.type !== "void") {
-            var type;
+            var resultType;
             if (operation.type === "create") {
-              type = "created";
+              resultType = "created";
             } else if (operation.type === "update") {
-              type = "updated";
+              resultType = "updated";
             } else if (operation.type === "delete") {
-              type = "deleted";
+              resultType = "deleted";
             }
-            syncResultObject.add(type, operation.data);
+            syncResultObject.add(resultType, operation.data);
           }
         });
         return syncResultObject;

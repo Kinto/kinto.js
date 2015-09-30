@@ -125,12 +125,9 @@ export default class IDB extends BaseAdapter {
           return operation;
         };
       }
-      let result = fn(batchObject);
-      if (!(result instanceof Promise)) {
-        result = Promise.resolve(result);
-      }
-      return result
-        .then(_ => {
+      const result = fn(batchObject);
+      return Promise.resolve(result)
+        .then(result => {
           return new Promise((resolve, reject) => {
             operations.forEach(operation => {
               const storeMethod = BATCH_STORE_METHODS[operation.type];
