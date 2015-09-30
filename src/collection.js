@@ -651,29 +651,41 @@ export default class Collection {
           return this.api.batch(this.bucket, this.name, localChanges.toSync, options);
         });
       })
-      // Update published local records
+      // Prepare result object and decode published records
       .then(synced => {
         // Merge outgoing errors into sync result object
         syncResultObject.add("errors", synced.errors);
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", synced.conflicts);
-        // Process local updates following published changes
+        // Decode published records
         return Promise.all(synced.published.map(record => {
-          if (record.deleted) {
-            // Remote deletion was successful, refect it locally
-            return this.delete(record.id, {virtual: false}).then(res => {
-              // Amend result data with the deleted attribute set
-              return {data: {id: res.data.id, deleted: true}};
-            });
-          } else {
-            // Remote create/update was successful, reflect it locally
-            return this._decodeRecord("remote", record)
-              .then(record => this.update(record, {synced: true}));
+          return record.deleted ? record : this._decodeRecord("remote", record);
+        }));
+      })
+      // Batch perform required local updates
+      .then(published => {
+        return this.db.batch(batch => {
+          for (let record of published) {
+            if (record.deleted) {
+              // Remote deletion to reflect locally
+              batch.delete(record.id);
+            } else {
+              // Remote creation/update, reflect it locally
+              batch.update(markSynced(record));
+            }
           }
-        })).then(published => {
-          syncResultObject.add("published", published.map(res => res.data));
-          return syncResultObject;
         });
+      })
+      .then(({operations, errors}) => {
+        return syncResultObject
+          .add("errors", errors)
+          .add("published", operations.map(operation => {
+            if (operation.type === "delete") {
+              // Expose published deletion in a more meaningful fashion
+              return {deleted: true, id: operation.data};
+            }
+            return operation.data;
+          }));
       })
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy))
