@@ -172,6 +172,23 @@ describe("adapter.IDB", () => {
         return db.get(999)
           .should.eventually.eql(undefined);
       });
+
+      it("should reject on transaction error", () => {
+        sandbox.stub(db, "prepare").returns({
+          store: {
+            get() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
+            }
+          }
+        });
+        return db.get(42)
+          .should.be.rejectedWith(Error, "transaction error");
+      });
     });
 
     /** @test {IDB#delete} */
