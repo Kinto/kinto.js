@@ -77,6 +77,18 @@ export class SyncResultObject {
   }
 }
 
+function mark(status, record) {
+  return Object.assign({}, record, {_status: status});
+}
+
+function markDeleted(record) {
+  return mark("deleted", record);
+}
+
+function markSynced(record) {
+  return mark("synced", record);
+}
+
 function createUUIDSchema() {
   return {
     generate() {
@@ -345,7 +357,7 @@ export default class Collection {
       } else if (options.synced) {
         newStatus = "synced";
       }
-      const updatedRecord = Object.assign({}, record, {_status: newStatus});
+      const updatedRecord = mark(newStatus, record);
       return this.db.update(updatedRecord).then(record => {
         return {data: record, permissions: {}};
       });
@@ -398,9 +410,7 @@ export default class Collection {
             permissions: {}
           });
         } else {
-          return this.update(Object.assign({}, res.data, {
-            _status: "deleted"
-          }));
+          return this.update(markDeleted(res.data));
         }
       }
       return this.db.delete(id).then(id => {
@@ -452,7 +462,7 @@ export default class Collection {
         // If records are identical, import anyway, so we bump the
         // local last_modified value from the server and set record
         // status to "synced".
-        return batch.update(Object.assign({}, remote, {_status: "synced"}));
+        return batch.update(markSynced(remote));
       } else {
         return {
           type: "conflicts",
@@ -465,7 +475,7 @@ export default class Collection {
       // if identical, simply exclude it from all lists
       return {type: "void", data: remote};
     } else {
-      return batch.update(Object.assign({}, remote, {_status: "synced"}));
+      return batch.update(markSynced(remote));
     }
   }
 
@@ -487,6 +497,7 @@ export default class Collection {
     return decodePromise
       .then(change => {
         _decodedChange = change;
+        // Check for an already existing local version
         return batch.get(_decodedChange.id);
       })
       .then(local => {
@@ -498,7 +509,7 @@ export default class Collection {
           return {type: "skipped", data: _decodedChange};
         } else {
           // Missing locally, remotely created; importing locally.
-          return batch.create(Object.assign({}, _decodedChange, {_status: "synced"}));
+          return batch.create(markSynced(_decodedChange));
         }
       });
   }
@@ -511,13 +522,15 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
-    const conflicts = [];
+    const conflicts = [], skipped = [];
     // Ensure all imports are done within a single transaction
     const batchResult = this.db.batch(batch => {
       return Promise.all(changeObject.changes.map(change => {
         return this._importChange(batch, change).then(importResult => {
           if (importResult.type === "conflicts") {
             conflicts.push(importResult.data);
+          } else if (importResult.type === "skipped") {
+            skipped.push(importResult.data);
           }
           return importResult;
         });
@@ -525,19 +538,13 @@ export default class Collection {
     });
     return batchResult
       .then(({operations, errors}) => {
+        syncResultObject.add("skipped", skipped);
         syncResultObject.add("conflicts", conflicts);
         syncResultObject.add("errors", errors);
         operations.forEach(operation => {
           if (operation.type !== "void") {
-            var resultType;
-            if (operation.type === "create") {
-              resultType = "created";
-            } else if (operation.type === "update") {
-              resultType = "updated";
-            } else if (operation.type === "delete") {
-              resultType = "deleted";
-            }
-            syncResultObject.add(resultType, operation.data);
+            // operations can only be create(d), update(d), delete(d)
+            syncResultObject.add(`${operation.type}d`, operation.data);
           }
         });
         return syncResultObject;

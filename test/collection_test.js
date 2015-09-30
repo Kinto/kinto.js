@@ -863,7 +863,17 @@ describe("Collection", () => {
           ]);
       });
 
-      it("should skip already locally deleted data", () => {
+      it("should list skipped data", () => {
+        return articles.create({title: "foo"})
+          .then(res => articles.delete(res.data.id))
+          .then(res => articles.importChanges(result, {
+            changes: [{id: res.data.id, deleted: true}]
+          }))
+          .then(res => res.skipped[0].title)
+          .should.eventually.become("foo");
+      });
+
+      it("should not list skipped entries as deleted", () => {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
           .then(res => articles.importChanges(result, {
