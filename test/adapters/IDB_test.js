@@ -150,6 +150,29 @@ describe("adapter.IDB", () => {
       });
     });
 
+    /** @test {IDB#clear} */
+    describe("#clear", () => {
+      it("should reject on transaction error", () => {
+        sandbox.stub(db, "prepare").returns({
+          store: {clear() {}},
+          transaction: {
+            get onerror() {},
+            set onerror(onerror) {
+              onerror({target: {error: new Error("transaction error")}});
+            }
+          }
+        });
+        return db.clear()
+          .should.be.rejectedWith(Error, "transaction error");
+      });
+
+      it("should prefix error encountered", () => {
+        sandbox.stub(db, "open").returns(Promise.reject("error"));
+        return db.clear()
+          .should.be.rejectedWith(Error, /^Error: clear/);
+      });
+    });
+
     /** @test {IDB#create} */
     describe("#create", () => {
       it("should reject on transaction error", () => {

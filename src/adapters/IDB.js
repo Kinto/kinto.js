@@ -189,7 +189,7 @@ export default class IDB extends BaseAdapter {
     return this.batch(batch => batch.clear())
       .then(res => {
         if (res.errors.length > 0) {
-          throw res.errors[0];
+          throw res.errors[0].error;
         }
       })
       .catch(this._handleError("clear"));
