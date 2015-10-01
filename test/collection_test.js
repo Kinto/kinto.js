@@ -380,10 +380,16 @@ describe("Collection", () => {
 
     it("should update record status on update", () => {
       return articles.create(article)
-        .then(res => res.data)
-        .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
+        .then(res => articles.update(Object.assign({}, res.data, {title: "blah"})))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
+    });
+
+    it("should mark record as synced when the synced option is true", () => {
+      return articles.create(article)
+        .then(res => articles.update(res.data, {synced: true}))
+        .then(res => res.data._status)
+        .should.eventually.eql("synced");
     });
 
     it("should reject updates on a non-existent record", () => {
