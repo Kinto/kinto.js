@@ -117,6 +117,22 @@ export default class IDB extends BaseAdapter {
             request.onerror = event => reject(new Error(event.target.error));
             request.onsuccess = () => resolve(request.result);
           });
+        },
+        list() {
+          return new Promise((resolve, reject) => {
+            const results = [];
+            const request = store.openCursor();
+            request.onerror = event => reject(new Error(event.target.error));
+            request.onsuccess = function(event) {
+              var cursor = event.target.result;
+              if (cursor) {
+                results.push(cursor.value);
+                cursor.continue();
+              } else {
+                resolve(results);
+              }
+            };
+          });
         }
       };
       for (let type of Object.keys(BATCH_STORE_METHODS)) {
@@ -126,7 +142,6 @@ export default class IDB extends BaseAdapter {
           return operation;
         };
       }
-      // Ensure that the result
       return Promise.resolve(operationsFn(batchObject))
         .then(result => {
           return new Promise((resolve, reject) => {
@@ -256,22 +271,14 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   list() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const results = [];
-        const {transaction, store} = this.prepare();
-        const request = store.openCursor();
-        request.onsuccess = function(event) {
-          var cursor = event.target.result;
-          if (cursor) {
-            results.push(cursor.value);
-            cursor.continue();
-          }
-        };
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => resolve(results);
-      });
-    }).catch(this._handleError("list"));
+    return this.batch(batch => batch.list())
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0];
+        }
+        return res.result;
+      })
+      .catch(this._handleError("list"));
   }
 
   /**
