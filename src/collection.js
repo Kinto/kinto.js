@@ -704,10 +704,11 @@ export default class Collection {
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
-          // XXX: Ensure all updates are done within a single transaction
-          return Promise.all(resolvedUnsynced.map(record => {
-            return this.update(record, {synced: true});
-          })).then(_ => result);
+          return this.db.batch(batch => {
+            for (let record of resolvedUnsynced) {
+              batch.update(markSynced(record));
+            }
+          }).then(_ => result);
         }
       });
   }
