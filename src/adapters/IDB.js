@@ -209,7 +209,7 @@ export default class IDB extends BaseAdapter {
         if (res.errors.length > 0) {
           throw res.errors[0].error;
         }
-        return record;
+        return res.result.data;
       })
       .catch(this._handleError("create"));
   }
@@ -226,7 +226,7 @@ export default class IDB extends BaseAdapter {
         if (res.errors.length > 0) {
           throw res.errors[0].error;
         }
-        return record;
+        return res.result.data;
       })
       .catch(this._handleError("update"));
   }
@@ -260,7 +260,7 @@ export default class IDB extends BaseAdapter {
         if (res.errors.length > 0) {
           throw res.errors[0].error;
         }
-        return id;
+        return res.result.data;
       })
       .catch(this._handleError("delete"));
   }
