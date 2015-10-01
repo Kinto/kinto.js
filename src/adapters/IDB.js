@@ -3,6 +3,7 @@
 import BaseAdapter from "./base.js";
 
 const BATCH_STORE_METHODS = {
+  clear:  "clear",
   create: "add",
   update: "put",
   delete: "delete"
@@ -185,14 +186,13 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   clear() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.clear();
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve();
-      });
-    }).catch(this._handleError("clear"));
+    return this.batch(batch => batch.clear())
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0];
+        }
+      })
+      .catch(this._handleError("clear"));
   }
 
   /**
