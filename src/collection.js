@@ -89,6 +89,10 @@ function markSynced(record) {
   return mark("synced", record);
 }
 
+function bumpLastModified(record, lastModified) {
+  return Object.assign({}, record, {last_modified: lastModified});
+}
+
 function createUUIDSchema() {
   return {
     generate() {
@@ -718,10 +722,9 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
-    return this.update(Object.assign({}, resolution, {
-      // Ensure local record has the latest authoritative timestamp
-      last_modified: conflict.remote.last_modified
-    }));
+    // Ensure local record has the latest authoritative timestamp
+    return this.update(
+      bumpLastModified(resolution, conflict.remote.last_modified));
   }
 
   /**
@@ -735,15 +738,17 @@ export default class Collection {
     if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
       return Promise.resolve(result);
     }
-    // XXX: Ensure all updates are done within a single transaction
-    return Promise.all(result.conflicts.map(conflict => {
-      const resolution = strategy === Collection.strategy.CLIENT_WINS ?
-                         conflict.local : conflict.remote;
-      return this.resolve(conflict, resolution);
-    })).then(imports => {
+    return this.db.batch(batch => {
+      return result.conflicts.map(conflict => {
+        const resolution = strategy === Collection.strategy.CLIENT_WINS ?
+                           conflict.local : conflict.remote;
+        // Ensure local record has the latest authoritative timestamp
+        return batch.update(bumpLastModified(resolution, conflict.remote.last_modified));
+      });
+    }).then(batchResult => {
       return result
         .reset("conflicts")
-        .add("resolved", imports.map(res => res.data));
+        .add("resolved", batchResult.result.map(res => res.data));
     });
   }
 
