@@ -109,6 +109,11 @@ export default class IDB extends BaseAdapter {
       const errors = [], operations = [];
       const {transaction, store} = this.prepare("readwrite");
       const batchObject = {
+        abort() {
+          // Clear the list of performed operations
+          operations.length = 0;
+          transaction.abort();
+        },
         get(id) {
           if (!id) {
             return Promise.reject(new Error("Id not provided."));

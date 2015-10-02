@@ -101,6 +101,31 @@ describe("adapter.IDB", () => {
         });
       });
 
+      describe("#batch.abort", () => {
+        it("should allow aborting the initiated transaction", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => {
+              return db.batch(batch => {
+                batch.create({id: 2, name: "bar"});
+                batch.abort();
+              });
+            })
+            .then(_ => db.list())
+            .should.become([{id: 1, name: "foo"}]);
+        });
+
+        it("should resolve with an empty list of operations", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => {
+              return db.batch(batch => {
+                batch.create({id: 2, name: "bar"});
+                batch.abort();
+              });
+            })
+            .should.eventually.have.property("operations").eql([]);
+        });
+      });
+
       describe("#batch.get", () => {
         it("should allow performing a get operation within a batch", () => {
           return db.create({id: 1, name: "foo"})
