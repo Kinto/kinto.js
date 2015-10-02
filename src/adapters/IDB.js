@@ -135,6 +135,11 @@ class Batch {
     return Promise.resolve(operationsFn(this))
       .then(result => {
         return new Promise((resolve, reject) => {
+          const _resolve = result => resolve({
+            result,
+            operations: this._operations,
+            errors: this._errors,
+          });
           this._operations.forEach(operation => {
             const storeMethod = Batch.BATCH_STORE_METHODS[operation.type];
             try {
@@ -144,29 +149,14 @@ class Batch {
             }
           });
           this._transaction.onerror = event => {
-            resolve({
-              result,
-              operations: this._operations,
-              errors: this._errors.concat({
-                type: "error",
-                error: event.target.error
-              })
+            this._errors = this._errors.concat({
+              type: "error",
+              error: event.target.error
             });
+            _resolve(result);
           };
-          this._transaction.onabort = event => {
-            resolve({
-              result,
-              operations: this._operations,
-              errors: this._errors,
-            });
-          };
-          this._transaction.oncomplete = event => {
-            resolve({
-              result,
-              operations: this._operations,
-              errors: this._errors,
-            });
-          };
+          this._transaction.onabort = () => _resolve(result);
+          this._transaction.oncomplete = () => _resolve(result);
         });
       })
       .catch(err => ({
