@@ -15,10 +15,6 @@ export default class BaseAdapter {
     throw new Error("Not Implemented.");
   }
 
-  // batch() {
-  //   return
-  // }
-
   /**
    * Adds a record to the IndexedDB database.
    *
