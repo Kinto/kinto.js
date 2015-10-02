@@ -70,7 +70,7 @@ class Batch {
       const results = [];
       const request = this._store.openCursor();
       request.onerror = event => reject(event.target.error);
-      request.onsuccess = function(event) {
+      request.onsuccess = event => {
         var cursor = event.target.result;
         if (cursor) {
           results.push(cursor.value);
@@ -83,13 +83,13 @@ class Batch {
   }
 
   /**
-   * Schedules an operation for current transaction.
+   * Schedules a write operation for current transaction.
    *
    * @param  {String} type
    * @param  {Object} data
    * @return {Promise}
    */
-  _schedule(type, data) {
+  _scheduleWrite(type, data) {
     const operation = {type, data};
     this._operations.push(operation);
     return new Promise((resolve, reject) => {
@@ -115,7 +115,7 @@ class Batch {
    * @return {Promise} A promise resolving with the operation descriptor.
    */
   clear() {
-    return this._schedule("clear");
+    return this._scheduleWrite("clear");
   }
 
   /**
@@ -124,7 +124,7 @@ class Batch {
    * @return {Promise} A promise resolving with the operation descriptor.
    */
   create(data) {
-    return this._schedule("create", data);
+    return this._scheduleWrite("create", data);
   }
 
   /**
@@ -133,7 +133,7 @@ class Batch {
    * @return {Promise} A promise resolving with the operation descriptor.
    */
   update(data) {
-    return this._schedule("update", data);
+    return this._scheduleWrite("update", data);
   }
 
   /**
@@ -142,7 +142,7 @@ class Batch {
    * @return {Promise} A promise resolving with the operation descriptor.
    */
   delete(data) {
-    return this._schedule("delete", data);
+    return this._scheduleWrite("delete", data);
   }
 
   /**
@@ -173,7 +173,6 @@ class Batch {
         });
       })
       .catch(err => {
-        console.log(err);
         return {
           result: undefined,
           operations: this._operations,
@@ -188,9 +187,9 @@ class Batch {
  */
 export default class IDB extends BaseAdapter {
   /**
-   * Constructor.
+   * Constructs this adapter.
    *
-   * @param  {String} dbname The database nale.
+   * @param  {String} dbname The database name.
    */
   constructor(dbname) {
     super();
@@ -203,6 +202,13 @@ export default class IDB extends BaseAdapter {
     this.dbname = dbname;
   }
 
+  /**
+   * Returns a functtion decorating an error and rethrowing it, preserving its
+   * stack.
+   *
+   * @param  {String} method The name of the function the error has been thrown
+   *                         from.
+   */
   _handleError(method) {
     return err => {
       const error = new Error(method + "() " + err);
@@ -287,18 +293,32 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
+   * Executes a single operation within a transaction.
+   *
+   * @param  {String} name The operation name.
+   * @param  {Any}    data The operation data.
+   * @return {Promise}
+   */
+  _singleOperationTransaction(name, data) {
+    return this.batch(batch => batch[name](data))
+      .catch(this._handleError(name))
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0];
+        }
+        // get() and list() expose their result directly, while clear(),
+        // create(), update() and delete() put them in a `data` propertty.
+        return res.result && "data" in res.result ? res.result.data : res.result;
+      });
+  }
+
+  /**
    * Deletes every records in the current collection.
    *
    * @return {Promise}
    */
   clear() {
-    return this.batch(batch => batch.clear())
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-      })
-      .catch(this._handleError("clear"));
+    return this._singleOperationTransaction("clear");
   }
 
   /**
@@ -310,14 +330,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    return this.batch(batch => batch.create(record))
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-        return res.result.data;
-      })
-      .catch(this._handleError("create"));
+    return this._singleOperationTransaction("create", record);
   }
 
   /**
@@ -327,31 +340,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    return this.batch(batch => batch.update(record))
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-        return res.result.data;
-      })
-      .catch(this._handleError("update"));
-  }
-
-  /**
-   * Retrieve a record by its primary key from the IndexedDB database.
-   *
-   * @param  {String} id The record id.
-   * @return {Promise}
-   */
-  get(id) {
-    return this.batch(batch => batch.get(id))
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-        return res.result;
-      })
-      .catch(this._handleError("get"));
+    return this._singleOperationTransaction("update", record);
   }
 
   /**
@@ -361,14 +350,17 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   delete(id) {
-    return this.batch(batch => batch.delete(id))
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-        return res.result.data;
-      })
-      .catch(this._handleError("delete"));
+    return this._singleOperationTransaction("delete", id);
+  }
+
+  /**
+   * Retrieve a record by its primary key from the IndexedDB database.
+   *
+   * @param  {String} id The record id.
+   * @return {Promise}
+   */
+  get(id) {
+    return this._singleOperationTransaction("get", id);
   }
 
   /**
@@ -377,14 +369,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   list() {
-    return this.batch(batch => batch.list())
-      .then(res => {
-        if (res.errors.length > 0) {
-          throw res.errors[0];
-        }
-        return res.result;
-      })
-      .catch(this._handleError("list"));
+    return this._singleOperationTransaction("list");
   }
 
   /**
