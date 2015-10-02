@@ -2,12 +2,182 @@
 
 import BaseAdapter from "./base.js";
 
-const BATCH_STORE_METHODS = {
-  clear:  "clear",
-  create: "add",
-  update: "put",
-  delete: "delete"
-};
+/**
+ * Batch operations class. Executes a function providing an object exposing an
+ * API to schedule atomic CRUD operations and wrap them within and IDB
+ * transaction.
+ */
+class Batch {
+  /**
+   * Constructor.
+   *
+   * @param  {IDBTransaction} transaction
+   * @param  {IDBStore}       store
+   */
+  constructor(transaction, store) {
+    this._transaction = transaction;
+    this._store = store;
+    this._operations = [];
+    this._errors = [];
+  }
+
+  /**
+   * IDBStore methods map.
+   */
+  static get BATCH_STORE_METHODS() {
+    return {
+      clear:  "clear",
+      create: "add",
+      update: "put",
+      delete: "delete"
+    };
+  }
+
+  /**
+   * Aborts the current transaction, cleaning all pending operations.
+   */
+  abort() {
+    this._operations.length = 0;
+    this._transaction.abort();
+  }
+
+  /**
+   * Retrieves an existing record by its id. Note that this method won't find
+   * records scheduled for write within the current transaction.
+   *
+   * @param  {Number|String} id
+   * @return {Object}
+   */
+  get(id) {
+    if (!id) {
+      return Promise.reject(new Error("Id not provided."));
+    }
+    return new Promise((resolve, reject) => {
+      const request = this._store.get(id);
+      request.onerror = event => reject(new Error(event.target.error));
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  /**
+   * Retrieves all existing records. Note that this method won't find records
+   * scheduled for write within the current transaction.
+   *
+   * @return {Array}
+   */
+  list() {
+    return new Promise((resolve, reject) => {
+      const results = [];
+      const request = this._store.openCursor();
+      request.onerror = event => reject(new Error(event.target.error));
+      request.onsuccess = function(event) {
+        var cursor = event.target.result;
+        if (cursor) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+    });
+  }
+
+  /**
+   * Clears the current store.
+   *
+   * @return {Object} An object describing the operation.
+   */
+  clear() {
+    const operation = {type: "clear", data: undefined};
+    this._operations.push(operation);
+    return operation;
+  }
+
+  /**
+   * Adds a record to the store.
+   *
+   * @return {Object} An object describing the operation.
+   */
+  create(data) {
+    const operation = {type: "create", data};
+    this._operations.push(operation);
+    return operation;
+  }
+
+  /**
+   * Updates a record from the store.
+   *
+   * @return {Object} An object describing the operation.
+   */
+  update(data) {
+    const operation = {type: "update", data};
+    this._operations.push(operation);
+    return operation;
+  }
+
+  /**
+   * Deletes a record from the store.
+   *
+   * @return {Object} An object describing the operation.
+   */
+  delete(data) {
+    const operation = {type: "delete", data};
+    this._operations.push(operation);
+    return operation;
+  }
+
+  /**
+   * Registers a function performing the planned transactional operations, and
+   * commits the transaction.
+   *
+   * @param  {Function(Batch)} operationsFn The function planning operations.
+   * @return {Promise}
+   */
+  execute(operationsFn) {
+    return Promise.resolve(operationsFn(this))
+      .then(result => {
+        return new Promise((resolve, reject) => {
+          this._operations.forEach(operation => {
+            const storeMethod = Batch.BATCH_STORE_METHODS[operation.type];
+            try {
+              this._store[storeMethod](operation.data);
+            } catch(error) {
+              this._errors.push({type: "error", error, operation});
+            }
+          });
+          this._transaction.onerror = event => {
+            resolve({
+              result,
+              operations: this._operations,
+              errors: this._errors.concat({
+                type: "error",
+                error: event.target.error
+              })
+            });
+          };
+          this._transaction.onabort = event => {
+            resolve({
+              result,
+              operations: this._operations,
+              errors: this._errors,
+            });
+          };
+          this._transaction.oncomplete = event => {
+            resolve({
+              result,
+              operations: this._operations,
+              errors: this._errors,
+            });
+          };
+        });
+      })
+      .catch(err => ({
+        result: undefined,
+        operations: this._operations,
+        errors: this._errors.concat(err),
+      }));
+  }
+}
 
 /**
  * IndexedDB adapter.
@@ -106,82 +276,9 @@ export default class IDB extends BaseAdapter {
    */
   batch(operationsFn) {
     return this.open().then(() => {
-      const errors = [], operations = [];
       const {transaction, store} = this.prepare("readwrite");
-      const batchObject = {
-        abort() {
-          // Clear the list of performed operations
-          operations.length = 0;
-          transaction.abort();
-        },
-        get(id) {
-          if (!id) {
-            return Promise.reject(new Error("Id not provided."));
-          }
-          return new Promise((resolve, reject) => {
-            const request = store.get(id);
-            request.onerror = event => reject(new Error(event.target.error));
-            request.onsuccess = () => resolve(request.result);
-          });
-        },
-        list() {
-          return new Promise((resolve, reject) => {
-            const results = [];
-            const request = store.openCursor();
-            request.onerror = event => reject(new Error(event.target.error));
-            request.onsuccess = function(event) {
-              var cursor = event.target.result;
-              if (cursor) {
-                results.push(cursor.value);
-                cursor.continue();
-              } else {
-                resolve(results);
-              }
-            };
-          });
-        }
-      };
-      for (let type of Object.keys(BATCH_STORE_METHODS)) {
-        batchObject[type] = data => {
-          const operation = {type, data};
-          operations.push(operation);
-          return operation;
-        };
-      }
-      return Promise.resolve(operationsFn(batchObject))
-        .then(result => {
-          return new Promise((resolve, reject) => {
-            operations.forEach(operation => {
-              const storeMethod = BATCH_STORE_METHODS[operation.type];
-              try {
-                store[storeMethod](operation.data);
-              } catch(error) {
-                errors.push({type: "error", error, operation});
-              }
-            });
-            transaction.onerror = event => {
-              resolve({
-                result,
-                operations,
-                errors: errors.concat({
-                  type: "error",
-                  error: event.target.error
-                })
-              });
-            };
-            transaction.onabort = event => {
-              resolve({result, operations, errors});
-            };
-            transaction.oncomplete = event => {
-              resolve({result, operations, errors});
-            };
-          });
-        })
-        .catch(err => ({
-          result: undefined,
-          operations,
-          errors: errors.concat(err),
-        }));
+      const batch = new Batch(transaction, store);
+      return batch.execute(operationsFn);
     });
   }
 
