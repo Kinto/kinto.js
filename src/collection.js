@@ -740,12 +740,12 @@ export default class Collection {
       return Promise.resolve(result);
     }
     return this.db.batch(batch => {
-      return result.conflicts.map(conflict => {
+      return Promise.all(result.conflicts.map(conflict => {
         const resolution = strategy === Collection.strategy.CLIENT_WINS ?
                            conflict.local : conflict.remote;
         // Ensure local record has the latest authoritative timestamp
         return batch.update(bumpLastModified(resolution, conflict.remote.last_modified));
-      });
+      }));
     }).then(batchResult => {
       return result
         .reset("conflicts")

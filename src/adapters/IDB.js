@@ -82,16 +82,39 @@ class Batch {
     });
   }
 
+  /**
+   * Schedules an operation for current transaction.
+   *
+   * @param  {String} type
+   * @param  {Object} data
+   * @return {Promise}
+   */
   _schedule(type, data) {
     const operation = {type, data};
     this._operations.push(operation);
-    return operation;
+    return new Promise((resolve, reject) => {
+      const storeMethod = Batch.BATCH_STORE_METHODS[type];
+      try {
+        const req = this._store[storeMethod](data);
+        req.onerror = event => {
+          this._errors.push({
+            type: "error",
+            error: event.target.error,
+            operation
+          });
+          reject(event.target.error);
+        };
+        req.onsuccess = event => resolve(operation);
+      } catch(error) {
+        this._errors.push({type: "error", error, operation});
+      }
+    });
   }
 
   /**
    * Clears the current store.
    *
-   * @return {Object} An object describing the operation.
+   * @return {Promise} A promise resolving with the operation descriptor.
    */
   clear() {
     return this._schedule("clear");
@@ -100,7 +123,7 @@ class Batch {
   /**
    * Adds a record to the store.
    *
-   * @return {Object} An object describing the operation.
+   * @return {Promise} A promise resolving with the operation descriptor.
    */
   create(data) {
     return this._schedule("create", data);
@@ -109,7 +132,7 @@ class Batch {
   /**
    * Updates a record from the store.
    *
-   * @return {Object} An object describing the operation.
+   * @return {Promise} A promise resolving with the operation descriptor.
    */
   update(data) {
     return this._schedule("update", data);
@@ -118,7 +141,7 @@ class Batch {
   /**
    * Deletes a record from the store.
    *
-   * @return {Object} An object describing the operation.
+   * @return {Promise} A promise resolving with the operation descriptor.
    */
   delete(data) {
     return this._schedule("delete", data);
@@ -139,14 +162,6 @@ class Batch {
             result,
             operations: this._operations,
             errors: this._errors,
-          });
-          this._operations.forEach(operation => {
-            const storeMethod = Batch.BATCH_STORE_METHODS[operation.type];
-            try {
-              this._store[storeMethod](operation.data);
-            } catch(error) {
-              this._errors.push({type: "error", error, operation});
-            }
           });
           this._transaction.onerror = event => {
             this._errors = this._errors.concat({

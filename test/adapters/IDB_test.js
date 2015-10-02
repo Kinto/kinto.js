@@ -172,6 +172,17 @@ describe("adapter.IDB", () => {
           return db.batch(batch => batch.list())
             .should.eventually.have.property("result").eql(records);
         });
+
+        it("should allow listing from within batch", () => {
+          return db.batch(batch => {
+            return batch.create({id: 3, name: "baz"})
+              .then(_ => batch.list());
+          }).should.eventually.have.property("result").eql([
+            {id: 1, name: "foo"},
+            {id: 2, name: "bar"},
+            {id: 3, name: "baz"},
+          ]);
+        });
       });
     });
 
@@ -179,11 +190,14 @@ describe("adapter.IDB", () => {
     describe("#clear", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {clear() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: new Error("transaction error")}});
+          store: {
+            clear() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
           }
         });
@@ -202,13 +216,16 @@ describe("adapter.IDB", () => {
     describe("#create", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {add() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: new Error("transaction error")}});
+          store: {
+            add() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
-          }
+          },
         });
         return db.create({foo: "bar"})
           .should.be.rejectedWith(Error, "transaction error");
@@ -223,13 +240,16 @@ describe("adapter.IDB", () => {
     /** @test {IDB#update} */
     describe("#update", () => {
       it("should reject on transaction error", () => {
-        sandbox.stub(db, "get").returns(Promise.resolve());
         sandbox.stub(db, "prepare").returns({
-          store: {get() {}, put() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: new Error("transaction error")}});
+          store: {
+            get() {},
+            put() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
           }
         });
@@ -280,13 +300,16 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {delete() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: new Error("transaction error")}});
+          store: {
+            delete() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
-          }
+          },
         });
         return db.delete(42)
           .should.be.rejectedWith(Error, "transaction error");
