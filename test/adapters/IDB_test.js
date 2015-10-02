@@ -69,6 +69,17 @@ describe("adapter.IDB", () => {
             .then(_ => db.list())
             .should.become([{id: 2, name: "baz"}]);
         });
+
+        it("should allow following afully async operation flow", () => {
+          return db.batch(batch => {
+            return batch.create({id: 1, name: "foo"})
+              .then(_ => batch.update({id: 1, name: "foo-mod"}))
+              .then(_ => batch.list())
+              .then(list => batch.update(Object.assign({}, list[0], {name: list[0].name + "!"})));
+          })
+            .then(_ => db.list())
+            .should.become([{id: 1, name: "foo-mod!"}]);
+        });
       });
 
       describe("Failing transaction", () => {
@@ -81,9 +92,9 @@ describe("adapter.IDB", () => {
           })
             .then(res => {
               expect(res.errors).to.have.length.of(2);
-              expect(res.errors[0].error.name).eql("DataError");
+              expect(res.errors[0].name).eql("DataError");
               expect(res.errors[0].operation).eql({type: "create", data: 1});
-              expect(res.errors[1].error.name).eql("DataError");
+              expect(res.errors[1].name).eql("DataError");
               expect(res.errors[1].operation).eql({type: "create", data: 2});
             });
         });
