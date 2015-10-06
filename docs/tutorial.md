@@ -46,7 +46,7 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 }
 
@@ -56,7 +56,7 @@ window.addEventListener("DOMContentLoaded", main);
 
 > #### Notes
 >
-> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v0`; **data pushed to this instance are reset everyday**;
+> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v1`; **data pushed to this instance are reset everyday**;
 > - You'll need to serve this page over HTTP, for Kinto.js to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
 
 For example, if you're using http-server:
@@ -76,7 +76,7 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -117,7 +117,7 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v0"});
+  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -296,7 +296,7 @@ Then the JavaScript:
 
 ## Synchronizing tasks
 
-Synchronizing local data is done by calling the `#sync()` method on our collection. First things first, let's add a shiny *Synchronize* button to our HTML document, as well as a textarea to display synchronization results:
+Synchronizing local data is done by calling the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) method on our collection. First things first, let's add a shiny *Synchronize* button to our HTML document, as well as a textarea to display synchronization results:
 
 ```html
 <div class="row">
@@ -328,11 +328,11 @@ document.getElementById("sync")
   });
 ```
 
-We're passing an `Authorization` header as an option to `#sync()`; that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Kinto` constructor:
+We're passing an `Authorization` header as an option to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync); that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Kinto` constructor:
 
 ```js
 var db = new Kinto({
-  remote: "https://kinto.dev.mozaws.net/v0",
+  remote: "https://kinto.dev.mozaws.net/v1",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 });
 ```
@@ -411,7 +411,7 @@ Let's create a conflict by:
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v0/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
+$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v1/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
 Access-Control-Expose-Headers: Backoff, Retry-After, Alert
 Content-Length: 118
 Content-Type: application/json; charset=UTF-8
@@ -426,7 +426,7 @@ Server: waitress
 }
 ```
 
-If we try to `#sync`, now we get a conflict:
+If we try to [`#sync`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync), now we get a conflict:
 
 ```js
 {
@@ -502,7 +502,7 @@ Your take really. Let's take the former approach:
     });
 ```
 
-We're using `#resolve()` to mark a conflict as resolved: it accepts a conflict object, and a resolution one; the latter is what will be updated locally and sent for resynchronization on a next call to `#sync()` — which is exactly what we're doing after we've resolved all our conflicts.
+We're using [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resolve) to mark a conflict as resolved: it accepts a conflict object, and a resolution one; the latter is what will be updated locally and sent for resynchronization on a next call to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) — which is exactly what we're doing after we've resolved all our conflicts.
 
 ## Now what?
 
