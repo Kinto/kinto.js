@@ -18,6 +18,7 @@ chai.should();
 chai.config.includeStack = true;
 
 describe("Utils", () => {
+  /** @test {attachFakeIDBSymbolsTo} */
   describe("#attachFakeIDBSymbolsTo", () => {
     it("should attach fake IDB symbols to provided object", () => {
       var obj = {};
@@ -52,6 +53,7 @@ describe("Utils", () => {
     ]);
   });
 
+  /** @test {quote} */
   describe("#quote", () => {
     it("should add quotes to provided string", () => {
       var quoted = quote("42");
@@ -59,6 +61,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {unquote} */
   describe("#unquote", () => {
     it("should remove quotes to provided string", () => {
       var unquoted = unquote("\"42\"");
@@ -71,6 +74,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {sortObjects} */
   describe("#sortObjects", () => {
     it("should order on field ASC", () => {
       expect(sortObjects("title", [
@@ -137,6 +141,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {filterObjects} */
   describe("#filterObjects", () => {
     it("should filter list on a single field query", () => {
       expect(filterObjects({title: "a"}, [
@@ -164,6 +169,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {reduceRecords} */
   describe("#reduceRecords", () => {
     it("should filter and order list", () => {
       expect(reduceRecords({unread: false, complete: true}, "-title", [
@@ -177,6 +183,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {partition} */
   describe("#partition", () => {
     it("should chunk array", () => {
       expect(partition([1, 2, 3], 2)).eql([[1, 2], [3]]);
@@ -191,6 +198,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {isUUID4} */
   describe("#isUUID4", () => {
     it("should check that a string uses a valid UUID format", () => {
       expect(isUUID4("110ec58a-a0f2-4ac4-8393-c866d813b8d1")).eql(true);
@@ -208,6 +216,7 @@ describe("Utils", () => {
     });
   });
 
+  /** @test {waterfall} */
   describe("#waterfall", () => {
     it("should resolve with init value when list is empty", () => {
       return waterfall([], 42)

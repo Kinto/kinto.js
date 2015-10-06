@@ -1,5 +1,10 @@
 "use strict";
 
+/**
+ * Base db adapter.
+ *
+ * @abstract
+ */
 export default class BaseAdapter {
   /**
    * Deletes every records present in the database..
@@ -65,7 +70,6 @@ export default class BaseAdapter {
    * Store the lastModified value.
    *
    * @param  {Number}  lastModified
-   * @param  {Object}  options
    * @return {Promise}
    */
   saveLastModified(lastModified) {

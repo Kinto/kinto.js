@@ -21,7 +21,7 @@ export default class Kinto {
    * Provides a public access to the base adapter classes. Users can create
    * a custom DB adapter by extending BaseAdapter.
    *
-   * @return {Object}
+   * @type {Object}
    */
   static get adapters() {
     return {
@@ -38,7 +38,7 @@ export default class Kinto {
    * - `SERVER_WINS`: Conflicts are resolved using remote data.
    * - `CLIENT_WINS`: Conflicts are resolved using local data.
    *
-   * @return {Object}
+   * @type {Object}
    */
   static get syncStrategy() {
     return Collection.strategy;
@@ -48,13 +48,13 @@ export default class Kinto {
    * Constructor.
    *
    * Options:
-   * - {String}       remote   The server URL to use.
-   * - {String}       bucket   The collection bucket name.
-   * - {EventEmitter} events   Events handler.
-   * - {BaseAdapter}  adapter  The base DB adapter class.
-   * - {String}       dbPrefix The DB name prefix.
-   * - {Object}       headers  The HTTP headers to use.
-   * - {String}       requestMode The HTTP CORS mode to use.
+   * - `{String}`       `remote`      The server URL to use.
+   * - `{String}`       `bucket`      The collection bucket name.
+   * - `{EventEmitter}` `events`      Events handler.
+   * - `{BaseAdapter}`  `adapter`     The base DB adapter class.
+   * - `{String}`       `dbPrefix`    The DB name prefix.
+   * - `{Object}`       `headers`     The HTTP headers to use.
+   * - `{String}`       `requestMode` The HTTP CORS mode to use.
    *
    * @param  {Object} options The options object.
    */
@@ -73,6 +73,10 @@ export default class Kinto {
     });
 
     // public properties
+    /**
+     * The event emitter instance.
+     * @type {EventEmitter}
+     */
     this.events = this._options.events;
   }
 

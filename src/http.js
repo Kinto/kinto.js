@@ -4,9 +4,13 @@ import { EventEmitter } from "events";
 import ERROR_CODES from "./errors.js";
 
 /**
- * HTTP class.
+ * Enhanced HTTP client for the Kinto protocol.
  */
 export default class HTTP {
+  /**
+   * Default HTTP request headers applied to each outgoing request.
+   * @type {Object}
+   */
   static get DEFAULT_REQUEST_HEADERS() {
     return {
       "Accept":       "application/json",
@@ -19,13 +23,22 @@ export default class HTTP {
    *
    * Options:
    * - {EventEmitter} events       Events handler.
-   * - {String}       requestMode  The HTTP request mode (default: "cors").
+   * - {String}       requestMode  The HTTP request mode (default: `"cors"`).
    *
    * @param  {Object} options The options object.
    */
   constructor(options={requestMode: "cors"}) {
     // public properties
+    /**
+     * The eventt emitter instance.
+     * @type {EventEmitter}
+     */
     this.events = options.events || new EventEmitter();
+    /**
+     * The request mode.
+     * @see  https://fetch.spec.whatwg.org/#requestmode
+     * @type {String}
+     */
     this.requestMode = options.requestMode;
   }
 
@@ -33,12 +46,12 @@ export default class HTTP {
    * Performs an HTTP request to the Kinto server.
    *
    * Options:
-   * - {Object} headers The request headers object (default: {})
+   * - `{Object} headers` The request headers object (default: {})
    *
    * Resolves with an objet containing the following HTTP response properties:
-   * - {Number}  status  The HTTP status code.
-   * - {Object}  json    The JSON response body.
-   * - {Headers} headers The response headers object; see the ES6 fetch() spec.
+   * - `{Number}  status`  The HTTP status code.
+   * - `{Object}  json`    The JSON response body.
+   * - `{Headers} headers` The response headers object; see the ES6 fetch() spec.
    *
    * @param  {String} url     The URL.
    * @param  {Object} options The fetch() options object.

@@ -15,6 +15,7 @@ chai.config.includeStack = true;
 const root = typeof window === "object" ? window : global;
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
+/** @test {Api} */
 describe("Api", () => {
   var sandbox, api;
 
@@ -27,6 +28,7 @@ describe("Api", () => {
     sandbox.restore();
   });
 
+  /** @test {Api#constructor} */
   describe("#constructor", () => {
     it("should check that `remote` is a string", () => {
       expect(() => new Api(42))
@@ -97,6 +99,7 @@ describe("Api", () => {
     });
   });
 
+  /** @test {Api#endpoints} */
   describe("#endpoints", () => {
     describe("full URL", () => {
       var endpoints;
@@ -169,6 +172,7 @@ describe("Api", () => {
     });
   });
 
+  /** @test {Api#fetchServerSettings} */
   describe("#fetchServerSettings", () => {
     it("should retrieve server settings on first request made", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
@@ -195,6 +199,7 @@ describe("Api", () => {
     });
   });
 
+  /** @test {Api#fetchChangesSince} */
   describe("#fetchChangesSince", () => {
     it("should fetch server settings", () => {
       sandbox.stub(api, "fetchServerSettings")
@@ -289,6 +294,7 @@ describe("Api", () => {
     });
   });
 
+  /** @test {Api#batch} */
   describe("#batch", () => {
     const operations = [
       {id: 1, title: "foo", last_modified: 42},
@@ -634,6 +640,7 @@ describe("Api", () => {
   });
 
   describe("Helpers", () => {
+    /** @test {cleanRecord} */
     describe("#cleanRecord", () => {
       it("should clean record data", () => {
         expect(cleanRecord({title: "foo", _status: "foo"}))

@@ -1,13 +1,23 @@
 "use strict";
 
 import { EventEmitter } from "events";
-import { quote, unquote } from "./utils.js";
+import { quote, unquote, partition } from "./utils.js";
 import HTTP from "./http.js";
-import { partition } from "./utils.js";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+/**
+ * Currently supported protocol version.
+ * @type {String}
+ */
 export const SUPPORTED_PROTOCOL_VERSION = "v1";
 
+/**
+ * Cleans a record object, excluding passed keys.
+ *
+ * @param  {Object} record        The record object.
+ * @param  {Array}  excludeFields The list of keys to exclude.
+ * @return {Object}               A clean copy of source record object.
+ */
 export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
   return Object.keys(record).reduce((acc, key) => {
     if (excludeFields.indexOf(key) === -1) {
@@ -18,7 +28,7 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
 }
 
 /**
- * Api class.
+ * High level HTTP client for the Kinto API.
  */
 export default class Api {
   /**
@@ -41,11 +51,31 @@ export default class Api {
     }
     this._backoffReleaseTime = null;
     // public properties
+    /**
+     * The remote endpoint base URL.
+     * @type {String}
+     */
     this.remote = remote;
+    /**
+     * The optional generic headers.
+     * @type {Object}
+     */
     this.optionHeaders = options.headers || {};
+    /**
+     * Current server settings, retrieved from the server.
+     * @type {Object}
+     */
     this.serverSettings = null;
+    /**
+     * The even emitter instance.
+     * @type {EventEmitter}
+     */
     this.events = options.events || new EventEmitter();
     try {
+      /**
+       * The current server protocol version, eg. `v1`.
+       * @type {String}
+       */
       this.version = remote.match(/\/(v\d+)\/?$/)[1];
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + remote);
@@ -53,6 +83,10 @@ export default class Api {
     if (this.version !== SUPPORTED_PROTOCOL_VERSION) {
       throw new Error(`Unsupported protocol version: ${this.version}`);
     }
+    /**
+     * The HTTP instance.
+     * @type {HTTP}
+     */
     this.http = new HTTP({events: this.events, requestMode: options.requestMode});
     this._registerHTTPEvents();
   }

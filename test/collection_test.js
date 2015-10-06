@@ -20,6 +20,7 @@ const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
+/** @test {Collection} */
 describe("Collection", () => {
   var sandbox, events, idSchema, remoteTransformers, api;
   const article = {title: "foo", url: "http://foo"};
@@ -66,6 +67,7 @@ describe("Collection", () => {
     sandbox.restore();
   });
 
+  /** @test {Collection#constructor} */
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
@@ -171,6 +173,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {SyncResultObject} */
   describe("SyncResultObject", () => {
     it("should create a result object", () => {
       expect(new SyncResultObject()).to.include.keys([
@@ -195,6 +198,7 @@ describe("Collection", () => {
       });
     });
 
+    /** @test {SyncResultObject#add} */
     describe("#add", () => {
       it("should add typed entries", () => {
         const result = new SyncResultObject();
@@ -244,6 +248,7 @@ describe("Collection", () => {
       });
     });
 
+    /** @test {SyncResultObject#reset} */
     describe("#reset", () => {
       it("should reset to array prop to its default value", () => {
         const result = new SyncResultObject()
@@ -261,6 +266,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#create} */
   describe("#create", () => {
     var articles;
 
@@ -353,6 +359,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#update} */
   describe("#update", () => {
     var articles;
 
@@ -409,6 +416,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#resolve} */
   describe("#resolve", () => {
     var articles, local;
 
@@ -440,6 +448,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#get} */
   describe("#get", () => {
     var articles, id;
 
@@ -508,6 +517,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#delete} */
   describe("#delete", () => {
     var articles, id;
 
@@ -570,6 +580,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#list} */
   describe("#list", () => {
     var articles;
 
@@ -707,6 +718,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#gatherLocalChanges} */
   describe("#gatherLocalChanges", () => {
     var articles;
 
@@ -734,6 +746,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#pullChanges} */
   describe("#pullChanges", () => {
     var fetchChangesSince, articles, result;
 
@@ -968,6 +981,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#importChanges} */
   describe("#importChanges", () => {
     var articles, result;
 
@@ -1019,6 +1033,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
     var articles, records, result;
 
@@ -1105,6 +1120,7 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#sync} */
   describe("#sync", () => {
     const fixtures = [
       {title: "art1"},

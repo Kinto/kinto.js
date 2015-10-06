@@ -5,6 +5,7 @@ import sinon from "sinon";
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
 
+/** @test {IDB} */
 describe("adapter.IDB", () => {
   adapterTestSuite(() => new IDB("test/foo"));
 
@@ -19,6 +20,7 @@ describe("adapter.IDB", () => {
 
     afterEach(() => sandbox.restore());
 
+    /** @test {IDB#create} */
     describe("#create", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
@@ -40,6 +42,7 @@ describe("adapter.IDB", () => {
       });
     });
 
+    /** @test {IDB#update} */
     describe("#update", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "get").returns(Promise.resolve());
@@ -62,6 +65,7 @@ describe("adapter.IDB", () => {
       });
     });
 
+    /** @test {IDB#get} */
     describe("#get", () => {
       beforeEach(() => {
         return db.create({id: 1, foo: "bar"});
@@ -73,6 +77,7 @@ describe("adapter.IDB", () => {
       });
     });
 
+    /** @test {IDB#delete} */
     describe("#delete", () => {
       beforeEach(() => {
         return db.create({id: 1, foo: "bar"});
@@ -98,6 +103,7 @@ describe("adapter.IDB", () => {
       });
     });
 
+    /** @test {IDB#list} */
     describe("#list", () => {
       it("should prefix error encountered", () => {
         sandbox.stub(db, "open").returns(Promise.reject("error"));
