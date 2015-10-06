@@ -9,13 +9,25 @@ if (!root.hasOwnProperty("localStorage")) {
   root.localStorage = require("localStorage");
 }
 
+/**
+ * LocalStorage adapter.
+ */
 export default class LocalStorage extends BaseAdapter {
+  /**
+   * Constructor.
+   *
+   * @param  {String} dbname The database nale.
+   */
   constructor(dbname) {
     super();
     this._db = null;
     this._keyStoreName = `${this.dbname}/__keys`;
     this._keyLastModified = `${this.dbname}/__lastModified`;
     // public properties
+    /**
+     * The database name.
+     * @type {String}
+     */
     this.dbname = dbname;
   }
 
@@ -146,7 +158,6 @@ export default class LocalStorage extends BaseAdapter {
    * Store the lastModified value into metadata store.
    *
    * @param  {Number}  lastModified
-   * @param  {Object}  options
    * @return {Promise}
    */
   saveLastModified(lastModified) {

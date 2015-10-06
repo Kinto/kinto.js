@@ -19,6 +19,7 @@ chai.config.includeStack = true;
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
 
+/** @test {Kinto} */
 describe("Kinto", () => {
   var sandbox;
 
@@ -62,6 +63,7 @@ describe("Kinto", () => {
     });
   });
 
+  /** @test {Kinto#constructor} */
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
@@ -91,6 +93,7 @@ describe("Kinto", () => {
     });
   });
 
+  /** @test {Kinto#collection} */
   describe("#collection()", () => {
     it("should return a Collection", () => {
       expect(testCollection()).to.be.a("object");

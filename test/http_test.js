@@ -13,6 +13,7 @@ chai.config.includeStack = true;
 
 const root = typeof window === "object" ? window : global;
 
+/** @test {HTTP} */
 describe("HTTP class", () => {
   var sandbox, events, http;
 
@@ -24,6 +25,7 @@ describe("HTTP class", () => {
 
   afterEach(() => sandbox.restore());
 
+  /** @test {HTTP#constructor} */
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
@@ -40,6 +42,7 @@ describe("HTTP class", () => {
     });
   });
 
+  /** @test {HTTP#request} */
   describe("#request()", () => {
     describe("Request headers", () => {
       beforeEach(() => {

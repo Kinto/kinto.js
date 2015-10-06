@@ -5,11 +5,23 @@ import { attachFakeIDBSymbolsTo } from "./../utils";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
+/**
+ * IndexedDB adapter.
+ */
 export default class IDB extends BaseAdapter {
+  /**
+   * Constructor.
+   *
+   * @param  {String} dbname The database nale.
+   */
   constructor(dbname) {
     super();
     this._db = null;
     // public properties
+    /**
+     * The database name.
+     * @type {String}
+     */
     this.dbname = dbname;
   }
 
@@ -68,8 +80,9 @@ export default class IDB extends BaseAdapter {
    * request’s success event, because the transaction may still fail after the
    * success event fires.
    *
-   * @param {String}      mode  Transaction mode ("readwrite" or undefined)
-   * @param {String|null} name  Store name (defaults to coll name)
+   * @param  {String}      mode  Transaction mode ("readwrite" or undefined)
+   * @param  {String|null} name  Store name (defaults to coll name)
+   * @return {Object}
    */
   prepare(mode=undefined, name=null) {
     const storeName = name || this.dbname;
@@ -194,7 +207,6 @@ export default class IDB extends BaseAdapter {
    * Store the lastModified value into metadata store.
    *
    * @param  {Number}  lastModified
-   * @param  {Object}  options
    * @return {Promise}
    */
   saveLastModified(lastModified) {

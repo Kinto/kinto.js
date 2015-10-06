@@ -1,3 +1,7 @@
+/**
+ * Kinto server error code descriptors.
+ * @type {Object}
+ */
 export default {
   104: "Missing Authorization Token",
   105: "Invalid Authorization Token",

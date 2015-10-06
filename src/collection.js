@@ -14,7 +14,14 @@ import IDB from "./adapters/IDB";
 
 attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
+/**
+ * Synchronization result object.
+ */
 export class SyncResultObject {
+  /**
+   * Object default values.
+   * @type {Object}
+   */
   static get defaults() {
     return {
       ok:           true,
@@ -30,10 +37,26 @@ export class SyncResultObject {
     };
   }
 
+  /**
+   * Public constructor.
+   */
   constructor() {
+    /**
+     * Current synchronization result status; becomes `false` when conflicts or
+     * errors are registered.
+     * @type {Boolean}
+     */
+    this.ok = true;
     Object.assign(this, SyncResultObject.defaults);
   }
 
+  /**
+   * Adds entries for a given result type.
+   *
+   * @param {String} type    The result type.
+   * @param {Array}  entries The result entries.
+   * @return {SyncResultObject}
+   */
   add(type, entries) {
     if (!Array.isArray(this[type])) {
       return;
@@ -43,6 +66,12 @@ export class SyncResultObject {
     return this;
   }
 
+  /**
+   * Reinitializes result entries for a given result type.
+   *
+   * @param  {String} type The result type.
+   * @return {SyncResultObject}
+   */
   reset(type) {
     this[type] = SyncResultObject.defaults[type];
     this.ok = this.errors.length + this.conflicts.length === 0;
@@ -63,15 +92,16 @@ function createUUIDSchema() {
 }
 
 /**
- * Collection class.
+ * Abstracts a collection of records stored in the local database, providing
+ * CRUD operations and synchronization helpers.
  */
 export default class Collection {
   /**
    * Constructor.
    *
    * Options:
-   * - {BaseAdapter} adapter  The DB adapter (default: IDB)
-   * - {String}      dbPrefix The DB name prefix (default: "")
+   * - `{BaseAdapter} adapter` The DB adapter (default: `IDB`)
+   * - `{String} dbPrefix`     The DB name prefix (default: `""`)
    *
    * @param  {String} bucket  The bucket identifier.
    * @param  {String} name    The collection name.
@@ -90,21 +120,53 @@ export default class Collection {
       throw new Error("Unsupported adapter.");
     }
     // public properties
+    /**
+     * The db adapter instance
+     * @type {BaseAdapter}
+     */
     this.db = db;
+    /**
+     * The Api instance.
+     * @type {Api}
+     */
     this.api = api;
+    /**
+     * The event emitter instance.
+     * @type {EventEmitter}
+     */
     this.events = options.events || new EventEmitter();
+    /**
+     * The IdSchema instance.
+     * @type {Object}
+     */
     this.idSchema = this._validateIdSchema(options.idSchema);
+    /**
+     * The list of remote transformers.
+     * @type {Array}
+     */
     this.remoteTransformers = this._validateRemoteTransformers(options.remoteTransformers);
   }
 
+  /**
+   * The collection name.
+   * @type {String}
+   */
   get name() {
     return this._name;
   }
 
+  /**
+   * The bucket name.
+   * @type {String}
+   */
   get bucket() {
     return this._bucket;
   }
 
+  /**
+   * The last modified timestamp.
+   * @type {Number}
+   */
   get lastModified() {
     return this._lastModified;
   }
@@ -116,7 +178,7 @@ export default class Collection {
    * - `SERVER_WINS`: Conflicts are resolved using remote data.
    * - `CLIENT_WINS`: Conflicts are resolved using local data.
    *
-   * @return {Object}
+   * @type {Object}
    */
   static get strategy() {
     return {
@@ -317,8 +379,8 @@ export default class Collection {
    * Deletes a record from the local database.
    *
    * Options:
-   * - {Boolean} virtual: When set to true, doesn't actually delete the record,
-   *                      update its _status attribute to "deleted" instead.
+   * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
+   *   update its `_status` attribute to `deleted` instead.
    *
    * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
@@ -353,8 +415,8 @@ export default class Collection {
    * Lists records from the local database.
    *
    * Params:
-   * - {Object} filters The filters to apply (default: {}).
-   * - {String} order   The order to apply   (default: "-last_modified").
+   * - {Object} filters The filters to apply (default: `{}`).
+   * - {String} order   The order to apply   (default: `-last_modified`).
    *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.
@@ -455,8 +517,8 @@ export default class Collection {
   /**
    * Import changes into the local database.
    *
-   * @param  {SyncResultObject} syncResultObject
-   * @param  {Object} changeObject The change object.
+   * @param  {SyncResultObject} syncResultObject The sync result object.
+   * @param  {Object}           changeObject     The change object.
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
@@ -516,8 +578,11 @@ export default class Collection {
   }
 
   /**
-   * Fetch remote changes, import them to the local database,
-   * and (according to `options.strategy`) handle conflicts.
+   * Fetch remote changes, import them to the local database, and handle
+   * conflicts according to `options.strategy`.
+   *
+   * Options:
+   * - {String} strategy: The selected sync strategy.
    *
    * @param  {SyncResultObject} syncResultObject
    * @param  {Object}           options
@@ -616,7 +681,7 @@ export default class Collection {
 
   /**
    * Resolves a conflict, updating local record according to proposed
-   * resolution — keeping remote record last_modified value as a reference for
+   * resolution — keeping remote record `last_modified` value as a reference for
    * further batch sending.
    *
    * @param  {Object} conflict   The conflict object.

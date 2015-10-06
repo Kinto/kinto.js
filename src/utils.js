@@ -6,6 +6,8 @@ const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
  * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
  * This piece of code will register them with the same names as native API,
  * only if indexedDB is not already available.
+ *
+ * @param {Object} obj The object to check and atttach indexedDB symbols to.
  */
 export function attachFakeIDBSymbolsTo(obj) {
   if (typeof obj.indexedDB === "object") {
@@ -28,6 +30,7 @@ export function attachFakeIDBSymbolsTo(obj) {
 
 /**
  * Returns the specified string with double quotes.
+ *
  * @param  {String} str  A string to quote.
  * @return {String}
  */
@@ -37,6 +40,7 @@ export function quote(str) {
 
 /**
  * Trim double quotes from specified string.
+ *
  * @param  {String} str  A string to unquote.
  * @return {String}
  */
@@ -55,8 +59,9 @@ function _isUndefined(value) {
 
 /**
  * Sorts records in a list according to a given ordering.
- * @param  {String} ordering The ordering.
- * @param  {Array}  list     The collection to order.
+ *
+ * @param  {String} order The ordering, eg. `-last_modified`.
+ * @param  {Array}  list  The collection to order.
  * @return {Array}
  */
 export function sortObjects(order, list) {
@@ -79,6 +84,7 @@ export function sortObjects(order, list) {
 
 /**
  * Filters records in a list matching all given filters.
+ *
  * @param  {String} filters  The filters object.
  * @param  {Array}  list     The collection to order.
  * @return {Array}
@@ -93,6 +99,7 @@ export function filterObjects(filters, list) {
 
 /**
  * Filter and sort list against provided filters and order.
+ *
  * @param  {Object} filters  The filters to apply.
  * @param  {String} order    The order to apply.
  * @param  {Array}  list     The list to reduce.

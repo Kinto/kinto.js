@@ -20,6 +20,7 @@ function thrower(msg) {
 describe("adapter.LocalStorage", () => {
   adapterTestSuite(() => new LocalStorage("test/foo"));
 
+  /** @test {LocalStorage} */
   describe("LocalStorage specific tests", () => {
     var sandbox, db;
 
@@ -31,6 +32,7 @@ describe("adapter.LocalStorage", () => {
 
     afterEach(() => sandbox.restore());
 
+    /** @test {LocalStorage#clear} */
     describe("#clear", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "clear", thrower("err"));
@@ -39,6 +41,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#create} */
     describe("#create", () => {
       it("should add created key to the key list", () => {
         return db.create({id: 1})
@@ -58,6 +61,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#update} */
     describe("#update", () => {
       it("should reject on id not found", () => {
         return db.update({id: 1})
@@ -72,6 +76,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#get} */
     describe("#get", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "getItem", thrower("err"));
@@ -80,6 +85,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#delete} */
     describe("#delete", () => {
       it("should remove deleted key to the key list", () => {
         db.keys = [1];
@@ -94,6 +100,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#list} */
     describe("#list", () => {
       it("should reject on generic error", () => {
         sandbox.stub(JSON, "parse", thrower("err"));
@@ -102,6 +109,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#saveLastModified} */
     describe("#saveLastModified", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "setItem", thrower("err"));
@@ -110,6 +118,7 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
+    /** @test {LocalStorage#getLastModified} */
     describe("#getLastModified", () => {
       it("should reject on generic error", () => {
         sandbox.stub(JSON, "parse", thrower("err"));
