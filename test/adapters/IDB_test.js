@@ -4,6 +4,7 @@ import sinon from "sinon";
 
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
+import { expect } from "chai";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
@@ -122,6 +123,41 @@ describe("adapter.IDB", () => {
         });
         return db.list({})
           .should.be.rejectedWith(Error, "transaction error");
+      });
+    });
+
+    /** @test {IDB:attachFakeIDBSymbolsTo} */
+    describe("#attachFakeIDBSymbolsTo", () => {
+      it("should attach fake IDB symbols to provided object", () => {
+        var obj = {};
+
+        IDB.attachFakeIDBSymbolsTo(obj);
+
+        expect(obj).to.include.keys([
+          "IDBCursor",
+          "IDBCursorWithValue",
+          "IDBIndex",
+          "IDBKeyRange",
+          "IDBObjectStore",
+          "IDBTransaction",
+          "indexedDB",
+        ]);
+      });
+
+      it("should not attach IDB symbols if they exist", () => {
+        var obj = {indexedDB: {}};
+
+        IDB.attachFakeIDBSymbolsTo(obj);
+
+        expect(obj).to.not.include.keys([
+          "IDBCursor",
+          "IDBCursorWithValue",
+          "IDBIndex",
+          "IDBKeyRange",
+          "IDBObjectStore",
+          "IDBTransaction",
+          "indexedDB",
+        ]);
       });
     });
   });

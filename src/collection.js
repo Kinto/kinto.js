@@ -109,6 +109,9 @@ export default class Collection {
     this._lastModified = null;
 
     const DBAdapter = options.adapter;
+    if (!DBAdapter) {
+      throw new Error("No adapter provided");
+    }
     const dbPrefix = options.dbPrefix || "";
     const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
     if (!(db instanceof BaseAdapter)) {
