@@ -1,6 +1,5 @@
 "use strict";
 
-import { EventEmitter } from "events";
 import ERROR_CODES from "./errors.js";
 
 /**
@@ -33,7 +32,7 @@ export default class HTTP {
      * The eventt emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events || new EventEmitter();
+    this.events = options.events;
     /**
      * The request mode.
      * @see  https://fetch.spec.whatwg.org/#requestmode

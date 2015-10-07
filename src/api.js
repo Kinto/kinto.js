@@ -1,6 +1,5 @@
 "use strict";
 
-import { EventEmitter } from "events";
 import { quote, unquote, partition } from "./utils.js";
 import HTTP from "./http.js";
 
@@ -70,7 +69,7 @@ export default class Api {
      * The even emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events || new EventEmitter();
+    this.events = options.events;
     try {
       /**
        * The current server protocol version, eg. `v1`.

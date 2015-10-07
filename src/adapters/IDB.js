@@ -1,9 +1,6 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { attachFakeIDBSymbolsTo } from "./../utils";
-
-attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 /**
  * IndexedDB adapter.
@@ -238,4 +235,32 @@ export default class IDB extends BaseAdapter {
       });
     });
   }
+
+  /**
+   * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
+   * This piece of code will register them with the same names as native API,
+   * only if indexedDB is not already available.
+   *
+   * @param {Object} obj The object to check and atttach indexedDB symbols to.
+   */
+  static attachFakeIDBSymbolsTo(obj) {
+    if (typeof obj.indexedDB === "object") {
+      return;
+    }
+    const iDBSymbols = [
+      "IDBTransaction",
+      "IDBObjectStore",
+      "IDBIndex",
+      "IDBCursor",
+      "IDBCursorWithValue",
+      "IDBKeyRange",
+    ];
+    iDBSymbols.forEach(symbol => {
+      let fakeSymbol = symbol.replace("IDB", "FDB");
+      obj[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
+    });
+    obj.indexedDB = require("fake-indexeddb");
+  }
 }
+
+IDB.attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);

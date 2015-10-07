@@ -12,6 +12,8 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
+const events = new EventEmitter();
+
 const root = typeof window === "object" ? window : global;
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
@@ -21,7 +23,7 @@ describe("Api", () => {
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    api = new Api(FAKE_SERVER_URL);
+    api = new Api(FAKE_SERVER_URL, {events});
   });
 
   afterEach(() => {
@@ -41,7 +43,7 @@ describe("Api", () => {
     });
 
     it("should strip any trailing slash", () => {
-      expect(new Api(`http://test/${SPV}/`).remote).eql(`http://test/${SPV}`);
+      expect(new Api(`http://test/${SPV}/`, {events}).remote).eql(`http://test/${SPV}`);
     });
 
     it("should expose a passed events instance option", () => {
@@ -49,22 +51,18 @@ describe("Api", () => {
       expect(new Api(`http://test/${SPV}`, {events}).events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      expect(new Api(`http://test/${SPV}`).events).to.be.an.instanceOf(EventEmitter);
-    });
-
     it("should propagate its events property to child dependencies", () => {
-      const api = new Api(`http://test/${SPV}`);
+      const api = new Api(`http://test/${SPV}`, {events});
       expect(api.http.events).eql(api.events);
     });
 
     it("should assign version value", () => {
-      expect(new Api(`http://test/${SPV}`).version).eql(SPV);
-      expect(new Api(`http://test/${SPV}/`).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}`, {events}).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}/`, {events}).version).eql(SPV);
     });
 
     it("should accept a headers option", () => {
-      expect(new Api(`http://test/${SPV}`, {headers: {Foo: "Bar"}}).optionHeaders)
+      expect(new Api(`http://test/${SPV}`, {headers: {Foo: "Bar"}, events}).optionHeaders)
         .eql({Foo: "Bar"});
     });
 
@@ -75,7 +73,7 @@ describe("Api", () => {
 
     it("should propagate the requestMode option to the child HTTP instance", () => {
       const requestMode = "no-cors";
-      expect(new Api(`http://test/${SPV}`, {requestMode}).http.requestMode)
+      expect(new Api(`http://test/${SPV}`, {requestMode, events}).http.requestMode)
         .eql(requestMode);
     });
   });
