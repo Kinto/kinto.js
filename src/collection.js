@@ -1,18 +1,13 @@
 "use strict";
 
-import { EventEmitter } from "events";
 import deepEquals from "deep-eql";
 
 import BaseAdapter from "./adapters/base";
-import { attachFakeIDBSymbolsTo, reduceRecords, waterfall } from "./utils";
+import { reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
 import { isUUID4 } from "./utils";
-
-import IDB from "./adapters/IDB";
-
-attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 /**
  * Synchronization result object.
@@ -113,7 +108,7 @@ export default class Collection {
     this._name = name;
     this._lastModified = null;
 
-    const DBAdapter = options.adapter || IDB;
+    const DBAdapter = options.adapter;
     const dbPrefix = options.dbPrefix || "";
     const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
     if (!(db instanceof BaseAdapter)) {
@@ -134,7 +129,7 @@ export default class Collection {
      * The event emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events || new EventEmitter();
+    this.events = options.events;
     /**
      * The IdSchema instance.
      * @type {Object}
