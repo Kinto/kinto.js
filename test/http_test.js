@@ -33,12 +33,8 @@ describe("HTTP class", () => {
       expect(http.events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      expect(new HTTP().events).to.be.an.instanceOf(EventEmitter);
-    });
-
     it("should accept a requestMode option", () => {
-      expect(new HTTP({requestMode: "no-cors"}).requestMode).eql("no-cors");
+      expect(new HTTP({requestMode: "no-cors", events}).requestMode).eql("no-cors");
     });
   });
 

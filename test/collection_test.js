@@ -76,13 +76,6 @@ describe("Collection", () => {
       expect(collection.events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, {events});
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
-      expect(collection.events).to.be.an.instanceOf(EventEmitter);
-    });
-
     it("should propagate its events property to child dependencies", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, {events});
