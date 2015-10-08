@@ -27,7 +27,7 @@ describe("Integration tests", () => {
     // Keeping parent's environment is needed so that pserve's executable
     // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
     env = Object.assign({}, process.env, env);
-    server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env, detached: true});
+    server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env});
     server.stderr.on("data", data => {
       serverLogs.push(data);
     });

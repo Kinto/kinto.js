@@ -1,6 +1,7 @@
 "use strict";
 
 import sinon from "sinon";
+import { expect } from "chai";
 
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
@@ -20,17 +21,222 @@ describe("adapter.IDB", () => {
 
     afterEach(() => sandbox.restore());
 
+    /** @test {IDB#batch} */
+    describe("#batch", () => {
+      describe("Succesful transaction", () => {
+        function successfulBatch() {
+          return db.batch(batch => {
+            batch.create({id: 1, name: "foo"});
+            batch.create({id: 2, name: "bar"});
+            return Promise.resolve(42);
+          });
+        }
+
+        it("should resolve with the batch function result", () => {
+          return successfulBatch()
+            .should.eventually.have.property("result").eql(42);
+        });
+
+        it("should resolve with the list of successful operations", () => {
+          return successfulBatch()
+            .should.eventually.have.property("operations").eql([
+              {type: "create", data: {id: 1, name: "foo"}},
+              {type: "create", data: {id: 2, name: "bar"}},
+            ]);
+        });
+
+        it("should resolve with the list of errors", () => {
+          return successfulBatch()
+            .should.eventually.have.property("errors").eql([]);
+        });
+
+        it("should batch create records", () => {
+          return successfulBatch()
+            .then(_ => db.list())
+            .should.become([
+              {id: 1, name: "foo"},
+              {id: 2, name: "bar"},
+            ]);
+        });
+
+        it("should perform different crud operations in order", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => db.batch(batch => {
+              batch.delete(1);
+              batch.create({id: 2, name: "bar"});
+              batch.update({id: 2, name: "baz"});
+            }))
+            .then(_ => db.list())
+            .should.become([{id: 2, name: "baz"}]);
+        });
+
+        it("should allow following afully async operation flow", () => {
+          return db.batch(batch => {
+            return batch.create({id: 1, name: "foo"})
+              .then(_ => batch.update({id: 1, name: "foo-mod"}))
+              .then(_ => batch.list())
+              .then(list => batch.update(Object.assign({}, list[0], {name: list[0].name + "!"})));
+          })
+            .then(_ => db.list())
+            .should.become([{id: 1, name: "foo-mod!"}]);
+        });
+      });
+
+      describe("Failing transaction", () => {
+        it("should expose failing operation errors", () => {
+          return db.batch(batch => {
+            batch.create({id: 1, name: "foo"});
+            batch.create({id: 2, name: "bar"});
+            batch.create(1);
+            batch.create(2);
+          })
+            .then(res => {
+              expect(res.errors).to.have.length.of(2);
+              expect(res.errors[0].name).eql("DataError");
+              expect(res.errors[0].operation).eql({type: "create", data: 1});
+              expect(res.errors[1].name).eql("DataError");
+              expect(res.errors[1].operation).eql({type: "create", data: 2});
+            });
+        });
+
+        it("should not alter database on transaction error", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => db.batch(batch => {
+              batch.create({id: 2, name: "bar"});
+              batch.create({id: 3, name: "baz"});
+              batch.create({id: 1, name: "foo-dupe"}); // dupe
+              batch.create({id: 4, name: "qux"});
+            }))
+            .then(_ => db.list())
+            .should.become([{id: 1, name: "foo"}]);
+        });
+      });
+
+      describe("#batch.abort", () => {
+        it("should allow aborting the initiated transaction", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => {
+              return db.batch(batch => {
+                batch.create({id: 2, name: "bar"});
+                batch.abort();
+              });
+            })
+            .then(_ => db.list())
+            .should.become([{id: 1, name: "foo"}]);
+        });
+
+        it("should resolve with an empty list of operations", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => {
+              return db.batch(batch => {
+                batch.create({id: 2, name: "bar"});
+                batch.abort();
+              });
+            })
+            .should.eventually.have.property("operations").eql([]);
+        });
+      });
+
+      describe("#batch.get", () => {
+        it("should allow performing a get operation within a batch", () => {
+          return db.create({id: 1, name: "foo"})
+            .then(_ => {
+              return db.batch(batch => {
+                return batch.get(1)
+                  .then(res => {
+                    batch.update({id: 1, name: `Hello ${res.name}`});
+                  });
+              });
+            })
+            .then(res => expect(res).eql({
+              result: undefined,
+              errors: [],
+              operations: [{
+                type: "update",
+                data: {id: 1, name: "Hello foo"}
+              }],
+            }));
+        });
+      });
+
+      describe("#batch.list", () => {
+        const records = [
+          {id: 1, name: "foo"},
+          {id: 2, name: "bar"},
+        ];
+
+        beforeEach(() => {
+          return Promise.all(records.map(record => db.create(record)));
+        });
+
+        it("should not raise any error", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("errors").eql([]);
+        });
+
+        it("should not list list operations", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("operations").eql([]);
+        });
+
+        it("should allow listing records from within a batch", () => {
+          return db.batch(batch => batch.list())
+            .should.eventually.have.property("result").eql(records);
+        });
+
+        it("should allow listing from within batch", () => {
+          return db.batch(batch => {
+            return batch.create({id: 3, name: "baz"})
+              .then(_ => batch.list());
+          }).should.eventually.have.property("result").eql([
+            {id: 1, name: "foo"},
+            {id: 2, name: "bar"},
+            {id: 3, name: "baz"},
+          ]);
+        });
+      });
+    });
+
+    /** @test {IDB#clear} */
+    describe("#clear", () => {
+      it("should reject on transaction error", () => {
+        sandbox.stub(db, "prepare").returns({
+          store: {
+            clear() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
+            }
+          }
+        });
+        return db.clear()
+          .should.be.rejectedWith(Error, "transaction error");
+      });
+
+      it("should prefix error encountered", () => {
+        sandbox.stub(db, "open").returns(Promise.reject("error"));
+        return db.clear()
+          .should.be.rejectedWith(Error, /^Error: clear/);
+      });
+    });
+
     /** @test {IDB#create} */
     describe("#create", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {add() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+          store: {
+            add() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
-          }
+          },
         });
         return db.create({foo: "bar"})
           .should.be.rejectedWith(Error, "transaction error");
@@ -45,13 +251,16 @@ describe("adapter.IDB", () => {
     /** @test {IDB#update} */
     describe("#update", () => {
       it("should reject on transaction error", () => {
-        sandbox.stub(db, "get").returns(Promise.resolve());
         sandbox.stub(db, "prepare").returns({
-          store: {get() {}, put() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+          store: {
+            get() {},
+            put() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
           }
         });
@@ -75,6 +284,23 @@ describe("adapter.IDB", () => {
         return db.get(999)
           .should.eventually.eql(undefined);
       });
+
+      it("should reject on transaction error", () => {
+        sandbox.stub(db, "prepare").returns({
+          store: {
+            get() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
+            }
+          }
+        });
+        return db.get(42)
+          .should.be.rejectedWith(Error, "transaction error");
+      });
     });
 
     /** @test {IDB#delete} */
@@ -85,15 +311,18 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {get() {}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+          store: {
+            delete() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
-          }
+          },
         });
-        return db.get(42)
+        return db.delete(42)
           .should.be.rejectedWith(Error, "transaction error");
       });
 
@@ -112,15 +341,18 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {openCursor() {return {};}},
-          transaction: {
-            get onerror() {},
-            set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+          store: {
+            openCursor() {
+              return {
+                get onerror() {},
+                set onerror(onerror) {
+                  onerror({target: {error: new Error("transaction error")}});
+                }
+              };
             }
           }
         });
-        return db.list({})
+        return db.list()
           .should.be.rejectedWith(Error, "transaction error");
       });
     });

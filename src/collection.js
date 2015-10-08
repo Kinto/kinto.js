@@ -77,6 +77,22 @@ export class SyncResultObject {
   }
 }
 
+function mark(status, record) {
+  return Object.assign({}, record, {_status: status});
+}
+
+function markDeleted(record) {
+  return mark("deleted", record);
+}
+
+function markSynced(record) {
+  return mark("synced", record);
+}
+
+function bumpLastModified(record, lastModified) {
+  return Object.assign({}, record, {last_modified: lastModified});
+}
+
 function createUUIDSchema() {
   return {
     generate() {
@@ -345,7 +361,7 @@ export default class Collection {
       } else if (options.synced) {
         newStatus = "synced";
       }
-      const updatedRecord = Object.assign({}, record, {_status: newStatus});
+      const updatedRecord = mark(newStatus, record);
       return this.db.update(updatedRecord).then(record => {
         return {data: record, permissions: {}};
       });
@@ -398,9 +414,7 @@ export default class Collection {
             permissions: {}
           });
         } else {
-          return this.update(Object.assign({}, res.data, {
-            _status: "deleted"
-          }));
+          return this.update(markDeleted(res.data));
         }
       }
       return this.db.delete(id).then(id => {
@@ -440,49 +454,45 @@ export default class Collection {
    *
    * @param  {Object} local  The local record object.
    * @param  {Object} remote The remote change object.
-   * @return {Promise}
+   * @return {Object}
    */
-  _processChangeImport(local, remote) {
+  _processChangeImport(batch, local, remote) {
     const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
     if (local._status !== "synced") {
       // Locally deleted, unsynced: scheduled for remote deletion.
       if (local._status === "deleted") {
         return {type: "skipped", data: local};
-      }
-      if (identical) {
+      } else if (identical) {
         // If records are identical, import anyway, so we bump the
         // local last_modified value from the server and set record
         // status to "synced".
-        return this.update(remote, {synced: true}).then(res => {
-          return {type: "updated", data: res.data};
-        });
+        return batch.update(markSynced(remote));
+      } else {
+        return {
+          type: "conflicts",
+          data: {type: "incoming", local: local, remote: remote}
+        };
       }
-      return {
-        type: "conflicts",
-        data: {type: "incoming", local: local, remote: remote}
-      };
-    }
-    if (remote.deleted) {
-      return this.delete(remote.id, {virtual: false}).then(res => {
-        return {type: "deleted", data: res.data};
-      });
-    }
-    return this.update(remote, {synced: true}).then(updated => {
+    } else if (remote.deleted) {
+      return batch.delete(remote.id);
+    } else if (identical) {
       // if identical, simply exclude it from all lists
-      const type = identical ? "void" : "updated";
-      return {type, data: updated.data};
-    });
+      return {type: "void", data: remote};
+    } else {
+      return batch.update(markSynced(remote));
+    }
   }
 
   /**
    * Import a single change into the local database.
    *
-   * @param  {Object} change
+   * @param  {Object} batch   The adapter's batch object.
+   * @param  {Object} change  The change object.
    * @return {Promise}
    */
-  _importChange(change) {
+  _importChange(batch, change) {
     var _decodedChange, decodePromise;
-    // if change is a deletion, skip decoding
+    // If change is a deletion, skip decoding
     if (change.deleted) {
       decodePromise = Promise.resolve(change);
     } else {
@@ -491,24 +501,20 @@ export default class Collection {
     return decodePromise
       .then(change => {
         _decodedChange = change;
-        return this.get(_decodedChange.id, {includeDeleted: true});
+        // Check for an already existing local version
+        return batch.get(_decodedChange.id);
       })
-      // Matching local record found
-      .then(res => this._processChangeImport(res.data, _decodedChange))
-      .catch(err => {
-        if (!(/not found/i).test(err.message)) {
-          return {type: "errors", data: err};
-        }
-        // Not found locally but remote change is marked as deleted; skip to
-        // avoid recreation.
-        if (_decodedChange.deleted) {
+      .then(local => {
+        if (local) {
+          // Local version found; process updating.
+          return this._processChangeImport(batch, local, _decodedChange);
+        } else if (_decodedChange.deleted) {
+          // Remotely deleted, missing locally; skipping.
           return {type: "skipped", data: _decodedChange};
+        } else {
+          // Missing locally, remotely created; importing locally.
+          return batch.create(markSynced(_decodedChange));
         }
-        return this.create(_decodedChange, {synced: true})
-          // If everything went fine, expose created record data
-          .then(res => ({type: "created", data: res.data}))
-          // Expose individual creation errors
-          .catch(err => ({type: "errors", data: err}));
       });
   }
 
@@ -520,15 +526,30 @@ export default class Collection {
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
-    return Promise.all(changeObject.changes.map(change => {
-      return this._importChange(change);
-    }))
-      .then(imports => {
-        for (let imported of imports) {
-          if (imported.type !== "void") {
-            syncResultObject.add(imported.type, imported.data);
+    const conflicts = [], skipped = [];
+    // Ensure all imports are done within a single transaction
+    return this.db.batch(batch => {
+      return Promise.all(changeObject.changes.map(change => {
+        return this._importChange(batch, change).then(importResult => {
+          if (importResult.type === "conflicts") {
+            conflicts.push(importResult.data);
+          } else if (importResult.type === "skipped") {
+            skipped.push(importResult.data);
           }
-        }
+          return importResult;
+        });
+      }));
+    })
+      .then(({operations, errors}) => {
+        syncResultObject.add("skipped", skipped);
+        syncResultObject.add("conflicts", conflicts);
+        syncResultObject.add("errors", errors);
+        operations.forEach(operation => {
+          if (operation.type !== "void") {
+            // operations can only be create(d), update(d), delete(d)
+            syncResultObject.add(`${operation.type}d`, operation.data);
+          }
+        });
         return syncResultObject;
       })
       .then(syncResultObject => {
@@ -622,39 +643,52 @@ export default class Collection {
 
     // Fetch local changes
     return this.gatherLocalChanges()
-      .then(({toDelete, toSync}) => {
-        return Promise.all([
-          // Delete never synced records marked for deletion
-          Promise.all(toDelete.map(record => {
-            return this.delete(record.id, {virtual: false});
-          })),
+      .then(localChanges => {
+        // Delete never synced records marked for deletion
+        return this.db.batch(batch => {
+          for (let record of localChanges.toDelete) {
+            batch.delete(record.id);
+          }
+        }).then(_ => {
           // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options)
-        ]);
+          return this.api.batch(this.bucket, this.name, localChanges.toSync, options);
+        });
       })
-      // Update published local records
-      .then(([deleted, synced]) => {
+      // Prepare result object and decode published records
+      .then(synced => {
         // Merge outgoing errors into sync result object
         syncResultObject.add("errors", synced.errors);
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", synced.conflicts);
-        // Process local updates following published changes
+        // Decode published records
         return Promise.all(synced.published.map(record => {
-          if (record.deleted) {
-            // Remote deletion was successful, refect it locally
-            return this.delete(record.id, {virtual: false}).then(res => {
-              // Amend result data with the deleted attribute set
-              return {data: {id: res.data.id, deleted: true}};
-            });
-          } else {
-            // Remote create/update was successful, reflect it locally
-            return this._decodeRecord("remote", record)
-              .then(record => this.update(record, {synced: true}));
+          return record.deleted ? record : this._decodeRecord("remote", record);
+        }));
+      })
+      // Batch perform required local updates
+      .then(published => {
+        return this.db.batch(batch => {
+          for (let record of published) {
+            if (record.deleted) {
+              // Remote deletion to reflect locally
+              batch.delete(record.id);
+            } else {
+              // Remote creation/update, reflect it locally
+              batch.update(markSynced(record));
+            }
           }
-        })).then(published => {
-          syncResultObject.add("published", published.map(res => res.data));
-          return syncResultObject;
         });
+      })
+      .then(({operations, errors}) => {
+        return syncResultObject
+          .add("errors", errors)
+          .add("published", operations.map(operation => {
+            if (operation.type === "delete") {
+              // Expose published deletion in a more meaningful fashion
+              return {deleted: true, id: operation.data};
+            }
+            return operation.data;
+          }));
       })
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy))
@@ -670,9 +704,11 @@ export default class Collection {
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
-          return Promise.all(resolvedUnsynced.map(record => {
-            return this.update(record, {synced: true});
-          })).then(_ => result);
+          return this.db.batch(batch => {
+            for (let record of resolvedUnsynced) {
+              batch.update(markSynced(record));
+            }
+          }).then(_ => result);
         }
       });
   }
@@ -687,10 +723,9 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
-    return this.update(Object.assign({}, resolution, {
-      // Ensure local record has the latest authoritative timestamp
-      last_modified: conflict.remote.last_modified
-    }));
+    // Ensure local record has the latest authoritative timestamp
+    return this.update(
+      bumpLastModified(resolution, conflict.remote.last_modified));
   }
 
   /**
@@ -704,14 +739,17 @@ export default class Collection {
     if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
       return Promise.resolve(result);
     }
-    return Promise.all(result.conflicts.map(conflict => {
-      const resolution = strategy === Collection.strategy.CLIENT_WINS ?
-                         conflict.local : conflict.remote;
-      return this.resolve(conflict, resolution);
-    })).then(imports => {
+    return this.db.batch(batch => {
+      return Promise.all(result.conflicts.map(conflict => {
+        const resolution = strategy === Collection.strategy.CLIENT_WINS ?
+                           conflict.local : conflict.remote;
+        // Ensure local record has the latest authoritative timestamp
+        return batch.update(bumpLastModified(resolution, conflict.remote.last_modified));
+      }));
+    }).then(batchResult => {
       return result
         .reset("conflicts")
-        .add("resolved", imports.map(res => res.data));
+        .add("resolved", batchResult.result.map(res => res.data));
     });
   }
 

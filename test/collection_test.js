@@ -47,7 +47,7 @@ describe("Collection", () => {
   }
 
   function createIntegerIdSchema() {
-    var _next = 0;
+    var _next = 1;
     return {
       generate() {
         return _next++;
@@ -380,10 +380,16 @@ describe("Collection", () => {
 
     it("should update record status on update", () => {
       return articles.create(article)
-        .then(res => res.data)
-        .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
+        .then(res => articles.update(Object.assign({}, res.data, {title: "blah"})))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
+    });
+
+    it("should mark record as synced when the synced option is true", () => {
+      return articles.create(article)
+        .then(res => articles.update(res.data, {synced: true}))
+        .then(res => res.data._status)
+        .should.eventually.eql("synced");
     });
 
     it("should reject updates on a non-existent record", () => {
@@ -777,7 +783,7 @@ describe("Collection", () => {
         {id: id_3, title: "art3"},   // to be created
         {id: id_4, deleted: true},   // to be deleted
         {id: id_6, deleted: true},   // remotely deleted & missing locally, skipped
-        {id: id_7, title: "art7-b"}, // remotely conflicting
+        {id: id_7, title: "art7-b"}, // remotely updated
         {id: id_8, title: "art8"},   // to be created
       ];
 
@@ -840,9 +846,7 @@ describe("Collection", () => {
       it("should resolve with imported deletions", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
-          .should.eventually.become([
-            {id: id_4}
-          ]);
+          .should.eventually.become([id_4]);
       });
 
       it("should resolve with no conflicts detected", () => {
@@ -865,12 +869,24 @@ describe("Collection", () => {
           ]);
       });
 
-      it("should skip already locally deleted data", () => {
+      it("should list skipped data", () => {
         return articles.create({title: "foo"})
           .then(res => articles.delete(res.data.id))
-          .then(res => articles._importChange({id: res.data.id, deleted: true}))
-          .then(res => res.data.title)
+          .then(res => articles.importChanges(result, {
+            changes: [{id: res.data.id, deleted: true}]
+          }))
+          .then(res => res.skipped[0].title)
           .should.eventually.become("foo");
+      });
+
+      it("should not list skipped entries as deleted", () => {
+        return articles.create({title: "foo"})
+          .then(res => articles.delete(res.data.id))
+          .then(res => articles.importChanges(result, {
+            changes: [{id: res.data.id, deleted: true}]
+          }))
+          .then(res => res.deleted)
+          .should.eventually.have.length.of(0);
       });
 
       it("should not list identical records as skipped", () => {
@@ -884,16 +900,15 @@ describe("Collection", () => {
       });
 
       describe("Error handling", () => {
-        it("should expose per-record import errors", () => {
+        it("should expose batch operation errors", () => {
           const err1 = new Error("err1");
           const err2 = new Error("err2");
-          sandbox.stub(articles, "create")
-            .onCall(0).returns(Promise.reject(err1))
-            .onCall(1).returns(Promise.reject(err2));
+          sandbox.stub(articles.db, "batch")
+            .returns(Promise.resolve({operations: [], errors: [err1, err2]}));
 
           return articles.pullChanges(result)
-          .then(res => res.errors)
-          .should.become([err1, err2]);
+            .then(res => res.errors)
+            .should.become([err1, err2]);
         });
       });
     });
@@ -1000,11 +1015,9 @@ describe("Collection", () => {
     });
 
     it("should return errors when encountered", () => {
-      sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
-
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
-        .should.eventually.become(["unknown error"]);
+        .should.eventually.become([new Error("Id not provided.")]);
     });
 
     it("should decode incoming encoded records using a single transformer", () => {

@@ -3,13 +3,193 @@
 import BaseAdapter from "./base.js";
 
 /**
+ * Batch operations class. Executes a function providing an object exposing an
+ * API to schedule atomic CRUD operations and wrap them within and IDB
+ * transaction.
+ */
+class Batch {
+  /**
+   * Constructor.
+   *
+   * @param  {IDBTransaction} transaction
+   * @param  {IDBStore}       store
+   */
+  constructor(transaction, store) {
+    this._transaction = transaction;
+    this._store = store;
+    this._operations = [];
+    this._errors = [];
+  }
+
+  /**
+   * IDBStore methods map.
+   */
+  static get BATCH_STORE_METHODS() {
+    return {
+      clear:  "clear",
+      create: "add",
+      update: "put",
+      delete: "delete"
+    };
+  }
+
+  /**
+   * Aborts the current transaction, cleaning all pending operations.
+   */
+  abort() {
+    this._operations.length = 0;
+    this._transaction.abort();
+  }
+
+  /**
+   * Retrieves an existing record by its id. Note that this method won't find
+   * records scheduled for write within the current transaction.
+   *
+   * @param  {Number|String} id
+   * @return {Object}
+   */
+  get(id) {
+    if (!id) {
+      return Promise.reject(new Error("Id not provided."));
+    }
+    return new Promise((resolve, reject) => {
+      const request = this._store.get(id);
+      request.onerror = event => reject(event.target.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  /**
+   * Retrieves all existing records. Note that this method won't find records
+   * scheduled for write within the current transaction.
+   *
+   * @return {Array}
+   */
+  list() {
+    return new Promise((resolve, reject) => {
+      const results = [];
+      const request = this._store.openCursor();
+      request.onerror = event => reject(event.target.error);
+      request.onsuccess = event => {
+        var cursor = event.target.result;
+        if (cursor) {
+          results.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(results);
+        }
+      };
+    });
+  }
+
+  /**
+   * Schedules a write operation for current transaction.
+   *
+   * @param  {String} type
+   * @param  {Object} data
+   * @return {Promise}
+   */
+  _scheduleWrite(type, data) {
+    const operation = {type, data};
+    this._operations.push(operation);
+    return new Promise((resolve, reject) => {
+      const storeMethod = Batch.BATCH_STORE_METHODS[type];
+      try {
+        const request = this._store[storeMethod](data);
+        request.onerror = event => {
+          this._errors.push(event.target.error);
+          reject(event.target.error);
+        };
+        request.onsuccess = event => resolve(operation);
+      } catch (err) {
+        err.operation = operation;
+        this._errors.push(err);
+        reject(event.target.err);
+      }
+    });
+  }
+
+  /**
+   * Clears the current store.
+   *
+   * @return {Promise} A promise resolving with the operation descriptor.
+   */
+  clear() {
+    return this._scheduleWrite("clear");
+  }
+
+  /**
+   * Adds a record to the store.
+   *
+   * @return {Promise} A promise resolving with the operation descriptor.
+   */
+  create(data) {
+    return this._scheduleWrite("create", data);
+  }
+
+  /**
+   * Updates a record from the store.
+   *
+   * @return {Promise} A promise resolving with the operation descriptor.
+   */
+  update(data) {
+    return this._scheduleWrite("update", data);
+  }
+
+  /**
+   * Deletes a record from the store.
+   *
+   * @return {Promise} A promise resolving with the operation descriptor.
+   */
+  delete(data) {
+    return this._scheduleWrite("delete", data);
+  }
+
+  /**
+   * Registers a function performing the planned transactional operations, and
+   * commits the transaction.
+   *
+   * @param  {Function(Batch)} operationsFn The function planning operations.
+   * @return {Promise}
+   */
+  execute(operationsFn) {
+    return Promise.resolve(operationsFn(this))
+      .then(result => {
+        return new Promise((resolve, reject) => {
+          const _resolve = result => resolve({
+            result,
+            operations: this._operations,
+            errors: this._errors,
+          });
+          this._transaction.onerror = event => {
+            this._errors = this._errors.concat({
+              type: "error",
+              error: event.target.error
+            });
+            _resolve(result);
+          };
+          this._transaction.onabort = () => _resolve(result);
+          this._transaction.oncomplete = () => _resolve(result);
+        });
+      })
+      .catch(err => {
+        return {
+          result: undefined,
+          operations: this._operations,
+          errors: this._errors.concat(err),
+        };
+      });
+  }
+}
+
+/**
  * IndexedDB adapter.
  */
 export default class IDB extends BaseAdapter {
   /**
-   * Constructor.
+   * Constructs this adapter.
    *
-   * @param  {String} dbname The database nale.
+   * @param  {String} dbname The database name.
    */
   constructor(dbname) {
     super();
@@ -22,9 +202,16 @@ export default class IDB extends BaseAdapter {
     this.dbname = dbname;
   }
 
+  /**
+   * Returns a functtion decorating an error and rethrowing it, preserving its
+   * stack.
+   *
+   * @param  {String} method The name of the function the error has been thrown
+   *                         from.
+   */
   _handleError(method) {
     return err => {
-      const error = new Error(method + "() " + err.message);
+      const error = new Error(method + "() " + err);
       error.stack = err.stack;
       throw error;
     };
@@ -91,19 +278,47 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
+   * Starts a transaction and executes the batch operations described in the
+   * provided function.
+   *
+   * @param  {Function} operationsFn The operations function, which should
+   *                                 either return nothing or a Promise.
+   * @return {Promise}
+   */
+  batch(operationsFn) {
+    return this.open().then(() => {
+      const {transaction, store} = this.prepare("readwrite");
+      return new Batch(transaction, store).execute(operationsFn);
+    });
+  }
+
+  /**
+   * Executes a single operation within a transaction.
+   *
+   * @param  {String} name The operation name.
+   * @param  {Any}    data The operation data.
+   * @return {Promise}
+   */
+  _singleOperationTransaction(name, data) {
+    return this.batch(batch => batch[name](data))
+      .catch(this._handleError(name))
+      .then(res => {
+        if (res.errors.length > 0) {
+          throw res.errors[0];
+        }
+        // get() and list() expose their result directly, while clear(),
+        // create(), update() and delete() put them in a `data` propertty.
+        return res.result && "data" in res.result ? res.result.data : res.result;
+      });
+  }
+
+  /**
    * Deletes every records in the current collection.
    *
    * @return {Promise}
    */
   clear() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.clear();
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve();
-      });
-    }).catch(this._handleError("clear"));
+    return this._singleOperationTransaction("clear");
   }
 
   /**
@@ -115,14 +330,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.add(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("create"));
+    return this._singleOperationTransaction("create", record);
   }
 
   /**
@@ -132,31 +340,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.put(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("update"));
-  }
-
-  /**
-   * Retrieve a record by its primary key from the IndexedDB database.
-   *
-   * @param  {String} id The record id.
-   * @return {Promise}
-   */
-  get(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare();
-        const request = store.get(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(request.result);
-      });
-    }).catch(this._handleError("get"));
+    return this._singleOperationTransaction("update", record);
   }
 
   /**
@@ -166,14 +350,17 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   delete(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.delete(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(id);
-      });
-    }).catch(this._handleError("delete"));
+    return this._singleOperationTransaction("delete", id);
+  }
+
+  /**
+   * Retrieve a record by its primary key from the IndexedDB database.
+   *
+   * @param  {String} id The record id.
+   * @return {Promise}
+   */
+  get(id) {
+    return this._singleOperationTransaction("get", id);
   }
 
   /**
@@ -182,22 +369,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   list() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const results = [];
-        const {transaction, store} = this.prepare();
-        const request = store.openCursor();
-        request.onsuccess = function(event) {
-          var cursor = event.target.result;
-          if (cursor) {
-            results.push(cursor.value);
-            cursor.continue();
-          }
-        };
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => resolve(results);
-      });
-    }).catch(this._handleError("list"));
+    return this._singleOperationTransaction("list");
   }
 
   /**
