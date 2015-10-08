@@ -3,32 +3,6 @@
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
- * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
- * This piece of code will register them with the same names as native API,
- * only if indexedDB is not already available.
- *
- * @param {Object} obj The object to check and atttach indexedDB symbols to.
- */
-export function attachFakeIDBSymbolsTo(obj) {
-  if (typeof obj.indexedDB === "object") {
-    return;
-  }
-  const iDBSymbols = [
-    "IDBTransaction",
-    "IDBObjectStore",
-    "IDBIndex",
-    "IDBCursor",
-    "IDBCursorWithValue",
-    "IDBKeyRange",
-  ];
-  iDBSymbols.forEach(symbol => {
-    let fakeSymbol = symbol.replace("IDB", "FDB");
-    obj[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
-  });
-  obj.indexedDB = require("fake-indexeddb");
-}
-
-/**
  * Returns the specified string with double quotes.
  *
  * @param  {String} str  A string to quote.
