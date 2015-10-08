@@ -29,7 +29,7 @@ describe("Collection", () => {
     events = new EventEmitter();
     idSchema = options.idSchema;
     remoteTransformers = options.remoteTransformers;
-    api = new Api(FAKE_SERVER_URL, {events});
+    api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
       events,
       idSchema,
@@ -72,14 +72,14 @@ describe("Collection", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, {events});
+      const api = new Api(FAKE_SERVER_URL, events);
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
       expect(collection.events).to.eql(events);
     });
 
     it("should propagate its events property to child dependencies", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, {events});
+      const api = new Api(FAKE_SERVER_URL, events);
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
       expect(collection.api.events).eql(collection.events);
       expect(collection.api.http.events).eql(collection.events);
@@ -95,7 +95,7 @@ describe("Collection", () => {
 
     it("should complain if a database adapter is not provided", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, {events});
+      const api = new Api(FAKE_SERVER_URL, events);
       expect(() => {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
       }).to.Throw(Error,/No adapter provided/);
@@ -103,7 +103,7 @@ describe("Collection", () => {
 
     it("should throw incompatible adapter options", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, {events});
+      const api = new Api(FAKE_SERVER_URL, events);
       expect(() => {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {adapter: function(){}});
       }).to.Throw(Error, /Unsupported adapter/);

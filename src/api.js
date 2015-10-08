@@ -35,13 +35,13 @@ export default class Api {
    *
    * Options:
    * - {Object}       headers The key-value headers to pass to each request.
-   * - {EventEmitter} events  The events handler.
    * - {String}       events  The HTTP request mode.
    *
-   * @param  {String}  remote   The remote URL.
-   * @param  {Object}  options  The options object.
+   * @param  {String}       remote  The remote URL.
+   * @param  {EventEmitter} events  The events handler
+   * @param  {Object}       options The options object.
    */
-  constructor(remote, options={}) {
+  constructor(remote, events, options={}) {
     if (typeof(remote) !== "string" || !remote.length) {
       throw new Error("Invalid remote URL: " + remote);
     }
@@ -69,7 +69,10 @@ export default class Api {
      * The even emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events;
+    if (!events) {
+      throw new Error("No events handler provided");
+    }
+    this.events = events;
     try {
       /**
        * The current server protocol version, eg. `v1`.

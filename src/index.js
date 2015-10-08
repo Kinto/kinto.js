@@ -32,7 +32,6 @@ export default class Kinto extends KintoBase {
       events: new EventEmitter()
     };
 
-    let expandedOptions = Object.assign(defaults, options);
-    super(expandedOptions);
+    super(Object.assign({}, defaults, options));
   }
 }
