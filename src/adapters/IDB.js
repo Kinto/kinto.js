@@ -278,7 +278,8 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Batch operations.
+   * Starts a transaction and executes the batch operations described in the
+   * provided function.
    *
    * @param  {Function} operationsFn The operations function, which should
    *                                 either return nothing or a Promise.
@@ -287,8 +288,7 @@ export default class IDB extends BaseAdapter {
   batch(operationsFn) {
     return this.open().then(() => {
       const {transaction, store} = this.prepare("readwrite");
-      const batch = new Batch(transaction, store);
-      return batch.execute(operationsFn);
+      return new Batch(transaction, store).execute(operationsFn);
     });
   }
 
