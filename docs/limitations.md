@@ -16,9 +16,9 @@ Kinto.js won't try to outsmart you as a conflict resolver. Instead, it provides 
 
 ## Transactions
 
-Ideally, we should wrap the whole synchronization flow related operations within a single transaction. While that's a goal and [part of our roadmap](https://github.com/mozilla-services/kinto.js/issues/16), right now this isn't implemented.
+While Kinto.js supports transactions at the local database level, the entire synchronization flow related operations is not currently wrapped within a *single* transaction.
 
-That means if anything fails during the sync flow while some records have already been processed locally, there won't be any rollback performed — and you'll have to handle the situation by hand.
+That means if anything fails during a synchronization step while some records have already been processed locally, there won't be any full rollback automatically performed — and you'll have to handle the situation by hand.
 
 Fortunately, as in theory records don't carry any relations information, usually that's simply matter of calling `#sync()` again once you've addressed the reported issues.
 
