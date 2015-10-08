@@ -21,18 +21,22 @@ export default class HTTP {
    * Constructor.
    *
    * Options:
-   * - {EventEmitter} events       Events handler.
    * - {String}       requestMode  The HTTP request mode (default: `"cors"`).
    *
-   * @param  {Object} options The options object.
+   * @param {EventEmitter} events  The event handler.
+   * @param  {Object}      options The options object.
    */
-  constructor(options={requestMode: "cors"}) {
+  constructor(events, options={requestMode: "cors"}) {
     // public properties
     /**
-     * The eventt emitter instance.
+     * The event emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events;
+    if (!events) {
+      throw new Error("No events handler provided");
+    }
+    this.events = events;
+
     /**
      * The request mode.
      * @see  https://fetch.spec.whatwg.org/#requestmode

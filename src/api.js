@@ -89,7 +89,7 @@ export default class Api {
      * The HTTP instance.
      * @type {HTTP}
      */
-    this.http = new HTTP({events: this.events, requestMode: options.requestMode});
+    this.http = new HTTP(this.events, {requestMode: options.requestMode});
     this._registerHTTPEvents();
   }
 
