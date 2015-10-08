@@ -1,9 +1,6 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { attachFakeIDBSymbolsTo } from "./../utils";
-
-attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 /**
  * IndexedDB adapter.

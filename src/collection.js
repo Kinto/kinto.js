@@ -4,15 +4,13 @@ import { EventEmitter } from "events";
 import deepEquals from "deep-eql";
 
 import BaseAdapter from "./adapters/base";
-import { attachFakeIDBSymbolsTo, reduceRecords, waterfall } from "./utils";
+import { reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
 import { isUUID4 } from "./utils";
 
 import IDB from "./adapters/IDB";
-
-attachFakeIDBSymbolsTo(typeof global === "object" ? global : window);
 
 /**
  * Synchronization result object.
