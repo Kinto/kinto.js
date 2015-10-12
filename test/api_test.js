@@ -12,17 +12,16 @@ chai.use(chaiAsPromised);
 chai.should();
 chai.config.includeStack = true;
 
-const events = new EventEmitter();
-
 const root = typeof window === "object" ? window : global;
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Api} */
 describe("Api", () => {
-  var sandbox, api;
+  var sandbox, api, events;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
+    events = new EventEmitter();
     api = new Api(FAKE_SERVER_URL, events);
   });
 
@@ -47,7 +46,6 @@ describe("Api", () => {
     });
 
     it("should expose a passed events instance option", () => {
-      const events = new EventEmitter();
       expect(new Api(`http://test/${SPV}`, events).events).to.eql(events);
     });
 
