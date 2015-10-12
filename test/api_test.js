@@ -17,11 +17,12 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Api} */
 describe("Api", () => {
-  var sandbox, api;
+  var sandbox, api, events;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    api = new Api(FAKE_SERVER_URL);
+    events = new EventEmitter();
+    api = new Api(FAKE_SERVER_URL, events);
   });
 
   afterEach(() => {
@@ -31,52 +32,53 @@ describe("Api", () => {
   /** @test {Api#constructor} */
   describe("#constructor", () => {
     it("should check that `remote` is a string", () => {
-      expect(() => new Api(42))
+      expect(() => new Api(42, events))
         .to.Throw(Error, /Invalid remote URL/);
     });
 
     it("should validate `remote` arg value", () => {
-      expect(() => new Api("http://nope"))
+      expect(() => new Api("http://nope", events))
         .to.Throw(Error, /The remote URL must contain the version/);
     });
 
     it("should strip any trailing slash", () => {
-      expect(new Api(`http://test/${SPV}/`).remote).eql(`http://test/${SPV}`);
+      expect(new Api(`http://test/${SPV}/`, events).remote).eql(`http://test/${SPV}`);
     });
 
     it("should expose a passed events instance option", () => {
-      const events = new EventEmitter();
-      expect(new Api(`http://test/${SPV}`, {events}).events).to.eql(events);
-    });
-
-    it("should create an events property if none passed", () => {
-      expect(new Api(`http://test/${SPV}`).events).to.be.an.instanceOf(EventEmitter);
+      expect(new Api(`http://test/${SPV}`, events).events).to.eql(events);
     });
 
     it("should propagate its events property to child dependencies", () => {
-      const api = new Api(`http://test/${SPV}`);
+      const api = new Api(`http://test/${SPV}`, events);
       expect(api.http.events).eql(api.events);
     });
 
     it("should assign version value", () => {
-      expect(new Api(`http://test/${SPV}`).version).eql(SPV);
-      expect(new Api(`http://test/${SPV}/`).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}`, events).version).eql(SPV);
+      expect(new Api(`http://test/${SPV}/`, events).version).eql(SPV);
     });
 
     it("should accept a headers option", () => {
-      expect(new Api(`http://test/${SPV}`, {headers: {Foo: "Bar"}}).optionHeaders)
+      expect(new Api(`http://test/${SPV}`, events, {headers: {Foo: "Bar"}}).optionHeaders)
         .eql({Foo: "Bar"});
     });
 
     it("should validate protocol version", () => {
-      expect(() => new Api(`http://test/v999`))
+      expect(() => new Api(`http://test/v999`, events))
         .to.Throw(Error, /^Unsupported protocol version/);
     });
 
     it("should propagate the requestMode option to the child HTTP instance", () => {
       const requestMode = "no-cors";
-      expect(new Api(`http://test/${SPV}`, {requestMode}).http.requestMode)
+      expect(new Api(`http://test/${SPV}`, events, {requestMode}).http.requestMode)
         .eql(requestMode);
+    });
+
+    it("should complain if an events handler is not provided", () => {
+      expect(() => {
+        new Api(`http://test/${SPV}`);
+      }).to.Throw(Error,/No events handler provided/);
     });
   });
 

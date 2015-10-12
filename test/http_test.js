@@ -20,7 +20,7 @@ describe("HTTP class", () => {
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
     events = new EventEmitter();
-    http = new HTTP({events});
+    http = new HTTP(events);
   });
 
   afterEach(() => sandbox.restore());
@@ -29,16 +29,18 @@ describe("HTTP class", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      const http = new HTTP({events});
+      const http = new HTTP(events);
       expect(http.events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      expect(new HTTP().events).to.be.an.instanceOf(EventEmitter);
+    it("should accept a requestMode option", () => {
+      expect(new HTTP(events, {requestMode: "no-cors"}).requestMode).eql("no-cors");
     });
 
-    it("should accept a requestMode option", () => {
-      expect(new HTTP({requestMode: "no-cors"}).requestMode).eql("no-cors");
+    it("should complain if an events handler is not provided", () => {
+      expect(() => {
+        new HTTP();
+      }).to.Throw(Error,/No events handler provided/);
     });
   });
 
@@ -69,14 +71,14 @@ describe("HTTP class", () => {
       });
 
       it("should use default CORS mode", () => {
-        new HTTP().request("/");
+        new HTTP(events).request("/");
 
         expect(fetch.firstCall.args[1].mode)
           .eql("cors");
       });
 
       it("should use configured custom CORS mode", () => {
-        new HTTP({requestMode: "no-cors"}).request("/");
+        new HTTP(events, {requestMode: "no-cors"}).request("/");
 
         expect(fetch.firstCall.args[1].mode)
           .eql("no-cors");
