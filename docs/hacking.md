@@ -85,6 +85,18 @@ To serve them over http locally so you can see your modifications in real time:
 
     $ mkdocs serve
 
+### Generating browsable API docs
+
+API docs are available [online](https://doc.esdoc.org/github.com/Kinto/kinto.js/), and are automatically updated when new commits are pushed to master.
+
+To generate the api docs locally:
+
+```
+$ esdoc -c esdoc.json && open esdoc/index.html
+```
+
+Publication is done manually by submitting new versions to [doc.esdoc.org](https://doc.esdoc.org/-/generate.html).
+
 ## Publishing to npm
 
     $ npm run publish-package

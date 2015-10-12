@@ -1,5 +1,7 @@
 # API documentation
 
+The detailed API documentation is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/). This page provides an abstract of it, aimed at making you immediately productive.
+
 ## The `Kinto` constructor
 
 ```js
@@ -17,7 +19,7 @@ const db = new Kinto(options);
 
 ## Collections
 
-By default, collections are persisted locally in IndexedDB.
+By default, collections are persisted locally in [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API).
 
 > #### Notes
 >
@@ -35,7 +37,7 @@ The collection object has the following (read-only) attribute:
 
 > #### Notes
 >
-> - A single dedicated database and store are created per collection.
+> - A single dedicated database and store are created per collection;
 > - All transactional operations are asynchronous and rely on [Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise).
 
 ## Creating a record
@@ -60,8 +62,9 @@ Result is:
 
 > #### Notes
 >
-> - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29),
-but you can also define a [custom ID schema](#id-schemas)).
+> - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29);
+but you can also define a [custom ID schema](#id-schemas));
+> - Detailed API documentation for `Collection#create()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-create).
 
 ## Retrieving a single record
 
@@ -86,7 +89,8 @@ Result:
 
 > #### Notes
 >
-> - The promise will be rejected if no record is found for that ID.
+> - The promise will be rejected if no record is found for that ID;
+> - Detailed API documentation for `Collection#get()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-get).
 
 ## Updating a record
 
@@ -118,7 +122,8 @@ Result is:
 
 > #### Notes
 >
-> - An ID is required, otherwise the promise will be rejected.
+> - An ID is required, otherwise the promise will be rejected;
+> - Detailed API documentation for `Collection#update()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-update).
 
 ## Deleting records
 
@@ -146,7 +151,8 @@ Result:
 > #### Notes
 >
 > - An ID is required, otherwise the promise will be rejected;
-> - Virtual deletions aren't retrieved when calling `#get()` and `#list()`.
+> - Virtual deletions aren't retrieved when calling [`#get()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-get) and [`#list()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-list);
+> - Detailed API documentation for `Collection#delete()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-delete).
 
 ## Listing records
 
@@ -176,6 +182,7 @@ Result is:
 > #### Notes
 >
 > - Records with `last_modified` attribute were sync'ed on a server.
+> - Detailed API documentation for `Collection#list()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-list).
 
 ### Filtering
 
@@ -226,9 +233,12 @@ Result:
 }
 ```
 
+> #### Notes
+> - Detailed API documentation for `Collection#clear()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-clear).
+
 ## Fetching and publishing changes
 
-Synchronizing local data with remote ones is performed by calling the `#sync()` method.
+Synchronizing local data with remote ones is performed by calling the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) method.
 
 ![](images/sync-flow.png)
 
@@ -236,7 +246,7 @@ Synopsis:
 
 1. Fetch remote changes since last synchronization;
 2. Fail on any conflict encountered;
-    - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts-manually), and call `#sync()` again when done;
+    - The developer has to handle them manually using [`#resolve()`](#resolving-conflicts-manually), and call [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) again when done;
 3. If everything went fine, publish local changes;
     - Fail on any publication conflict detected;
         * If `strategy` is set to `Kinto.syncStrategy.SERVER_WINS`, no client data will overwrite the remote data;
@@ -252,6 +262,9 @@ articles.sync()
     }
   });
 ```
+
+> #### Notes
+> - Detailed API documentation for `Collection#sync()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync).
 
 ### Error handling
 
@@ -274,7 +287,7 @@ For publication conflicts, the `sync()` method accepts a `strategy` option, whic
 > `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
 > be reported in the `conflicts` array. See [`resolving conflicts section`](#resolving-conflicts-manually).
 
-You can override default options by passing `#sync()` a new `options` object; Kinto.js will merge these new values with the default ones:
+You can override default options by passing [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) a new `options` object; Kinto.js will merge these new values with the default ones:
 
 ```js
 import Collection from "kinto/lib/collection";
@@ -293,7 +306,7 @@ articles.sync({
 
 ## The synchronization result object
 
-When the `#sync()` promise is fulfilled, a result object is returned, providing information about the performed operations.
+When the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) promise is fulfilled, a [`SyncResultObject`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~SyncResultObject.html) is returned, providing information about the performed operations.
 
 Here's a sample result object:
 
@@ -325,6 +338,9 @@ The synchronization result object exposes the following properties:
 - `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
 - `resolved`:  The list of conflicting records which have been successfully resolved according to the selected [strategy](#synchronization-strategies) (note that when using the default `MANUAL` strategy, this list is always empty).
 
+> #### Notes
+> - Detailed API documentation for `SyncResultObject` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~SyncResultObject.html).
+
 ## Resolving conflicts manually
 
 When using `Kinto.syncStrategy.MANUAL`, if conflicts occur, they're listed in the `conflicts` property; they must be resolved locally and `sync()` called again.
@@ -352,7 +368,7 @@ The `conflicts` array is in this form:
 ```
 
 Once the developer is done with merging records, conflicts are marked as
-resolved using the `#resolve()` method of the collection:
+resolved using the [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resolve) method of the collection:
 
 ```js
 function sync() {
@@ -379,7 +395,7 @@ Here we're solving encountered conflicts by picking all remote versions. After c
 
 If the Kinto server instance is under heavy load or maintenance, their admins can [send a Backoff header](http://kinto.readthedocs.org/en/latest/api/cliquet/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
 
-When this happens, Kinto.js will reject calls to `#sync()` with an appropriate error message specifying the number of seconds you need to wait before calling it again.
+When this happens, Kinto.js will reject calls to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) with an appropriate error message specifying the number of seconds you need to wait before calling it again.
 
 While not necessarily recommended, if you ever want to bypass this restriction, you can pass the `ignoreBackoff` option set to `true`:
 
@@ -396,7 +412,7 @@ The `Kinto` instance and its other dependencies expose an `events` property you 
 
 Triggered when a `Backoff` HTTP header has been received from the last received response from the server, meaning clients should hold on performing further requests during a given amount of time.
 
-The `backoff` event notifies what's the backoff release timestamp you should wait until before performing another `#sync()` call:
+The `backoff` event notifies what's the backoff release timestamp you should wait until before performing another [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) call:
 
 ```js
 const kinto = new Kinto();
@@ -545,9 +561,9 @@ There's currently no way to deal with adding transformers to an already filled r
 
 **As a rule of thumb, you should only start using transformers on an empty remote collection.**
 
-## ID schemas
+## Custom ID generation using an ID schema
 
-By default, kinto.js uses UUID4 strings for record ID's. If you want to work with an existing body of data, this may not be what you want.
+By default, kinto.js uses [UUID4](https://en.wikipedia.org/wiki/Universally_unique_identifier) strings for record ID's. If you want to work with an existing body of data, this may not be what you want.
 
 You can define a custom ID schema on a collection by passing it to `Kinto#collection`:
 
