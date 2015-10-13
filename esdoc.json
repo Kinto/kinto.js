@@ -1,6 +1,14 @@
 {
   "source": "./src",
   "destination": "./esdoc",
+  "index": "./docs/index.md",
+  "manual": {
+    "installation": "./docs/installation.md",
+    "usage": "./docs/api.md",
+    "example": "./docs/tutorial.md",
+    "faq": "./docs/limitations.md",
+    "changelog": "./CHANGELOG.md"
+  },
   "test": {
     "type": "mocha",
     "source": "./test"
