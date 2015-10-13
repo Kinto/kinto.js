@@ -4,5 +4,15 @@
   "test": {
     "type": "mocha",
     "source": "./test"
-  }
+  },
+  "plugins": [
+    {
+      "name": "esdoc-importpath-plugin",
+      "option": {
+        "replaces": [
+          {"from": "^src", "to": "lib"}
+        ]
+      }
+    }
+  ]
 }
