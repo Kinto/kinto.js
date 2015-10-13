@@ -5,7 +5,7 @@
 If you're using [NodeJS](https://nodejs.org) and [npm](https://www.npmjs.com/) as a frontend package manager, you'll need [NodeJS v0.12.x](https://nodejs.org/download/) installed on your system. Then:
 
 ```js
-$ npm install kinto --save-dev
+$ npm install kinto --save
 ```
 
 > #### Notes
