@@ -8,7 +8,7 @@ const tasks = new Kinto({
 }).collection("tasks");
 
 tasks
-  .add({label: "First item", done: false})
+  .create({label: "First item", done: false})
   .then(_ => tasks.sync());
 ```
 
