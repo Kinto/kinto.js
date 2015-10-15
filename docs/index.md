@@ -19,6 +19,13 @@ tasks
 
 Take the [tutorial](tutorial.md) to get you started, then read about [API usage](api.md) and eventually browse the [detailed API docs](https://doc.esdoc.org/github.com/Kinto/kinto.js/).
 
+## Community & Support
+
+* [Code repository](https://github.com/Kinto/kinto.js)
+* [Issue tracker](https://github.com/Kinto/kinto.js/issues)
+* [Mailing list](https://mail.mozilla.org/listinfo/kinto)
+* IRC: irc.mozilla.org#storage
+
 ## License
 
 [Mozilla Public License v2](https://www.mozilla.org/MPL/2.0/)
