@@ -261,6 +261,17 @@ describe("Api", () => {
           });
       });
 
+      it("should resolve with no changes if HTTP 200 is received with no data", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {}, {"ETag": quote(41)}));
+
+        return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
+          .should.eventually.become({
+            lastModified: 41,
+            changes: []
+          });
+      });
+
       it("should resolve with no changes if HTTP 304 is received", () => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(304, {}));
 
