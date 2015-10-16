@@ -186,7 +186,7 @@ export default class Api {
         const etag = res.headers.get("ETag");  // e.g. '"42"'
         return {
           lastModified: etag ? parseInt(unquote(etag), 10) : options.lastModified,
-          changes: res.json.data
+          changes: res.json && res.json.data ? res.json.data : []
         };
       });
   }
