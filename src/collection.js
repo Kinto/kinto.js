@@ -1,13 +1,11 @@
 "use strict";
 
-import deepEquals from "deep-eql";
-
 import BaseAdapter from "./adapters/base";
 import { reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
-import { isUUID4 } from "./utils";
+import { deepEquals, isUUID4 } from "./utils";
 
 /**
  * Synchronization result object.
