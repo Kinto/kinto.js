@@ -21,6 +21,7 @@ export class SyncResultObject {
     return {
       ok:           true,
       lastModified: null,
+      serverEmpty:  false,
       errors:       [],
       created:      [],
       updated:      [],
@@ -554,9 +555,17 @@ export default class Collection {
    *
    * @return {Object}
    */
-  gatherLocalChanges() {
+  gatherLocalChanges(options={forceAll: false}) {
+    var forceSync = Promise.resolve();
+    if (options.forceAll) {
+      forceSync = this.list({filters: {_status: "synced"}})
+        .then(synced => Promise.all(synced.data.map(r => {
+          return this.update(Object.assign(r, {lastModified: null}));
+        })));
+    }
     var _toDelete;
-    return this.list({}, {includeDeleted: true})
+    return forceSync
+      .then(_ => this.list({}, {includeDeleted: true}))
       .then(res => {
         return res.data.reduce((acc, record) => {
           if (record._status === "deleted" && !record.last_modified) {
@@ -600,6 +609,16 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers
     })
+      // Check if server is empty (flushed or changed).
+      .then(changes => {
+        const firstSync =           (!this.lastModified);
+        const lastModifiedUpdated = (changes.lastModified !== this.lastModified);
+        const emptyCollection =     (changes.changes.length === 0);
+        syncResultObject.serverEmpty = (!firstSync &&
+                                        lastModifiedUpdated &&
+                                        emptyCollection);
+        return changes;
+      })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
@@ -621,7 +640,7 @@ export default class Collection {
     options = Object.assign({safe}, options);
 
     // Fetch local changes
-    return this.gatherLocalChanges()
+    return this.gatherLocalChanges({forceAll: syncResultObject.serverEmpty})
       .then(({toDelete, toSync}) => {
         return Promise.all([
           // Delete never synced records marked for deletion

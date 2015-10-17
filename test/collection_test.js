@@ -918,6 +918,7 @@ describe("Collection", () => {
           .should.eventually.become({
             ok: false,
             lastModified: 42,
+            serverEmpty: false,
             errors:    [],
             created:   [],
             updated:   [],
@@ -963,6 +964,7 @@ describe("Collection", () => {
           .should.eventually.become({
             ok: true,
             lastModified: 42,
+            serverEmpty: false,
             errors:    [],
             created:   [],
             published: [],
@@ -1224,6 +1226,36 @@ describe("Collection", () => {
         sinon.assert.calledOnce(pullChanges);
       });
     });
+
+    describe("Server flushed", () => {
+      beforeEach(() => {
+        // Simulate flushed server.
+        sandbox.stub(articles.api, "fetchChangesSince")
+        .returns(Promise.resolve({
+          lastModified: 42,
+          changes: []
+        }));
+
+        // Simulate previous sync.
+        sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve(41));
+        // Mark **first** existing record as synced.
+        const synced = Object.assign({}, fixtures[0], {id: ids[0], lastModified: 12346});
+        return articles.update(synced, {synced: true});
+      });
+
+      it("reupdates the records already synced", () => {
+        return articles.sync().then(res => {
+          const toSync = articles.api.batch.firstCall.args[2];
+          // One is marked as "updated" and unsynced.
+          expect(toSync.filter(r => r._status == "updated")).have.length.of(1);
+          expect(toSync.filter(r => r.lastModified === null)).have.length.of(1);
+          // Others are still "created".
+          expect(toSync.filter(r => r._status == "created")).have.length.of(2);
+          expect(toSync.filter(r => r.lastModified === undefined)).have.length.of(2);
+        });
+      });
+    });
+
 
     describe("Options", () => {
       var pullChanges;
