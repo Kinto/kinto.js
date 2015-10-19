@@ -23,26 +23,30 @@ describe("Integration tests", () => {
   const serverLogs = [];
 
   function startServer(env) {
-    // Add the provided environment variables to the child process environment.
-    // Keeping parent's environment is needed so that pserve's executable
-    // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
-    env = Object.assign({}, process.env, env);
-    server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env, detached: true});
-    server.stderr.on("data", data => {
-      serverLogs.push(data);
-    });
-    server.on("close", code => {
-      if (code && code > 0) {
-        throw new Error("Server errors encountered:\n" +
-          serverLogs.map(line => line.toString()).join(""));
-      }
+    return new Promise(resolve => {
+      // Add the provided environment variables to the child process environment.
+      // Keeping parent's environment is needed so that pserve's executable
+      // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
+      env = Object.assign({}, process.env, env);
+      server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env, detached: true});
+      server.stderr.on("data", data => {
+        serverLogs.push(data);
+      });
+      server.on("close", code => {
+        if (code && code > 0) {
+          new Error("Server errors encountered:\n" +
+            serverLogs.map(line => line.toString()).join(""));
+        }
+      });
+      // Allow some time for the server to start.
+      setTimeout(resolve, 1000);
     });
   }
 
   function stopServer() {
     server.kill();
     return new Promise(resolve => {
-      setTimeout(() => resolve(), 1000);
+      setTimeout(() => resolve(), 500);
     });
   }
 
@@ -75,19 +79,22 @@ describe("Integration tests", () => {
       headers: {Authorization: "Basic " + btoa("user:pass")}
     });
     tasks = kinto.collection("tasks");
-
-    return tasks.clear().then(_ => flushServer());
   });
 
   afterEach(() => sandbox.restore());
 
   describe("Default server configuration", () => {
-    before(() => {
-      return startServer();
-    });
+    before(() => startServer());
 
-    after(() => {
-      return stopServer();
+    after(() => stopServer());
+
+    beforeEach(() => {
+      return tasks.clear()
+        .then(_ => flushServer())
+        .then(_ => {
+          // XXX refs #114: this should be cleared when db is cleared
+          tasks.db.saveLastModified(null);
+        });
     });
 
     describe("Settings", () => {
@@ -96,7 +103,8 @@ describe("Integration tests", () => {
           .then(_ => tasks.api.serverSettings)
           .should.become({"cliquet.batch_max_requests": 25});
       });
-      it("should share server settings across collections", function() {
+
+      it("should share server settings across collections", () => {
         return tasks.sync()
           .then(_ => kinto.collection("articles").api.serverSettings)
           .should.become({"cliquet.batch_max_requests": 25});
@@ -1080,13 +1088,52 @@ describe("Integration tests", () => {
     });
   });
 
-  describe("Backed off server", () => {
-    before(() => {
-      startServer({CLIQUET_BACKOFF: 10});
+  describe("Flushed server", function() {
+    before(() => startServer());
+
+    after(() => stopServer());
+
+    beforeEach(() => {
+      return tasks.clear()
+        .then(_ => {
+          // XXX refs #114: this should be cleared when db is cleared
+          return tasks.db.saveLastModified(null);
+        })
+        .then(_ => {
+          return Promise.all([
+            tasks.create({name: "foo"}),
+            tasks.create({name: "bar"}),
+          ]);
+        })
+        .then(_ => tasks.sync())
+        .then(_ => flushServer());
     });
 
-    after(() => {
-      return stopServer();
+    it("should reject a call to sync() with appropriate message", () => {
+      return tasks.sync()
+        .should.be.rejectedWith(Error, "Server has been flushed");
+    });
+
+    it("should allow republishing local collection to flushed server", () => {
+      return tasks.sync()
+        .catch(_ => tasks.resetSyncStatus())
+        .then(_ => tasks.sync())
+        .should.eventually.have.property("published").to.have.length.of(2);
+    });
+  });
+
+  describe("Backed off server", () => {
+    before(() => startServer({CLIQUET_BACKOFF: 10}));
+
+    after(() => stopServer());
+
+    beforeEach(() => {
+      return tasks.clear()
+        .then(_ => flushServer())
+        .then(_ => {
+          // XXX refs #114: this should be cleared when db is cleared
+          tasks.db.saveLastModified(null);
+        });
     });
 
     it("should reject sync when the server sends a Backoff header", () => {
@@ -1097,10 +1144,19 @@ describe("Integration tests", () => {
   });
 
   describe("Deprecated protocol version", () => {
+    beforeEach(() => {
+      return tasks.clear()
+        .then(_ => flushServer())
+        .then(_ => {
+          // XXX refs #114: this should be cleared when db is cleared
+          tasks.db.saveLastModified(null);
+        });
+    });
+
     describe("Soft EOL", () => {
       before(() => {
         const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
-        startServer({
+        return startServer({
           CLIQUET_EOS: tomorrow,
           CLIQUET_EOS_URL: "http://www.perdu.com",
           CLIQUET_EOS_MESSAGE: "Boom",
@@ -1122,7 +1178,7 @@ describe("Integration tests", () => {
     describe("Hard EOL", () => {
       before(() => {
         const lastWeek = new Date(new Date().getTime() - (7 * 86400000)).toJSON().slice(0, 10);
-        startServer({
+        return startServer({
           CLIQUET_EOS: lastWeek,
           CLIQUET_EOS_URL: "http://www.perdu.com",
           CLIQUET_EOS_MESSAGE: "Boom",

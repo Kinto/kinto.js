@@ -234,6 +234,8 @@ export default class Collection {
   /**
    * Deletes every records in the current collection.
    *
+   * XXX: refs #114, collection metas should be cleared.
+   *
    * @return {Promise}
    */
   clear() {
@@ -547,6 +549,38 @@ export default class Collection {
   }
 
   /**
+   * Resets the local records as if they were never synced; existing records are
+   * marked as newly created, deleted records are dropped.
+   *
+   * A next call to `sync()` will thus republish the whole content of the
+   * local collection to the server.
+   *
+   * @return {Promise} Resolves with the number of processed records.
+   */
+  resetSyncStatus() {
+    var _count;
+    return this.list({}, {includeDeleted: true})
+      .then(res => {
+        return Promise.all(res.data.map(r => {
+          // Garbage collect deleted records.
+          if (r._status === "deleted") {
+            return this.db.delete(r.id);
+          }
+          // Records that were synced become «created».
+          return this.db.update(Object.assign({}, r, {
+            last_modified: undefined,
+            _status: "created"
+          }));
+        }));
+      })
+      .then(res => {
+        _count = res.length;
+        return this.db.saveLastModified(null);
+      })
+      .then(_ => _count);
+  }
+
+  /**
    * Returns an object containing two lists:
    *
    * - `toDelete`: unsynced deleted records we can safely delete;
@@ -717,10 +751,10 @@ export default class Collection {
 
   /**
    * Synchronize remote and local data. The promise will resolve with a
-   * SyncResultObject, though will reject:
+   * `SyncResultObject`, though will reject:
    *
-   * - if conflicts have been encountered, with the same result;
-   * - if the server is currently backed off.
+   * - if the server is currently backed off;
+   * - if the server has been detected flushed.
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.

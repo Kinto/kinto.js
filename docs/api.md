@@ -383,13 +383,29 @@ function sync() {
       }))
       .then(_ => sync());
     })
-    .catch(error => {
-      console.error(error);
-    });
+  .catch(console.error.bind(console));
 }
 ```
 
 Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again, until no conflicts occur.
+
+## The case of a new/flushed server
+
+In case a pristine or [flushed](http://kinto.readthedocs.org/en/latest/configuration/settings.html?highlight=flush#activating-the-flush-endpoint) server is used against an existing local database, [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) will reject with a *«Server has been flushed»* error. That means the remote server doesn't hold any data, while your local database is marked as synchronized and probably contains records you don't want to lose.
+
+So instead of wiping your local database to reflect this new remote state, you're notified about the situation with a proper error :) You'll most likely want to republish your local database to the server; this is very easy to achieve by calling [`#resetSyncStatus()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resetSyncStatus), then [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) again:
+
+```js
+articles.sync()
+  .catch(err => {
+    if (err.message.contains("flushed")) {
+      return articles.resetSyncStatus()
+        .then(_ => articles.sync());
+    }
+    throw err;
+  })
+  .then(console.log.bind(console));
+```
 
 ## Handling server backoff
 
