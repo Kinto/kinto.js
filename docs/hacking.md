@@ -100,3 +100,9 @@ Publication is done manually by submitting new versions to [doc.esdoc.org](https
 ## Publishing to npm
 
     $ npm run publish-package
+
+## Publishing the demo
+
+The demo is hosted [on Gihub pages](http://mozilla-services.github.io/kinto.js/); to publish the current demo version:
+
+    $ npm run publish-demo
