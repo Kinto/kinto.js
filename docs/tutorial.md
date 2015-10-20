@@ -36,7 +36,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
     <hr>
     <ul id="tasks" class="list-group"></ul>
   </div>
-  <script src="https://raw.githubusercontent.com/mozilla-services/kinto.js/master/dist/kinto.min.js"></script>
+  <script src="//mozilla-services.github.io/kinto.js/kinto.dev.js"></script>
   <script src="demo.js"></script>
 </body>
 </html>

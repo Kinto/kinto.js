@@ -7,8 +7,8 @@
     "build": "babel -d lib/ src/",
     "demo": "npm run dist && http-server demo",
     "dist": "npm run dist-dev && npm run dist-prod",
-    "dist-dev": "browserify -s Kinto -d -e src/index.js -o dist/kinto.dev.js && cp dist/kinto.dev.js demo/",
-    "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o dist/kinto.min.js && cp dist/kinto.min.js demo/",
+    "dist-dev": "browserify -s Kinto -d -e src/index.js -o demo/kinto.dev.js",
+    "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o demo/kinto.min.js",
     "publish-demo": "npm run dist && gh-pages -d demo",
     "publish-package": "npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
@@ -17,7 +17,7 @@
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && open coverage/index.html",
     "test-nocover": "node_modules/.bin/_mocha --compilers js:babel/register --require ./test/_setup.js 'test/**/*_test.js'",
-    "watch": "watchify -s Kinto -d -e src/index.js -o dist/kinto.dev.js -v",
+    "watch": "watchify -s Kinto -d -e src/index.js -o demo/kinto.dev.js -v",
     "lint": "node_modules/.bin/eslint src test"
   },
   "repository": {

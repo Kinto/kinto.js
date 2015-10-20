@@ -3,3 +3,4 @@
 /coverage
 /esdoc
 /node_modules
+/demo/kinto.*.js
