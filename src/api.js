@@ -183,11 +183,20 @@ export default class Api {
           };
         }
         // XXX: ETag are supposed to be opaque and stored «as-is».
-        const etag = res.headers.get("ETag");  // e.g. '"42"'
-        return {
-          lastModified: etag ? parseInt(unquote(etag), 10) : options.lastModified,
-          changes: res.json.data
-        };
+        // Extract response data
+        var etag = res.headers.get("ETag");  // e.g. '"42"'
+        etag = etag ? parseInt(unquote(etag), 10) : options.lastModified;
+        const records = res.json.data;
+
+        // Check if server was flushed
+        const localSynced = options.lastModified;
+        const serverChanged = etag > options.lastModified;
+        const emptyCollection = records ? records.length === 0 : true;
+        if (localSynced && serverChanged && emptyCollection) {
+          throw Error("Server has been flushed.");
+        }
+
+        return {lastModified: etag, changes: records};
       });
   }
 

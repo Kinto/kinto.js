@@ -1119,6 +1119,60 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#resetSyncStatus} */
+  describe("#resetSyncStatus", () => {
+    const fixtures = [
+      {id: uuid4(), last_modified: 42, title: "art1"},
+      {id: uuid4(), last_modified: 42, title: "art2"},
+      {id: uuid4(), last_modified: 42, title: "art3"},
+    ];
+    var articles;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return Promise.all(fixtures.map(fixture => {
+        return articles.create(fixture, {synced: true});
+      }))
+      .then(_ => {
+        return articles.delete(fixtures[1].id);
+      });
+    });
+
+    it("should reset the synced status of all local records", () => {
+      return articles.resetSyncStatus()
+        .then(_ => articles.list({filters: {_status: "synced"}}))
+        .should.eventually.have.property("data").to.have.length(0);
+    });
+
+    it("should garbage collect the locally deleted records", () => {
+      return articles.resetSyncStatus()
+        .then(_ => {
+          return articles.list({
+            filters: {_status: "deleted"}
+          }, {includeDeleted: true});
+        })
+        .should.eventually.have.property("data").to.have.length(0);
+    });
+
+    it("should clear last modified value of all records", () => {
+      return articles.resetSyncStatus()
+        .then(_ => articles.list())
+        .then(res => res.data.some(r => r.last_modified))
+        .should.eventually.eql(false);
+    });
+
+    it("should clear any previously saved lastModified value", () => {
+      return articles.resetSyncStatus()
+        .then(_ => articles.db.getLastModified())
+        .should.become(null);
+    });
+
+    it("should resolve with the number of local records processed ", () => {
+      return articles.resetSyncStatus()
+        .should.become(3);
+    });
+  });
+
   /** @test {Collection#sync} */
   describe("#sync", () => {
     const fixtures = [
