@@ -9,7 +9,7 @@ import FirefoxAdapter from "./FirefoxStorage";
 export default function loadKinto() {
   let { EventEmitter } = Cu.import("resource://gre/modules/devtools/shared/event-emitter.js", {});
 
-  let fetch = Cu.import("resource://gre/modules/CollectionsUtils.jsm");
+  let fetch = Cu.import("resource://gre/modules/Fetch.jsm");
   if (!fetch) {
     throw new Error("There was a problem loading fx-fetch");
   }
