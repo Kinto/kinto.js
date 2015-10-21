@@ -16,7 +16,7 @@ Kinto.js won't try to outsmart you as a conflict resolver. Instead, it provides 
 
 ## Transactions
 
-Ideally, we should wrap the whole synchronization flow related operations within a single transaction. While that's a goal and [part of our roadmap](https://github.com/mozilla-services/kinto.js/issues/16), right now this isn't implemented.
+Ideally, we should wrap the whole synchronization flow related operations within a single transaction. While that's a goal and [part of our roadmap](https://github.com/Kinto/kinto.js/issues/16), right now this isn't implemented.
 
 That means if anything fails during the sync flow while some records have already been processed locally, there won't be any rollback performed — and you'll have to handle the situation by hand.
 
@@ -32,7 +32,7 @@ As all local persistence operations are asynchronous, there might be situations 
 
 For example, if you're displaying a form for the user to update a record, and in the meanwhile that record is updated from a ServiceWorker, you might just save an obsolete/conflicting version of the record, overriding the last know valid one by "mistake".
 
-This is a [known issue](https://github.com/mozilla-services/kinto.js/issues/34) and we're in the process of finding a decent situation to handle these smoothly.
+This is a [known issue](https://github.com/Kinto/kinto.js/issues/34) and we're in the process of finding a decent situation to handle these smoothly.
 
 ### Take away →
 
@@ -48,7 +48,7 @@ All the collection ordering and filtering is done in-memory; that means Kinto.js
 
 ## Custom schema fields are not indexed yet
 
-For now only a few standard fields are indexed by default in IndexedDB collection schemas, resulting in possible degraded performances when filtering & ordering collections. We'll add [custom indexes capability](https://github.com/mozilla-services/kinto.js/issues/66) in a near future, though.
+For now only a few standard fields are indexed by default in IndexedDB collection schemas, resulting in possible degraded performances when filtering & ordering collections. We'll add [custom indexes capability](https://github.com/Kinto/kinto.js/issues/66) in a near future, though.
 
 ### Take away →
 

@@ -52,7 +52,7 @@
   "config": {
     "ISPARTA_OPTS": "--report lcovonly --root ./src"
   },
-  "homepage": "https://github.com/mozilla-services/kinto.js",
+  "homepage": "https://github.com/Kinto/kinto.js",
   "dependencies": {
     "babel": "^5.8.19",
     "btoa": "^1.1.2",

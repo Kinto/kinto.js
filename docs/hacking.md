@@ -4,9 +4,9 @@ Hacking on Kinto.js requires a working [NodeJS v0.12x environment](https://nodej
 
 ## Installation
 
-Source code is [hosted on Github](https://github.com/mozilla-services/kinto.js).
+Source code is [hosted on Github](https://github.com/Kinto/kinto.js).
 
-    $ git clone https://github.com/mozilla-services/kinto.js
+    $ git clone https://github.com/Kinto/kinto.js
     $ cd kinto.js
     $ npm install
 
@@ -44,7 +44,7 @@ Alternative test commands are also available:
 
 > #### Notes
 >
-> Code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/mozilla-services/kinto.js).
+> Code coverage reports are also [browseable on Coveralls](https://coveralls.io/r/Kinto/kinto.js).
 
 ### TDD mode
 
@@ -73,14 +73,14 @@ This should have created the following assets:
 
 Once the [demo is published](#publishing-the-demo) along these generated assets, they're available at the following URLs:
 
-- [http://mozilla-services.github.io/kinto.js/kinto.dev.js](http://mozilla-services.github.io/kinto.js/kinto.dev.js) for the development version;
-- [http://mozilla-services.github.io/kinto.js/kinto.min.js](http://mozilla-services.github.io/kinto.js/kinto.min.js) for the production version.
+- [http://kinto.github.io/kinto.js/kinto.dev.js](http://kinto.github.io/kinto.js/kinto.dev.js) for the development version;
+- [http://kinto.github.io/kinto.js/kinto.min.js](http://kinto.github.io/kinto.js/kinto.min.js) for the production version.
 
 ## Updating docs
 
 Docs are written in [Markdown](http://daringfireball.net/projects/markdown/syntax) using [mkdocs](http://www.mkdocs.org/), and are hosted on [readthedocs](https://readthedocs.org/).
 
-Document sources are versionned in the Kinto.js repository, under the [docs/ directory](https://github.com/mozilla-services/kinto.js/tree/master/docs). Updates are automatically deployed when pushed to `origin/master`. That means the docs site is automatically updated everytime a PR lands.
+Document sources are versionned in the Kinto.js repository, under the [docs/ directory](https://github.com/Kinto/kinto.js/tree/master/docs). Updates are automatically deployed when pushed to `origin/master`. That means the docs site is automatically updated everytime a PR lands.
 
 To build docs locally, ensure mkdocs is [properly installed](http://www.mkdocs.org/#installation), then run:
 
@@ -108,6 +108,6 @@ Publication is done manually by submitting new versions to [doc.esdoc.org](https
 
 ## Publishing the demo
 
-The demo is hosted [on Gihub pages](http://mozilla-services.github.io/kinto.js/); to publish the current demo version:
+The demo is hosted [on Gihub pages](http://kinto.github.io/kinto.js/); to publish the current demo version:
 
     $ npm run publish-demo
