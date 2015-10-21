@@ -207,7 +207,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   saveLastModified(lastModified) {
-    var value = parseInt(lastModified, 10);
+    var value = parseInt(lastModified, 10) || null;
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");

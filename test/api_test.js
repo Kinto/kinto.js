@@ -293,6 +293,14 @@ describe("Api", () => {
           .catch(err => err.data)
           .should.eventually.become(response);
       });
+
+      it("should reject on server flushed", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {data: []}, {ETag: quote(43)}));
+
+        return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+          .should.be.rejectedWith(Error, /Server has been flushed/);
+      });
     });
   });
 

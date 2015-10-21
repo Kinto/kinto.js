@@ -1,6 +1,24 @@
 "use strict";
 
+import { deepEqual } from "assert";
+
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Deeply checks if two structures are equals.
+ *
+ * @param  {Any} a
+ * @param  {Any} b
+ * @return {Boolean}
+ */
+export function deepEquals(a, b) {
+  try {
+    deepEqual(a, b);
+  } catch(err) {
+    return false;
+  }
+  return true;
+}
 
 /**
  * Returns the specified string with double quotes.
