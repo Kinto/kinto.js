@@ -11,10 +11,6 @@ export default function loadKinto() {
 
   Cu.importGlobalProperties(['fetch']);
 
-  if (!fetch) {
-    throw new Error("There was a problem loading fx-fetch");
-  }
-
   class KintoFX extends KintoBase {
     static get adapters() {
       return {

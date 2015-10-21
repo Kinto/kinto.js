@@ -4,9 +4,12 @@ Components.utils.import("resource://gre/modules/Services.jsm");
 Components.utils.import("resource://gre/modules/FileUtils.jsm");
 
 function debug(message) {
+  // TODO: Read a pref or something to work out whether to emit debug
+  // messages
   dump("FirefoxStorage "+message+"\n\n");
 }
 
+// A way to handle our storage connection and storage statements
 class KintoStorage {
   constructor(dbname) {
     this.dbname = dbname;
@@ -42,9 +45,32 @@ class KintoStorage {
 
   getConnection() {
     if (!this._dbconn) {
-      this._dbconn = Services.storage.openDatabase(this.file);
+      try {
+        this._dbconn = Services.storage.openDatabase(this.file);
+      } catch (e) {
+        if (e.result == Components.results.NS_ERROR_FILE_CORRUPTED) {
+          // Database is corrupted; backup and remove the database, then throw
+          this.cleanup();
+          throw e;
+        }
+      }
     }
     return this._dbconn;
+  }
+
+  cleanup() {
+    // Create backup file
+    let backupFile = this.file.leafName + ".corrupt";
+    Services.storage.backupDatabaseFile(this.file, backupFile);
+
+    if (this._dbconn) {
+      try {
+        // Honey badger a close
+        this._dbconn.close();
+      } catch (e) {}
+    }
+    this.file.remove(false);
+    debug("all cleaned up");
   }
 
   requestAsyncClose() {
@@ -55,7 +81,6 @@ class KintoStorage {
     }
 
     function connectionClosed() {
-      // TODO: might we care about connections being closed?
       debug("connection closed");
     }
 
@@ -76,8 +101,8 @@ export default class FirefoxAdapter extends BaseAdapter {
     this.busy = false;
 
 
-    // attempt creation
-    // TODO: should these happen in a single transaction?
+    // attempt creation - we don't need to use a transaction here since our
+    // operation queue means these will happen before other operations.
     var statements = ["CREATE TABLE IF NOT EXISTS collection_metadata (collection_name TEXT PRIMARY KEY, last_modified INTEGER) WITHOUT ROWID;",
           "CREATE TABLE IF NOT EXISTS collection_data (collection_name TEXT, record_id TEXT, record TEXT);",
           "CREATE UNIQUE INDEX IF NOT EXISTS unique_collection_record ON collection_data(collection_name, record_id);"];
@@ -208,7 +233,6 @@ export default class FirefoxAdapter extends BaseAdapter {
       } else {
         reject(new Error("record or record id missing"));
       }
-    // TODO: If we don't have a record or record ID, reject
     }.bind(this));
   }
 
@@ -381,7 +405,6 @@ export default class FirefoxAdapter extends BaseAdapter {
   saveLastModified(lastModified) {
     // store the last modified data
     return new Promise(function(resolve,reject) {
-      // TODO: ensure lastModified is a number?
       if (lastModified) {
         this.executeOperation(function(kintoStorage, complete) {
           var statement = kintoStorage.getStatement("REPLACE INTO collection_metadata (collection_name, last_modified) VALUES (:collection_name, :last_modified)");
@@ -411,7 +434,6 @@ export default class FirefoxAdapter extends BaseAdapter {
           });
         });
       } else {
-        // TODO: Explain why
         reject(new Error("missing lastModified"));
       }
     }.bind(this));
