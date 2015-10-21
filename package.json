@@ -9,7 +9,7 @@
     "dist": "npm run dist-dev && npm run dist-prod",
     "dist-dev": "browserify -s Kinto -d -e src/index.js -o demo/kinto.dev.js",
     "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o demo/kinto.min.js",
-    "dist-fx": "browserify -s loadKinto -e fx-src/index.js -o dist/temp.jsm && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat dist/temp.jsm >> dist/moz-kinto-client.js && rm dist/temp.jsm",
+    "dist-fx": "browserify -s loadKinto -e fx-src/index.js -o temp.jsm && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat temp.jsm >> dist/moz-kinto-client.js && rm temp.jsm",
     "publish-demo": "npm run dist && gh-pages -d demo",
     "publish-package": "npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
