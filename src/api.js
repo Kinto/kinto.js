@@ -264,7 +264,7 @@ export default class Api {
    *
    * Options:
    * - {Object}  headers  Headers to attach to main and all subrequests.
-   * - {Boolean} safe     Safe update (default: true)
+   * - {Boolean} safe     Safe update (default: `true`)
    *
    * @param  {String} bucketName  The bucket name.
    * @param  {String} collName    The collection name.
