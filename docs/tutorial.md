@@ -4,7 +4,7 @@ We'll create a super simple offline-first, remotely synchronized todo list appli
 
 ![](images/final.png)
 
-The final demo code is [available](https://github.com/mozilla-services/kinto.js/tree/master/demo) in the Kinto.js repository.
+The final demo code is [available](https://github.com/Kinto/kinto.js/tree/master/demo) in the Kinto.js repository.
 
 > #### Notes
 >
@@ -36,7 +36,7 @@ First, let's create a simple HTML file for our demo app, in an `index.html` file
     <hr>
     <ul id="tasks" class="list-group"></ul>
   </div>
-  <script src="https://raw.githubusercontent.com/mozilla-services/kinto.js/master/dist/kinto.min.js"></script>
+  <script src="//kinto.github.io/kinto.js/kinto.dev.js"></script>
   <script src="demo.js"></script>
 </body>
 </html>
@@ -506,4 +506,4 @@ We're using [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class
 
 ## Now what?
 
-That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/mozilla-services/kinto.js/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.
+That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/Kinto/kinto.js/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.

@@ -12,8 +12,8 @@ const DEFAULT_REMOTE = "http://localhost:8888/v1";
  */
 export default class KintoBase {
   /**
-   * Provides a public access to the base adapter classes. Users can create
-   * a custom DB adapter by extending BaseAdapter.
+   * Provides a public access to the base adapter class. Users can create a
+   * custom DB adapter by extending {@link BaseAdapter}.
    *
    * @type {Object}
    */
@@ -72,12 +72,12 @@ export default class KintoBase {
   }
 
   /**
-   * Creates a Collection instance. The second (optional) parameter
-   * will set collection-level options like e.g. remoteTransformers.
+   * Creates a {@link Collection} instance. The second (optional) parameter
+   * will set collection-level options like e.g. `remoteTransformers`.
    *
    * @param  {String} collName The collection name.
-   * @param  {Object} options May contain the following fields:
-   *                          remoteTransformers: Array of RemoteTransformers
+   * @param  {Object} options  May contain the following fields:
+   *                           remoteTransformers: Array<RemoteTransformer>
    * @return {Collection}
    */
   collection(collName, options = {}) {
