@@ -29,7 +29,7 @@ class KintoStorage {
       }
     } else {
       debug("statement does not exist; creating");
-      let dbconn = this.getConnection();
+      const dbconn = this.getConnection();
       if (dbconn) {
         debug("connection is ready? "+dbconn.connectionReady);
         statement = dbconn.createAsyncStatement(statementString);
@@ -63,12 +63,12 @@ class KintoStorage {
 
   cleanup() {
     // Create backup file
-    let backupFile = this.file.leafName + ".corrupt";
+    const backupFile = this.file.leafName + ".corrupt";
     Services.storage.backupDatabaseFile(this.file, backupFile);
 
     if (this._dbconn) {
       try {
-        // Honey-badger closing (we do anything about failure here)
+        // Honey-badger closing (we can't do anything about failure here)
         this._dbconn.close();
       } catch (e) {}
     }
@@ -106,13 +106,13 @@ export default class FirefoxAdapter extends BaseAdapter {
 
     // attempt creation - we don't need to use a transaction here since our
     // operation queue means these will happen before other operations.
-    var statements = ["CREATE TABLE IF NOT EXISTS collection_metadata (collection_name TEXT PRIMARY KEY, last_modified INTEGER) WITHOUT ROWID;",
+    const statements = ["CREATE TABLE IF NOT EXISTS collection_metadata (collection_name TEXT PRIMARY KEY, last_modified INTEGER) WITHOUT ROWID;",
           "CREATE TABLE IF NOT EXISTS collection_data (collection_name TEXT, record_id TEXT, record TEXT);",
           "CREATE UNIQUE INDEX IF NOT EXISTS unique_collection_record ON collection_data(collection_name, record_id);"];
 
     this.kintoStorage = new KintoStorage(dbname);
 
-    for (var stmt of statements) {
+    for (let stmt of statements) {
       this.executeUpdate(stmt);
     }
   }
@@ -121,7 +121,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     debug("requesting to execute statement: "+sql);
     this.executeOperation(function(kintoStorage, complete) {
       debug("executing statement: "+sql);
-      var statement = kintoStorage.getStatement(sql);
+      const statement = kintoStorage.getStatement(sql);
 
       statement.executeAsync({
         handleError: function(aError) {
@@ -147,7 +147,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       this.busy = true;
       function executeNextOperation() {
         debug("executeNextOperation");
-        var next = this.operations.shift();
+        const next = this.operations.shift();
         if (next) {
           debug("executing queued operation");
           next(this.kintoStorage, executeNextOperation.bind(this));
@@ -170,7 +170,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       this.executeOperation((kintoStorage, complete) => {
         debug("kinto::clear");
         // clear all of the data for this adapter
-        var statement = kintoStorage.getStatement("DELETE FROM collection_data WHERE collection_name = :collection_name;");
+        const statement = kintoStorage.getStatement("DELETE FROM collection_data WHERE collection_name = :collection_name;");
         statement.params.collection_name = kintoStorage.getName();
 
         // execute the statement
@@ -206,7 +206,7 @@ export default class FirefoxAdapter extends BaseAdapter {
         this.executeOperation((kintoStorage, complete) => {
           debug("kinto::create");
           // insert a row for this record
-          var statement = kintoStorage.getStatement("INSERT INTO collection_data (collection_name, record_id, record) VALUES (:collection_name, :record_id, :record)");
+          const statement = kintoStorage.getStatement("INSERT INTO collection_data (collection_name, record_id, record) VALUES (:collection_name, :record_id, :record)");
           statement.params.collection_name = kintoStorage.getName();
           statement.params.record_id = record.id;
           statement.params.record = JSON.stringify(record);
@@ -245,7 +245,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       if (record && record.id) {
         this.executeOperation((kintoStorage, complete) => {
           debug("kinto::update");
-          var statement = kintoStorage.getStatement("UPDATE collection_data SET record = :record WHERE collection_name = :collection_name AND record_id = :record_id");
+          const statement = kintoStorage.getStatement("UPDATE collection_data SET record = :record WHERE collection_name = :collection_name AND record_id = :record_id");
           statement.params.record = JSON.stringify(record);
           statement.params.collection_name = kintoStorage.getName();
           statement.params.record_id = record.id;
@@ -284,7 +284,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       debug("kinto::get");
       if (id) {
         this.executeOperation((kintoStorage, complete) => {
-          var statement = kintoStorage.getStatement("SELECT record FROM collection_data WHERE collection_name = :collection_name AND record_id = :record_id");
+          const statement = kintoStorage.getStatement("SELECT record FROM collection_data WHERE collection_name = :collection_name AND record_id = :record_id");
           statement.params.collection_name = kintoStorage.getName();
           statement.params.record_id = id;
 
@@ -332,7 +332,7 @@ export default class FirefoxAdapter extends BaseAdapter {
         this.executeOperation((kintoStorage, complete) => {
           debug("kinto::delete");
           // delete the record with the specified ID
-          var statement = kintoStorage.getStatement("DELETE FROM collection_data WHERE collection_name = :collection_name AND record_id = :record_id");
+          const statement = kintoStorage.getStatement("DELETE FROM collection_data WHERE collection_name = :collection_name AND record_id = :record_id");
           statement.params.collection_name = kintoStorage.getName();
           statement.params.record_id = id;
 
@@ -370,10 +370,10 @@ export default class FirefoxAdapter extends BaseAdapter {
         debug("kinto::list");
 
         // list the records
-        var statement = kintoStorage.getStatement("SELECT record FROM collection_data WHERE collection_name = :collection_name");
+        const statement = kintoStorage.getStatement("SELECT record FROM collection_data WHERE collection_name = :collection_name");
         statement.params.collection_name = kintoStorage.getName();
 
-        var results = [];
+        const results = [];
 
         // execute the statement
         statement.executeAsync({
@@ -410,7 +410,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     return new Promise((resolve,reject) => {
       if (lastModified) {
         this.executeOperation((kintoStorage, complete) => {
-          var statement = kintoStorage.getStatement("REPLACE INTO collection_metadata (collection_name, last_modified) VALUES (:collection_name, :last_modified)");
+          const statement = kintoStorage.getStatement("REPLACE INTO collection_metadata (collection_name, last_modified) VALUES (:collection_name, :last_modified)");
           statement.params.collection_name = kintoStorage.getName();
           statement.params.last_modified = lastModified;
 
@@ -447,7 +447,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       debug("kinto::getLastModified");
       this.executeOperation((kintoStorage, complete) => {
         // retrieve the last modified data
-        var statement = kintoStorage.getStatement("SELECT last_modified FROM collection_metadata WHERE collection_name = :collection_name");
+        const statement = kintoStorage.getStatement("SELECT last_modified FROM collection_metadata WHERE collection_name = :collection_name");
         statement.params.collection_name = kintoStorage.getName();
         let result = 0;
 
