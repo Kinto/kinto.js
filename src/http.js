@@ -8,6 +8,7 @@ import ERROR_CODES from "./errors.js";
 export default class HTTP {
   /**
    * Default HTTP request headers applied to each outgoing request.
+   *
    * @type {Object}
    */
   static get DEFAULT_REQUEST_HEADERS() {
@@ -21,10 +22,10 @@ export default class HTTP {
    * Constructor.
    *
    * Options:
-   * - {String}       requestMode  The HTTP request mode (default: `"cors"`).
+   * - {String} requestMode  The HTTP request mode (default: `"cors"`).
    *
    * @param {EventEmitter} events  The event handler.
-   * @param  {Object}      options The options object.
+   * @param {Object}       options The options object.
    */
   constructor(events, options={requestMode: "cors"}) {
     // public properties

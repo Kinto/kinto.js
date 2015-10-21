@@ -283,10 +283,10 @@ export default class Collection {
    * case, the record passed must not have an id.
    *
    * Options:
-   * - {Boolean} synced       Sets record status to "synced" (default: false).
-   * - {Boolean} useRecordId  Forces the id field from the record to be used,
+   * - {Boolean} synced       Sets record status to "synced" (default: `false`).
+   * - {Boolean} useRecordId  Forces the `id` field from the record to be used,
    *                          instead of one that is generated automatically
-   *                          (default: false).
+   *                          (default: `false`).
    *
    * @param  {Object} record
    * @param  {Object} options
@@ -550,7 +550,7 @@ export default class Collection {
    * Resets the local records as if they were never synced; existing records are
    * marked as newly created, deleted records are dropped.
    *
-   * A next call to `sync()` will thus republish the whole content of the
+   * A next call to {@link Collection.sync} will thus republish the whole content of the
    * local collection to the server.
    *
    * @return {Promise} Resolves with the number of processed records.
@@ -609,7 +609,8 @@ export default class Collection {
 
   /**
    * Fetch remote changes, import them to the local database, and handle
-   * conflicts according to `options.strategy`.
+   * conflicts according to `options.strategy`. Then, updates the passed
+   * {@link SyncResultObject} with import results.
    *
    * Options:
    * - {String} strategy: The selected sync strategy.
@@ -639,10 +640,11 @@ export default class Collection {
   }
 
   /**
-   * Publish local changes to the remote server.
+   * Publish local changes to the remote server and updates the passed
+   * {@link SyncResultObject} with publication results.
    *
-   * @param  {SyncResultObject} syncResultObject
-   * @param  {Object}           options
+   * @param  {SyncResultObject} syncResultObject The sync result object.
+   * @param  {Object}           options          The options object.
    * @return {Promise}
    */
   pushChanges(syncResultObject, options={}) {
@@ -729,7 +731,7 @@ export default class Collection {
    * Handles synchronization conflicts according to specified strategy.
    *
    * @param  {SyncResultObject} result    The sync result object.
-   * @param  {String}           strategy  The sync strategy.
+   * @param  {String}           strategy  The {@link Collection.strategy}.
    * @return {Promise}
    */
   _handleConflicts(result, strategy=Collection.strategy.MANUAL) {
@@ -749,14 +751,14 @@ export default class Collection {
 
   /**
    * Synchronize remote and local data. The promise will resolve with a
-   * `SyncResultObject`, though will reject:
+   * {@link SyncResultObject}, though will reject:
    *
    * - if the server is currently backed off;
    * - if the server has been detected flushed.
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
-   * - {Collection.strategy} strategy: See `Collection.strategy`.
+   * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
    *
