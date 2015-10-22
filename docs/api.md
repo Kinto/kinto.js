@@ -261,8 +261,6 @@ const kinto = new Kinto({
 });
 ```
 
-**Note that this authentication method should never been used in production, and passwords in clear should never be part of the source code.**
-
 Note that you can also provide this authentication header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync):
 
 ```js
@@ -271,6 +269,11 @@ kinto.collection("articles")
     headers: {Authorization: "Basic " + btoa(`${username}:${password}`)}
   }).then(…);
 ```
+
+> #### Notes
+>
+> - This authentication method should never been used in production, and passwords in clear should never be part of the source code;
+> - You're not obliged to use the `username:password` format; basically whatever unique string gets you covered.
 
 ### Using an OAuth Bearer Token
 
