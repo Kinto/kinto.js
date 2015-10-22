@@ -234,7 +234,55 @@ Result:
 ```
 
 > #### Notes
+>
+> - Clearing the local collection will mark the collection as never synchronized;
 > - Detailed API documentation for `Collection#clear()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-clear).
+
+## Authentication
+
+Authenticating against a Kinto server can be achieved in [two distinct ways](http://kinto.readthedocs.org/en/latest/api/cliquet/authentication.html):
+
+- Using Basic Auth
+- Using an OAuth Bearer Token
+
+### Using Basic Auth
+
+Simply provide an `Authorization` header option to the `Kinto` constructor:
+
+```js
+const username = "my_username";
+const password = "my_password";
+const kinto = new Kinto({
+  remote: "https://my.server.tld/v1",
+  headers: {
+    Authorization: "Basic " + btoa(`${username}:${password}`)
+  }
+});
+```
+
+**Note that this authentication method should never been used in production, and passwords in clear should never be part of the source code.**
+
+Note that you can also provide this authentication header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync):
+
+```js
+kinto.collection("articles")
+  .sync({
+    headers: {Authorization: "Basic " + btoa(`${username}:${password}`)}
+  }).then(…);
+```
+
+### Using an OAuth Bearer Token
+
+As for Basic Auth, once you have retrieved a valid OAuth Bearer Token, simply pass it in a generic `Authorization` header:
+
+```js
+const kinto = new Kinto({
+  remote: "https://my.server.tld/v1",
+  headers: {
+    Authorization: `Bearer ` + oauthBearerToken)
+  }
+});
+```
 
 ## Fetching and publishing changes
 
