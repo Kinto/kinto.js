@@ -89,12 +89,7 @@ describe("Integration tests", () => {
     after(() => stopServer());
 
     beforeEach(() => {
-      return tasks.clear()
-        .then(_ => flushServer())
-        .then(_ => {
-          // XXX refs #114: this should be cleared when db is cleared
-          tasks.db.saveLastModified(null);
-        });
+      return tasks.clear().then(_ => flushServer());
     });
 
     describe("Settings", () => {
@@ -1096,10 +1091,6 @@ describe("Integration tests", () => {
     beforeEach(() => {
       return tasks.clear()
         .then(_ => {
-          // XXX refs #114: this should be cleared when db is cleared
-          return tasks.db.saveLastModified(null);
-        })
-        .then(_ => {
           return Promise.all([
             tasks.create({name: "foo"}),
             tasks.create({name: "bar"}),
@@ -1128,12 +1119,7 @@ describe("Integration tests", () => {
     after(() => stopServer());
 
     beforeEach(() => {
-      return tasks.clear()
-        .then(_ => flushServer())
-        .then(_ => {
-          // XXX refs #114: this should be cleared when db is cleared
-          tasks.db.saveLastModified(null);
-        });
+      return tasks.clear().then(_ => flushServer());
     });
 
     it("should reject sync when the server sends a Backoff header", () => {
@@ -1145,12 +1131,7 @@ describe("Integration tests", () => {
 
   describe("Deprecated protocol version", () => {
     beforeEach(() => {
-      return tasks.clear()
-        .then(_ => flushServer())
-        .then(_ => {
-          // XXX refs #114: this should be cleared when db is cleared
-          tasks.db.saveLastModified(null);
-        });
+      return tasks.clear().then(_ => flushServer());
     });
 
     describe("Soft EOL", () => {

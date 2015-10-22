@@ -264,6 +264,33 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#clear} */
+  describe("#clear", () => {
+    var articles;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return Promise.all([
+        articles.create({title: "foo"}),
+        articles.create({title: "bar"}),
+      ]);
+    });
+
+    it("should clear collection records", () => {
+      return articles.clear()
+        .then(_ => articles.list())
+        .then(res => res.data)
+        .should.eventually.have.length.of(0);
+    });
+
+    it("should clear collection metas", () => {
+      return articles.db.saveLastModified(42)
+        .then(_ => articles.clear())
+        .then(_ => articles.db.getLastModified())
+        .should.eventually.eql(null);
+    });
+  });
+
   /** @test {Collection#create} */
   describe("#create", () => {
     var articles;
@@ -1274,7 +1301,7 @@ describe("Collection", () => {
           }]
         }));
       return articles.sync().then(res => {
-        expect(articles.lastModified).eql(42);
+        expect(articles.lastModified).eql(null);
       });
     });
 
@@ -1290,7 +1317,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "_processChangeImport")
         .returns(Promise.reject(new Error("import error")));
       return articles.sync().then(res => {
-        expect(articles.lastModified).eql(42);
+        expect(articles.lastModified).eql(null);
       });
     });
 

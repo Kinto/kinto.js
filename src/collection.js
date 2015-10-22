@@ -230,16 +230,15 @@ export default class Collection {
   }
 
   /**
-   * Deletes every records in the current collection.
-   *
-   * XXX: refs #114, collection metas should be cleared.
+   * Deletes every records in the current collection and marks the collection as
+   * never synced.
    *
    * @return {Promise}
    */
   clear() {
-    return this.db.clear().then(() => {
-      return {data: [], permissions: {}};
-    });
+    return this.db.clear()
+      .then(_ => this.db.saveLastModified(null))
+      .then(_ => ({data: [], permissions: {}}));
   }
 
   /**
