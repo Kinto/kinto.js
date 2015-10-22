@@ -286,7 +286,9 @@ export default class Api {
     }
     return this.fetchServerSettings()
       .then(serverSettings => {
-        const maxRequests = serverSettings["cliquet.batch_max_requests"];
+        // Kinto 1.6.1 possibly exposes multiple setting prefixes
+        const maxRequests = serverSettings["batch_max_requests"] ||
+                            serverSettings["cliquet.batch_max_requests"];
         if (maxRequests && records.length > maxRequests) {
           return Promise.all(partition(records, maxRequests).map(chunk => {
             return this.batch(bucketName, collName, chunk, options);

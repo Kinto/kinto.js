@@ -101,13 +101,21 @@ describe("Integration tests", () => {
       it("should retrieve server settings", () => {
         return tasks.sync()
           .then(_ => tasks.api.serverSettings)
-          .should.become({"cliquet.batch_max_requests": 25});
+          .should.become({
+            // Kinto 1.6.1 possibly exposes multiple setting prefixes
+            "batch_max_requests": 25,
+            "cliquet.batch_max_requests": 25
+          });
       });
 
       it("should share server settings across collections", () => {
         return tasks.sync()
           .then(_ => kinto.collection("articles").api.serverSettings)
-          .should.become({"cliquet.batch_max_requests": 25});
+          .should.become({
+            // Kinto 1.6.1 possibly exposes multiple setting prefixes
+            "batch_max_requests": 25,
+            "cliquet.batch_max_requests": 25
+          });
       });
     });
 
