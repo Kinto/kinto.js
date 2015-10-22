@@ -9,7 +9,7 @@ before_install:
 - export PATH=$HOME/.local/bin:$PATH
 - pip install --user `whoami` virtualenv
 - virtualenv .env
-- .env/bin/pip install kinto==1.6.1
+- .env/bin/pip install kinto==1.6.2
 - export KINTO_PSERVE_EXECUTABLE=.env/bin/pserve
 env:
 - ACTION=test
