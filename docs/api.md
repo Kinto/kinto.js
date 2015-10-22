@@ -274,7 +274,7 @@ kinto.collection("articles")
 
 ### Using an OAuth Bearer Token
 
-As for Basic Auth, once you have retrieved a valid OAuth Bearer Token, simply pass it in a generic `Authorization` header:
+As for Basic Auth, once you have retrieved a valid OAuth Bearer Token, simply pass it through a generic `Authorization` header:
 
 ```js
 const kinto = new Kinto({
@@ -283,6 +283,15 @@ const kinto = new Kinto({
     Authorization: `Bearer ` + oauthBearerToken)
   }
 });
+```
+
+As with Basic Auth, you can pass the header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) as well:
+
+```js
+kinto.collection("articles")
+  .sync({
+    headers: {Authorization: "Basic " + oauthBearerToken}
+  }).then(…);
 ```
 
 ### Using Firefox Account
