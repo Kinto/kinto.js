@@ -18,51 +18,61 @@ Components.utils.import("resource://gre/modules/Sqlite.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");
 
 const statements = {
-  "createCollectionData": "\
-    CREATE TABLE collection_data (\
-      collection_name TEXT, \
-      record_id TEXT, \
-      record TEXT\
-    );",
-  "createCollectionMetadata": "\
-    CREATE TABLE collection_metadata (\
-      collection_name TEXT PRIMARY KEY, \
-      last_modified INTEGER\
-    ) WITHOUT ROWID;",
-  "createCollectionDataRecordIdIndex": "\
-    CREATE UNIQUE INDEX unique_collection_record \
-      ON collection_data(collection_name, record_id);",
-  "clearData": "\
-    DELETE FROM collection_data \
-      WHERE collection_name = :collection_name;",
-  "createData": "\
-    INSERT INTO collection_data (collection_name, record_id, record) \
-      VALUES (:collection_name, :record_id, :record)",
-  "updateData": "\
-    UPDATE collection_data \
-      SET record = :record \
-        WHERE collection_name = :collection_name \
-        AND record_id = :record_id",
-  "deleteData": "\
-    DELETE FROM collection_data \
-      WHERE collection_name = :collection_name \
-      AND record_id = :record_id",
-  "saveLastModified": "\
-    REPLACE INTO collection_metadata (collection_name, last_modified) \
-      VALUES (:collection_name, :last_modified)",
-  "getLastModified": "\
-    SELECT last_modified \
-      FROM collection_metadata \
-        WHERE collection_name = :collection_name",
-  "getRecord": "\
-    SELECT record \
-      FROM collection_data \
-        WHERE collection_name = :collection_name \
-        AND record_id = :record_id",
-  "listRecords": "\
-    SELECT record \
-      FROM collection_data \
-        WHERE collection_name = :collection_name"
+  "createCollectionData": `
+    CREATE TABLE collection_data (
+      collection_name TEXT,
+      record_id TEXT,
+      record TEXT
+    );`,
+
+  "createCollectionMetadata": `
+    CREATE TABLE collection_metadata (
+      collection_name TEXT PRIMARY KEY,
+      last_modified INTEGER
+    ) WITHOUT ROWID;`,
+
+  "createCollectionDataRecordIdIndex": `
+    CREATE UNIQUE INDEX unique_collection_record
+      ON collection_data(collection_name, record_id);`,
+
+  "clearData": `
+    DELETE FROM collection_data
+      WHERE collection_name = :collection_name;`,
+
+  "createData": `
+    INSERT INTO collection_data (collection_name, record_id, record)
+      VALUES (:collection_name, :record_id, :record)`,
+
+  "updateData": `
+    UPDATE collection_data
+      SET record = :record
+        WHERE collection_name = :collection_name
+        AND record_id = :record_id`,
+
+  "deleteData": `
+    DELETE FROM collection_data
+      WHERE collection_name = :collection_name
+      AND record_id = :record_id`,
+
+  "saveLastModified": `
+    REPLACE INTO collection_metadata (collection_name, last_modified)
+      VALUES (:collection_name, :last_modified)`,
+
+  "getLastModified": `
+    SELECT last_modified
+      FROM collection_metadata
+        WHERE collection_name = :collection_name`,
+
+  "getRecord": `
+    SELECT record
+      FROM collection_data
+        WHERE collection_name = :collection_name
+        AND record_id = :record_id`,
+
+  "listRecords": `
+    SELECT record
+      FROM collection_data
+        WHERE collection_name = :collection_name`
 };
 
 const createStatements = ["createCollectionData",
@@ -130,7 +140,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   clear() {
     const params = {collection_name: this.dbname};
-    return this._doTransaction(statements["clearData"], params);
+    return this._doTransaction(statements.clearData, params);
   }
 
   create(record) {
@@ -139,7 +149,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._doTransaction(statements["createData"], params).then(() => {
+    return this._doTransaction(statements.createData, params).then(() => {
       return record;
     });
   }
@@ -150,7 +160,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._doTransaction(statements["updateData"], params).then(() => {
+    return this._doTransaction(statements.updateData, params).then(() => {
       return record;
     });
   }
@@ -160,12 +170,11 @@ export default class FirefoxAdapter extends BaseAdapter {
         collection_name: this.dbname,
         record_id: id,
       };
-      return this._doTransaction(statements["getRecord"], params).then(result => {
+      return this._doTransaction(statements.getRecord, params).then(result => {
         if (result.length == 0) {
           return;
         }
         return JSON.parse(result[0].getResultByName("record"));
-
       });
     }
 
@@ -174,14 +183,16 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.dbname,
       record_id: id,
     };
-    return this._doTransaction(statements["deleteData"], params);
+    return this._doTransaction(statements.deleteData, params).then(() => {
+      return id;
+    });
   }
 
   list() {
     const params = {
       collection_name: this.dbname,
     };
-    return this._doTransaction(statements["listRecords"], params).then(result => {
+    return this._doTransaction(statements.listRecords, params).then(result => {
       const records = [];
       for (let k = 0; k < result.length; k++) {
         let row = result[k];
@@ -192,18 +203,21 @@ export default class FirefoxAdapter extends BaseAdapter {
   }
 
   saveLastModified(lastModified) {
+    const parsedLastModified = parseInt(lastModified, 10) || null;
     const params = {
       collection_name: this.dbname,
-      last_modified: lastModified,
+      last_modified: parsedLastModified,
     };
-    return this._doTransaction(statements["saveLastModified"], params);
+    return this._doTransaction(statements.saveLastModified, params).then(() => {
+      return parsedLastModified;
+    });
   }
 
   getLastModified() {
     const params = {
       collection_name: this.dbname,
     };
-    return this._doTransaction(statements["getLastModified"], params).then(result => {
+    return this._doTransaction(statements.getLastModified, params).then(result => {
       if (result.length == 0) {
         return 0;
       }
