@@ -230,16 +230,15 @@ export default class Collection {
   }
 
   /**
-   * Deletes every records in the current collection.
-   *
-   * XXX: refs #114, collection metas should be cleared.
+   * Deletes every records in the current collection and marks the collection as
+   * never synced.
    *
    * @return {Promise}
    */
   clear() {
-    return this.db.clear().then(() => {
-      return {data: [], permissions: {}};
-    });
+    return this.db.clear()
+      .then(_ => this.db.saveLastModified(null))
+      .then(_ => ({data: [], permissions: {}}));
   }
 
   /**
@@ -497,6 +496,7 @@ export default class Collection {
       .then(res => this._processChangeImport(res.data, _decodedChange))
       .catch(err => {
         if (!(/not found/i).test(err.message)) {
+          err.type = "incoming";
           return {type: "errors", data: err};
         }
         // Not found locally but remote change is marked as deleted; skip to
@@ -669,7 +669,10 @@ export default class Collection {
       // Update published local records
       .then(([deleted, synced]) => {
         // Merge outgoing errors into sync result object
-        syncResultObject.add("errors", synced.errors);
+        syncResultObject.add("errors", synced.errors.map(error => {
+          error.type = "outgoing";
+          return error;
+        }));
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", synced.conflicts);
         // Process local updates following published changes

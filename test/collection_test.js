@@ -264,6 +264,33 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#clear} */
+  describe("#clear", () => {
+    var articles;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return Promise.all([
+        articles.create({title: "foo"}),
+        articles.create({title: "bar"}),
+      ]);
+    });
+
+    it("should clear collection records", () => {
+      return articles.clear()
+        .then(_ => articles.list())
+        .then(res => res.data)
+        .should.eventually.have.length.of(0);
+    });
+
+    it("should clear collection metas", () => {
+      return articles.db.saveLastModified(42)
+        .then(_ => articles.clear())
+        .then(_ => articles.db.getLastModified())
+        .should.eventually.eql(null);
+    });
+  });
+
   /** @test {Collection#create} */
   describe("#create", () => {
     var articles;
@@ -999,11 +1026,21 @@ describe("Collection", () => {
     });
 
     it("should return errors when encountered", () => {
-      sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
+      const error = new Error("unknown error");
+      sandbox.stub(articles, "get").returns(Promise.reject(error));
 
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
-        .should.eventually.become(["unknown error"]);
+        .should.eventually.become([error]);
+    });
+
+    it("should return typed errors", () => {
+      const error = new Error("unknown error");
+      sandbox.stub(articles, "get").returns(Promise.reject(error));
+
+      return articles.importChanges(result, {changes: [{title: "bar"}]})
+        .then(res => res.errors[0])
+        .should.eventually.have.property("type").eql("incoming");
     });
 
     it("should decode incoming encoded records using a single transformer", () => {
@@ -1051,6 +1088,7 @@ describe("Collection", () => {
         published: [],
         errors:    [],
         conflicts: [],
+        skipped:   [],
       }));
 
       return articles.pushChanges(result)
@@ -1076,6 +1114,7 @@ describe("Collection", () => {
         published: [],
         errors:    [],
         conflicts: [],
+        skipped:   [],
       }));
 
       return articles.pushChanges(result)
@@ -1084,7 +1123,10 @@ describe("Collection", () => {
 
     it("should update published records local status", () => {
       sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [records[0]]
+        published: [records[0]],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
       }));
       return articles.pushChanges(result)
         .then(res => res.published)
@@ -1106,7 +1148,10 @@ describe("Collection", () => {
 
     it("should locally delete remotely deleted records", () => {
       sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [Object.assign({}, records[1], {deleted: true})]
+        published: [Object.assign({}, records[1], {deleted: true})],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
       }));
       return articles.pushChanges(result)
         .then(res => res.published)
@@ -1116,6 +1161,31 @@ describe("Collection", () => {
             deleted: true
           }
         ]);
+    });
+
+    describe("Error handling", () => {
+      const error = new Error("publish error");
+
+      beforeEach(() => {
+        sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+          errors:    [error],
+          published: [],
+          conflicts: [],
+          skipped:   [],
+        }));
+      });
+
+      it("should report encountered publication errors", () => {
+        return articles.pushChanges(result)
+          .then(res => res.errors)
+          .should.eventually.become([error]);
+      });
+
+      it("should report typed publication errors", () => {
+        return articles.pushChanges(result)
+          .then(res => res.errors[0])
+          .should.eventually.have.property("type").eql("outgoing");
+      });
     });
   });
 
@@ -1231,7 +1301,7 @@ describe("Collection", () => {
           }]
         }));
       return articles.sync().then(res => {
-        expect(articles.lastModified).eql(42);
+        expect(articles.lastModified).eql(null);
       });
     });
 
@@ -1247,7 +1317,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "_processChangeImport")
         .returns(Promise.reject(new Error("import error")));
       return articles.sync().then(res => {
-        expect(articles.lastModified).eql(42);
+        expect(articles.lastModified).eql(null);
       });
     });
 
