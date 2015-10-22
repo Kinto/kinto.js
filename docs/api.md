@@ -240,7 +240,7 @@ Result:
 
 ## Authentication
 
-Authenticating against a Kinto server can be achieved in [three distinct ways](http://kinto.readthedocs.org/en/latest/api/cliquet/authentication.html):
+Authenticating against a Kinto server can be achieved in [two main ways](http://kinto.readthedocs.org/en/latest/api/cliquet/authentication.html):
 
 - Using Basic Auth
 - Using an OAuth Bearer Token (eg. Firefox Account)
@@ -297,6 +297,10 @@ kinto.collection("articles")
 ```
 
 If your Kinto instance supports it, you can also use a [Firefox Account](https://accounts.firefox.com/) Bearer Token. Once obtained, the procedure is the same as with a standard OAuth Bearer Token, as documented above.
+
+> #### Notes
+>
+> - Note that Kinto also supports custom [Pyramid](http://docs.pylonsproject.org/projects/pyramid) authentication backends, though these must be obviously installed and configured at the server level.
 
 ## Fetching and publishing changes
 
