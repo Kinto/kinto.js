@@ -999,11 +999,21 @@ describe("Collection", () => {
     });
 
     it("should return errors when encountered", () => {
-      sandbox.stub(articles, "get").returns(Promise.reject("unknown error"));
+      const error = new Error("unknown error");
+      sandbox.stub(articles, "get").returns(Promise.reject(error));
 
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
-        .should.eventually.become(["unknown error"]);
+        .should.eventually.become([error]);
+    });
+
+    it("should return typed errors", () => {
+      const error = new Error("unknown error");
+      sandbox.stub(articles, "get").returns(Promise.reject(error));
+
+      return articles.importChanges(result, {changes: [{title: "bar"}]})
+        .then(res => res.errors[0])
+        .should.eventually.have.property("type").eql("incoming");
     });
 
     it("should decode incoming encoded records using a single transformer", () => {
@@ -1051,6 +1061,7 @@ describe("Collection", () => {
         published: [],
         errors:    [],
         conflicts: [],
+        skipped:   [],
       }));
 
       return articles.pushChanges(result)
@@ -1076,6 +1087,7 @@ describe("Collection", () => {
         published: [],
         errors:    [],
         conflicts: [],
+        skipped:   [],
       }));
 
       return articles.pushChanges(result)
@@ -1084,7 +1096,10 @@ describe("Collection", () => {
 
     it("should update published records local status", () => {
       sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [records[0]]
+        published: [records[0]],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
       }));
       return articles.pushChanges(result)
         .then(res => res.published)
@@ -1106,7 +1121,10 @@ describe("Collection", () => {
 
     it("should locally delete remotely deleted records", () => {
       sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [Object.assign({}, records[1], {deleted: true})]
+        published: [Object.assign({}, records[1], {deleted: true})],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
       }));
       return articles.pushChanges(result)
         .then(res => res.published)
@@ -1116,6 +1134,31 @@ describe("Collection", () => {
             deleted: true
           }
         ]);
+    });
+
+    describe("Error handling", () => {
+      const error = new Error("publish error");
+
+      beforeEach(() => {
+        sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+          errors:    [error],
+          published: [],
+          conflicts: [],
+          skipped:   [],
+        }));
+      });
+
+      it("should report encountered publication errors", () => {
+        return articles.pushChanges(result)
+          .then(res => res.errors)
+          .should.eventually.become([error]);
+      });
+
+      it("should report typed publication errors", () => {
+        return articles.pushChanges(result)
+          .then(res => res.errors[0])
+          .should.eventually.have.property("type").eql("outgoing");
+      });
     });
   });
 
