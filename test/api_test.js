@@ -511,7 +511,7 @@ describe("Api", () => {
                 {
                   path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                   sent: published[0],
-                  error: { 500: true }
+                  error: { 500: true },
                 }
               ],
               published: []

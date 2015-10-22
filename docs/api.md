@@ -330,7 +330,7 @@ The synchronization result object exposes the following properties:
 - `ok`: The boolean status of the synchronization operation; `true` if no unresolved conflicts and no errors were encountered.
 - `lastModified`: The timestamp of the latest known successful synchronization operation (no error and no conflict encountered).
 - `conflicts`: The list of unresolved conflicts encountered during both import and export operations (see *[Resolving conflicts manually](#resolving-conflicts-manually)*);
-- `errors`:    The list of encountered errors, if any.
+- `errors`:    The list of encountered errors, if any. Each error has a `type` property, which value can either be `incoming` or `outgoing` depending on which part of the sync flow it's been caught from;
 - `created`:   The list of remote records which have been successfully imported into the local database.
 - `updated`:   The list of remote record updates which have been successfully reflected into the local database.
 - `deleted`:   The list of remotely deleted records which have been successfully deleted as well locally.
