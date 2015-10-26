@@ -234,7 +234,69 @@ Result:
 ```
 
 > #### Notes
+>
+> - Clearing the local collection will mark the collection as never synchronized;
 > - Detailed API documentation for `Collection#clear()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-clear).
+
+## Authentication
+
+Authenticating against a Kinto server can be achieved by adding an `Authorization` header to the request.
+
+By default Kinto server supports Basic Auth authentication, but others mechanisms can be activated such as OAuth (eg. [Firefox Account](https://accounts.firefox.com/))
+
+### Using Basic Auth
+
+Simply provide an `Authorization` header option to the `Kinto` constructor:
+
+```js
+const username = "my_username";
+const password = "my_password";
+const kinto = new Kinto({
+  remote: "https://my.server.tld/v1",
+  headers: {
+    Authorization: "Basic " + btoa(`${username}:${password}`)
+  }
+});
+```
+
+You can also provide this authentication header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync):
+
+```js
+kinto.collection("articles")
+  .sync({
+    headers: {Authorization: "Basic " + btoa(`${username}:${password}`)}
+  }).then(…);
+```
+
+> #### Notes
+>
+> - You're not obliged to use the `username:password` format; basically whatever unique string gets you covered.
+
+### Using an OAuth Bearer Token
+
+As for Basic Auth, once you have retrieved a valid OAuth Bearer Token, simply pass it in an `Authorization` header:
+
+```js
+const kinto = new Kinto({
+  remote: "https://my.server.tld/v1",
+  headers: {
+    Authorization: `Bearer ` + oauthBearerToken)
+  }
+});
+```
+
+As with Basic Auth, you can pass the header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) as well:
+
+```js
+kinto.collection("articles")
+  .sync({
+    headers: {Authorization: "Basic " + oauthBearerToken}
+  }).then(…);
+```
+
+> #### Notes
+>
+> - Kinto also supports custom [Pyramid](http://docs.pylonsproject.org/projects/pyramid) authentication backends, though these must be obviously installed and configured at the server level.
 
 ## Fetching and publishing changes
 
