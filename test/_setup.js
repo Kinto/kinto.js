@@ -12,6 +12,7 @@ const root = typeof global === "object" ? global : window;
 
 if (typeof root.indexedDB !== "object") {
   const iDBSymbols = [
+    "IDBDatabase",
     "IDBTransaction",
     "IDBObjectStore",
     "IDBIndex",

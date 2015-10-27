@@ -20,6 +20,31 @@ describe("adapter.IDB", () => {
 
     afterEach(() => sandbox.restore());
 
+    /** @test {IDB#open} */
+    describe("#open", () => {
+      it("should be fullfilled when a connection is opened", () => {
+        return db.open().should.be.fulfilled;
+      });
+    });
+
+    /** @test {IDB#close} */
+    describe("#close", () => {
+      it("should be fullfilled when a connection is closed", () => {
+        return db.close().should.be.fulfilled;
+      });
+
+      it("should be fullfilled when no connection has been opened", () => {
+        db._db = null;
+        return db.close().should.be.fulfilled;
+      });
+
+      it("should close an opened connection to the database", () => {
+        return db.close()
+          .then(_ => db._db)
+          .should.become(null);
+      });
+    });
+
     /** @test {IDB#create} */
     describe("#create", () => {
       it("should reject on transaction error", () => {
