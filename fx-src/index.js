@@ -22,7 +22,7 @@ import KintoBase from "../src/KintoBase";
 import FirefoxAdapter from "./FirefoxStorage";
 
 export default function loadKinto() {
-  const { EventEmitter } = Cu.import("resource://gre/modules/devtools/shared/event-emitter.js", {});
+  const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
 
   Cu.importGlobalProperties(['fetch']);
 

@@ -41,43 +41,45 @@ const statements = {
 
   "createData": `
     INSERT INTO collection_data (collection_name, record_id, record)
-      VALUES (:collection_name, :record_id, :record)`,
+      VALUES (:collection_name, :record_id, :record);`,
 
   "updateData": `
     UPDATE collection_data
       SET record = :record
         WHERE collection_name = :collection_name
-        AND record_id = :record_id`,
+        AND record_id = :record_id;`,
 
   "deleteData": `
     DELETE FROM collection_data
       WHERE collection_name = :collection_name
-      AND record_id = :record_id`,
+      AND record_id = :record_id;`,
 
   "saveLastModified": `
     REPLACE INTO collection_metadata (collection_name, last_modified)
-      VALUES (:collection_name, :last_modified)`,
+      VALUES (:collection_name, :last_modified);`,
 
   "getLastModified": `
     SELECT last_modified
       FROM collection_metadata
-        WHERE collection_name = :collection_name`,
+        WHERE collection_name = :collection_name;`,
 
   "getRecord": `
     SELECT record
       FROM collection_data
         WHERE collection_name = :collection_name
-        AND record_id = :record_id`,
+        AND record_id = :record_id;`,
 
   "listRecords": `
     SELECT record
       FROM collection_data
-        WHERE collection_name = :collection_name`
+        WHERE collection_name = :collection_name;`
 };
 
 const createStatements = ["createCollectionData",
                           "createCollectionMetadata",
                           "createCollectionDataRecordIdIndex"];
+
+const currentSchemaVersion = 1;
 
 export default class FirefoxAdapter extends BaseAdapter {
   constructor(dbname) {
@@ -87,9 +89,8 @@ export default class FirefoxAdapter extends BaseAdapter {
     // make a promise to initialize
     const self = this;
     this.init = Task.spawn(function* () {
-      let connection;
+      let connection = yield self._doOpenConnection();
       try {
-        connection = yield self._doOpenConnection();
         yield connection.executeTransaction(function* doSetup() {
           let schema = yield (connection.getSchemaVersion());
 
@@ -99,16 +100,14 @@ export default class FirefoxAdapter extends BaseAdapter {
               yield (connection.execute(statements[statementName]));
             }
 
-            yield (connection.setSchemaVersion(1));
+            yield (connection.setSchemaVersion(currentSchemaVersion));
           } else if (schema != 1) {
             throw new Error("Unknown database schema: " + schema);
           }
         });
         self.initialized = true;
       } finally {
-        if (connection) {
-          connection.close();
-        }
+        connection.close();
       }
     });
   }
@@ -118,7 +117,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     return Sqlite.openConnection(opts);
   }
 
-  _doTransaction(statement, params){
+  _withOpenConnection(statement, params){
     const self = this;
     return Task.spawn(function* (){
       // get a connection
@@ -130,17 +129,23 @@ export default class FirefoxAdapter extends BaseAdapter {
       //execute the transaction
       try {
         return yield connection.executeCached(statement, params);
-      }
-      finally {
-        // ensure the connection is closed
+      } finally {
         connection.close();
       }
     });
   }
 
+
+  open() {
+    return new Promise(function(resolve, reject){
+      dump("OPENED!!!\n");
+      resolve(this);
+    });
+  }
+
   clear() {
     const params = {collection_name: this.dbname};
-    return this._doTransaction(statements.clearData, params);
+    return this._withOpenConnection(statements.clearData, params);
   }
 
   create(record) {
@@ -149,9 +154,8 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._doTransaction(statements.createData, params).then(() => {
-      return record;
-    });
+    return this._withOpenConnection(statements.createData, params)
+           .then(() => record);
   }
 
   update(record) {
@@ -160,9 +164,8 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._doTransaction(statements.updateData, params).then(() => {
-      return record;
-    });
+    return this._withOpenConnection(statements.updateData, params)
+           .then(() => record);
   }
 
   get(id) {
@@ -170,7 +173,8 @@ export default class FirefoxAdapter extends BaseAdapter {
         collection_name: this.dbname,
         record_id: id,
       };
-      return this._doTransaction(statements.getRecord, params).then(result => {
+      return this._withOpenConnection(statements.getRecord, params)
+             .then(result => {
         if (result.length == 0) {
           return;
         }
@@ -183,16 +187,16 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.dbname,
       record_id: id,
     };
-    return this._doTransaction(statements.deleteData, params).then(() => {
-      return id;
-    });
+    return this._withOpenConnection(statements.deleteData, params)
+           .then(() => id);
   }
 
   list() {
     const params = {
       collection_name: this.dbname,
     };
-    return this._doTransaction(statements.listRecords, params).then(result => {
+    return this._withOpenConnection(statements.listRecords, params)
+           .then(result => {
       const records = [];
       for (let k = 0; k < result.length; k++) {
         let row = result[k];
@@ -208,16 +212,16 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.dbname,
       last_modified: parsedLastModified,
     };
-    return this._doTransaction(statements.saveLastModified, params).then(() => {
-      return parsedLastModified;
-    });
+    return this._withOpenConnection(statements.saveLastModified, params)
+           .then(() => parsedLastModified);
   }
 
   getLastModified() {
     const params = {
       collection_name: this.dbname,
     };
-    return this._doTransaction(statements.getLastModified, params).then(result => {
+    return this._withOpenConnection(statements.getLastModified, params)
+           .then(result => {
       if (result.length == 0) {
         return 0;
       }
