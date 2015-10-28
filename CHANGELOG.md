@@ -2,10 +2,57 @@
 
 ## [Unreleased](https://github.com/Kinto/kinto.js/tree/HEAD)
 
-[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.4...HEAD)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.5...HEAD)
+
+**Implemented enhancements:**
+
+- Don't version dist files, publish & host them. [\#203](https://github.com/Kinto/kinto.js/issues/203)
+- Add a publish-demo command to deploy demo assets to gh-pages [\#202](https://github.com/Kinto/kinto.js/issues/202)
+- Investigate how to allow importing kinto public modules from other packages [\#193](https://github.com/Kinto/kinto.js/issues/193)
+- Remove unneeded external dependencies [\#190](https://github.com/Kinto/kinto.js/issues/190)
+- How does Kinto.js detect server was flushed and reupload the local database. [\#178](https://github.com/Kinto/kinto.js/issues/178)
+- Consistent reported errors formatting in sync result object [\#176](https://github.com/Kinto/kinto.js/issues/176)
+- Fixes \#176: Consistent sync result error reporting. [\#220](https://github.com/Kinto/kinto.js/pull/220) ([n1k0](https://github.com/n1k0))
+- Fixes \#203: Removed dist files. [\#217](https://github.com/Kinto/kinto.js/pull/217) ([n1k0](https://github.com/n1k0))
+- Flushed server handling. [\#214](https://github.com/Kinto/kinto.js/pull/214) ([n1k0](https://github.com/n1k0))
+- Inject dependencies [\#199](https://github.com/Kinto/kinto.js/pull/199) ([mozmark](https://github.com/mozmark))
+
+**Fixed bugs:**
+
+- Installing 1.0.0-rc.5 through npm and using it from the node command triggers an error [\#208](https://github.com/Kinto/kinto.js/issues/208)
+- Fixes \#114: Drop collection metas on \#clear\(\). [\#221](https://github.com/Kinto/kinto.js/pull/221) ([n1k0](https://github.com/n1k0))
+
+**Closed issues:**
+
+- Investigate how to link to foreign symbols from within esdoc [\#215](https://github.com/Kinto/kinto.js/issues/215)
+- reject instead of throw if item not found in Collection\#get [\#200](https://github.com/Kinto/kinto.js/issues/200)
+- Update tutorial to use the /v1 version of the public moz test kinto server [\#188](https://github.com/Kinto/kinto.js/issues/188)
+- Investigate Travis failure [\#182](https://github.com/Kinto/kinto.js/issues/182)
+- Avoid typing and extending classes for transformers [\#155](https://github.com/Kinto/kinto.js/issues/155)
+- Add an Authentication section to the docs [\#99](https://github.com/Kinto/kinto.js/issues/99)
 
 **Merged pull requests:**
 
+- Update browserify to version 12.0.0 🚀 [\#224](https://github.com/Kinto/kinto.js/pull/224) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
+- Fixes \#99: Added docs for authorization. [\#223](https://github.com/Kinto/kinto.js/pull/223) ([n1k0](https://github.com/n1k0))
+- Update to Kinto 1.6.2 [\#222](https://github.com/Kinto/kinto.js/pull/222) ([Natim](https://github.com/Natim))
+- Fixes \#215: Added internal links to esdoc. [\#218](https://github.com/Kinto/kinto.js/pull/218) ([n1k0](https://github.com/n1k0))
+- Fixes \#202: Added publish-demo command. [\#216](https://github.com/Kinto/kinto.js/pull/216) ([n1k0](https://github.com/n1k0))
+- Fixes \#190: Avoid exporting Buffer to dist files. [\#211](https://github.com/Kinto/kinto.js/pull/211) ([n1k0](https://github.com/n1k0))
+- Fix snippet doc index \(create instead of add\) [\#207](https://github.com/Kinto/kinto.js/pull/207) ([leplatrem](https://github.com/leplatrem))
+- Fix details in documentation [\#205](https://github.com/Kinto/kinto.js/pull/205) ([leplatrem](https://github.com/leplatrem))
+- Fix import path in esdoc [\#204](https://github.com/Kinto/kinto.js/pull/204) ([leplatrem](https://github.com/leplatrem))
+- Moved fake indexedDB symbol imports to test logic. [\#201](https://github.com/Kinto/kinto.js/pull/201) ([n1k0](https://github.com/n1k0))
+- Update to Kinto 1.5.1 [\#195](https://github.com/Kinto/kinto.js/pull/195) ([Natim](https://github.com/Natim))
+- Documentation improvements. [\#194](https://github.com/Kinto/kinto.js/pull/194) ([n1k0](https://github.com/n1k0))
+- Adds esdoc support. [\#192](https://github.com/Kinto/kinto.js/pull/192) ([n1k0](https://github.com/n1k0))
+
+## [v1.0.0-rc.5](https://github.com/Kinto/kinto.js/tree/v1.0.0-rc.5) (2015-09-30)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.4...v1.0.0-rc.5)
+
+**Merged pull requests:**
+
+- 1.0.0-rc.5 [\#189](https://github.com/Kinto/kinto.js/pull/189) ([n1k0](https://github.com/n1k0))
 - Bump 1.0.0-rc.4. [\#187](https://github.com/Kinto/kinto.js/pull/187) ([n1k0](https://github.com/n1k0))
 
 ## [v1.0.0-rc.4](https://github.com/Kinto/kinto.js/tree/v1.0.0-rc.4) (2015-09-29)
@@ -20,6 +67,7 @@
 - Avoid running coverage twice now that isparta is fixed [\#133](https://github.com/Kinto/kinto.js/issues/133)
 - Expose Collection.strategy.\* [\#113](https://github.com/Kinto/kinto.js/issues/113)
 - Add lint/style check in Travis [\#5](https://github.com/Kinto/kinto.js/issues/5)
+- Fixes \#122 - Added Kinto.createRemoteTransformer\(\). [\#139](https://github.com/Kinto/kinto.js/pull/139) ([n1k0](https://github.com/n1k0))
 
 **Fixed bugs:**
 
@@ -68,7 +116,6 @@
 - Fixes \#120 - Documented bucket option. [\#145](https://github.com/Kinto/kinto.js/pull/145) ([n1k0](https://github.com/n1k0))
 - Fixes \#138 - Implement custom id schema's [\#143](https://github.com/Kinto/kinto.js/pull/143) ([michielbdejong](https://github.com/michielbdejong))
 - Fix db transactions on safari. [\#142](https://github.com/Kinto/kinto.js/pull/142) ([n1k0](https://github.com/n1k0))
-- Fixes \#122 - Added Kinto.createRemoteTransformer\(\). [\#139](https://github.com/Kinto/kinto.js/pull/139) ([n1k0](https://github.com/n1k0))
 - Fix test failing when KINTO\_PSERVE\_EXECUTABLE is not set in the env. [\#132](https://github.com/Kinto/kinto.js/pull/132) ([QuentinRoy](https://github.com/QuentinRoy))
 - Add instructions on how to run functional tests. [\#130](https://github.com/Kinto/kinto.js/pull/130) ([ametaireau](https://github.com/ametaireau))
 - Hint at http error reporting in docs example, fix \#124 [\#128](https://github.com/Kinto/kinto.js/pull/128) ([michielbdejong](https://github.com/michielbdejong))

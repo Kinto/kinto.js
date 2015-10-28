@@ -56,8 +56,31 @@ export default class LocalStorage extends BaseAdapter {
   }
 
   /**
+   * Opens a connection to the database. Doesn't do anything as LocalStorage
+   * database doesn't have to be opened.
+   *
+   * @override
+   * @return {Promise}
+   */
+  open() {
+    return super.open();
+  }
+
+  /**
+   * Closes current connection to the database. Doesn't do anything as LocalStorage
+   * database can't be closed.
+   *
+   * @override
+   * @return {Promise}
+   */
+  close() {
+    return super.close();
+  }
+
+  /**
    * Deletes every records in the current collection.
    *
+   * @override
    * @return {Promise}
    */
   clear() {
@@ -74,6 +97,7 @@ export default class LocalStorage extends BaseAdapter {
    *
    * Note: An id value is required.
    *
+   * @override
    * @param  {Object} record The record object, including an id.
    * @return {Promise}
    */
@@ -93,6 +117,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Updates a record from the localStorage datastore.
    *
+   * @override
    * @param  {Object} record
    * @return {Promise}
    */
@@ -111,6 +136,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Retrieve a record by its primary key from the localStorage datastore.
    *
+   * @override
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -126,6 +152,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Deletes a record from the localStorage datastore.
    *
+   * @override
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -142,6 +169,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Lists all records from the localStorage datastore.
    *
+   * @override
    * @return {Promise}
    */
   list() {
@@ -157,6 +185,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Store the lastModified value into metadata store.
    *
+   * @override
    * @param  {Number}  lastModified
    * @return {Promise}
    */
@@ -173,6 +202,7 @@ export default class LocalStorage extends BaseAdapter {
   /**
    * Retrieve saved lastModified value.
    *
+   * @override
    * @return {Promise}
    */
   getLastModified() {
