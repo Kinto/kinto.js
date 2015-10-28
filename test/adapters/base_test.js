@@ -8,6 +8,14 @@ describe("adapters.BaseAdapter", () => {
   var adapter;
   beforeEach(() => adapter = new BaseAdapter());
 
+  it("should fulfill calls to open", () => {
+    return adapter.open().should.be.fulfilled;
+  });
+
+  it("should fulfill calls to close", () => {
+    return adapter.close().should.be.fulfilled;
+  });
+
   it("should throw for non-implemented methods", () => {
     expect(() => adapter.clear()).to.Throw(Error, "Not Implemented.");
     expect(() => adapter.create()).to.Throw(Error, "Not Implemented.");

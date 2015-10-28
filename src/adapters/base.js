@@ -7,8 +7,29 @@
  */
 export default class BaseAdapter {
   /**
-   * Deletes every records present in the database..
+   * Opens a connection to the database.
    *
+   * @abstract
+   * @return {Promise}
+   */
+  open() {
+    return Promise.resolve();
+  }
+
+  /**
+   * Closes current connection to the database.
+   *
+   * @abstract
+   * @return {Promise}
+   */
+  close() {
+    return Promise.resolve();
+  }
+
+  /**
+   * Deletes every records present in the database.
+   *
+   * @abstract
    * @return {Promise}
    */
   clear() {
@@ -16,10 +37,11 @@ export default class BaseAdapter {
   }
 
   /**
-   * Adds a record to the IndexedDB database.
+   * Adds a record to the database.
    *
    * Note: An id value is required.
    *
+   * @abstract
    * @param  {Object} record The record object, including an id.
    * @return {Promise}
    */
@@ -30,6 +52,7 @@ export default class BaseAdapter {
   /**
    * Updates a record from the IndexedDB database.
    *
+   * @abstract
    * @param  {Object} record
    * @return {Promise}
    */
@@ -40,6 +63,7 @@ export default class BaseAdapter {
   /**
    * Retrieve a record by its primary key from the database.
    *
+   * @abstract
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -50,6 +74,7 @@ export default class BaseAdapter {
   /**
    * Deletes a record from the database.
    *
+   * @abstract
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -60,6 +85,7 @@ export default class BaseAdapter {
   /**
    * Lists all records from the database.
    *
+   * @abstract
    * @return {Promise}
    */
   list() {
@@ -69,6 +95,7 @@ export default class BaseAdapter {
   /**
    * Store the lastModified value.
    *
+   * @abstract
    * @param  {Number}  lastModified
    * @return {Promise}
    */
@@ -79,6 +106,7 @@ export default class BaseAdapter {
   /**
    * Retrieve saved lastModified value.
    *
+   * @abstract
    * @return {Promise}
    */
   getLastModified() {

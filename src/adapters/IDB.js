@@ -33,6 +33,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Ensures a connection to the IndexedDB database has been opened.
    *
+   * @override
    * @return {Promise}
    */
   open() {
@@ -70,6 +71,20 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
+   * Closes current connection to the database.
+   *
+   * @override
+   * @return {Promise}
+   */
+  close() {
+    if (this._db) {
+      this._db.close(); // indexedDB.close is synchronous
+      this._db = null;
+    }
+    return super.close();
+  }
+
+  /**
    * Returns a transaction and a store objects for this collection.
    *
    * To determine if a transaction has completed successfully, we should rather
@@ -93,6 +108,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Deletes every records in the current collection.
    *
+   * @override
    * @return {Promise}
    */
   clear() {
@@ -111,6 +127,7 @@ export default class IDB extends BaseAdapter {
    *
    * Note: An id value is required.
    *
+   * @override
    * @param  {Object} record The record object, including an id.
    * @return {Promise}
    */
@@ -128,6 +145,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Updates a record from the IndexedDB database.
    *
+   * @override
    * @param  {Object} record
    * @return {Promise}
    */
@@ -145,6 +163,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Retrieve a record by its primary key from the IndexedDB database.
    *
+   * @override
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -162,6 +181,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Deletes a record from the IndexedDB database.
    *
+   * @override
    * @param  {String} id The record id.
    * @return {Promise}
    */
@@ -179,6 +199,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Lists all records from the IndexedDB database.
    *
+   * @override
    * @return {Promise}
    */
   list() {
@@ -203,6 +224,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Store the lastModified value into metadata store.
    *
+   * @override
    * @param  {Number}  lastModified
    * @return {Promise}
    */
@@ -221,6 +243,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Retrieve saved lastModified value.
    *
+   * @override
    * @return {Promise}
    */
   getLastModified() {

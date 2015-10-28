@@ -32,6 +32,20 @@ describe("adapter.LocalStorage", () => {
 
     afterEach(() => sandbox.restore());
 
+    /** @test {IDB#open} */
+    describe("#open", () => {
+      it("should be fullfilled when a connection is opened", () => {
+        return db.open().should.be.fulfilled;
+      });
+    });
+
+    /** @test {IDB#close} */
+    describe("#close", () => {
+      it("should be fullfilled when a connection is closed", () => {
+        return db.close().should.be.fulfilled;
+      });
+    });
+
     /** @test {LocalStorage#clear} */
     describe("#clear", () => {
       it("should reject on generic error", () => {
