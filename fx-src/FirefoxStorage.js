@@ -127,9 +127,11 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   close() {
     if (this._connection) {
-      this._connection.close();
+      let promise = this._connection.close();
       this._connection = null;
+      return promise;
     }
+    return Promise.resolve();
   }
 
   clear() {
