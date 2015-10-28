@@ -85,67 +85,56 @@ export default class FirefoxAdapter extends BaseAdapter {
   constructor(dbname) {
     super();
     this.dbname = dbname;
+  }
 
-    // make a promise to initialize
-    const self = this;
-    this.init = Task.spawn(function* () {
-      let connection = yield self._doOpenConnection();
-      try {
-        yield connection.executeTransaction(function* doSetup() {
-          let schema = yield (connection.getSchemaVersion());
+  _init(connection) {
+    return Task.spawn(function* () {
+      yield connection.executeTransaction(function* doSetup() {
+        let schema = yield (connection.getSchemaVersion());
 
-          if (schema == 0) {
+        if (schema == 0) {
 
-            for (let statementName of createStatements) {
-              yield (connection.execute(statements[statementName]));
-            }
-
-            yield (connection.setSchemaVersion(currentSchemaVersion));
-          } else if (schema != 1) {
-            throw new Error("Unknown database schema: " + schema);
+          for (let statementName of createStatements) {
+            yield (connection.execute(statements[statementName]));
           }
-        });
-        self.initialized = true;
-      } finally {
-        connection.close();
-      }
+
+          yield (connection.setSchemaVersion(currentSchemaVersion));
+        } else if (schema != 1) {
+          throw new Error("Unknown database schema: " + schema);
+        }
+      });
+      return connection;
     });
   }
 
-  _doOpenConnection() {
-    const opts = { path: "kinto.sqlite", sharedMemoryCache: false }
-    return Sqlite.openConnection(opts);
-  }
-
-  _withOpenConnection(statement, params){
-    const self = this;
-    return Task.spawn(function* (){
-      // get a connection
-      let connection = yield self._doOpenConnection();
-
-      // ensure we're initialized
-      yield self.init;
-
-      //execute the transaction
-      try {
-        return yield connection.executeCached(statement, params);
-      } finally {
-        connection.close();
-      }
-    });
+  _executeStatement(statement, params){
+    if (!this._connection) {
+      throw new Error("The storage adapter is not open");
+    }
+    return this._connection.executeCached(statement, params);
   }
 
 
   open() {
-    return new Promise(function(resolve, reject){
-      dump("OPENED!!!\n");
-      resolve(this);
+    const self = this;
+    return Task.spawn(function* (){
+      const opts = { path: "kinto.sqlite", sharedMemoryCache: false }
+      if (!self._connection) {
+        self._connection = yield Sqlite.openConnection(opts).then(connection => self._init(connection));
+      }
     });
+  }
+
+  close() {
+    if (this._connection) {
+      this._connection.close();
+      this._connection = null;
+    }
   }
 
   clear() {
     const params = {collection_name: this.dbname};
-    return this._withOpenConnection(statements.clearData, params);
+    return this._executeStatement(statements.clearData, params);
   }
 
   create(record) {
@@ -154,7 +143,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._withOpenConnection(statements.createData, params)
+    return this._executeStatement(statements.createData, params)
            .then(() => record);
   }
 
@@ -164,7 +153,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       record_id: record.id,
       record: JSON.stringify(record)
     };
-    return this._withOpenConnection(statements.updateData, params)
+    return this._executeStatement(statements.updateData, params)
            .then(() => record);
   }
 
@@ -173,7 +162,7 @@ export default class FirefoxAdapter extends BaseAdapter {
         collection_name: this.dbname,
         record_id: id,
       };
-      return this._withOpenConnection(statements.getRecord, params)
+      return this._executeStatement(statements.getRecord, params)
              .then(result => {
         if (result.length == 0) {
           return;
@@ -187,7 +176,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.dbname,
       record_id: id,
     };
-    return this._withOpenConnection(statements.deleteData, params)
+    return this._executeStatement(statements.deleteData, params)
            .then(() => id);
   }
 
@@ -195,7 +184,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     const params = {
       collection_name: this.dbname,
     };
-    return this._withOpenConnection(statements.listRecords, params)
+    return this._executeStatement(statements.listRecords, params)
            .then(result => {
       const records = [];
       for (let k = 0; k < result.length; k++) {
@@ -212,7 +201,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.dbname,
       last_modified: parsedLastModified,
     };
-    return this._withOpenConnection(statements.saveLastModified, params)
+    return this._executeStatement(statements.saveLastModified, params)
            .then(() => parsedLastModified);
   }
 
@@ -220,7 +209,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     const params = {
       collection_name: this.dbname,
     };
-    return this._withOpenConnection(statements.getLastModified, params)
+    return this._executeStatement(statements.getLastModified, params)
            .then(result => {
       if (result.length == 0) {
         return 0;
