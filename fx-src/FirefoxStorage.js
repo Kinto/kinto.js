@@ -82,23 +82,23 @@ const createStatements = ["createCollectionData",
 const currentSchemaVersion = 1;
 
 export default class FirefoxAdapter extends BaseAdapter {
-  constructor(dbname) {
+  constructor(collection) {
     super();
-    this.dbname = dbname;
+    this.collection = collection;
   }
 
   _init(connection) {
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doSetup() {
-        let schema = yield (connection.getSchemaVersion());
+        let schema = yield connection.getSchemaVersion();
 
         if (schema == 0) {
 
           for (let statementName of createStatements) {
-            yield (connection.execute(statements[statementName]));
+            yield connection.execute(statements[statementName]);
           }
 
-          yield (connection.setSchemaVersion(currentSchemaVersion));
+          yield connection.setSchemaVersion(currentSchemaVersion);
         } else if (schema != 1) {
           throw new Error("Unknown database schema: " + schema);
         }
@@ -120,7 +120,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     return Task.spawn(function* (){
       const opts = { path: "kinto.sqlite", sharedMemoryCache: false }
       if (!self._connection) {
-        self._connection = yield Sqlite.openConnection(opts).then(connection => self._init(connection));
+        self._connection = yield Sqlite.openConnection(opts).then(self._init);
       }
     });
   }
@@ -135,33 +135,33 @@ export default class FirefoxAdapter extends BaseAdapter {
   }
 
   clear() {
-    const params = {collection_name: this.dbname};
+    const params = {collection_name: this.collection};
     return this._executeStatement(statements.clearData, params);
   }
 
   create(record) {
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
       record_id: record.id,
       record: JSON.stringify(record)
     };
     return this._executeStatement(statements.createData, params)
-           .then(() => record);
+               .then(() => record);
   }
 
   update(record) {
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
       record_id: record.id,
       record: JSON.stringify(record)
     };
     return this._executeStatement(statements.updateData, params)
-           .then(() => record);
+               .then(() => record);
   }
 
   get(id) {
       const params = {
-        collection_name: this.dbname,
+        collection_name: this.collection,
         record_id: id,
       };
       return this._executeStatement(statements.getRecord, params)
@@ -175,7 +175,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   delete(id) {
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
       record_id: id,
     };
     return this._executeStatement(statements.deleteData, params)
@@ -184,7 +184,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   list() {
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
     };
     return this._executeStatement(statements.listRecords, params)
            .then(result => {
@@ -200,7 +200,7 @@ export default class FirefoxAdapter extends BaseAdapter {
   saveLastModified(lastModified) {
     const parsedLastModified = parseInt(lastModified, 10) || null;
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
       last_modified: parsedLastModified,
     };
     return this._executeStatement(statements.saveLastModified, params)
@@ -209,7 +209,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   getLastModified() {
     const params = {
-      collection_name: this.dbname,
+      collection_name: this.collection,
     };
     return this._executeStatement(statements.getLastModified, params)
            .then(result => {
