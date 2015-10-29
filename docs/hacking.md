@@ -66,15 +66,15 @@ Of course, as for `npm test`, you can explictely pass the pass to the Kinto serv
 
     $ npm run dist
 
-This should have created the following assets:
+This should have created the following assets, with the current version in the filename (for instance, `1.0.0`):
 
--  `demo/kinto.dev.js`: Developement version, unminified, embedding source maps;
--  `demo/kinto.min.js`: Production version, minified, no source maps.
+-  `demo/kinto-1.0.0.dev.js`: Development version, unminified, embedding source maps;
+-  `demo/kinto-1.0.0.min.js`: Production version, minified, no source maps.
 
 Once the [demo is published](#publishing-the-demo) along these generated assets, they're available at the following URLs:
 
-- [http://kinto.github.io/kinto.js/kinto.dev.js](http://kinto.github.io/kinto.js/kinto.dev.js) for the development version;
-- [http://kinto.github.io/kinto.js/kinto.min.js](http://kinto.github.io/kinto.js/kinto.min.js) for the production version.
+- [http://kinto.github.io/kinto.js/kinto-1.0.0.dev.js](http://kinto.github.io/kinto.js/kinto-1.0.0.dev.js) for the development version;
+- [http://kinto.github.io/kinto.js/kinto-1.0.0.min.js](http://kinto.github.io/kinto.js/kinto-1.0.0.min.js) for the production version.
 
 ## Updating docs
 

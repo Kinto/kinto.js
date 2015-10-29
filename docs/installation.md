@@ -14,14 +14,11 @@ $ npm install kinto --save
 
 ## Static assets
 
-Dev and production ready assets are available in the [`dist` folder of the repository](https://github.com/Kinto/kinto.js/tree/master/dist). You can either download an archive of the code and use these files in your own project, or link to static assets served through [rawgit](http://rawgit.com/):
+Dev and production ready assets are available in the [`gh-pages` branch of the repository](https://github.com/Kinto/kinto.js/tree/gh-pages). In general, you should download these files and ship them along your own projects, though you can also link them during development:
 
-### Latest master
+- Dev version, including source maps: [kinto-1.0.0.dev.js](http://kinto.github.io/kinto.js/kinto-1.0.0.dev.js)
+- Production version, minified, no source maps: [kinto-1.0.0.dev.js](http://kinto.github.io/kinto.js/kinto-1.0.0.min.js)
 
-- Dev version, including source maps: [kinto.dev.js](https://rawgit.com/Kinto/kinto.js/master/dist/kinto.dev.js)
-- Production version, minified, no source maps: [kinto.dev.js](https://rawgit.com/Kinto/kinto.js/master/dist/kinto.min.js)
-
-### Latest tag
-
-- Dev version, including source maps: [kinto.dev.js](https://cdn.rawgit.com/Kinto/kinto.js/1.0.0-rc.1/dist/kinto.dev.js)
-- Production version, minified, no source maps: [kinto.dev.js](https://cdn.rawgit.com/Kinto/kinto.js/1.0.0-rc.1/dist/kinto.min.js)
+> #### Notes
+>
+> Only stable tags are released as dist files; if you plan on using latest versions from master, you need to [build them manually](hacking.md#generating-dist-files).
