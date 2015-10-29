@@ -40,19 +40,30 @@ function main() {
         });
     });
 
+  function doSync() {
+    return tasks.sync().catch(function(err) {
+      if (err.message.contains("flushed")) {
+        console.warn("Flushed server detected, marking local data for reupload.");
+        return tasks.resetSyncStatus()
+          .then(function() {
+            return tasks.sync();
+          });
+      }
+      throw err;
+    });
+  }
+
   function handleConflicts(conflicts) {
     return Promise.all(conflicts.map(function(conflict) {
       return tasks.resolve(conflict, conflict.remote);
     }))
-      .then(function() {
-        tasks.sync();
-      });
+      .then(doSync);
   }
 
   document.getElementById("sync")
     .addEventListener("click", function(event) {
       event.preventDefault();
-      tasks.sync()
+      doSync()
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
