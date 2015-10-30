@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^4.0.10",
-    "babelify": "^6.1.3",
+    "babelify": "^7.0.0",
     "browserify": "^12.0.0",
     "chai": "^3.2.0",
     "chai-as-promised": "^5.0.0",
