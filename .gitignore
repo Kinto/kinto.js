@@ -1,4 +1,5 @@
 /.venv
+/dist
 /lib
 /npm-debug.log
 /coverage

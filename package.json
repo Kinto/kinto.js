@@ -6,19 +6,18 @@
   "scripts": {
     "build": "babel -d lib/ src/",
     "demo": "npm run dist && http-server demo",
-    "dist": "npm run dist-dev && npm run dist-prod",
-    "dist-dev": "browserify -s Kinto -d -e src/index.js -o demo/kinto-$npm_package_version.dev.js -t [ babelify --sourceMapRelative . ]",
-    "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o demo/kinto-$npm_package_version.min.js -t [ babelify --sourceMapRelative . ]",
+    "dist": "mkdir -p dist && rm -f dist/*.* && npm run dist-dev && npm run dist-prod && npm run dist-fx",
+    "dist-dev": "browserify -s Kinto -d -e src/index.js -o dist/kinto-$npm_package_version.js -t [ babelify --sourceMapRelative . ]",
+    "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o dist/kinto-$npm_package_version.min.js -t [ babelify --sourceMapRelative . ]",
     "dist-fx": "browserify -s loadKinto -e fx-src/index.js -o temp.jsm -t [ babelify --blacklist regenerator,es6.arrowFunctions ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat temp.jsm >> dist/moz-kinto-client.js && rm temp.jsm",
-    "publish-demo": "npm run dist && gh-pages -d demo",
-    "publish-package": "npm run build && npm publish",
+    "publish-demo": "gh-pages -d demo",
+    "publish-package": "npm run build && npm run dist && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "tdd": "mocha -w --compilers js:babel/register --require ./test/_setup.js 'test/**/*_test.js'",
     "test": "npm run lint && npm run test-nocover",
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && open coverage/index.html",
     "test-nocover": "node_modules/.bin/_mocha --compilers js:babel/register --require ./test/_setup.js 'test/**/*_test.js'",
-    "watch": "watchify -s Kinto -d -e src/index.js -o demo/kinto.dev.js -v",
     "lint": "node_modules/.bin/eslint src test"
   },
   "repository": {
@@ -54,7 +53,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^4.0.10",
-    "babelify": "^7.0.1",
+    "babelify": "^6.1.3",
     "browserify": "^12.0.0",
     "chai": "^3.2.0",
     "chai-as-promised": "^5.0.0",
@@ -67,7 +66,6 @@
     "isparta": "^3.0.3",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",
-    "uglifyify": "^3.0.1",
-    "watchify": "^3.3.1"
+    "uglifyify": "^3.0.1"
   }
 }
