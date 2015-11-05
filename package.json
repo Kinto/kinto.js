@@ -11,7 +11,6 @@
     "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o dist/kinto-$npm_package_version.min.js -t [ babelify --sourceMapRelative . ]",
     "dist-fx": "browserify -s loadKinto -e fx-src/index.js -o temp.jsm -t [ babelify --blacklist regenerator,es6.arrowFunctions ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat temp.jsm >> dist/moz-kinto-client.js && rm temp.jsm",
     "publish-demo": "gh-pages -d demo",
-    "publish-package": "npm run build && npm run dist && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "tdd": "mocha -w --compilers js:babel/register --require ./test/_setup.js 'test/**/*_test.js'",
     "test": "npm run lint && npm run test-nocover",
