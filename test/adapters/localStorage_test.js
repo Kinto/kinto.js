@@ -22,7 +22,7 @@ describe("adapter.LocalStorage", () => {
 
   /** @test {LocalStorage} */
   describe("LocalStorage specific tests", () => {
-    var sandbox, db;
+    let sandbox, db;
 
     beforeEach(() => {
       sandbox = sinon.sandbox.create();

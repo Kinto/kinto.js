@@ -7,6 +7,8 @@
         "linebreak-style": [2, "unix"],
         "no-console": 0,
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
+        "no-var": 2,
+        "prefer-const": 1,
         "quotes": [2, "double"],
         "semi": [2, "always"]
     },

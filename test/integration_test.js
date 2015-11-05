@@ -18,7 +18,7 @@ const PSERVE_EXECUTABLE = process.env.KINTO_PSERVE_EXECUTABLE || "pserve";
 const KINTO_CONFIG = __dirname + "/kinto.ini";
 
 describe("Integration tests", () => {
-  var sandbox, server, kinto, tasks;
+  let sandbox, server, kinto, tasks;
   const MAX_ATTEMPTS = 50;
   const serverLogs = [];
 
@@ -144,7 +144,7 @@ describe("Integration tests", () => {
             {id: uuid4(), title: "task1", done: true},
           ]
         };
-        var syncResult;
+        let syncResult;
 
         beforeEach(() => {
           return testSync(testData).then(res => syncResult = res);
@@ -211,7 +211,7 @@ describe("Integration tests", () => {
         });
 
         describe("On next MANUAL sync", () => {
-          var nextSyncResult;
+          let nextSyncResult;
 
           beforeEach(() => {
             return tasks.sync().then(result => {
@@ -268,7 +268,7 @@ describe("Integration tests", () => {
             {id: conflictingId, title: "task4-remote", done: true},
           ]
         };
-        var syncResult;
+        let syncResult;
 
         describe("MANUAL strategy (default)", () => {
           beforeEach(() => {
@@ -346,7 +346,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -465,7 +465,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -584,7 +584,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -628,7 +628,7 @@ describe("Integration tests", () => {
       });
 
       describe("Outgoing conflict", () => {
-        var syncResult;
+        let syncResult;
 
         beforeEach(() => {
           return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
@@ -717,7 +717,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -825,7 +825,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -931,7 +931,7 @@ describe("Integration tests", () => {
           });
 
           describe("On next MANUAL sync", () => {
-            var nextSyncResult;
+            let nextSyncResult;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -975,13 +975,13 @@ describe("Integration tests", () => {
       });
 
       describe("Batch request chunking", () => {
-        var nbFixtures;
+        let nbFixtures;
 
         function loadFixtures() {
           return tasks.api.fetchServerSettings()
             .then(serverSettings => {
               nbFixtures = serverSettings["cliquet.batch_max_requests"] + 10;
-              var fixtures = [];
+              const fixtures = [];
               for (let i=0; i<nbFixtures; i++) {
                 fixtures.push({title: "title" + i, position: i});
               }
@@ -1004,7 +1004,7 @@ describe("Integration tests", () => {
 
     describe("Schemas", () => {
       function createIntegerIdSchema() {
-        var _next = 0;
+        let _next = 0;
         return {
           generate() {
             return _next++;
