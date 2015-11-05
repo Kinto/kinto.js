@@ -1,27 +1,20 @@
 {
     "parser": "babel-eslint",
     "rules": {
-        "curly": [2],
+        "comma-dangle": 0,
+        "curly": 2,
         "indent": [2, 2],
-        "quotes": [2, "double"],
         "linebreak-style": [2, "unix"],
-        "semi": [2, "always"],
-        "comma-dangle": [0],
+        "no-console": 0,
         "no-unused-vars": [2, {"vars": "all", "args": "none"}],
-        "no-console": [0]
+        "quotes": [2, "double"],
+        "semi": [2, "always"]
     },
     "env": {
         "es6": true,
         "browser": true,
         "node": true
     },
-    "globals": {
-        "it": true,
-        "describe": true,
-        "before": true,
-        "after": true,
-        "beforeEach": true,
-        "afterEach": true,
-    },
-    "extends": "eslint:recommended"
+    "extends": "eslint:recommended",
+    "root": true
 }
