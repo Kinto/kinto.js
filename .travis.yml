@@ -14,6 +14,7 @@ before_install:
 env:
 - ACTION=test
 - ACTION="run lint"
+- ACTION="run dist" # ensures building dist files doesn't break
 script:
 - npm $ACTION
 after_script:

@@ -48,17 +48,17 @@ Alternative test commands are also available:
 
 ### TDD mode
 
-This command will watch for changes on the js source files then rerun the tests:
+This command will watch when source files change and rerun the tests each time they do:
 
     $ npm run tdd
 
 Note that it won't perform code coverage analysis.
 
-You can also grep to run a subset of tests that way:
+You can also run a subset of tests that way:
 
     $ npm run tdd -- -g Api # only runs Api-related tests
 
-Of course, as for `npm test`, you can explictely pass the pass to the Kinto server `pserve` executable to use to execute integration tests:
+Of course, as for `npm test`, you can explictly pass the pass to the Kinto server `pserve` executable to use to execute integration tests:
 
     $ KINTO_PSERVE_EXECUTABLE="/path/to/venv/bin/pserve" npm run tdd
 
@@ -68,13 +68,14 @@ Of course, as for `npm test`, you can explictely pass the pass to the Kinto serv
 
 This should have created the following assets, with the current version in the filename (for instance, `1.0.0`):
 
--  `demo/kinto-1.0.0.dev.js`: Development version, unminified, embedding source maps;
--  `demo/kinto-1.0.0.min.js`: Production version, minified, no source maps.
+-  `dist/kinto-1.0.0.js`: Development version, unminified, embedding source maps;
+-  `dist/kinto-1.0.0.min.js`: Production version, minified, no source maps;
+-  `dist/moz-kinto-client.js`: Firefox internal component bundle (for Mozilla specific use).
 
-Once the [demo is published](#publishing-the-demo) along these generated assets, they're available at the following URLs:
+Once a new version is packaged and [published to npm](#publishing-to-npm), the [npmcdn](https://npmcdn.com/ service) makes ready-to-use kinto.js assets available from the following urls:
 
-- [http://kinto.github.io/kinto.js/kinto-1.0.0.dev.js](http://kinto.github.io/kinto.js/kinto-1.0.0.dev.js) for the development version;
-- [http://kinto.github.io/kinto.js/kinto-1.0.0.min.js](http://kinto.github.io/kinto.js/kinto-1.0.0.min.js) for the production version.
+- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js) for the development version;
+- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js) for the production version.
 
 ## Updating docs
 
