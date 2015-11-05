@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "1.0.0-dev",
+  "version": "1.1.0",
   "description": "JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
@@ -31,7 +31,22 @@
     "kinto",
     "indexeddb"
   ],
-  "author": "Nicolas Perriault <nperriault@mozilla.com>",
+  "author": "Mozilla <contact@mozilla.com>",
+  "contributors": [
+    {
+      "name": "Michiel B. de Jong",
+      "url": "https://michielbdejong.com/"
+    }, {
+      "name": "Nicolas Perriault",
+      "url": "https://nicolas.perriault.net/"
+    }, {
+      "name": "Mathieu Leplatre",
+      "url": "http://mathieu-leplatre.info/"
+    }, {
+      "name": "Mark Goodwin",
+      "url": "https://www.computerist.org/"
+    }
+  ],
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/Kinto/kinto.js/issues"

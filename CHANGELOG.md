@@ -1,8 +1,31 @@
 # Change Log
 
-## [Unreleased](https://github.com/Kinto/kinto.js/tree/HEAD)
+## [v1.1.0]((https://github.com/Kinto/kinto.js/tree/v1.1.0)
 
-[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.5...HEAD)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0...v1.1.0)
+
+**Implemented enhancements:**
+
+- Preserve old files in gh-pages branch, so older assets versions aren't overriden [\#241](https://github.com/Kinto/kinto.js/issues/241)
+- Hosted dist files should contain the version number in their filename [\#228](https://github.com/Kinto/kinto.js/issues/228)
+- Updated dist command to add current version to asset names. [\#230](https://github.com/Kinto/kinto.js/pull/230) ([n1k0](https://github.com/n1k0))
+
+**Fixed bugs:**
+
+- Handle the case of a flushed server in the demo. [\#231](https://github.com/Kinto/kinto.js/issues/231)
+- Fixes \#231: Updated demo to handle flushed server. [\#232](https://github.com/Kinto/kinto.js/pull/232) ([n1k0](https://github.com/n1k0))
+
+**Merged pull requests:**
+
+- Updated dist and publish commands to support versioned assets. [\#248](https://github.com/Kinto/kinto.js/pull/248) ([n1k0](https://github.com/n1k0))
+- Update babelify to version 7.0.1 🚀 [\#239](https://github.com/Kinto/kinto.js/pull/239) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
+- Update gh-pages to version 0.5.0 🚀 [\#237](https://github.com/Kinto/kinto.js/pull/237) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
+- Updated travis configuration to install Kinto 1.7.0. [\#229](https://github.com/Kinto/kinto.js/pull/229) ([n1k0](https://github.com/n1k0))
+- Exposed open\(\) and close\(\) methods to the BaseAdapter interface. [\#227](https://github.com/Kinto/kinto.js/pull/227) ([n1k0](https://github.com/n1k0))
+- 212 firefox entry point [\#219](https://github.com/Kinto/kinto.js/pull/219) ([mozmark](https://github.com/mozmark))
+
+## [v1.0.0](https://github.com/Kinto/kinto.js/tree/v1.0.0) (2015-10-27)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0-rc.5...v1.0.0)
 
 **Implemented enhancements:**
 
@@ -117,7 +140,7 @@
 - Fixes \#138 - Implement custom id schema's [\#143](https://github.com/Kinto/kinto.js/pull/143) ([michielbdejong](https://github.com/michielbdejong))
 - Fix db transactions on safari. [\#142](https://github.com/Kinto/kinto.js/pull/142) ([n1k0](https://github.com/n1k0))
 - Fix test failing when KINTO\_PSERVE\_EXECUTABLE is not set in the env. [\#132](https://github.com/Kinto/kinto.js/pull/132) ([QuentinRoy](https://github.com/QuentinRoy))
-- Add instructions on how to run functional tests. [\#130](https://github.com/Kinto/kinto.js/pull/130) ([ametaireau](https://github.com/ametaireau))
+- Add instructions on how to run functional tests. [\#130](https://github.com/Kinto/kinto.js/pull/130) ([almet](https://github.com/almet))
 - Hint at http error reporting in docs example, fix \#124 [\#128](https://github.com/Kinto/kinto.js/pull/128) ([michielbdejong](https://github.com/michielbdejong))
 - Add ESLint on TravisCI \(fixes \#5\) [\#121](https://github.com/Kinto/kinto.js/pull/121) ([leplatrem](https://github.com/leplatrem))
 - Remove mentions of Cliquet [\#118](https://github.com/Kinto/kinto.js/pull/118) ([leplatrem](https://github.com/leplatrem))
@@ -129,7 +152,7 @@
 - \[Ready for Review\] Initial implementation of transformers. [\#106](https://github.com/Kinto/kinto.js/pull/106) ([n1k0](https://github.com/n1k0))
 - Fixes \#103 - Updated links to public static assets. [\#104](https://github.com/Kinto/kinto.js/pull/104) ([n1k0](https://github.com/n1k0))
 - Remove the Backoff header handling exclusion for 304 responses  [\#86](https://github.com/Kinto/kinto.js/pull/86) ([n1k0](https://github.com/n1k0))
-- Change the license [\#2](https://github.com/Kinto/kinto.js/pull/2) ([ametaireau](https://github.com/ametaireau))
+- Change the license [\#2](https://github.com/Kinto/kinto.js/pull/2) ([almet](https://github.com/almet))
 
 ## [1.0.0-rc.3](https://github.com/Kinto/kinto.js/tree/1.0.0-rc.3) (2015-07-31)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/1.0.0-rc.2...1.0.0-rc.3)
@@ -215,8 +238,8 @@
 - Added full integration test suite. [\#50](https://github.com/Kinto/kinto.js/pull/50) ([n1k0](https://github.com/n1k0))
 - Adding the documentation badge in the readme. [\#49](https://github.com/Kinto/kinto.js/pull/49) ([n1k0](https://github.com/n1k0))
 - "ReferenceError: render is not defined" and a few typos in tutorial [\#46](https://github.com/Kinto/kinto.js/pull/46) ([ferjm](https://github.com/ferjm))
-- Update index.md [\#43](https://github.com/Kinto/kinto.js/pull/43) ([ametaireau](https://github.com/ametaireau))
-- Don't mention cliquet in the readme. [\#42](https://github.com/Kinto/kinto.js/pull/42) ([ametaireau](https://github.com/ametaireau))
+- Update index.md [\#43](https://github.com/Kinto/kinto.js/pull/43) ([almet](https://github.com/almet))
+- Don't mention cliquet in the readme. [\#42](https://github.com/Kinto/kinto.js/pull/42) ([almet](https://github.com/almet))
 - Rename project to kinto.js [\#37](https://github.com/Kinto/kinto.js/pull/37) ([n1k0](https://github.com/n1k0))
 - Kinto setup script. [\#32](https://github.com/Kinto/kinto.js/pull/32) ([n1k0](https://github.com/n1k0))
 
