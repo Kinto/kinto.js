@@ -130,11 +130,11 @@ describe("HTTP class", () => {
               if (name !== "Alert") {
                 return "fake";
               }
-            }
+            },
           },
           text() {
             return "invalid JSON";
-          }
+          },
         }));
 
         return http.request("/")
@@ -151,12 +151,12 @@ describe("HTTP class", () => {
               {
                 description: "data is missing",
                 location: "body",
-                name: "data"
-              }
+                name: "data",
+              },
             ],
             errno: 107,
             error: "Invalid parameters",
-            message: "data is missing"
+            message: "data is missing",
           }));
 
         return http.request("/")

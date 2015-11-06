@@ -54,8 +54,8 @@ describe("adapter.IDB", () => {
             get onerror() {},
             set onerror(onerror) {
               onerror({target: {error: "transaction error"}});
-            }
-          }
+            },
+          },
         });
         return db.create({foo: "bar"})
           .should.be.rejectedWith(Error, "transaction error");
@@ -77,8 +77,8 @@ describe("adapter.IDB", () => {
             get onerror() {},
             set onerror(onerror) {
               onerror({target: {error: "transaction error"}});
-            }
-          }
+            },
+          },
         });
         return db.update({id: 42, foo: "bar"})
           .should.be.rejectedWith(Error, "transaction error");
@@ -115,8 +115,8 @@ describe("adapter.IDB", () => {
             get onerror() {},
             set onerror(onerror) {
               onerror({target: {error: "transaction error"}});
-            }
-          }
+            },
+          },
         });
         return db.get(42)
           .should.be.rejectedWith(Error, "transaction error");
@@ -142,8 +142,8 @@ describe("adapter.IDB", () => {
             get onerror() {},
             set onerror(onerror) {
               onerror({target: {error: "transaction error"}});
-            }
-          }
+            },
+          },
         });
         return db.list({})
           .should.be.rejectedWith(Error, "transaction error");

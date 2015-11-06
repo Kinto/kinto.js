@@ -34,7 +34,7 @@ describe("Collection", () => {
       events,
       idSchema,
       remoteTransformers,
-      adapter: IDB
+      adapter: IDB,
     });
   }
 
@@ -43,7 +43,7 @@ describe("Collection", () => {
       encode(record) {
         return updateTitleWithDelay(record, char, delay);
       },
-      decode(record) {}
+      decode(record) {},
     };
   }
 
@@ -55,7 +55,7 @@ describe("Collection", () => {
       },
       validate(id) {
         return ((id == parseInt(id, 10)) && (id >= 0));
-      }
+      },
     };
   }
 
@@ -112,7 +112,7 @@ describe("Collection", () => {
     it("should allow providing an adapter option", () => {
       const MyAdapter = class extends BaseAdapter {};
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        adapter: MyAdapter
+        adapter: MyAdapter,
       });
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
@@ -121,7 +121,7 @@ describe("Collection", () => {
       function registerTransformers(transformers) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
           remoteTransformers: transformers,
-          adapter: IDB
+          adapter: IDB,
         });
       }
 
@@ -150,7 +150,7 @@ describe("Collection", () => {
       function registerIdSchema(idSchema) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
           idSchema: idSchema,
-          adapter: IDB
+          adapter: IDB,
         });
       }
 
@@ -315,7 +315,7 @@ describe("Collection", () => {
 
     it("should assign an id to the created record (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: createIntegerIdSchema()
+        idSchema: createIntegerIdSchema(),
       });
 
       return articles.create(article)
@@ -376,7 +376,7 @@ describe("Collection", () => {
 
     it("should validate record's Id when provided (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: createIntegerIdSchema()
+        idSchema: createIntegerIdSchema(),
       });
 
       return articles.create({id: "deadbeef", title: "foo"}, {useRecordId: true})
@@ -433,7 +433,7 @@ describe("Collection", () => {
 
     it("should validate record's id when provided (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: createIntegerIdSchema()
+        idSchema: createIntegerIdSchema(),
       });
 
       return articles.update({id: "deadbeef"})
@@ -468,7 +468,7 @@ describe("Collection", () => {
           _status: "updated",
           id: local.id,
           title: resolution.title,
-          last_modified: remote.last_modified
+          last_modified: remote.last_modified,
         });
     });
   });
@@ -499,7 +499,7 @@ describe("Collection", () => {
 
     it("should retrieve a record from its id (custom IdSchema)", () => {
       articles = testCollection({
-        idSchema: createIntegerIdSchema()
+        idSchema: createIntegerIdSchema(),
       });
 
       return articles.create(article)
@@ -615,7 +615,7 @@ describe("Collection", () => {
         articles = testCollection();
         return Promise.all([
           articles.create(article),
-          articles.create({title: "bar", url: "http://bar"})
+          articles.create({title: "bar", url: "http://bar"}),
         ]);
       });
 
@@ -731,7 +731,7 @@ describe("Collection", () => {
       it("should order and filter records", () => {
         return articles.list({
           order:   "-title",
-          filters: {unread: true, complete: true}
+          filters: {unread: true, complete: true},
         })
           .then(res => res.data.map(r => {
             return {title: r.title, unread: r.unread, complete: r.complete};
@@ -762,7 +762,7 @@ describe("Collection", () => {
           remoteTransformers: [
             createEncodeTransformer("?", 10),
             createEncodeTransformer("!", 5),
-          ]
+          ],
         });
 
         return articles.gatherLocalChanges()
@@ -811,7 +811,7 @@ describe("Collection", () => {
         fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince").returns(
           Promise.resolve({
             lastModified: 42,
-            changes: serverChanges
+            changes: serverChanges,
           }));
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
@@ -859,7 +859,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.updated)
           .should.eventually.become([
-            {id: id_7, title: "art7-b", _status: "synced"}
+            {id: id_7, title: "art7-b", _status: "synced"},
           ]);
       });
 
@@ -867,7 +867,7 @@ describe("Collection", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
           .should.eventually.become([
-            {id: id_4}
+            {id: id_4},
           ]);
       });
 
@@ -905,7 +905,7 @@ describe("Collection", () => {
           .should.eventually.not.contain({
             id: id_2,
             title: "art2",
-            _status: "synced"
+            _status: "synced",
           });
       });
 
@@ -938,7 +938,7 @@ describe("Collection", () => {
             lastModified: 42,
             changes: [
               {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
-            ]
+            ],
           }));
 
         return articles.pullChanges(result)
@@ -961,7 +961,7 @@ describe("Collection", () => {
               remote: {
                 id: createdId,
                 title: "art2mod",
-              }
+              },
             }],
             resolved:  [],
           });
@@ -980,7 +980,7 @@ describe("Collection", () => {
                 lastModified: 42,
                 changes: [
                   {id: createdId, title: "art2"}, // resolvable conflict
-                ]
+                ],
               }));
           });
       });
@@ -1016,7 +1016,7 @@ describe("Collection", () => {
         encode() {},
         decode(record) {
           return Object.assign({}, record, {title: record.title + char});
-        }
+        },
       };
     }
 
@@ -1046,8 +1046,8 @@ describe("Collection", () => {
     it("should decode incoming encoded records using a single transformer", () => {
       articles = testCollection({
         remoteTransformers: [
-          createDecodeTransformer("#")
-        ]
+          createDecodeTransformer("#"),
+        ],
       });
 
       return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
@@ -1060,7 +1060,7 @@ describe("Collection", () => {
         remoteTransformers: [
           createDecodeTransformer("!"),
           createDecodeTransformer("?"),
-        ]
+        ],
       });
 
       return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
@@ -1107,7 +1107,7 @@ describe("Collection", () => {
         remoteTransformers: [
           createEncodeTransformer("?", 10),
           createEncodeTransformer("!", 5),
-        ]
+        ],
       });
 
       const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
@@ -1135,7 +1135,7 @@ describe("Collection", () => {
             _status: "synced",
             id: records[0].id,
             title: "foo",
-          }
+          },
         ]);
     });
 
@@ -1158,8 +1158,8 @@ describe("Collection", () => {
         .should.eventually.become([
           {
             id: records[1].id,
-            deleted: true
-          }
+            deleted: true,
+          },
         ]);
     });
 
@@ -1218,7 +1218,7 @@ describe("Collection", () => {
       return articles.resetSyncStatus()
         .then(_ => {
           return articles.list({
-            filters: {_status: "deleted"}
+            filters: {_status: "deleted"},
           }, {includeDeleted: true});
         })
         .should.eventually.have.property("data").to.have.length(0);
@@ -1273,7 +1273,7 @@ describe("Collection", () => {
       const fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,
-          changes: []
+          changes: [],
         }));
       return articles.sync().then(res => {
         sinon.assert.calledOnce(fetchChangesSince);
@@ -1284,7 +1284,7 @@ describe("Collection", () => {
       sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,
-          changes: []
+          changes: [],
         }));
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(42);
@@ -1298,7 +1298,7 @@ describe("Collection", () => {
           changes: [{
             id: ids[0],
             title: "art1mod",
-          }]
+          }],
         }));
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(null);
@@ -1312,7 +1312,7 @@ describe("Collection", () => {
           changes: [{
             id: ids[0],
             title: "art1mod",
-          }]
+          }],
         }));
       sandbox.stub(articles, "_processChangeImport")
         .returns(Promise.reject(new Error("import error")));

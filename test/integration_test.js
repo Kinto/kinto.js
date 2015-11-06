@@ -76,7 +76,7 @@ describe("Integration tests", () => {
 
     kinto = new Kinto({
       remote: TEST_KINTO_SERVER,
-      headers: {Authorization: "Basic " + btoa("user:pass")}
+      headers: {Authorization: "Basic " + btoa("user:pass")},
     });
     tasks = kinto.collection("tasks");
   });
@@ -122,7 +122,7 @@ describe("Integration tests", () => {
 
       function getRemoteList() {
         return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records?_sort=title`, {
-          headers: {"Authorization": "Basic " + btoa("user:pass")}
+          headers: {"Authorization": "Basic " + btoa("user:pass")},
         })
           .then(res => res.json())
           .then(json => json.data.map(record => ({
@@ -142,7 +142,7 @@ describe("Integration tests", () => {
           ],
           server: [
             {id: uuid4(), title: "task1", done: true},
-          ]
+          ],
         };
         let syncResult;
 
@@ -266,7 +266,7 @@ describe("Integration tests", () => {
           ],
           server: [
             {id: conflictingId, title: "task4-remote", done: true},
-          ]
+          ],
         };
         let syncResult;
 
@@ -391,7 +391,7 @@ describe("Integration tests", () => {
         describe("CLIENT_WINS strategy", () => {
           beforeEach(() => {
             return testSync(testData, {
-              strategy: Kinto.syncStrategy.CLIENT_WINS
+              strategy: Kinto.syncStrategy.CLIENT_WINS,
             }).then(res => syncResult = res);
           });
 
@@ -510,7 +510,7 @@ describe("Integration tests", () => {
         describe("SERVER_WINS strategy", () => {
           beforeEach(() => {
             return testSync(testData, {
-              strategy: Kinto.syncStrategy.SERVER_WINS
+              strategy: Kinto.syncStrategy.SERVER_WINS,
             }).then(res => syncResult = res);
           });
 
@@ -638,14 +638,14 @@ describe("Integration tests", () => {
               "Content-Type":  "application/json",
               "Authorization": "Basic " + btoa("user:pass"),
             },
-            body: JSON.stringify({data: {title: "task1-remote", done: true}})
+            body: JSON.stringify({data: {title: "task1-remote", done: true}}),
           })
             .then(_ => tasks.sync())
             .then(res => {
               return tasks.update(Object.assign({}, res.created[0], {
                 title: "task1-local",
                 done: false,
-                last_modified: undefined
+                last_modified: undefined,
               }));
             });
         });
@@ -1011,14 +1011,14 @@ describe("Integration tests", () => {
           },
           validate(id) {
             return ((id == parseInt(id, 10)) && (id >= 0));
-          }
+          },
         };
       }
 
       describe("IdSchema", () => {
         beforeEach(() => {
           tasks = kinto.collection("tasks", {
-            idSchema: createIntegerIdSchema()
+            idSchema: createIntegerIdSchema(),
           });
         });
 
@@ -1038,7 +1038,7 @@ describe("Integration tests", () => {
           },
           decode(record) {
             return Object.assign({}, record, {title: record.title.slice(0, -1)});
-          }
+          },
         };
       }
 
@@ -1046,8 +1046,8 @@ describe("Integration tests", () => {
         tasks = kinto.collection("tasks", {
           remoteTransformers: [
             createTransformer("!"),
-            createTransformer("?")
-          ]
+            createTransformer("?"),
+          ],
         });
 
         return Promise.all([
@@ -1066,7 +1066,7 @@ describe("Integration tests", () => {
         return tasks.sync()
           .then(_ => {
             return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
-              headers: {"Authorization": "Basic " + btoa("user:pass")}
+              headers: {"Authorization": "Basic " + btoa("user:pass")},
             });
           })
           .then(res => res.json())

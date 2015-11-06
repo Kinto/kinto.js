@@ -160,7 +160,7 @@ describe("Kinto", () => {
       const transformer = {encode(){}, decode(){}};
       const db = new Kinto();
       const options = {
-        remoteTransformers: [ transformer ]
+        remoteTransformers: [ transformer ],
       };
       const coll = db.collection("plop", options);
 
