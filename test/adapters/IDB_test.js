@@ -10,7 +10,7 @@ describe("adapter.IDB", () => {
   adapterTestSuite(() => new IDB("test/foo"));
 
   describe("IDB specific tests", () => {
-    var sandbox, db;
+    let sandbox, db;
 
     beforeEach(() => {
       sandbox = sinon.sandbox.create();

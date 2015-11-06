@@ -17,7 +17,7 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Api} */
 describe("Api", () => {
-  var sandbox, api, events;
+  let sandbox, api, events;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
@@ -104,7 +104,7 @@ describe("Api", () => {
   /** @test {Api#endpoints} */
   describe("#endpoints", () => {
     describe("full URL", () => {
-      var endpoints;
+      let endpoints;
 
       beforeEach(() => endpoints = api.endpoints({fullUrl: true}));
 
@@ -139,7 +139,7 @@ describe("Api", () => {
     });
 
     describe("absolute URL", () => {
-      var endpoints;
+      let endpoints;
 
       beforeEach(() => endpoints = api.endpoints({fullUrl: false}));
 
@@ -319,7 +319,7 @@ describe("Api", () => {
     });
 
     describe("server request", () => {
-      var requestBody, requestHeaders;
+      let requestBody, requestHeaders;
 
       beforeEach(() => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
@@ -415,7 +415,7 @@ describe("Api", () => {
       });
 
       describe("safe mode", () => {
-        var requests;
+        let requests;
 
         beforeEach(() => {
           return api.batch("blog", "articles", operations)

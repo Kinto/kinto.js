@@ -22,7 +22,7 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Collection} */
 describe("Collection", () => {
-  var sandbox, events, idSchema, remoteTransformers, api;
+  let sandbox, events, idSchema, remoteTransformers, api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
@@ -48,7 +48,7 @@ describe("Collection", () => {
   }
 
   function createIntegerIdSchema() {
-    var _next = 0;
+    let _next = 0;
     return {
       generate() {
         return _next++;
@@ -266,7 +266,7 @@ describe("Collection", () => {
 
   /** @test {Collection#clear} */
   describe("#clear", () => {
-    var articles;
+    let articles;
 
     beforeEach(() => {
       articles = testCollection();
@@ -293,7 +293,7 @@ describe("Collection", () => {
 
   /** @test {Collection#create} */
   describe("#create", () => {
-    var articles;
+    let articles;
 
     beforeEach(() => articles = testCollection());
 
@@ -386,7 +386,7 @@ describe("Collection", () => {
 
   /** @test {Collection#update} */
   describe("#update", () => {
-    var articles;
+    let articles;
 
     beforeEach(() => articles = testCollection());
 
@@ -443,7 +443,7 @@ describe("Collection", () => {
 
   /** @test {Collection#resolve} */
   describe("#resolve", () => {
-    var articles, local;
+    let articles, local;
 
     beforeEach(() => {
       articles = testCollection();
@@ -475,7 +475,7 @@ describe("Collection", () => {
 
   /** @test {Collection#get} */
   describe("#get", () => {
-    var articles, id;
+    let articles, id;
 
     beforeEach(() => {
       articles = testCollection();
@@ -545,7 +545,7 @@ describe("Collection", () => {
 
   /** @test {Collection#delete} */
   describe("#delete", () => {
-    var articles, id;
+    let articles, id;
 
     beforeEach(() => {
       articles = testCollection();
@@ -608,7 +608,7 @@ describe("Collection", () => {
 
   /** @test {Collection#list} */
   describe("#list", () => {
-    var articles;
+    let articles;
 
     describe("Basic", () => {
       beforeEach(() => {
@@ -746,7 +746,7 @@ describe("Collection", () => {
 
   /** @test {Collection#gatherLocalChanges} */
   describe("#gatherLocalChanges", () => {
-    var articles;
+    let articles;
 
     beforeEach(() => {
       articles = testCollection();
@@ -774,7 +774,7 @@ describe("Collection", () => {
 
   /** @test {Collection#pullChanges} */
   describe("#pullChanges", () => {
-    var fetchChangesSince, articles, result;
+    let fetchChangesSince, articles, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -925,7 +925,7 @@ describe("Collection", () => {
     });
 
     describe("When a conflict occured", () => {
-      var createdId;
+      let createdId;
 
       beforeEach(() => {
         return articles.create({title: "art2"})
@@ -969,7 +969,7 @@ describe("Collection", () => {
     });
 
     describe("When a resolvable conflict occured", () => {
-      var createdId;
+      let createdId;
 
       beforeEach(() => {
         return articles.create({title: "art2"})
@@ -1009,7 +1009,7 @@ describe("Collection", () => {
 
   /** @test {Collection#importChanges} */
   describe("#importChanges", () => {
-    var articles, result;
+    let articles, result;
 
     function createDecodeTransformer(char) {
       return {
@@ -1071,7 +1071,7 @@ describe("Collection", () => {
 
   /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
-    var articles, records, result;
+    let articles, records, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1196,7 +1196,7 @@ describe("Collection", () => {
       {id: uuid4(), last_modified: 42, title: "art2"},
       {id: uuid4(), last_modified: 42, title: "art3"},
     ];
-    var articles;
+    let articles;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1250,7 +1250,7 @@ describe("Collection", () => {
       {title: "art2"},
       {title: "art3"},
     ];
-    var articles, ids;
+    let articles, ids;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1270,7 +1270,7 @@ describe("Collection", () => {
     });
 
     it("should fetch latest changes from the server", () => {
-      var fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+      const fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
         .returns(Promise.resolve({
           lastModified: 42,
           changes: []
@@ -1342,7 +1342,7 @@ describe("Collection", () => {
     it("should not execute a last pull if nothing to push", () => {
       sandbox.stub(articles, "gatherLocalChanges")
         .returns(Promise.resolve({toDelete: [], toSync: []}));
-      var pullChanges = sandbox.stub(articles, "pullChanges")
+      const pullChanges = sandbox.stub(articles, "pullChanges")
         .returns(Promise.resolve(new SyncResultObject()));
       return articles.sync().then(res => {
         sinon.assert.calledOnce(pullChanges);
@@ -1350,7 +1350,7 @@ describe("Collection", () => {
     });
 
     describe("Options", () => {
-      var pullChanges;
+      let pullChanges;
 
       beforeEach(() => {
         pullChanges = sandbox.stub(articles, "pullChanges")

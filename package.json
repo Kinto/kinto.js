@@ -18,7 +18,7 @@
     "test-cover": "babel-node node_modules/.bin/isparta cover --report text $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
     "test-cover-html": "babel-node node_modules/.bin/isparta cover --report html $npm_package_config_ISPARTA_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && open coverage/index.html",
     "test-nocover": "node_modules/.bin/_mocha --compilers js:babel/register --require ./test/_setup.js 'test/**/*_test.js'",
-    "lint": "node_modules/.bin/eslint src test"
+    "lint": "eslint src test"
   },
   "repository": {
     "type": "git",
@@ -62,8 +62,8 @@
     "babel": "^5.8.19",
     "btoa": "^1.1.2",
     "fake-indexeddb": "^1.0.3",
-    "localStorage": "^1.0.3",
     "isomorphic-fetch": "^2.1.1",
+    "localStorage": "^1.0.3",
     "uuid": "^2.0.1"
   },
   "devDependencies": {

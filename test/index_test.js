@@ -21,7 +21,7 @@ const TEST_COLLECTION_NAME = "kinto-test";
 
 /** @test {Kinto} */
 describe("Kinto", () => {
-  var sandbox;
+  let sandbox;
 
   function testCollection() {
     const db = new Kinto({bucket: TEST_BUCKET_NAME});

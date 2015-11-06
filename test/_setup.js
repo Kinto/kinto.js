@@ -22,7 +22,7 @@ if (typeof root.indexedDB !== "object") {
   ];
 
   iDBSymbols.forEach(symbol => {
-    let fakeSymbol = symbol.replace("IDB", "FDB");
+    const fakeSymbol = symbol.replace("IDB", "FDB");
     root[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
   });
 

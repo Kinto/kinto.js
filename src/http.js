@@ -62,7 +62,7 @@ export default class HTTP {
    * @return {Promise}
    */
   request(url, options={headers:{}}) {
-    var response, status, statusText, headers;
+    let response, status, statusText, headers;
     // Ensure default request headers are always set
     options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
     options.mode = this.requestMode;
@@ -92,7 +92,7 @@ export default class HTTP {
       })
       .then(json => {
         if (json && status >= 400) {
-          var message = `HTTP ${status}; `;
+          let message = `HTTP ${status}; `;
           if (json.errno && json.errno in ERROR_CODES) {
             message += ERROR_CODES[json.errno];
             if (json.message) {
@@ -115,7 +115,7 @@ export default class HTTP {
     if (!alertHeader) {
       return;
     }
-    var alert;
+    let alert;
     try {
       alert = JSON.parse(alertHeader);
     } catch(err) {
@@ -127,7 +127,7 @@ export default class HTTP {
   }
 
   _checkForBackoffHeader(status, headers) {
-    var backoffMs;
+    let backoffMs;
     const backoffSeconds = parseInt(headers.get("Backoff"), 10);
     if (backoffSeconds > 0) {
       backoffMs = (new Date().getTime()) + (backoffSeconds * 1000);

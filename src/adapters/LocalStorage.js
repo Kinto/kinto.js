@@ -190,7 +190,7 @@ export default class LocalStorage extends BaseAdapter {
    * @return {Promise}
    */
   saveLastModified(lastModified) {
-    var value = parseInt(lastModified, 10);
+    const value = parseInt(lastModified, 10);
     try {
       localStorage.setItem(this._keyLastModified, JSON.stringify(value));
       return Promise.resolve(value);

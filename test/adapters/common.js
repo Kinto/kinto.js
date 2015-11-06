@@ -11,7 +11,7 @@ chai.config.includeStack = true;
 export function adapterTestSuite(createDB, options={only: false}) {
   const testFn = options["only"] ? describe["only"] : describe;
   testFn("Common adapter tests", () => {
-    var sandbox, db;
+    let sandbox, db;
 
     beforeEach(() => {
       sandbox = sinon.sandbox.create();
@@ -45,7 +45,7 @@ export function adapterTestSuite(createDB, options={only: false}) {
     });
 
     describe("#get", () => {
-      var id;
+      let id;
 
       beforeEach(() => {
         return db.create({id: 1, foo: "bar"})
@@ -65,7 +65,7 @@ export function adapterTestSuite(createDB, options={only: false}) {
     });
 
     describe("#delete", () => {
-      var id;
+      let id;
 
       beforeEach(() => {
         return db.create({id: 1, foo: "bar"})

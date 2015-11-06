@@ -338,7 +338,7 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
     return this.get(record.id).then(_ => {
-      var newStatus = "updated";
+      let newStatus = "updated";
       if (record._status === "deleted") {
         newStatus = "deleted";
       } else if (options.synced) {
@@ -425,7 +425,7 @@ export default class Collection {
   list(params={}, options={includeDeleted: false}) {
     params = Object.assign({order: "-last_modified", filters: {}}, params);
     return this.db.list().then(results => {
-      var reduced = reduceRecords(params.filters, params.order, results);
+      let reduced = reduceRecords(params.filters, params.order, results);
       if (!options.includeDeleted) {
         reduced = reduced.filter(record => record._status !== "deleted");
       }
@@ -480,7 +480,7 @@ export default class Collection {
    * @return {Promise}
    */
   _importChange(change) {
-    var _decodedChange, decodePromise;
+    let _decodedChange, decodePromise;
     // if change is a deletion, skip decoding
     if (change.deleted) {
       decodePromise = Promise.resolve(change);
@@ -524,7 +524,7 @@ export default class Collection {
       return this._importChange(change);
     }))
       .then(imports => {
-        for (let imported of imports) {
+        for (const imported of imports) {
           if (imported.type !== "void") {
             syncResultObject.add(imported.type, imported.data);
           }
@@ -556,7 +556,7 @@ export default class Collection {
    * @return {Promise} Resolves with the number of processed records.
    */
   resetSyncStatus() {
-    var _count;
+    let _count;
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return Promise.all(res.data.map(r => {
@@ -587,7 +587,7 @@ export default class Collection {
    * @return {Object}
    */
   gatherLocalChanges() {
-    var _toDelete;
+    let _toDelete;
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return res.data.reduce((acc, record) => {

@@ -209,7 +209,7 @@ export default class IDB extends BaseAdapter {
         const {transaction, store} = this.prepare();
         const request = store.openCursor();
         request.onsuccess = function(event) {
-          var cursor = event.target.result;
+          const cursor = event.target.result;
           if (cursor) {
             results.push(cursor.value);
             cursor.continue();
@@ -229,7 +229,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   saveLastModified(lastModified) {
-    var value = parseInt(lastModified, 10) || null;
+    const value = parseInt(lastModified, 10) || null;
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");

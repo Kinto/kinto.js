@@ -15,7 +15,7 @@ const root = typeof window === "object" ? window : global;
 
 /** @test {HTTP} */
 describe("HTTP class", () => {
-  var sandbox, events, http;
+  let sandbox, events, http;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();

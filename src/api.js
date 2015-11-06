@@ -126,8 +126,8 @@ export default class Api {
    * @return {String}
    */
   endpoints(options={fullUrl: true}) {
-    var root = options.fullUrl ? this.remote : `/${this.version}`;
-    var urls = {
+    const root = options.fullUrl ? this.remote : `/${this.version}`;
+    const urls = {
       root:                   () => `${root}/`,
       batch:                  () => `${root}/batch`,
       bucket:           (bucket) => `${root}/buckets/${bucket}`,
@@ -164,8 +164,8 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    var queryString = "";
-    var headers = Object.assign({}, this.optionHeaders, options.headers);
+    let queryString = "";
+    const headers = Object.assign({}, this.optionHeaders, options.headers);
 
     if (options.lastModified) {
       queryString = "?_since=" + options.lastModified;
@@ -184,7 +184,7 @@ export default class Api {
         }
         // XXX: ETag are supposed to be opaque and stored «as-is».
         // Extract response data
-        var etag = res.headers.get("ETag");  // e.g. '"42"'
+        let etag = res.headers.get("ETag");  // e.g. '"42"'
         etag = etag ? parseInt(unquote(etag), 10) : options.lastModified;
         const records = res.json.data;
 

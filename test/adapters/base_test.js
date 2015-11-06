@@ -5,7 +5,7 @@ import { expect } from "chai";
 import BaseAdapter from "../../src/adapters/base";
 
 describe("adapters.BaseAdapter", () => {
-  var adapter;
+  let adapter;
   beforeEach(() => adapter = new BaseAdapter());
 
   it("should fulfill calls to open", () => {
