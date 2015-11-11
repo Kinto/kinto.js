@@ -377,7 +377,7 @@ export default class Collection {
    *
    * Options:
    * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
-   *   update its `_status` attribute to `deleted` instead.
+   *   update its `_status` attribute to `deleted` instead (default: true)
    *
    * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
