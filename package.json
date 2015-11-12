@@ -36,13 +36,16 @@
     {
       "name": "Michiel B. de Jong",
       "url": "https://michielbdejong.com/"
-    }, {
+    },
+    {
       "name": "Nicolas Perriault",
       "url": "https://nicolas.perriault.net/"
-    }, {
+    },
+    {
       "name": "Mathieu Leplatre",
       "url": "http://mathieu-leplatre.info/"
-    }, {
+    },
+    {
       "name": "Mark Goodwin",
       "url": "https://www.computerist.org/"
     }
@@ -59,7 +62,7 @@
   },
   "homepage": "https://github.com/Kinto/kinto.js",
   "dependencies": {
-    "babel": "^5.8.19",
+    "babel": "^6.1.4",
     "btoa": "^1.1.2",
     "fake-indexeddb": "^1.0.3",
     "isomorphic-fetch": "^2.1.1",
