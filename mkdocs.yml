@@ -6,5 +6,6 @@ pages:
 - Api: api.md
 - Extending: extending.md
 - Hacking: hacking.md
+- Releasing: releasing.md
 - Limitations: limitations.md
 theme: readthedocs
