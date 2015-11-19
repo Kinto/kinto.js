@@ -80,7 +80,7 @@ function createUUIDSchema() {
 
     validate(id) {
       return isUUID4(id);
-    }
+    },
   };
 }
 
@@ -307,7 +307,7 @@ export default class Collection {
       id:      options.synced ||
                    options.useRecordId ? record.id :
                                      this.idSchema.generate(),
-      _status: options.synced ? "synced" : "created"
+      _status: options.synced ? "synced" : "created",
     });
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
@@ -394,11 +394,11 @@ export default class Collection {
           // Record is already deleted
           return Promise.resolve({
             data: { id: id },
-            permissions: {}
+            permissions: {},
           });
         } else {
           return this.update(Object.assign({}, res.data, {
-            _status: "deleted"
+            _status: "deleted",
           }));
         }
       }
@@ -458,7 +458,7 @@ export default class Collection {
       }
       return {
         type: "conflicts",
-        data: {type: "incoming", local: local, remote: remote}
+        data: {type: "incoming", local: local, remote: remote},
       };
     }
     if (remote.deleted) {
@@ -567,7 +567,7 @@ export default class Collection {
           // Records that were synced become «created».
           return this.db.update(Object.assign({}, r, {
             last_modified: undefined,
-            _status: "created"
+            _status: "created",
           }));
         }));
       })
@@ -631,7 +631,7 @@ export default class Collection {
     // First fetch remote changes from the server
     return this.api.fetchChangesSince(this.bucket, this.name, {
       lastModified: options.lastModified,
-      headers: options.headers
+      headers: options.headers,
     })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
@@ -663,7 +663,7 @@ export default class Collection {
             return this.delete(record.id, {virtual: false});
           })),
           // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options)
+          this.api.batch(this.bucket, this.name, toSync, options),
         ]);
       })
       // Update published local records
@@ -726,7 +726,7 @@ export default class Collection {
   resolve(conflict, resolution) {
     return this.update(Object.assign({}, resolution, {
       // Ensure local record has the latest authoritative timestamp
-      last_modified: conflict.remote.last_modified
+      last_modified: conflict.remote.last_modified,
     }));
   }
 

@@ -178,7 +178,7 @@ describe("Api", () => {
   describe("#fetchServerSettings", () => {
     it("should retrieve server settings on first request made", () => {
       sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
-        settings: {"cliquet.batch_max_requests": 25}
+        settings: {"cliquet.batch_max_requests": 25},
       }));
 
       return api.fetchServerSettings()
@@ -257,7 +257,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
           .should.eventually.become({
             lastModified: 41,
-            changes: []
+            changes: [],
           });
       });
 
@@ -277,7 +277,7 @@ describe("Api", () => {
 
       it("should reject with detailed error message", () => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(401, {
-          errno: 105
+          errno: 105,
         }));
 
         return api.fetchChangesSince("blog", "articles")
@@ -314,7 +314,7 @@ describe("Api", () => {
 
     beforeEach(() => {
       sandbox.stub(api, "fetchServerSettings").returns(Promise.resolve({
-        "cliquet.batch_max_requests": 3
+        "cliquet.batch_max_requests": 3,
       }));
     });
 
@@ -323,7 +323,7 @@ describe("Api", () => {
 
       beforeEach(() => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
-          responses: []
+          responses: [],
         }));
       });
 
@@ -396,7 +396,7 @@ describe("Api", () => {
             headers: { "If-Match": quote(42) },
             body: {
               data: { id: 1, title: "foo" },
-            }
+            },
           });
         });
 
@@ -405,11 +405,11 @@ describe("Api", () => {
             path: `/${SPV}/buckets/blog/collections/articles/records/2`,
             method: "PUT",
             headers: {
-              "If-None-Match": "*"
+              "If-None-Match": "*",
             },
             body: {
               data: { id: 2, title: "bar" },
-            }
+            },
           });
         });
       });
@@ -438,7 +438,7 @@ describe("Api", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(400, {
             error: true,
             errno: 117,
-            message: "http 400"
+            message: "http 400",
           }));
 
           return api.batch("blog", "articles", published)
@@ -448,7 +448,7 @@ describe("Api", () => {
         it("should reject on HTTP error status code", () => {
           sandbox.stub(root, "fetch").returns(fakeServerResponse(500, {
             error: true,
-            message: "http 500"
+            message: "http 500",
           }));
 
           return api.batch("blog", "articles", published)
@@ -464,7 +464,7 @@ describe("Api", () => {
               { status: 201,
                 path: `/${SPV}/buckets/blog/collections/articles/records`,
                 body: { data: published[1]}},
-            ]
+            ],
           }));
 
           return api.batch("blog", "articles", published)
@@ -472,7 +472,7 @@ describe("Api", () => {
               conflicts: [],
               errors:    [],
               skipped:   [],
-              published: published
+              published: published,
             });
         });
 
@@ -482,7 +482,7 @@ describe("Api", () => {
               { status: 404,
                 path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: { 404: true }},
-            ]
+            ],
           }));
 
           return api.batch("blog", "articles", published)
@@ -490,7 +490,7 @@ describe("Api", () => {
               conflicts: [],
               skipped:   [{ 404: true }],
               errors:    [],
-              published: []
+              published: [],
             });
         });
 
@@ -500,7 +500,7 @@ describe("Api", () => {
               { status: 500,
                 path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: { 500: true }},
-            ]
+            ],
           }));
 
           return api.batch("blog", "articles", published)
@@ -512,9 +512,9 @@ describe("Api", () => {
                   path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                   sent: published[0],
                   error: { 500: true },
-                }
+                },
               ],
-              published: []
+              published: [],
             });
         });
 
@@ -525,10 +525,10 @@ describe("Api", () => {
                 path: `/${SPV}/buckets/blog/collections/articles/records/1`,
                 body: {
                   details: {
-                    existing: {title: "foo"}
-                  }
+                    existing: {title: "foo"},
+                  },
                 }},
-            ]
+            ],
           }));
 
           return api.batch("blog", "articles", published)
@@ -536,7 +536,7 @@ describe("Api", () => {
               conflicts: [{
                 type: "outgoing",
                 local: published[0],
-                remote: {title: "foo"}
+                remote: {title: "foo"},
               }],
               skipped:   [],
               errors:    [],
@@ -562,12 +562,12 @@ describe("Api", () => {
               {status: 200, body: {data: 1}},
               {status: 200, body: {data: 2}},
               {status: 200, body: {data: 3}},
-            ]
+            ],
           }))
           .onSecondCall().returns(fakeServerResponse(200, {
             responses: [
               {status: 200, body: {data: 4}},
-            ]
+            ],
           }));
         return api.batch("blog", "articles", moreOperations)
           .then(res => res.published)
@@ -576,10 +576,10 @@ describe("Api", () => {
 
       it("should not chunk batch requests if setting is falsy", () => {
         api.fetchServerSettings.returns(Promise.resolve({
-          "cliquet.batch_max_requests": null
+          "cliquet.batch_max_requests": null,
         }));
         sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
-          responses: []
+          responses: [],
         }));
         return api.batch("blog", "articles", moreOperations)
           .then(_ => sinon.assert.calledOnce(fetch));
@@ -592,31 +592,31 @@ describe("Api", () => {
               {status: 412, body: {details: {existing: {id: 1}}}},
               {status: 412, body: {details: {existing: {id: 2}}}},
               {status: 412, body: {}},
-            ]
+            ],
           }))
           .onSecondCall().returns(fakeServerResponse(200, {
             responses: [
               {status: 412, body: {details: {existing: {id: 4}}}},
-            ]
+            ],
           }));
         return api.batch("blog", "articles", moreOperations)
           .then(res => res.conflicts)
           .should.become([{
             type: "outgoing",
             local:  {id: 1, title: "foo"},
-            remote: {id: 1}
+            remote: {id: 1},
           }, {
             type: "outgoing",
             local:  {id: 2, title: "bar"},
-            remote: {id: 2}
+            remote: {id: 2},
           }, {
             type: "outgoing",
             local:  {id: 3, title: "baz"},
-            remote: null
+            remote: null,
           }, {
             type: "outgoing",
             local:  {id: 4, title: "qux"},
-            remote: {id: 4}
+            remote: {id: 4},
           }]);
       });
 
@@ -629,7 +629,7 @@ describe("Api", () => {
                   {status: 200, body: {data: 1}},
                   {status: 200, body: {data: 2}},
                   {status: 200, body: {data: 3}},
-                ]
+                ],
               }));
             }, 100);
           }))
@@ -638,7 +638,7 @@ describe("Api", () => {
               resolve(fakeServerResponse(200, {
                 responses: [
                   {status: 200, body: {data: 4}},
-                ]
+                ],
               }));
             }, 5);
           }));

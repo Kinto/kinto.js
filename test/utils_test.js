@@ -10,7 +10,7 @@ import {
   reduceRecords,
   partition,
   isUUID4,
-  waterfall
+  waterfall,
 } from "../src/utils";
 
 chai.should();

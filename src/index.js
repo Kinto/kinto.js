@@ -29,7 +29,7 @@ export default class Kinto extends KintoBase {
   constructor(options={}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
-      events: new EventEmitter()
+      events: new EventEmitter(),
     };
 
     super(Object.assign({}, defaults, options));

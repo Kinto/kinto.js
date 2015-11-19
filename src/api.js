@@ -179,7 +179,7 @@ export default class Api {
         if (res.status === 304) {
           return {
             lastModified: options.lastModified,
-            changes: []
+            changes: [],
           };
         }
         // XXX: ETag are supposed to be opaque and stored «as-is».
@@ -246,13 +246,13 @@ export default class Api {
         results.conflicts.push({
           type: "outgoing",
           local: records[index],
-          remote: response.body.details && response.body.details.existing || null
+          remote: response.body.details && response.body.details.existing || null,
         });
       } else {
         results.errors.push({
           path: response.path,
           sent: records[index],
-          error: response.body
+          error: response.body,
         });
       }
     });
@@ -279,7 +279,7 @@ export default class Api {
       errors:    [],
       published: [],
       conflicts: [],
-      skipped:   []
+      skipped:   [],
     };
     if (!records.length) {
       return Promise.resolve(results);
@@ -313,8 +313,8 @@ export default class Api {
               const path = this.endpoints({full: false})
                 .record(bucketName, collName, record.id);
               return this._buildRecordBatchRequest(record, path, safe);
-            })
-          })
+            }),
+          }),
         })
           .then(res => this._processBatchResponses(results, records, res));
       });

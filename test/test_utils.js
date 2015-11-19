@@ -9,11 +9,11 @@ export function fakeServerResponse(status, json, headers={}) {
           return JSON.stringify(json).length;
         }
         return headers[name];
-      }
+      },
     },
     text() {
       return JSON.stringify(json);
-    }
+    },
   });
 }
 
