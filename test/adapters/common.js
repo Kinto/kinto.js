@@ -3,6 +3,7 @@
 import sinon from "sinon";
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
+import { v4 as uuid4 } from "uuid";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -123,6 +124,54 @@ export function adapterTestSuite(createDB, options={only: false}) {
           .then(_ => db.saveLastModified(43))
           .then(_ => db.getLastModified())
           .should.eventually.become(43);
+      });
+    });
+
+    describe("#loadDump", () => {
+      it("should import a list of records.", () => {
+        return db.loadDump([
+            {id: 1, foo: "bar"},
+            {id: 2, foo: "baz"},
+        ])
+        .should.eventually.have.length(2);
+      });
+
+      it("should override existing records.",  () => {
+        return db.loadDump([
+            {id: 1, foo: "bar"},
+            {id: 2, foo: "baz"},
+        ])
+        .then(() => {
+          return db.loadDump([
+            {id: 1, foo: "baz"},
+            {id: 3, foo: "bab"},
+          ]);
+        })
+        .then(() => db.list())
+        .should.eventually.eql([
+            {id: 1, foo: "baz"},
+            {id: 2, foo: "baz"},
+            {id: 3, foo: "bab"},
+        ]);
+      });
+
+      it("should update the collection lastModified value.", () => {
+        return db.loadDump([
+          {id: uuid4(), title: "foo", last_modified: 1457896541},
+          {id: uuid4(), title: "bar", last_modified: 1458796542},
+        ])
+          .then(() => db.getLastModified())
+          .should.eventually.become(1458796542);
+      });
+
+      it("should preserve older collection lastModified value.", () => {
+        return db.saveLastModified(1458796543)
+          .then(() => db.loadDump([
+            {id: uuid4(), title: "foo", last_modified: 1457896541},
+            {id: uuid4(), title: "bar", last_modified: 1458796542},
+          ]))
+          .then(() => db.getLastModified())
+          .should.eventually.become(1458796543);
       });
     });
   });

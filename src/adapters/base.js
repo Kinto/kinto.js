@@ -112,4 +112,14 @@ export default class BaseAdapter {
   getLastModified() {
     throw new Error("Not Implemented.");
   }
+
+  /**
+   * Load a dump of records exported from a server.
+   *
+   * @abstract
+   * @return {Promise}
+   */
+  loadDump(records) {
+    throw new Error("Not Implemented.");
+  }
 }

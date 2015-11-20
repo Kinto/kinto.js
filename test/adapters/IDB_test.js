@@ -149,5 +149,22 @@ describe("adapter.IDB", () => {
           .should.be.rejectedWith(Error, "transaction error");
       });
     });
+
+    /** @test {IDB#loadDump} */
+    describe("#loadDump", () => {
+      it("should reject on transaction error", () => {
+        sandbox.stub(db, "prepare").returns({
+          store: {add() {}},
+          transaction: {
+            get onerror() {},
+            set onerror(onerror) {
+              onerror({target: {error: "transaction error"}});
+            }
+          }
+        });
+        return db.loadDump([{foo: "bar"}])
+          .should.be.rejectedWith(Error, /^Error: loadDump/);
+      });
+    });
   });
 });

@@ -744,6 +744,88 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#loadDump} */
+  describe("#loadDump", () => {
+    let articles;
+
+    beforeEach(() => articles = testCollection());
+
+    it("should import records in the collection", () => {
+      return articles.loadDump([
+        {id: uuid4(), title: "foo", last_modified: 1452347896},
+        {id: uuid4(), title: "bar", last_modified: 1452347985}
+      ])
+      .should.eventually.have.length(2);
+    });
+
+    it("should fail if records is not an array", () => {
+      return articles.loadDump({id: 1, title: "foo"})
+      .should.be.rejectedWith(Error, /^Error: Records is not an array./);
+    });
+
+    it("should fail if id is invalid", () => {
+      return articles.loadDump([{id: 1, title: "foo"}])
+      .should.be.rejectedWith(Error, /^Error: Record has invalid ID./);
+    });
+
+    it("should fail if id is missing", () => {
+      return articles.loadDump([{title: "foo"}])
+      .should.be.rejectedWith(Error, /^Error: Record has invalid ID./);
+    });
+
+    it("should fail if last_modified is missing", () => {
+      return articles.loadDump([{id: uuid4(), title: "foo"}])
+      .should.be.rejectedWith(Error, /^Error: Record has no last_modified value./);
+    });
+
+    it("should mark imported records as synced.", () => {
+      const testId = uuid4();
+      return articles.loadDump([
+        {id: testId, title: "foo", last_modified: 1457896541}
+      ])
+      .then(() => {
+        return articles.get(testId);
+      })
+      .then(res => res.data._status)
+      .should.eventually.eql("synced");
+    });
+
+    it("should ignore already imported records.", () => {
+      const record = {id: uuid4(), title: "foo", last_modified: 1457896541};
+      return articles.loadDump([record])
+      .then(() => articles.loadDump([record]))
+      .should.eventually.have.length(0);
+    });
+
+    it("should overwrite old records.", () => {
+      const record = {id: uuid4(), title: "foo", last_modified: 1457896541};
+      return articles.loadDump([record])
+        .then(() => {
+          const updated = Object.assign({}, record, {last_modified: 1457896543});
+          return articles.loadDump([updated]);
+        })
+        .should.eventually.have.length(1);
+    });
+
+    it("should not overwrite unsynced records.", () => {
+      return articles.create({title: "foo"})
+        .then(result => {
+          const record = {id: result.data.id, title: "foo", last_modified: 1457896541};
+          return articles.loadDump([record]);
+        })
+        .should.eventually.have.length(0);
+    });
+
+    it("should not overwrite records without last modified.", () => {
+      return articles.create({id: uuid4(), title: "foo"}, {synced: true})
+        .then(result => {
+          const record = {id: result.data.id, title: "foo", last_modified: 1457896541};
+          return articles.loadDump([record]);
+        })
+        .should.eventually.have.length(0);
+    });
+  });
+
   /** @test {Collection#gatherLocalChanges} */
   describe("#gatherLocalChanges", () => {
     let articles;

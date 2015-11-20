@@ -258,4 +258,30 @@ export default class IDB extends BaseAdapter {
       });
     });
   }
+
+  /**
+   * Load a dump of records exported from a server.
+   *
+   * @abstract
+   * @return {Promise}
+   */
+  loadDump(records) {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite");
+        records.forEach(record => store.put(record));
+        const lastModified = Math.max(...records.map(record => record.last_modified));
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = () => {
+          resolve(this.getLastModified()
+            .then(previousLastModified => {
+              if (lastModified > previousLastModified) {
+                return this.saveLastModified(lastModified);
+              }
+            }).then(() => records));
+        };
+      });
+    }).catch(this._handleError("loadDump"));
+  }
+
 }

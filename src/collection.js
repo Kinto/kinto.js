@@ -787,4 +787,64 @@ export default class Collection {
         return this.pullChanges(result, options);
       });
   }
+
+  /**
+   * Load a list of records already synced with the remote server.
+   *
+   * @param  {Array} records.
+   * @param  {Object} options Options.
+   * @return {Promise}
+   */
+  loadDump(records) {
+    const reject = msg => Promise.reject(new Error(msg));
+    if (!(records instanceof Array)) {
+      return reject("Records is not an array.");
+    }
+
+    for(const record of records) {
+      if (!record.id || !this.idSchema.validate(record.id)) {
+        return reject("Record has invalid ID: " +
+                      JSON.stringify(record));
+      }
+
+      if (!record.last_modified) {
+        return reject("Record has no last_modified value: " +
+                      JSON.stringify(record));
+      }
+    }
+
+    // Fetch all existing records from local database,
+    // and skip those who are newer or not marked as synced.
+    return this.list({}, {includeDeleted: true})
+      .then(res => {
+        return res.data.reduce((acc, record) => {
+          acc[record.id] = record;
+          return acc;
+        }, {});
+      })
+    .then(existingById => {
+      return records.filter(record => {
+        const localRecord = existingById[record.id];
+        const shouldKeep = (
+          // No local record with this id.
+          localRecord === undefined ||
+          // Or local record is synced
+          localRecord._status === "synced" &&
+          // And was synced from server
+          localRecord.last_modified !== undefined &&
+          // And is older than imported one.
+          record.last_modified > localRecord.last_modified
+        );
+        return shouldKeep;
+      });
+    })
+    .then(newRecords => {
+      return newRecords.map(record => {
+        return Object.assign({}, record, {
+          _status: "synced"
+        });
+      });
+    })
+    .then(newRecords => this.db.loadDump(newRecords));
+  }
 }

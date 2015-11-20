@@ -72,7 +72,12 @@ const statements = {
   "listRecords": `
     SELECT record
       FROM collection_data
-        WHERE collection_name = :collection_name;`
+        WHERE collection_name = :collection_name;`,
+
+  "importData": `
+    REPLACE INTO collection_data (collection_name, record_id, record)
+      VALUES (:collection_name, :record_id, :record);`
+
 };
 
 const createStatements = ["createCollectionData",
@@ -193,6 +198,39 @@ export default class FirefoxAdapter extends BaseAdapter {
         let row = result[k];
         records.push(JSON.parse(row.getResultByName("record")));
       }
+      return records;
+    });
+  }
+
+  loadDump(records) {
+    let connection = this._connection;
+    let collection_name = this.collection;
+    return Task.spawn(function* () {
+      yield connection.executeTransaction(function* doImport() {
+        for (let record of records) {
+          const params = {
+            collection_name: collection_name,
+            record_id: record.id,
+            record: JSON.stringify(record)
+          };
+          yield connection.execute(statements.importData, params);
+        }
+        const lastModified = Math.max(...records.map(record => record.last_modified));
+        const params = {
+          collection_name: collection_name
+        };
+        const previousLastModified = yield connection.execute(
+          statements.getLastModified, params).then(result => {
+            return result ? result[0].getResultByName('last_modified') : -1;
+          });
+        if (lastModified > previousLastModified) {
+          const params = {
+            collection_name: collection_name,
+            last_modified: lastModified
+          };
+          yield connection.execute(statements.saveLastModified, params);
+        }
+      });
       return records;
     });
   }

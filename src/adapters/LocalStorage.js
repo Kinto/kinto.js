@@ -208,9 +208,37 @@ export default class LocalStorage extends BaseAdapter {
   getLastModified() {
     try {
       const lastModified = JSON.parse(localStorage.getItem(this._keyLastModified));
-      return Promise.resolve(parseInt(lastModified, 10) || undefined);
+      return Promise.resolve(parseInt(lastModified, 10) || null);
     } catch(err) {
       return this._handleError("getLastModified", err);
+    }
+  }
+
+
+  /**
+   * Load a dump of records exported from a server.
+   *
+   * @abstract
+   * @return {Promise}
+   */
+  loadDump(records) {
+    try {
+      records.forEach(record => {
+        localStorage.setItem(`${this.dbname}/${record.id}`, JSON.stringify(record));
+        if (this.keys.indexOf(record.id) === -1) {
+          this.keys = this.keys.concat(record.id);
+        }
+      });
+      const lastModified = Math.max(...records.map(record => record.last_modified));
+      return this.getLastModified()
+        .then(previousLastModified => {
+          if (lastModified > previousLastModified) {
+            return this.saveLastModified(lastModified);
+          }
+        })
+        .then(() => records);
+    } catch(err) {
+      return this._handleError("loadDump", err);
     }
   }
 }
