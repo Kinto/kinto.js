@@ -5,7 +5,7 @@ import { reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
-import { deepEquals, isUUID4 } from "./utils";
+import { deepEquals, isUUID } from "./utils";
 
 /**
  * Synchronization result object.
@@ -79,7 +79,7 @@ function createUUIDSchema() {
     },
 
     validate(id) {
-      return isUUID4(id);
+      return isUUID(id);
     }
   };
 }

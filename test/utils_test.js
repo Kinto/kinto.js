@@ -9,7 +9,7 @@ import {
   filterObjects,
   reduceRecords,
   partition,
-  isUUID4,
+  isUUID,
   waterfall
 } from "../src/utils";
 
@@ -162,21 +162,22 @@ describe("Utils", () => {
     });
   });
 
-  /** @test {isUUID4} */
-  describe("#isUUID4", () => {
+  /** @test {isUUID} */
+  describe("#isUUID", () => {
     it("should check that a string uses a valid UUID format", () => {
-      expect(isUUID4("110ec58a-a0f2-4ac4-8393-c866d813b8d1")).eql(true);
+      expect(isUUID("63e5ccb8-1798-3b9f-48f5-12b5ca13054e")).eql(true);
+      expect(isUUID("00000000-0000-5000-a000-000000000000")).eql(true);
+      expect(isUUID("00000000-0000-4000-e000-000000000000")).eql(true);
     });
 
     it("should check that a string does not use a valid UUID format", () => {
-      expect(isUUID4("110ex58a-a0f2-4ac4-8393-c866d813b8d1")).eql(false);
-      expect(isUUID4("")).eql(false);
-      expect(isUUID4(null)).eql(false);
-      expect(isUUID4(undefined)).eql(false);
-      expect(isUUID4(42)).eql(false);
-      expect(isUUID4({})).eql(false);
-      expect(isUUID4("00000000-0000-5000-a000-000000000000")).eql(false);
-      expect(isUUID4("00000000-0000-4000-e000-000000000000")).eql(false);
+      expect(isUUID("63e5xcb8-1798-4b9f-48f5-12b5ca13054e")).eql(false);
+      expect(isUUID("")).eql(false);
+      expect(isUUID(null)).eql(false);
+      expect(isUUID(undefined)).eql(false);
+      expect(isUUID(42)).eql(false);
+      expect(isUUID({})).eql(false);
+      expect(isUUID("00000000-0000-5000-a000-000000000000")).eql(true);
     });
   });
 

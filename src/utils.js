@@ -2,7 +2,7 @@
 
 import { deepEqual } from "assert";
 
-const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Deeply checks if two structures are equals.
@@ -123,12 +123,12 @@ export function partition(array, n) {
 }
 
 /**
- * Checks if a string is an UUID, according to RFC4122.
+ * Checks if a string is an UUID.
  *
  * @param  {String} uuid The uuid to validate.
  * @return {Boolean}
  */
-export function isUUID4(uuid) {
+export function isUUID(uuid) {
   return RE_UUID.test(uuid);
 }
 
