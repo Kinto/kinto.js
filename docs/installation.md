@@ -16,8 +16,8 @@ $ npm install kinto --save
 
 Dev and production ready assets are available in the [`gh-pages` branch of the repository](https://github.com/Kinto/kinto.js/tree/gh-pages). In general, you should download these files and ship them along your own projects, though you can also link them during development:
 
-- Dev version, including source maps: [kinto-1.1.0.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js)
-- Production version, minified, no source maps: [kinto-1.1.0.min.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js)
+- Dev version, including source maps: [kinto-1.1.1.js](http://npmcdn.com/kinto@1.1.1/dist/kinto-1.1.1.js)
+- Production version, minified, no source maps: [kinto-1.1.1.min.js](http://npmcdn.com/kinto@1.1.1/dist/kinto-1.1.1.min.js)
 
 > #### Notes
 >
