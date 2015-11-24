@@ -1,7 +1,27 @@
 # Change Log
 
-## [v1.1.0]((https://github.com/Kinto/kinto.js/tree/v1.1.0)
+## [v1.1.1](https://github.com/Kinto/kinto.js/tree/v1.1.1) (2015-11-24)
 
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.0...v1.1.1)
+
+**Implemented enhancements:**
+
+- Use let/const instead of var? [\#253](https://github.com/Kinto/kinto.js/issues/253)
+- Change demo/demo.js to use a bucket [\#233](https://github.com/Kinto/kinto.js/issues/233)
+- Relaxed UUID validation. [\#269](https://github.com/Kinto/kinto.js/pull/269) ([n1k0](https://github.com/n1k0))
+- Update to Kinto 1.9.0 [\#267](https://github.com/Kinto/kinto.js/pull/267) ([Natim](https://github.com/Natim))
+- let/const is the new var [\#255](https://github.com/Kinto/kinto.js/pull/255) ([pdehaan](https://github.com/pdehaan))
+- Add mocha env to .eslintrc [\#252](https://github.com/Kinto/kinto.js/pull/252) ([pdehaan](https://github.com/pdehaan))
+
+**Closed issues:**
+
+- Kinto.js currently forces IDs to be UUID4 [\#261](https://github.com/Kinto/kinto.js/issues/261)
+
+**Merged pull requests:**
+
+- Added docs for packaging and releasing Kinto.js. [\#251](https://github.com/Kinto/kinto.js/pull/251) ([n1k0](https://github.com/n1k0))
+
+## [v1.1.0](https://github.com/Kinto/kinto.js/tree/v1.1.0) (2015-11-05)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.0.0...v1.1.0)
 
 **Implemented enhancements:**
