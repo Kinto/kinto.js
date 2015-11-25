@@ -140,6 +140,15 @@ describe("adapter.LocalStorage", () => {
           .should.be.rejectedWith(Error, /^Error: getLastModified\(\) err/);
       });
     });
+
+    /** @test {LocalStorage#loadDump} */
+    describe("#loadDump", () => {
+      it("should reject on generic error", () => {
+        sandbox.stub(localStorage, "setItem", thrower("err"));
+        return db.loadDump([{foo: "bar"}])
+          .should.be.rejectedWith(Error, /^Error: loadDump\(\) err/);
+      });
+    });
   });
 });
 

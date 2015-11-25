@@ -214,6 +214,29 @@ articles.list({sort: "-title"})
 > - By default, the records are sorted on `last_modified` in descending order.
 > - As mentioned in the [limitations](limitations.md) section, the sort is performed in memory.
 
+## Importing a data dump locally
+
+You may want to preload a dump of records from the server, before
+actually starting the first sync with it.
+
+The list of imported records is returned.
+
+```js
+articles.loadDump([
+  {
+    id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
+    title: "baz",
+    last_modified: 1432222889337
+  }
+])
+  .then(records => console.log(records));
+```
+
+> #### Notes
+>
+> - Existing records are replaced if they do not have more recent modifications.
+> - Imported records won't be synced with the server.
+> - The importation is optimized in a single database transaction.
 
 ## Clearing the collection
 
