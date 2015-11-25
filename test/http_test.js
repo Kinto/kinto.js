@@ -20,7 +20,7 @@ describe("HTTP class", () => {
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
     events = new EventEmitter();
-    http = new HTTP(events);
+    http = new HTTP(events, {timeout: 100});
   });
 
   afterEach(() => sandbox.restore());
@@ -107,6 +107,17 @@ describe("HTTP class", () => {
         return http.request("/")
           .then(res => res.headers.get("b"))
           .should.eventually.become(2);
+      });
+    });
+
+    describe("Request timeout", () => {
+      it("should timeout the request", () => {
+        sandbox.stub(root, "fetch").returns(
+          new Promise(resolve => {
+            setTimeout(resolve, 20000);
+          }));
+        return http.request("/")
+          .should.eventually.be.rejectedWith(Error, /timeout/);
       });
     });
 

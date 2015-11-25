@@ -19,15 +19,25 @@ export default class HTTP {
   }
 
   /**
+   * Default options.
+   *
+   * @type {Object}
+   */
+  static get defaultOptions() {
+    return {timeout: 5000, requestMode: "cors"};
+  }
+
+  /**
    * Constructor.
    *
    * Options:
+   * - {Number} timeout      The request timeout in ms (default: `5000`).
    * - {String} requestMode  The HTTP request mode (default: `"cors"`).
    *
    * @param {EventEmitter} events  The event handler.
    * @param {Object}       options The options object.
    */
-  constructor(events, options={requestMode: "cors"}) {
+  constructor(events, options={}) {
     // public properties
     /**
      * The event emitter instance.
@@ -38,12 +48,20 @@ export default class HTTP {
     }
     this.events = events;
 
+    options = Object.assign({}, HTTP.defaultOptions, options);
+
     /**
      * The request mode.
      * @see  https://fetch.spec.whatwg.org/#requestmode
      * @type {String}
      */
     this.requestMode = options.requestMode;
+
+    /**
+     * The request timeout.
+     * @type {Number}
+     */
+    this.timeout = options.timeout;
   }
 
   /**
@@ -62,11 +80,16 @@ export default class HTTP {
    * @return {Promise}
    */
   request(url, options={headers:{}}) {
-    let response, status, statusText, headers;
+    let response, status, statusText, headers, _timeoutId;
     // Ensure default request headers are always set
     options.headers = Object.assign({}, HTTP.DEFAULT_REQUEST_HEADERS, options.headers);
     options.mode = this.requestMode;
-    return fetch(url, options)
+    const timeoutPromise = new Promise((_, reject) => {
+      _timeoutId = setTimeout(() => {
+        reject(new Error("Request timeout."));
+      }, this.timeout);
+    });
+    const requestPromise = fetch(url, options)
       .then(res => {
         response = res;
         headers = res.headers;
@@ -107,6 +130,12 @@ export default class HTTP {
           throw error;
         }
         return {status, json, headers};
+      });
+    // Quickest promise is resolved
+    return Promise.race([timeoutPromise, requestPromise])
+      .then(res => {
+        clearTimeout(_timeoutId);
+        return res;
       });
   }
 
