@@ -24,6 +24,7 @@ import FirefoxAdapter from "./FirefoxStorage";
 export default function loadKinto() {
   const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
 
+  Cu.import("resource://gre/modules/Timer.jsm");
   Cu.importGlobalProperties(['fetch']);
 
   class KintoFX extends KintoBase {

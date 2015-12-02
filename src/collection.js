@@ -797,7 +797,7 @@ export default class Collection {
    */
   loadDump(records) {
     const reject = msg => Promise.reject(new Error(msg));
-    if (!(records instanceof Array)) {
+    if (!(typeof records.sort == 'function')) {
       return reject("Records is not an array.");
     }
 
