@@ -80,7 +80,7 @@
     "eslint": "^1.2.0",
     "gh-pages": "^0.6.0",
     "http-server": "^0.8.0",
-    "isparta": "^3.0.3",
+    "isparta": "^4.0.0",
     "mocha": "^2.2.5",
     "sinon": "^1.14.1",
     "uglifyify": "^3.0.1"
