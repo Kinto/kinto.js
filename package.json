@@ -61,7 +61,7 @@
   },
   "homepage": "https://github.com/Kinto/kinto.js",
   "dependencies": {
-    "babel": "^5.8.19",
+    "babel": "^6.1.4",
     "btoa": "^1.1.2",
     "fake-indexeddb": "^1.0.3",
     "isomorphic-fetch": "^2.1.1",
