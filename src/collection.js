@@ -5,7 +5,7 @@ import { reduceRecords, waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
-import { deepEquals, isUUID } from "./utils";
+import { deepEquals, isUUID, pFinally } from "./utils";
 
 /**
  * Synchronization result object.
@@ -767,18 +767,30 @@ export default class Collection {
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
+   * - {String} remote The remote Kinto server endpoint to use (default: null).
    *
    * @param  {Object} options Options.
    * @return {Promise}
+   * @throws {Error} If an invalid remote option is passed.
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false}) {
+  sync(options={
+    strategy: Collection.strategy.MANUAL,
+    headers: {},
+    ignoreBackoff: false,
+    remote: null,
+  }) {
+    const previousRemote = this.api.remote;
+    if (options.remote) {
+      // Note: setting the remote ensures it's valid, throws when invalid.
+      this.api.remote = options.remote;
+    }
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
         new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
     const result = new SyncResultObject();
-    return this.db.getLastModified()
+    const syncPromise = this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
       .then(_ => this.pullChanges(result, options))
       .then(result => this.pushChanges(result, options))
@@ -789,6 +801,8 @@ export default class Collection {
         }
         return this.pullChanges(result, options);
       });
+    // Ensure API default remote is reverted if a custom one's been used
+    return pFinally(syncPromise, () => this.api.remote = previousRemote);
   }
 
   /**

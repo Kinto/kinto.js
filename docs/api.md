@@ -379,6 +379,7 @@ import Collection from "kinto/lib/collection";
 
 articles.sync({
   strategy: Kinto.syncStrategy.CLIENT_WINS,
+  remote: "https://alt.server.tld/v1",
   headers: {Authorization: "Basic bWF0Og=="}
 })
   .then(result => {

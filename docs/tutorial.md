@@ -46,25 +46,12 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
+  var db = new Kinto();
   var tasks = db.collection("tasks");
 }
 
 window.addEventListener("DOMContentLoaded", main);
-
 ```
-
-> #### Notes
->
-> - For convenience, we're using a mozilla-hosted version of Kinto at `https://kinto.dev.mozaws.net/v1`; **data pushed to this instance are reset everyday**;
-> - You'll need to serve this page over HTTP, for Kinto.js to work. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
-
-For example, if you're using http-server:
-
-    $ pwd
-    /home/niko/kinto.js-tutorial
-    $ npm install -g http-server
-    $ http-server /home/niko/kinto.js-tutorial
 
 And that's it. You should see something like this on `http://localhost:3000`:
 
@@ -76,7 +63,7 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
+  var db = new Kinto();
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -117,7 +104,7 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Kinto({remote: "https://kinto.dev.mozaws.net/v1"});
+  var db = new Kinto();
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
@@ -296,7 +283,23 @@ Then the JavaScript:
 
 ## Synchronizing tasks
 
-Synchronizing local data is done by calling the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) method on our collection. First things first, let's add a shiny *Synchronize* button to our HTML document, as well as a textarea to display synchronization results:
+Synchronizing local data is done by calling the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) method on our collection.
+
+Data synchronization is performed over HTTP and requires a Kinto server; now's probably a good time to tell you about the public mozilla-hosted Kinto server available at `https://kinto.dev.mozaws.net/v1` we'll use for this tutorial:
+
+- **The test server is flushed everyday at 7PM UTC;**
+- You'll need to serve the web page over HTTP so Kinto.js can talk to the server. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
+
+For example, if you're using http-server:
+
+```
+$ pwd
+/home/niko/kinto.js-tutorial
+$ npm install -g http-server
+$ http-server /home/niko/kinto.js-tutorial
+```
+
+Now back to our web page: let's add a shiny *Synchronize* button and a textarea to display synchronization results:
 
 ```html
 <div class="row">
@@ -311,13 +314,18 @@ Synchronizing local data is done by calling the [`#sync()`](https://doc.esdoc.or
 </div>
 ```
 
-Now the JavaScript:
+Then, update the JavaScript:
 
 ```js
+var syncOptions = {
+  remote: "https://kinto.dev.mozaws.net/v1",
+  headers: {Authorization: "Basic " + btoa("user:pass")}
+};
+
 document.getElementById("sync")
   .addEventListener("click", function(event) {
     event.preventDefault();
-    tasks.sync({headers: {Authorization: "Basic " + btoa("user:pass")}})
+    tasks.sync(syncOptions)
       .then(function(res) {
         document.getElementById("results").value = JSON.stringify(res, null, 2);
       })
@@ -328,20 +336,11 @@ document.getElementById("sync")
   });
 ```
 
-We're passing an `Authorization` header as an option to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync); that's because we're using Basic Auth mode for Kinto. We could alternatively have defined that authorization header in the `Kinto` constructor:
-
-```js
-var db = new Kinto({
-  remote: "https://kinto.dev.mozaws.net/v1",
-  headers: {Authorization: "Basic " + btoa("user:pass")}
-});
-```
-
 Now, if you click on the button, you should see the JSON synchronization result object in the textarea:
 
 ![](images/step4.png)
 
-Here's a sample result object, so you can appreciate it all:
+Here's a sample result object:
 
 ```json
 {
@@ -349,22 +348,7 @@ Here's a sample result object, so you can appreciate it all:
   "lastModified": 1434617181458,
   "errors": [],
   "created": [],
-  "updated": [
-    {
-      "last_modified": 1434617181458,
-      "done": false,
-      "id": "7ca54d89-479a-4201-8494-ba7d40b9248f",
-      "title": "eat more cheese",
-      "_status": "synced"
-    },
-    {
-      "last_modified": 1434617181453,
-      "done": false,
-      "id": "0422fba7-32ad-48e2-a9eb-82725b12e6fa",
-      "title": "eat cheese",
-      "_status": "synced"
-    }
-  ],
+  "updated": [],
   "deleted": [],
   "published": [
     {
@@ -393,7 +377,7 @@ Let's review the different result object properties:
 - `lastModified`: the collection latest modification timestamp;
 - `errors`: the list of encountered errors (eg. IndexedDB errors), if any;
 - `created`: the list of records imported locally;
-- `updated`: the list of records updated locally; in our case, the `_status` and `last_modified` values were updated;
+- `updated`: the list of records updated locally;
 - `deleted`: the list of records deleted locally;
 - `published`: the list of records published; here we see we successfully pushed our two local tasks;
 - `conflicts`: the list of conflicts encountered, if any (we'll see this in a minute);
@@ -480,14 +464,14 @@ Your take really. Let's take the former approach:
       return tasks.resolve(conflict, conflict.remote);
     }))
       .then(function() {
-        tasks.sync();
+        tasks.sync(syncOptions);
       });
   }
 
   document.getElementById("sync")
     .addEventListener("click", function(event) {
       event.preventDefault();
-      tasks.sync({headers: {Authorization: "Basic " + btoa("user:pass")}})
+      tasks.sync(syncOptions)
         .then(function(res) {
           document.getElementById("results").value = JSON.stringify(res, null, 2);
           if (res.conflicts.length) {
