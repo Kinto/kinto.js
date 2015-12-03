@@ -614,6 +614,7 @@ export default class Collection {
    *
    * Options:
    * - {String} strategy: The selected sync strategy.
+   * - {String} fetchLimit: Number of items to pull from the server.
    *
    * @param  {SyncResultObject} syncResultObject
    * @param  {Object}           options
@@ -631,7 +632,8 @@ export default class Collection {
     // First fetch remote changes from the server
     return this.api.fetchChangesSince(this.bucket, this.name, {
       lastModified: options.lastModified,
-      headers: options.headers
+      headers: options.headers,
+      limit: options.fetchLimit
     })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
@@ -764,11 +766,12 @@ export default class Collection {
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
+   * - {Number} fetchLimit: Number of items to fetch from the server.
    *
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false}) {
+  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false, fetchLimit: null}) {
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
