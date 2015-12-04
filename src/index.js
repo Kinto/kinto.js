@@ -2,7 +2,7 @@
 
 import { EventEmitter } from "events";
 
-import "babel/polyfill";
+import "babel-polyfill";
 import "isomorphic-fetch";
 
 import BaseAdapter from "./adapters/base";
@@ -34,4 +34,10 @@ export default class Kinto extends KintoBase {
 
     super(Object.assign({}, defaults, options));
   }
+}
+
+// This fixes compatibility with CommonJS required by browserify.
+// See http://stackoverflow.com/questions/33505992/babel-6-changes-how-it-exports-default/33683495#33683495
+if (typeof module === "object") {
+  module.exports = Kinto;
 }

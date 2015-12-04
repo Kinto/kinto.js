@@ -677,7 +677,7 @@ export default class Collection {
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
         // Reflect publication results localy
-        const missingRemotely = skipped.map(r => ({...r, deleted: true}));
+        const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
         const toApplyLocally = published.concat(missingRemotely);
         return Promise.all(toApplyLocally.map(record => {
           if (record.deleted) {
