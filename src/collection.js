@@ -797,19 +797,17 @@ export default class Collection {
    */
   loadDump(records) {
     const reject = msg => Promise.reject(new Error(msg));
-    if (!(typeof records.sort == 'function')) {
+    if (!Array.isArray(records)) {
       return reject("Records is not an array.");
     }
 
     for(const record of records) {
       if (!record.id || !this.idSchema.validate(record.id)) {
-        return reject("Record has invalid ID: " +
-                      JSON.stringify(record));
+        return reject("Record has invalid ID: " + JSON.stringify(record));
       }
 
       if (!record.last_modified) {
-        return reject("Record has no last_modified value: " +
-                      JSON.stringify(record));
+        return reject("Record has no last_modified value: " + JSON.stringify(record));
       }
     }
 
