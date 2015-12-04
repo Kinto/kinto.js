@@ -791,9 +791,12 @@ export default class Collection {
   /**
    * Load a list of records already synced with the remote server.
    *
+   * The local records which are unsynced or whose timestamp is either missing
+   * or superior to those being loaded will be ignored.
+   *
    * @param  {Array} records.
    * @param  {Object} options Options.
-   * @return {Promise}
+   * @return {Promise} with the effectively imported records.
    */
   loadDump(records) {
     const reject = msg => Promise.reject(new Error(msg));
