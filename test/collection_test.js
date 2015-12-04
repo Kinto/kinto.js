@@ -913,7 +913,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: null, headers: {}});
+              {lastModified: null, headers: {}, limit: undefined});
           });
       });
 
@@ -924,7 +924,18 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: 42, headers: {}});
+              {lastModified: 42, headers: {}, limit: undefined});
+          });
+      });
+
+      it("should use limit to fetch remote changes from the server", () => {
+        return articles.pullChanges(result, {fetchLimit: 100})
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              {lastModified: null, headers: {}, limit: 100});
           });
       });
 

@@ -162,7 +162,7 @@ export default class Api {
    * @param  {Object} options     The options object.
    * @return {Promise}
    */
-  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
+  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}, limit: null}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
     let queryString = "";
     const headers = Object.assign({}, this.optionHeaders, options.headers);
@@ -170,6 +170,11 @@ export default class Api {
     if (options.lastModified) {
       queryString = "?_since=" + options.lastModified;
       headers["If-None-Match"] = quote(options.lastModified);
+    }
+
+    if (options.limit) {
+      queryString += (queryString.indexOf("?") == -1 ? "?" : "&");
+      queryString += "_limit=" + options.limit;
     }
 
     return this.fetchServerSettings()
