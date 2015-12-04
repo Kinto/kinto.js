@@ -613,8 +613,10 @@ export default class Collection {
    * {@link SyncResultObject} with import results.
    *
    * Options:
-   * - {String} strategy: The selected sync strategy.
+   * - {String} strategy:   The selected sync strategy.
    * - {String} fetchLimit: Number of items to pull from the server.
+   * - {String} maxPages:   Max number of pages of changes to fetch from the
+   *   server.
    *
    * @param  {SyncResultObject} syncResultObject
    * @param  {Object}           options
@@ -634,6 +636,7 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers,
       limit: options.fetchLimit,
+      maxPages: options.maxPages,
     })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
@@ -767,11 +770,19 @@ export default class Collection {
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
    * - {Number} fetchLimit: Number of items to fetch from the server.
+   * - {Number} maxPages: Maximum number of pages of changes to fetch from the
+   *   server.
    *
    * @param  {Object} options Options.
    * @return {Promise}
    */
-  sync(options={strategy: Collection.strategy.MANUAL, headers: {}, ignoreBackoff: false, fetchLimit: null}) {
+  sync(options={
+    strategy: Collection.strategy.MANUAL,
+    headers: {},
+    ignoreBackoff: false,
+    fetchLimit: null,
+    maxPages: null
+  }) {
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(

@@ -913,7 +913,12 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: null, headers: {}, limit: undefined});
+              {
+                lastModified: null,
+                headers: {},
+                limit: undefined,
+                maxPages: undefined,
+              });
           });
       });
 
@@ -924,7 +929,12 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: 42, headers: {}, limit: undefined});
+              {
+                lastModified: 42,
+                headers: {},
+                limit: undefined,
+                maxPages: undefined,
+              });
           });
       });
 
@@ -935,7 +945,28 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: null, headers: {}, limit: 100});
+              {
+                lastModified: null,
+                headers: {},
+                limit: 100,
+                maxPages: undefined,
+              });
+          });
+      });
+
+      it("should use maxPages to fetch remote changes from the server", () => {
+        return articles.pullChanges(result, {maxPages: 8})
+          .then(_ => {
+            sinon.assert.calledOnce(fetchChangesSince);
+            sinon.assert.calledWithExactly(fetchChangesSince,
+              TEST_BUCKET_NAME,
+              TEST_COLLECTION_NAME,
+              {
+                lastModified: null,
+                headers: {},
+                limit: undefined,
+                maxPages: 8,
+              });
           });
       });
 

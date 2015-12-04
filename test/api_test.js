@@ -347,6 +347,45 @@ describe("Api", () => {
             });
         });
       });
+
+      describe("Max pages limit", () => {
+        const nextPageUrl = "http://test/v1/?_token=nextToken";
+        const nextPageHeader = {"Next-Page": nextPageUrl};
+
+        beforeEach(() => {
+          sandbox.stub(root, "fetch")
+            // fetch server Settings
+            .onFirstCall().returns(
+              fakeServerResponse(200, {}, {}))
+            // fetch first page
+            .onSecondCall().returns(
+              fakeServerResponse(200, {data: [1, 2]}, nextPageHeader));
+        });
+
+        it("should request the next page URL", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .then(res => sinon.assert.calledTwice(root.fetch));
+        });
+
+        it("should aggregate changes from a limited number of pages", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .should.eventually.have.property("changes").eql([1, 2]);
+        });
+
+        it("should expose the next page url remaining", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .should.eventually.have.property("nextPage").eql(nextPageUrl);
+        });
+      });
     });
   });
 

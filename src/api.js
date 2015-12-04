@@ -156,15 +156,16 @@ export default class Api {
       });
   }
 
-  _fetchChangeUrl(results, url, headers, options) {
+  _fetchChangesPage(page, results, url, headers, options) {
+    if (options.maxPages && page > options.maxPages) {
+      return Promise.resolve(results);
+    }
     return this.http.request(url, {headers})
       .then(res => {
-        // If HTTP 304, nothing has changed
-        if (res.status === 304) {
-          return results;
-        } else if (res.status=== 412) {
-          // XXX what now?
-          throw new Error("Changed meanwhile.");
+        // HTTP 304: nothing has changed
+        // HTTP 412: collection changed since we started paginating
+        if ([304, 412].indexOf(res.status) !== -1) {
+          return {... results, ...{nextPage: null}};
         }
 
         // Extract pagination token, if any
@@ -184,22 +185,35 @@ export default class Api {
           throw Error("Server has been flushed.");
         }
 
+        // Aggregate new results
         const newResults = {...results, ...{
           lastModified: etag,
           nextPage,
           changes: results.changes.concat(records),
         }};
 
-        if (nextPage) {
-          return this._fetchChangeUrl(newResults, nextPage, headers, options);
-        } else {
+        if (!nextPage) {
           return newResults;
         }
+
+        return this._fetchChangesPage(
+          page + 1,
+          newResults,
+          nextPage,
+          headers,
+          options
+        );
       });
   }
 
   /**
    * Fetches latest changes from the remote server.
+   *
+   * Options:
+   * - {Number|null} lastModified: The collection last modified timestamp.
+   * - {Object}      headers:      The HTTP request headers.
+   * - {Number|null} limit:        The number of changes per page to retrieve.
+   * - {Number|null} maxPages:     The max number of result pages to retrieve.
    *
    * @param  {String} bucketName  The bucket name.
    * @param  {String} collName    The collection name.
@@ -233,7 +247,13 @@ export default class Api {
     };
 
     return this.fetchServerSettings()
-      .then(_ => this._fetchChangeUrl(results, recordsUrl, headers, options));
+      .then(_ => this._fetchChangesPage(
+        1,
+        results,
+        recordsUrl,
+        headers,
+        options
+      ));
   }
 
   /**
