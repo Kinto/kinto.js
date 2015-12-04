@@ -191,9 +191,15 @@ export default class Api {
         if (res.status === 304) {
           return {
             lastModified: options.lastModified,
+            token: null,
             changes: []
           };
         }
+
+        // Extract pagination token, if any
+        const nextPage = res.headers.get("Next-Page");
+        const token = nextPage ? urlParse(nextPage, true).query._token : null;
+
         // XXX: ETag are supposed to be opaque and stored «as-is».
         // Extract response data
         let etag = res.headers.get("ETag");  // e.g. '"42"'
@@ -208,7 +214,7 @@ export default class Api {
           throw Error("Server has been flushed.");
         }
 
-        return {lastModified: etag, changes: records};
+        return {lastModified: etag, token, changes: records};
       });
   }
 

@@ -266,6 +266,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
           .should.eventually.become({
             lastModified: 41,
+            token: null,
             changes: []
           });
       });
@@ -274,7 +275,11 @@ describe("Api", () => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(304, {}));
 
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
-          .should.eventually.become({lastModified: 42, changes: []});
+          .should.eventually.become({
+            lastModified: 42,
+            token: null,
+            changes: [],
+          });
       });
 
       it("should reject on any HTTP status >= 400", () => {
@@ -301,6 +306,19 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles")
           .catch(err => err.data)
           .should.eventually.become(response);
+      });
+
+      it("should extract next page token from the Next-Page header", () => {
+        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
+          data: [],
+        }, {"Next-Page": "http://test/v1/?_token=nextToken"}));
+
+        return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+          .should.become({
+            changes: [],
+            token: "nextToken",
+            lastModified: 42,
+          });
       });
 
       it("should reject on server flushed", () => {
