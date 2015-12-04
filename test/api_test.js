@@ -232,6 +232,15 @@ describe("Api", () => {
           .then(_ => expect(fetch.secondCall.args[0]).to.match(/\?_since=42/));
       });
 
+      it("should request server changes using the limit option", () =>{
+        return api.fetchChangesSince("blog", "articles", {
+          lastModified: 42,
+          limit: 100,
+        }).then(_ => {
+          expect(fetch.secondCall.args[0]).to.match(/\?_since=42&_limit=100/);
+        });
+      });
+
       it("should attach an If-None-Match header if lastModified is provided", () =>{
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .then(_ => expect(fetch.secondCall.args[1].headers["If-None-Match"]).eql(quote(42)));

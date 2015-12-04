@@ -633,7 +633,7 @@ export default class Collection {
     return this.api.fetchChangesSince(this.bucket, this.name, {
       lastModified: options.lastModified,
       headers: options.headers,
-      limit: options.fetchLimit
+      limit: options.fetchLimit,
     })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))

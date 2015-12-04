@@ -1,5 +1,7 @@
 "use strict";
 
+import { parse as urlParse, format as urlFormat } from "url";
+
 import { quote, unquote, partition } from "./utils.js";
 import HTTP from "./http.js";
 
@@ -162,23 +164,28 @@ export default class Api {
    * @param  {Object} options     The options object.
    * @return {Promise}
    */
-  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}, limit: null}) {
-    const recordsUrl = this.endpoints().records(bucketName, collName);
-    let queryString = "";
+  fetchChangesSince(bucketName, collName, options={
+    lastModified: null,
+    headers: {},
+    limit: null
+  }) {
     const headers = Object.assign({}, this.optionHeaders, options.headers);
+    const urlObj = urlParse(this.endpoints().records(bucketName, collName));
+    const query = {};
 
     if (options.lastModified) {
-      queryString = "?_since=" + options.lastModified;
+      query._since = options.lastModified;
       headers["If-None-Match"] = quote(options.lastModified);
     }
 
     if (options.limit) {
-      queryString += (queryString.indexOf("?") == -1 ? "?" : "&");
-      queryString += "_limit=" + options.limit;
+      query._limit = options.limit;
     }
 
+    const recordsUrl = urlFormat({...urlObj, ...{query}});
+
     return this.fetchServerSettings()
-      .then(_ => this.http.request(recordsUrl + queryString, {headers}))
+      .then(_ => this.http.request(recordsUrl, {headers}))
       .then(res => {
         // If HTTP 304, nothing has changed
         if (res.status === 304) {
