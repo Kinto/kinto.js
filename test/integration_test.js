@@ -131,7 +131,7 @@ describe("Integration tests", () => {
           })));
       }
 
-      describe("Fetch limit", () => {
+      describe("Pagination", () => {
         const testData = {
           localSynced: [],
           localUnsynced: [],
@@ -150,12 +150,12 @@ describe("Integration tests", () => {
         });
 
         it("should retrieve the max nb of records specified in limit", () => {
-          expect(syncResult.created).to.have.length.of(2);
+          expect(syncResult.created).to.have.length.of(4);
         });
 
         it("should retrieve the expected chunk of records", () => {
           expect(syncResult.created.map(r => r.title))
-            .eql(["task4", "task3"]);
+            .eql(["task4", "task3", "task2", "task1"]);
         });
       });
 

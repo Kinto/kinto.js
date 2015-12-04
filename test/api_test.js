@@ -308,25 +308,44 @@ describe("Api", () => {
           .should.eventually.become(response);
       });
 
-      it("should extract next page token from the Next-Page header", () => {
-        sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
-          data: [],
-        }, {"Next-Page": "http://test/v1/?_token=nextToken"}));
-
-        return api.fetchChangesSince("blog", "articles", {lastModified: 42})
-          .should.become({
-            changes: [],
-            nextPage: "http://test/v1/?_token=nextToken",
-            lastModified: 42,
-          });
-      });
-
       it("should reject on server flushed", () => {
         sandbox.stub(root, "fetch").returns(
           fakeServerResponse(200, {data: []}, {ETag: quote(43)}));
 
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .should.be.rejectedWith(Error, /Server has been flushed/);
+      });
+
+      describe("Pagination", () => {
+        const nextPageUrl = "http://test/v1/?_token=nextToken";
+        const nextPageHeader = {"Next-Page": nextPageUrl};
+
+        beforeEach(() => {
+          sandbox.stub(root, "fetch")
+            // fetch server Settings
+            .onFirstCall().returns(
+              fakeServerResponse(200, {}, {}))
+            // fetch first page
+            .onSecondCall().returns(
+              fakeServerResponse(200, {data: [1, 2]}, nextPageHeader))
+            // fetch second page
+            .onThirdCall().returns(
+              fakeServerResponse(200, {data: [3, 4]}, {}));
+        });
+
+        it("should request the next page URL", () => {
+          return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+            .then(res => sinon.assert.calledWith(root.fetch, nextPageUrl));
+        });
+
+        it("should aggregate changes from multiple pages", () => {
+          return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+            .should.become({
+              lastModified: 42,
+              nextPage: null,
+              changes: [1, 2, 3, 4],
+            });
+        });
       });
     });
   });

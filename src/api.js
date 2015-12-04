@@ -156,6 +156,48 @@ export default class Api {
       });
   }
 
+  _fetchChangeUrl(results, url, headers, options) {
+    return this.http.request(url, {headers})
+      .then(res => {
+        // If HTTP 304, nothing has changed
+        if (res.status === 304) {
+          return results;
+        } else if (res.status=== 412) {
+          // XXX what now?
+          throw new Error("Changed meanwhile.");
+        }
+
+        // Extract pagination token, if any
+        const nextPage = res.headers.get("Next-Page") || null;
+
+        // XXX: ETag are supposed to be opaque and stored «as-is».
+        // Extract response data
+        let etag = res.headers.get("ETag");  // e.g. '"42"'
+        etag = etag ? parseInt(unquote(etag), 10) : options.lastModified;
+        const records = res.json.data;
+
+        // Check if server was flushed
+        const localSynced = options.lastModified;
+        const serverChanged = etag > options.lastModified;
+        const emptyCollection = records ? records.length === 0 : true;
+        if (localSynced && serverChanged && emptyCollection) {
+          throw Error("Server has been flushed.");
+        }
+
+        const newResults = {...results, ...{
+          lastModified: etag,
+          nextPage,
+          changes: results.changes.concat(records),
+        }};
+
+        if (nextPage) {
+          return this._fetchChangeUrl(newResults, nextPage, headers, options);
+        } else {
+          return newResults;
+        }
+      });
+  }
+
   /**
    * Fetches latest changes from the remote server.
    *
@@ -184,37 +226,14 @@ export default class Api {
 
     const recordsUrl = urlFormat({...urlObj, ...{query}});
 
+    const results = {
+      lastModified: options.lastModified,
+      nextPage: null,
+      changes: [],
+    };
+
     return this.fetchServerSettings()
-      .then(_ => this.http.request(recordsUrl, {headers}))
-      .then(res => {
-        // If HTTP 304, nothing has changed
-        if (res.status === 304) {
-          return {
-            lastModified: options.lastModified,
-            nextPage: null,
-            changes: []
-          };
-        }
-
-        // Extract pagination token, if any
-        const nextPage = res.headers.get("Next-Page") || null;
-
-        // XXX: ETag are supposed to be opaque and stored «as-is».
-        // Extract response data
-        let etag = res.headers.get("ETag");  // e.g. '"42"'
-        etag = etag ? parseInt(unquote(etag), 10) : options.lastModified;
-        const records = res.json.data;
-
-        // Check if server was flushed
-        const localSynced = options.lastModified;
-        const serverChanged = etag > options.lastModified;
-        const emptyCollection = records ? records.length === 0 : true;
-        if (localSynced && serverChanged && emptyCollection) {
-          throw Error("Server has been flushed.");
-        }
-
-        return {lastModified: etag, nextPage, changes: records};
-      });
+      .then(_ => this._fetchChangeUrl(results, recordsUrl, headers, options));
   }
 
   /**
