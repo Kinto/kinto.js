@@ -266,7 +266,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
           .should.eventually.become({
             lastModified: 41,
-            token: null,
+            nextPage: null,
             changes: []
           });
       });
@@ -277,7 +277,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .should.eventually.become({
             lastModified: 42,
-            token: null,
+            nextPage: null,
             changes: [],
           });
       });
@@ -316,7 +316,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .should.become({
             changes: [],
-            token: "nextToken",
+            nextPage: "http://test/v1/?_token=nextToken",
             lastModified: 42,
           });
       });
