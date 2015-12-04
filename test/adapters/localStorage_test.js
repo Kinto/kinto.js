@@ -123,21 +123,21 @@ describe("adapter.LocalStorage", () => {
       });
     });
 
-    /** @test {LocalStorage#saveLastModified} */
+    /** @test {LocalStorage#saveMetaProperty} */
     describe("#saveLastModified", () => {
       it("should reject on generic error", () => {
         sandbox.stub(localStorage, "setItem", thrower("err"));
-        return db.saveLastModified(42)
-          .should.be.rejectedWith(Error, /^Error: saveLastModified\(\) err/);
+        return db.saveMetaProperty("foo", 42)
+          .should.be.rejectedWith(Error, /^Error: saveMetaProperty\(\) err/);
       });
     });
 
-    /** @test {LocalStorage#getLastModified} */
-    describe("#getLastModified", () => {
+    /** @test {LocalStorage#getMetaProperty} */
+    describe("#getMetaProperty", () => {
       it("should reject on generic error", () => {
         sandbox.stub(JSON, "parse", thrower("err"));
-        return db.getLastModified()
-          .should.be.rejectedWith(Error, /^Error: getLastModified\(\) err/);
+        return db.getMetaProperty("foo")
+          .should.be.rejectedWith(Error, /^Error: getMetaProperty\(\) err/);
       });
     });
 

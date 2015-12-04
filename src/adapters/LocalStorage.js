@@ -22,7 +22,7 @@ export default class LocalStorage extends BaseAdapter {
     super();
     this._db = null;
     this._keyStoreName = `${this.dbname}/__keys`;
-    this._keyLastModified = `${this.dbname}/__lastModified`;
+    this._metaPrefix = `${this.dbname}/meta`;
     // public properties
     /**
      * The database name.
@@ -191,12 +191,7 @@ export default class LocalStorage extends BaseAdapter {
    */
   saveLastModified(lastModified) {
     const value = parseInt(lastModified, 10);
-    try {
-      localStorage.setItem(this._keyLastModified, JSON.stringify(value));
-      return Promise.resolve(value);
-    } catch(err) {
-      return this._handleError("saveLastModified", err);
-    }
+    return this.saveMetaProperty("lastModified", value);
   }
 
   /**
@@ -206,14 +201,42 @@ export default class LocalStorage extends BaseAdapter {
    * @return {Promise}
    */
   getLastModified() {
+    return this.getMetaProperty("lastModified")
+      .then(lastModified => parseInt(lastModified, 10) || null);
+  }
+
+  /**
+   * Saves a meta property.
+   *
+   * @param  {String} name
+   * @param  {Any}    value
+   * @return {Promise}
+   */
+  saveMetaProperty(name, value) {
     try {
-      const lastModified = JSON.parse(localStorage.getItem(this._keyLastModified));
-      return Promise.resolve(parseInt(lastModified, 10) || null);
+      const key = `${this._metaPrefix}name`;
+      localStorage.setItem(key, JSON.stringify(value));
+      return Promise.resolve(value);
     } catch(err) {
-      return this._handleError("getLastModified", err);
+      return this._handleError("saveMetaProperty", err);
     }
   }
 
+  /**
+   * Retrieves a meta property value.
+   *
+   * @param  {String} name
+   * @return {Promise}
+   */
+  getMetaProperty(name) {
+    try {
+      const key = `${this._metaPrefix}name`;
+      const lastModified = JSON.parse(localStorage.getItem(key));
+      return Promise.resolve(parseInt(lastModified, 10) || null);
+    } catch(err) {
+      return this._handleError("getMetaProperty", err);
+    }
+  }
 
   /**
    * Load a dump of records exported from a server.

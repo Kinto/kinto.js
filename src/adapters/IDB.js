@@ -222,6 +222,44 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
+   * Saves a meta property to the store.
+   *
+   * @param  {String} name  The meta property name
+   * @param  {Any}    value The meta property value
+   * @return {Promise}
+   */
+  saveMetaProperty(name, value) {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite", "__meta__");
+        store.put({name, value});
+        transaction.onerror = event => reject(event.target.error);
+        transaction.oncomplete = event => resolve(value);
+      });
+    });
+  }
+
+  /**
+   * Retrieves a meta property from the store.
+   *
+   * @override
+   * @param  {String} name  The meta property name
+   * @return {Promise}
+   */
+  getMetaProperty(name) {
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare(undefined, "__meta__");
+        const request = store.get(name);
+        transaction.onerror = event => reject(event.target.error);
+        transaction.oncomplete = event => {
+          resolve(request.result && request.result.value || null);
+        };
+      });
+    });
+  }
+
+  /**
    * Store the lastModified value into metadata store.
    *
    * @override
@@ -230,14 +268,7 @@ export default class IDB extends BaseAdapter {
    */
   saveLastModified(lastModified) {
     const value = parseInt(lastModified, 10) || null;
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite", "__meta__");
-        store.put({name: "lastModified", value: value});
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => resolve(value);
-      });
-    });
+    return this.saveMetaProperty("lastModified", value);
   }
 
   /**
@@ -247,16 +278,8 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   getLastModified() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare(undefined, "__meta__");
-        const request = store.get("lastModified");
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => {
-          resolve(request.result && request.result.value || null);
-        };
-      });
-    });
+    return this.getMetaProperty("lastModified")
+      .then(lastModified => parseInt(lastModified, 10) || null);
   }
 
   /**
