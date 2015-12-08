@@ -668,17 +668,20 @@ export default class Collection {
       })
       // Update published local records
       .then(([deleted, synced]) => {
+        const {errors, conflicts, published, skipped} = synced;
         // Merge outgoing errors into sync result object
-        syncResultObject.add("errors", synced.errors.map(error => {
+        syncResultObject.add("errors", errors.map(error => {
           error.type = "outgoing";
           return error;
         }));
         // Merge outgoing conflicts into sync result object
-        syncResultObject.add("conflicts", synced.conflicts);
-        // Process local updates following published changes
-        return Promise.all(synced.published.map(record => {
+        syncResultObject.add("conflicts", conflicts);
+        // Reflect publication results localy
+        const missingRemotely = skipped.map(r => ({...r, deleted: true}));
+        const toApplyLocally = published.concat(missingRemotely);
+        return Promise.all(toApplyLocally.map(record => {
           if (record.deleted) {
-            // Remote deletion was successful, refect it locally
+            // Remote deletion, refect it locally
             return this.delete(record.id, {virtual: false}).then(res => {
               // Amend result data with the deleted attribute set
               return {data: {id: res.data.id, deleted: true}};

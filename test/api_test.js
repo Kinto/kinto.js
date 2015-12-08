@@ -477,18 +477,19 @@ describe("Api", () => {
         });
 
         it("should resolve with skipped missing records", () => {
+          const missingRemotely = published[0];
           sandbox.stub(root, "fetch").returns(fakeServerResponse(200, {
             responses: [
               { status: 404,
                 path: `/${SPV}/buckets/blog/collections/articles/records/1`,
-                body: { 404: true }},
+                body: missingRemotely},
             ]
           }));
 
           return api.batch("blog", "articles", published)
             .should.eventually.become({
               conflicts: [],
-              skipped:   [{ 404: true }],
+              skipped:   [missingRemotely],
               errors:    [],
               published: []
             });
