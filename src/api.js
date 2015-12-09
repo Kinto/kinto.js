@@ -241,7 +241,7 @@ export default class Api {
       if (response.status && response.status >= 200 && response.status < 400) {
         results.published.push(response.body.data);
       } else if (response.status === 404) {
-        results.skipped.push(response.body);
+        results.skipped.push(records[index]);
       } else if (response.status === 412) {
         results.conflicts.push({
           type: "outgoing",

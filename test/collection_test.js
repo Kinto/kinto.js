@@ -1245,6 +1245,18 @@ describe("Collection", () => {
         ]);
     });
 
+    it("should delete local records when already deleted on server", () => {
+      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [],
+        errors:    [],
+        conflicts: [],
+        skipped:   [{id: records[0].id}]
+      }));
+      return articles.pushChanges(result)
+        .then(_ => articles.get(records[0].id, {includeDeleted: true}))
+        .should.be.eventually.rejectedWith(Error, /not found/);
+    });
+
     describe("Error handling", () => {
       const error = new Error("publish error");
 
@@ -1340,6 +1352,7 @@ describe("Collection", () => {
         errors:    [],
         published: [],
         conflicts: [],
+        skipped:   [],
       });
       return Promise.all(fixtures.map(fixture => articles.create(fixture)))
         .then(res => ids = res.map(r => r.data.id));
