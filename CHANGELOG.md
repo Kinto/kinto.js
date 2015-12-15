@@ -1,7 +1,18 @@
 # Change Log
 
-## [v1.1.1](https://github.com/Kinto/kinto.js/tree/v1.1.1) (2015-11-24)
+## [v1.1.2](https://github.com/Kinto/kinto.js/tree/v1.1.2) (2015-12-15)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.1...v.1.1.2)
 
+**Release enhancements:**
+
+- Add a minimalist dist file without polyfills [\#291](https://github.com/Kinto/kinto.js/issues/291)
+
+**Fixed bugs:**
+
+- Records not deleted locally when already deleted on server \(404 on delete\) [\#284](https://github.com/Kinto/kinto.js/issues/284)
+- Handle network request timeouts. [\#263](https://github.com/Kinto/kinto.js/issues/263)
+
+## [v1.1.1](https://github.com/Kinto/kinto.js/tree/v1.1.1) (2015-11-24)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.0...v1.1.1)
 
 **Implemented enhancements:**
