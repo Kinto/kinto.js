@@ -18,6 +18,7 @@ Dev and production ready assets are available in the [`gh-pages` branch of the r
 
 - Dev version, including source maps: [kinto-1.1.1.js](http://npmcdn.com/kinto@1.1.1/dist/kinto-1.1.1.js)
 - Production version, minified, no source maps: [kinto-1.1.1.min.js](http://npmcdn.com/kinto@1.1.1/dist/kinto-1.1.1.min.js)
+- Minimalist version, without polyfills [kinto-1.X.X.noshim.js](http://npmcdn.com/kinto@1.X.X/dist/kinto-1.X.X.min.js)
 
 > #### Notes
 >
