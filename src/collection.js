@@ -797,8 +797,7 @@ export default class Collection {
    * The local records which are unsynced or whose timestamp is either missing
    * or superior to those being loaded will be ignored.
    *
-   * @param  {Array} records.
-   * @param  {Object} options Options.
+   * @param  {Array} records The previously exported list of records to load.
    * @return {Promise} with the effectively imported records.
    */
   loadDump(records) {
