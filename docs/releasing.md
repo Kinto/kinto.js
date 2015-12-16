@@ -31,8 +31,8 @@ In the generated `CHANGELOG.md`, replace `HEAD` by `vX.Y.Z` in full changelog an
 
 ### Publish on NPM
 
-    $ npm build
-    $ npm dist
+    $ npm run build
+    $ npm run dist
 
 Ensure NPM package content is ready and valid. The `dist/` folder should contain browersified assets and `lib/` the babelized ES5 files.
 
