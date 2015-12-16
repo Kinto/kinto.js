@@ -794,25 +794,26 @@ export default class Collection {
   /**
    * Load a list of records already synced with the remote server.
    *
+   * The local records which are unsynced or whose timestamp is either missing
+   * or superior to those being loaded will be ignored.
+   *
    * @param  {Array} records.
    * @param  {Object} options Options.
-   * @return {Promise}
+   * @return {Promise} with the effectively imported records.
    */
   loadDump(records) {
     const reject = msg => Promise.reject(new Error(msg));
-    if (!(records instanceof Array)) {
+    if (!Array.isArray(records)) {
       return reject("Records is not an array.");
     }
 
     for(const record of records) {
       if (!record.id || !this.idSchema.validate(record.id)) {
-        return reject("Record has invalid ID: " +
-                      JSON.stringify(record));
+        return reject("Record has invalid ID: " + JSON.stringify(record));
       }
 
       if (!record.last_modified) {
-        return reject("Record has no last_modified value: " +
-                      JSON.stringify(record));
+        return reject("Record has no last_modified value: " + JSON.stringify(record));
       }
     }
 

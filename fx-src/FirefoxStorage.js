@@ -202,6 +202,16 @@ export default class FirefoxAdapter extends BaseAdapter {
     });
   }
 
+  /**
+   * Load a list of records into the local database.
+   *
+   * Note: The adapter is not in charge of filtering the already imported
+   * records. This is done in `Collection#loadDump()`, as a common behaviour
+   * between every adapters.
+   *
+   * @param  {Array} records.
+   * @return {Array} imported records.
+   */
   loadDump(records) {
     let connection = this._connection;
     let collection_name = this.collection;
