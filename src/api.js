@@ -1,5 +1,7 @@
 "use strict";
 
+import { parse as urlParse, format as urlFormat } from "url";
+
 import { quote, unquote, partition } from "./utils.js";
 import HTTP from "./http.js";
 
@@ -154,34 +156,21 @@ export default class Api {
       });
   }
 
-  /**
-   * Fetches latest changes from the remote server.
-   *
-   * @param  {String} bucketName  The bucket name.
-   * @param  {String} collName    The collection name.
-   * @param  {Object} options     The options object.
-   * @return {Promise}
-   */
-  fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
-    const recordsUrl = this.endpoints().records(bucketName, collName);
-    let queryString = "";
-    const headers = Object.assign({}, this.optionHeaders, options.headers);
-
-    if (options.lastModified) {
-      queryString = "?_since=" + options.lastModified;
-      headers["If-None-Match"] = quote(options.lastModified);
+  _fetchChangesPage(page, results, url, headers, options) {
+    if (options.maxPages && page > options.maxPages) {
+      return Promise.resolve(results);
     }
-
-    return this.fetchServerSettings()
-      .then(_ => this.http.request(recordsUrl + queryString, {headers}))
+    return this.http.request(url, {headers})
       .then(res => {
-        // If HTTP 304, nothing has changed
-        if (res.status === 304) {
-          return {
-            lastModified: options.lastModified,
-            changes: []
-          };
+        // HTTP 304: nothing has changed
+        // HTTP 412: collection changed since we started paginating
+        if ([304, 412].indexOf(res.status) !== -1) {
+          return {... results, ...{nextPage: null}};
         }
+
+        // Extract pagination token, if any
+        const nextPage = res.headers.get("Next-Page") || null;
+
         // XXX: ETag are supposed to be opaque and stored «as-is».
         // Extract response data
         let etag = res.headers.get("ETag");  // e.g. '"42"'
@@ -196,8 +185,75 @@ export default class Api {
           throw Error("Server has been flushed.");
         }
 
-        return {lastModified: etag, changes: records};
+        // Aggregate new results
+        const newResults = {...results, ...{
+          lastModified: etag,
+          nextPage,
+          changes: results.changes.concat(records),
+        }};
+
+        if (!nextPage) {
+          return newResults;
+        }
+
+        return this._fetchChangesPage(
+          page + 1,
+          newResults,
+          nextPage,
+          headers,
+          options
+        );
       });
+  }
+
+  /**
+   * Fetches latest changes from the remote server.
+   *
+   * Options:
+   * - {Number|null} lastModified: The collection last modified timestamp.
+   * - {Object}      headers:      The HTTP request headers.
+   * - {Number|null} limit:        The number of changes per page to retrieve.
+   * - {Number|null} maxPages:     The max number of result pages to retrieve.
+   *
+   * @param  {String} bucketName  The bucket name.
+   * @param  {String} collName    The collection name.
+   * @param  {Object} options     The options object.
+   * @return {Promise}
+   */
+  fetchChangesSince(bucketName, collName, options={
+    lastModified: null,
+    headers: {},
+    limit: null
+  }) {
+    const headers = Object.assign({}, this.optionHeaders, options.headers);
+    const urlObj = urlParse(this.endpoints().records(bucketName, collName));
+    const query = {};
+
+    if (options.lastModified) {
+      query._since = options.lastModified;
+      headers["If-None-Match"] = quote(options.lastModified);
+    }
+
+    if (options.limit) {
+      query._limit = options.limit;
+    }
+
+    const recordsUrl = urlFormat({...urlObj, ...{query}});
+
+    const results = {
+      lastModified: options.lastModified,
+      nextPage: null,
+      changes: [],
+    };
+
+    return this.fetchServerSettings()
+      .then(_ => this._fetchChangesPage(
+        1,
+        results,
+        recordsUrl,
+        headers,
+        options
+      ));
   }
 
   /**

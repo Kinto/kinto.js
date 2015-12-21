@@ -131,6 +131,62 @@ describe("Integration tests", () => {
           })));
       }
 
+      describe("Pagination", () => {
+        const testData = {
+          localSynced: [],
+          localUnsynced: [],
+          server: [
+            {id: uuid4(), title: "task1", done: true},
+            {id: uuid4(), title: "task2", done: true},
+            {id: uuid4(), title: "task3", done: true},
+            {id: uuid4(), title: "task4", done: true},
+          ]
+        };
+        let syncResult;
+
+        beforeEach(() => {
+          return testSync(testData, {fetchLimit: 2})
+            .then(res => syncResult = res);
+        });
+
+        it("should retrieve all the changes", () => {
+          expect(syncResult.created).to.have.length.of(4);
+        });
+
+        it("should retrieve the expected changes", () => {
+          expect(syncResult.created.map(r => r.title))
+            .eql(["task4", "task3", "task2", "task1"]);
+        });
+      });
+
+      describe("Max page", () => {
+        const testData = {
+          localSynced: [],
+          localUnsynced: [],
+          server: [
+            {id: uuid4(), title: "task1", done: true},
+            {id: uuid4(), title: "task2", done: true},
+            {id: uuid4(), title: "task3", done: true},
+            {id: uuid4(), title: "task4", done: true},
+          ]
+        };
+        let syncResult;
+
+        beforeEach(() => {
+          return testSync(testData, {fetchLimit: 2, maxPages: 1})
+            .then(res => syncResult = res);
+        });
+
+        it("should retrieve the max nb of pages of changes", () => {
+          expect(syncResult.created).to.have.length.of(2);
+        });
+
+        it("should retrieve the expected changes", () => {
+          expect(syncResult.created.map(r => r.title))
+            .eql(["task4", "task3"]);
+        });
+      });
+
       describe("No conflict", () => {
         const testData = {
           localSynced: [
@@ -1002,7 +1058,7 @@ describe("Integration tests", () => {
       });
     });
 
-    describe("Schemas", () => {
+    describe("Id schemas & transformers", () => {
       function createIntegerIdSchema() {
         let _next = 0;
         return {

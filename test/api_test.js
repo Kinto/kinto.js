@@ -232,6 +232,15 @@ describe("Api", () => {
           .then(_ => expect(fetch.secondCall.args[0]).to.match(/\?_since=42/));
       });
 
+      it("should request server changes using the limit option", () =>{
+        return api.fetchChangesSince("blog", "articles", {
+          lastModified: 42,
+          limit: 100,
+        }).then(_ => {
+          expect(fetch.secondCall.args[0]).to.match(/\?_since=42&_limit=100/);
+        });
+      });
+
       it("should attach an If-None-Match header if lastModified is provided", () =>{
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .then(_ => expect(fetch.secondCall.args[1].headers["If-None-Match"]).eql(quote(42)));
@@ -257,6 +266,7 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
           .should.eventually.become({
             lastModified: 41,
+            nextPage: null,
             changes: []
           });
       });
@@ -265,7 +275,11 @@ describe("Api", () => {
         sandbox.stub(root, "fetch").returns(fakeServerResponse(304, {}));
 
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
-          .should.eventually.become({lastModified: 42, changes: []});
+          .should.eventually.become({
+            lastModified: 42,
+            nextPage: null,
+            changes: [],
+          });
       });
 
       it("should reject on any HTTP status >= 400", () => {
@@ -300,6 +314,77 @@ describe("Api", () => {
 
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
           .should.be.rejectedWith(Error, /Server has been flushed/);
+      });
+
+      describe("Pagination", () => {
+        const nextPageUrl = "http://test/v1/?_token=nextToken";
+        const nextPageHeader = {"Next-Page": nextPageUrl};
+
+        beforeEach(() => {
+          sandbox.stub(root, "fetch")
+            // fetch server Settings
+            .onFirstCall().returns(
+              fakeServerResponse(200, {}, {}))
+            // fetch first page
+            .onSecondCall().returns(
+              fakeServerResponse(200, {data: [1, 2]}, nextPageHeader))
+            // fetch second page
+            .onThirdCall().returns(
+              fakeServerResponse(200, {data: [3, 4]}, {}));
+        });
+
+        it("should request the next page URL", () => {
+          return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+            .then(res => sinon.assert.calledWith(root.fetch, nextPageUrl));
+        });
+
+        it("should aggregate changes from multiple pages", () => {
+          return api.fetchChangesSince("blog", "articles", {lastModified: 42})
+            .should.become({
+              lastModified: 42,
+              nextPage: null,
+              changes: [1, 2, 3, 4],
+            });
+        });
+      });
+
+      describe("Max pages limit", () => {
+        const nextPageUrl = "http://test/v1/?_token=nextToken";
+        const nextPageHeader = {"Next-Page": nextPageUrl};
+
+        beforeEach(() => {
+          sandbox.stub(root, "fetch")
+            // fetch server Settings
+            .onFirstCall().returns(
+              fakeServerResponse(200, {}, {}))
+            // fetch first page
+            .onSecondCall().returns(
+              fakeServerResponse(200, {data: [1, 2]}, nextPageHeader));
+        });
+
+        it("should request the next page URL", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .then(res => sinon.assert.calledTwice(root.fetch));
+        });
+
+        it("should aggregate changes from a limited number of pages", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .should.eventually.have.property("changes").eql([1, 2]);
+        });
+
+        it("should expose the next page url remaining", () => {
+          return api.fetchChangesSince("blog", "articles", {
+            lastModified: 42,
+            maxPages: 1,
+          })
+            .should.eventually.have.property("nextPage").eql(nextPageUrl);
+        });
       });
     });
   });

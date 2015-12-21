@@ -107,6 +107,26 @@ export function adapterTestSuite(createDB, options={only: false}) {
       });
     });
 
+    describe("#saveMetaProperty", () => {
+      it("should resolve with meta property value", () => {
+        return db.saveMetaProperty("foo", 42)
+          .should.eventually.become(42);
+      });
+
+      it("should save a meta property value", () => {
+        return db.saveMetaProperty("foo", 42)
+          .then(_ => db.getMetaProperty("foo"))
+          .should.eventually.become(42);
+      });
+
+      it("should allow updating previous value", () => {
+        return db.saveMetaProperty("foo", 42)
+          .then(_ => db.saveMetaProperty("foo", 43))
+          .then(_ => db.getMetaProperty("foo"))
+          .should.eventually.become(43);
+      });
+    });
+
     describe("#saveLastModified", () => {
       it("should resolve with lastModified value", () => {
         return db.saveLastModified(42)
