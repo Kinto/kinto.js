@@ -1,10 +1,10 @@
 function main() {
-  var db = new Kinto({
+  var db = new Kinto();
+  var tasks = db.collection("tasks");
+  var syncOptions = {
     remote: "https://kinto.dev.mozaws.net/v1/",
     headers: {Authorization: "Basic " + btoa("user:pass")}
-  });
-  var tasks = db.collection("tasks");
-
+  };
   document.getElementById("form")
     .addEventListener("submit", function(event) {
       event.preventDefault();
@@ -41,12 +41,12 @@ function main() {
     });
 
   function doSync() {
-    return tasks.sync().catch(function(err) {
+    return tasks.sync(syncOptions).catch(function(err) {
       if (err.message.contains("flushed")) {
         console.warn("Flushed server detected, marking local data for reupload.");
         return tasks.resetSyncStatus()
           .then(function() {
-            return tasks.sync();
+            return tasks.sync(syncOptions);
           });
       }
       throw err;
