@@ -10,7 +10,7 @@ import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "../src/api";
-import { updateTitleWithDelay } from "./test_utils";
+import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -1356,6 +1356,47 @@ describe("Collection", () => {
       });
       return Promise.all(fixtures.map(fixture => articles.create(fixture)))
         .then(res => ids = res.map(r => r.data.id));
+    });
+
+    it("should validate the remote option", () => {
+      expect(() => articles.sync({remote: "http://fake.invalid"}))
+        .to.Throw(Error, /contain the version/);
+    });
+
+    it("should use a custom remote option", () => {
+      sandbox.stub(articles, "importChanges");
+      sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
+      const fetch = sandbox.stub(root, "fetch")
+        .returns(fakeServerResponse(200, {}, {}));
+
+      return articles.sync({remote: "http://test/v1"}).
+        then(res => {
+          sinon.assert.calledWith(fetch, sinon.match(/http:\/\/test\/v1/));
+        });
+    });
+
+    it("should revert the custom remote option on success", () => {
+      sandbox.stub(articles, "importChanges");
+      sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
+      sandbox.stub(root, "fetch")
+        .returns(fakeServerResponse(200, {}, {}));
+
+      return articles.sync({remote: "http://test/v1"}).
+        then(_ => {
+          expect(api.remote).eql(FAKE_SERVER_URL);
+        });
+    });
+
+    it("should revert the custom remote option on failure", () => {
+      sandbox.stub(articles, "importChanges");
+      sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
+      sandbox.stub(root, "fetch")
+        .returns(fakeServerResponse(200, {}, {}));
+
+      return articles.sync({remote: "http://test/v1"}).
+        catch(_ => {
+          expect(api.remote).eql(FAKE_SERVER_URL);
+        });
     });
 
     it("should load fixtures", () => {

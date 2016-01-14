@@ -34,8 +34,8 @@ export default class Api {
    * Constructor.
    *
    * Options:
-   * - {Object}       headers The key-value headers to pass to each request.
-   * - {String}       events  The HTTP request mode.
+   * - {Object} headers      The key-value headers to pass to each request.
+   * - {String} requestMode  The HTTP request mode.
    *
    * @param  {String}       remote  The remote URL.
    * @param  {EventEmitter} events  The events handler
@@ -49,12 +49,9 @@ export default class Api {
       remote = remote.slice(0, -1);
     }
     this._backoffReleaseTime = null;
-    // public properties
-    /**
-     * The remote endpoint base URL.
-     * @type {String}
-     */
     this.remote = remote;
+
+    // public properties
     /**
      * The optional generic headers.
      * @type {Object}
@@ -73,24 +70,44 @@ export default class Api {
       throw new Error("No events handler provided");
     }
     this.events = events;
-    try {
-      /**
-       * The current server protocol version, eg. `v1`.
-       * @type {String}
-       */
-      this.version = remote.match(/\/(v\d+)\/?$/)[1];
-    } catch (err) {
-      throw new Error("The remote URL must contain the version: " + remote);
-    }
-    if (this.version !== SUPPORTED_PROTOCOL_VERSION) {
-      throw new Error(`Unsupported protocol version: ${this.version}`);
-    }
+
     /**
      * The HTTP instance.
      * @type {HTTP}
      */
     this.http = new HTTP(this.events, {requestMode: options.requestMode});
     this._registerHTTPEvents();
+  }
+
+  /**
+   * The remote endpoint base URL. Setting the value will also extract and
+   * validate the version.
+   * @type {String}
+   */
+  get remote() {
+    return this._remote;
+  }
+
+  set remote(url) {
+    let version;
+    try {
+      version = url.match(/\/(v\d+)\/?$/)[1];
+    } catch (err) {
+      throw new Error("The remote URL must contain the version: " + url);
+    }
+    if (version !== SUPPORTED_PROTOCOL_VERSION) {
+      throw new Error(`Unsupported protocol version: ${version}`);
+    }
+    this._remote = url;
+    this._version = version;
+  }
+
+  /**
+   * The current server protocol version, eg. `v1`.
+   * @type {String}
+   */
+  get version() {
+    return this._version;
   }
 
   /**
