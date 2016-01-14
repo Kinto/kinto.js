@@ -1,16 +1,38 @@
 # Change Log
 
-## [v1.1.2](https://github.com/Kinto/kinto.js/tree/v1.1.2) (2015-12-15)
-[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.1...v.1.1.2)
+## [v1.2.0](https://github.com/Kinto/kinto.js/tree/v1.2.0)
 
-**Release enhancements:**
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.2...v1.2.0)
 
-- Add a minimalist dist file without polyfills [\#291](https://github.com/Kinto/kinto.js/issues/291)
+**Implemented enhancements:**
+
+- Allowing defining the remote endpoint in `#sync()`. [\#257](https://github.com/Kinto/kinto.js/issues/257)
+- Lightweight dist files for modern browsers  [\#249](https://github.com/Kinto/kinto.js/issues/249)
+
+**Fixed bugs:**
+
+- Broken links in the doc [\#293](https://github.com/Kinto/kinto.js/issues/293)
+- Fix JSM compatibility for Firefox adapter [\#274](https://github.com/Kinto/kinto.js/pull/274) ([leplatrem](https://github.com/leplatrem))
+- Fix parsing of ES7 code in esdoc [\#294](https://github.com/Kinto/kinto.js/pull/294) ([leplatrem](https://github.com/leplatrem))
+
+## [v1.1.2](https://github.com/Kinto/kinto.js/tree/v1.1.2) (2015-12-16)
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.1...v1.1.2)
+
+**Implemented enhancements:**
+
+- Fixes \#263: Handle network request timeouts. r=@leplatrem [\#273](https://github.com/Kinto/kinto.js/pull/273) ([michielbdejong](https://github.com/michielbdejong))
+- Add support for db.import [\#265](https://github.com/Kinto/kinto.js/pull/265) ([mozmark](https://github.com/mozmark))
 
 **Fixed bugs:**
 
 - Records not deleted locally when already deleted on server \(404 on delete\) [\#284](https://github.com/Kinto/kinto.js/issues/284)
-- Handle network request timeouts. [\#263](https://github.com/Kinto/kinto.js/issues/263)
+- Delete records locally when already deleted remotely \(fixes \#284\) [\#285](https://github.com/Kinto/kinto.js/pull/285) ([leplatrem](https://github.com/leplatrem))
+
+**Merged pull requests:**
+
+- Prepare 1.1.2 [\#292](https://github.com/Kinto/kinto.js/pull/292) ([leplatrem](https://github.com/leplatrem))
+- Add dist with minimalist version, without polyfills [\#291](https://github.com/Kinto/kinto.js/pull/291) ([leplatrem](https://github.com/leplatrem))
+- Update gh-pages to version 0.6.0 🚀 [\#275](https://github.com/Kinto/kinto.js/pull/275) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
 
 ## [v1.1.1](https://github.com/Kinto/kinto.js/tree/v1.1.1) (2015-11-24)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.0...v1.1.1)
@@ -23,6 +45,10 @@
 - Update to Kinto 1.9.0 [\#267](https://github.com/Kinto/kinto.js/pull/267) ([Natim](https://github.com/Natim))
 - let/const is the new var [\#255](https://github.com/Kinto/kinto.js/pull/255) ([pdehaan](https://github.com/pdehaan))
 - Add mocha env to .eslintrc [\#252](https://github.com/Kinto/kinto.js/pull/252) ([pdehaan](https://github.com/pdehaan))
+
+**Fixed bugs:**
+
+- Handle network request timeouts. [\#263](https://github.com/Kinto/kinto.js/issues/263)
 
 **Closed issues:**
 
