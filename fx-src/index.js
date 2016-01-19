@@ -50,3 +50,9 @@ export default function loadKinto() {
 
   return KintoFX;
 }
+
+// This fixes compatibility with CommonJS required by browserify.
+// See http://stackoverflow.com/questions/33505992/babel-6-changes-how-it-exports-default/33683495#33683495
+if (typeof module === "object") {
+  module.exports = loadKinto;
+}

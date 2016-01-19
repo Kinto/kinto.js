@@ -2,14 +2,21 @@
 
 /**
  * Test environment setup.
- *
+ */
+const root = typeof global === "object" ? global : window;
+
+/**
+ * Activate transpilation before running tests.
+ */
+require("babel-core/register")({
+  presets: ["es2015"]
+});
+
+/**
  * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
  * This piece of code will register them with the same names as native API,
  * only if indexedDB is not already available.
  */
-
-const root = typeof global === "object" ? global : window;
-
 if (typeof root.indexedDB !== "object") {
   const iDBSymbols = [
     "IDBDatabase",

@@ -48,14 +48,6 @@ Checklist:
 
 Update [Github release page](https://github.com/Kinto/kinto.js/releases) for this new tag (watchers will be notified).
 
-### Update demo
-
-On the `master` branch, update the CDN URL used in `demo/index.html`, where `X.X.X` is the version you've just released:
-
-```html
-  <script src="//npmcdn.com/kinto@X.X.X/dist/kinto-X.X.X.js"></script>
-```
-
 Update and publish the `gh-pages` branch containing the demo with:
 
     $ npm run publish-demo
