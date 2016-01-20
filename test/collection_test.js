@@ -23,18 +23,21 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Collection} */
 describe("Collection", () => {
-  let sandbox, events, idSchema, remoteTransformers, api;
+  let sandbox, events, idSchema, remoteTransformers, collectionTransformers,
+    api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
     events = new EventEmitter();
     idSchema = options.idSchema;
     remoteTransformers = options.remoteTransformers;
+    collectionTransformers = options.collectionTransformers;
     api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
       events,
       idSchema,
       remoteTransformers,
+      collectionTransformers,
       adapter: IDB
     });
   }
@@ -992,6 +995,34 @@ describe("Collection", () => {
         }))
         .then(_ => {
           return articles.delete(id_9);
+        });
+      });
+
+      describe("collectionTransformers", () => {
+        it("should call the collection transformer", () => {
+          let transformerCalled = false;
+          articles = testCollection({
+            collectionTransformers: [function(changes) {
+              transformerCalled = true;
+              return changes;
+            }]
+          });
+
+          return articles.pullChanges(result)
+            .then(_ => {
+              expect(transformerCalled).to.be.true;
+            });
+        });
+
+        it("should reject the promise if the transformer raises", () => {
+          articles = testCollection({
+            collectionTransformers: [function(changes, collection) {
+              throw new Error("Invalid collection data");
+            }]
+          });
+
+          return articles.pullChanges(result)
+            .should.eventually.be.rejectedWith(Error, /Invalid collection data/);
         });
       });
 

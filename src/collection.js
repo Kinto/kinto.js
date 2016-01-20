@@ -221,6 +221,7 @@ export default class Collection {
      * @type {Array}
      */
     this.remoteTransformers = this._validateRemoteTransformers(options.remoteTransformers);
+    this.collectionTransformers = this._validateCollectionTransformers(options.collectionTransformers);
   }
 
   /**
@@ -304,6 +305,27 @@ export default class Collection {
         throw new Error("A transformer must provide an encode function.");
       } else if (typeof transformer.decode !== "function") {
         throw new Error("A transformer must provide a decode function.");
+      }
+      return transformer;
+    });
+  }
+
+  /**
+   * Validates a list of remote transformers.
+   *
+   * @param  {Array|undefined} remoteTransformers
+   * @return {Array}
+   */
+  _validateCollectionTransformers(collectionTransformers) {
+    if (typeof collectionTransformers === "undefined") {
+      return [];
+    }
+    if (!Array.isArray(collectionTransformers)) {
+      throw new Error("collectionTransformers should be an array.");
+    }
+    return collectionTransformers.map(transformer => {
+      if (typeof transformer !== "function") {
+        throw new Error("A collection transformer must be a function");
       }
       return transformer;
     });
@@ -668,10 +690,17 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers
     })
+      .then(changes => this.applyCollectionTransformers(changes))
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy));
+  }
+
+  applyCollectionTransformers(changes) {
+    return waterfall(this.collectionTransformers.map(transformer => {
+      return record => transformer(changes, this);
+    }), changes);
   }
 
   /**
@@ -836,7 +865,7 @@ export default class Collection {
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
-        new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
+        new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
     const result = new SyncResultObject();
     const syncPromise = this.db.getLastModified()
