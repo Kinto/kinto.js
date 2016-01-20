@@ -3,7 +3,7 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import { TransactionHandler } from "../../src/adapters/IDB.js"
+import { TransactionHandler } from "../../src/adapters/IDB.js";
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
 

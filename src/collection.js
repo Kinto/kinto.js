@@ -559,17 +559,20 @@ export default class Collection {
     let _count;
     return this.list({}, {includeDeleted: true})
       .then(res => {
-        return Promise.all(res.data.map(r => {
-          // Garbage collect deleted records.
-          if (r._status === "deleted") {
-            return this.db.delete(r.id);
-          }
-          // Records that were synced become «created».
-          return this.db.update(Object.assign({}, r, {
-            last_modified: undefined,
-            _status: "created"
-          }));
-        }));
+        return this.db.execute(transaction => {
+          res.data.forEach(r => {
+            // Garbage collect deleted records.
+            if (r._status === "deleted") {
+              transaction.delete(r.id);
+            } else {
+              // Records that were synced become «created».
+              transaction.update(Object.assign({}, r, {
+                last_modified: undefined,
+                _status: "created"
+              }));
+            }
+          });
+        }).then(_ => res.data);
       })
       .then(res => {
         _count = res.length;
