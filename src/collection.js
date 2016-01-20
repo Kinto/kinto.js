@@ -324,8 +324,12 @@ export default class Collection {
       throw new Error("collectionTransformers should be an array.");
     }
     return collectionTransformers.map(transformer => {
-      if (typeof transformer !== "function") {
-        throw new Error("A collection transformer must be a function");
+      if (typeof transformer !== "object") {
+        throw new Error("A transformer must be an object.");
+      } else if (typeof transformer.encode !== "function") {
+        throw new Error("A transformer must provide an encode function.");
+      } else if (typeof transformer.decode !== "function") {
+        throw new Error("A transformer must provide a decode function.");
       }
       return transformer;
     });
@@ -690,16 +694,16 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers
     })
-      .then(changes => this.applyCollectionTransformers(changes))
+      .then(changes => this.applyCollectionTransformers("decode", changes))
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy));
   }
 
-  applyCollectionTransformers(changes) {
+  applyCollectionTransformers(method, changes) {
     return waterfall(this.collectionTransformers.map(transformer => {
-      return record => transformer(changes, this);
+      return record => transformer[method](changes, this);
     }), changes);
   }
 

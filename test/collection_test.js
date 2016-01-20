@@ -998,26 +998,39 @@ describe("Collection", () => {
         });
       });
 
-      describe("collectionTransformers", () => {
+      describe("collectionTransfomers", () => {
         it("should call the collection transformer", () => {
-          let transformerCalled = false;
+          let transformerEncoderCalled = false;
+          let transformerDecoderCalled = false;
           articles = testCollection({
-            collectionTransformers: [function(changes) {
-              transformerCalled = true;
-              return changes;
+            collectionTransformers: [{
+              encode: function(changes, collection) {
+                transformerEncoderCalled = true;
+                return changes;
+              },
+              decode: function(changes, collection) {
+                transformerDecoderCalled = true;
+                return changes;
+              }
             }]
           });
 
           return articles.pullChanges(result)
             .then(_ => {
-              expect(transformerCalled).to.be.true;
+              expect(transformerDecoderCalled).to.be.true;
+              expect(transformerEncoderCalled).to.be.false;
             });
         });
 
         it("should reject the promise if the transformer raises", () => {
           articles = testCollection({
-            collectionTransformers: [function(changes, collection) {
-              throw new Error("Invalid collection data");
+            collectionTransformers: [{
+              encode: function(changes, collection) {
+                return changes;
+              },
+              decode: function(changes, collection) {
+                throw new Error("Invalid collection data");
+              }
             }]
           });
 
