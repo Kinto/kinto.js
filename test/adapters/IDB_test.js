@@ -1,12 +1,14 @@
 "use strict";
 
 import sinon from "sinon";
+import { expect } from "chai";
 
+import { TransactionHandler } from "../../src/adapters/IDB.js"
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
 
 /** @test {IDB} */
-describe("adapter.IDB", () => {
+describe.only("adapter.IDB", () => {
   adapterTestSuite(() => new IDB("test/foo"));
 
   describe("IDB specific tests", () => {
@@ -46,6 +48,36 @@ describe("adapter.IDB", () => {
     });
 
     /** @test {IDB#create} */
+    describe("#execute", () => {
+      it("should return a promise", () => {
+        return db.execute(() => {})
+          .should.be.fulfilled;
+      });
+
+      it("should execute the specified callback", () => {
+        const callback = sandbox.spy();
+        return db.execute(callback)
+          .then(() => sinon.assert.called(callback));
+      });
+
+      it("should provide a transaction parameter", () => {
+        const callback = sandbox.spy();
+        return db.execute(callback)
+          .then(() => {
+            const handler = callback.getCall(0).args[0];
+            expect(handler).to.be.an.instanceOf(TransactionHandler);
+          });
+      });
+
+      it("should create a record", () => {
+        const data = {id: 1, foo: "bar"};
+        return db.execute((t) => {t.create(data);})
+          .then(() => db.list())
+          .should.become([data]);
+      });
+    });
+
+    /** @test {IDB#create} */
     describe("#create", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
@@ -53,7 +85,7 @@ describe("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: "transaction error"}});
+              onerror({target: {error: new Error("transaction error")}});
             }
           }
         });

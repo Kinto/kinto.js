@@ -122,6 +122,16 @@ export default class IDB extends BaseAdapter {
     }).catch(this._handleError("clear"));
   }
 
+  execute(callback) {
+    return new Promise((resolve, reject) => {
+      const {transaction, store} = this.prepare("readwrite");
+      const handler = new TransactionHandler(transaction, store);
+      callback(handler);
+      transaction.onerror = event => reject(event.target.error);
+      transaction.oncomplete = event => resolve();
+    });
+  }
+
   /**
    * Adds a record to the IndexedDB database.
    *
@@ -133,13 +143,12 @@ export default class IDB extends BaseAdapter {
    */
   create(record) {
     return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.add(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
+      return this.execute((transaction) => {
+        transaction.create(record);
       });
-    }).catch(this._handleError("create"));
+    })
+    .then(() => record)
+    .catch(this._handleError("create"));
   }
 
   /**
@@ -284,4 +293,15 @@ export default class IDB extends BaseAdapter {
     }).catch(this._handleError("loadDump"));
   }
 
+}
+
+
+export class TransactionHandler {
+  constructor(transaction, store) {
+    this._transaction = transaction;
+    this._store = store;
+  }
+  create(record) {
+    this._store.add(record);
+  }
 }
