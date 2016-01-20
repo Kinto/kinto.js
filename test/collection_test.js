@@ -1677,7 +1677,7 @@ describe("Collection", () => {
       it("should reject on server backoff by default", () => {
         articles.api = {backoff: 30000};
         return articles.sync()
-          .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
+          .should.be.rejectedWith(Error, /back off; retry in 30s/);
       });
 
       it("should perform sync on server backoff when ignoreBackoff is true", () => {
