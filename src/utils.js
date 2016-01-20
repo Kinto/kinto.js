@@ -98,7 +98,8 @@ export function filterObjects(filters, list) {
  * @return {Array}
  */
 export function reduceRecords(filters, order, list) {
-  return sortObjects(order, filterObjects(filters, list));
+  const filtered = filters ? filterObjects(filters, list) : list;
+  return order ? sortObjects(order, filtered) : filtered;
 }
 
 /**

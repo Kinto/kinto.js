@@ -981,11 +981,10 @@ describe("Collection", () => {
       });
 
       it("should skip already locally deleted data", () => {
-        return articles.create({title: "foo"})
-          .then(res => articles.delete(res.data.id))
-          .then(res => articles._importChange({id: res.data.id, deleted: true}))
-          .then(res => res.data.title)
-          .should.eventually.become("foo");
+        return articles.pullChanges(result)
+          .then(res => {
+            expect(res.skipped).eql([{id: id_6, deleted: true}]);
+          });
       });
 
       it("should not list identical records as skipped", () => {
@@ -999,16 +998,14 @@ describe("Collection", () => {
       });
 
       describe("Error handling", () => {
-        it("should expose per-record import errors", () => {
-          const err1 = new Error("err1");
-          const err2 = new Error("err2");
-          sandbox.stub(articles, "create")
-            .onCall(0).returns(Promise.reject(err1))
-            .onCall(1).returns(Promise.reject(err2));
+        it("should expose any import transaction error", () => {
+          const error = new Error("bad");
+          sandbox.stub(articles.db, "execute")
+            .returns(Promise.reject(error));
 
           return articles.pullChanges(result)
           .then(res => res.errors)
-          .should.become([err1, err2]);
+          .should.become([error]);
         });
       });
     });
@@ -1116,7 +1113,7 @@ describe("Collection", () => {
 
     it("should return errors when encountered", () => {
       const error = new Error("unknown error");
-      sandbox.stub(articles, "get").returns(Promise.reject(error));
+      sandbox.stub(articles, "list").returns(Promise.reject(error));
 
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
@@ -1457,8 +1454,8 @@ describe("Collection", () => {
             title: "art1mod",
           }]
         }));
-      sandbox.stub(articles, "_processChangeImport")
-        .returns(Promise.reject(new Error("import error")));
+      sandbox.stub(articles.db, "execute")
+        .returns(Promise.reject(new Error("error")));
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(null);
       });

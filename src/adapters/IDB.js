@@ -98,7 +98,8 @@ export default class IDB extends BaseAdapter {
    */
   prepare(mode=undefined, name=null) {
     const storeName = name || this.dbname;
-    // On Safari, calling IDBDatabase.transaction with mode == undefined raises a TypeError.
+    // On Safari, calling IDBDatabase.transaction with mode == undefined raises
+    // a TypeError.
     const transaction = mode ? this._db.transaction([storeName], mode)
                              : this._db.transaction([storeName]);
     const store = transaction.objectStore(storeName);
@@ -123,41 +124,61 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Adds a record to the IndexedDB database.
+   * Executes the set of synchronous CRUD operations described in the provided
+   * callback within an IndexedDB transaction, for current db store.
    *
-   * Note: An id value is required.
+   * The callback will be provided an object exposing the following synchronous
+   * CRUD operation methods: get, create, update, delete.
    *
-   * @override
-   * @param  {Object} record The record object, including an id.
+   * Important note: because limitations in IndexedDB implementations, no
+   * asynchronous code should be performed within the provided callback; the
+   * promise will therefore be rejected if the callback returns a Promise.
+   *
+   * Options:
+   * - {Array} preload: The list of records to make available to
+   *   the transaction object get() method (default: [])
+   *
+   * @example
+   * const db = new IDB("example");
+   * db.execute(transaction => {
+   *   transaction.create({id: 1, title: "foo"});
+   *   transaction.update({id: 2, title: "bar"});
+   *   transaction.delete(3);
+   *   return "foo";
+   * })
+   *   .catch(console.error.bind(console));
+   *   .then(console.log.bind(console)); // => "foo"
+   *
+   * @param  {Function} callback The operation description callback.
+   * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  create(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.add(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
+  execute(callback, options={preload: []}) {
+    const preloaded = options.preload.reduce((acc, record) => {
+      acc[record.id] = record;
+      return acc;
+    }, {});
+    return this.open()
+      .then(_ => {
+        return new Promise((resolve, reject) => {
+          const {transaction, store} = this.prepare("readwrite");
+          const proxy = transactionProxy(store, preloaded);
+          let result;
+          try {
+            result = callback(proxy);
+          } catch (e) {
+            transaction.abort();
+            reject(e);
+          }
+          if (result instanceof Promise) {
+            // XXX: investigate how to provide documentation details in error.
+            reject(new Error("execute() callback should not return a Promise."));
+          }
+          // XXX unsure if we should manually abort the transaction on error
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => resolve(result);
+        });
       });
-    }).catch(this._handleError("create"));
-  }
-
-  /**
-   * Updates a record from the IndexedDB database.
-   *
-   * @override
-   * @param  {Object} record
-   * @return {Promise}
-   */
-  update(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.put(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("update"));
   }
 
   /**
@@ -176,24 +197,6 @@ export default class IDB extends BaseAdapter {
         transaction.oncomplete = () => resolve(request.result);
       });
     }).catch(this._handleError("get"));
-  }
-
-  /**
-   * Deletes a record from the IndexedDB database.
-   *
-   * @override
-   * @param  {String} id The record id.
-   * @return {Promise}
-   */
-  delete(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.delete(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(id);
-      });
-    }).catch(this._handleError("delete"));
   }
 
   /**
@@ -266,22 +269,46 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   loadDump(records) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        records.forEach(record => store.put(record));
+    return this.execute((transaction) => {
+      records.forEach(record => transaction.update(record));
+    })
+      .then(() => this.getLastModified())
+      .then((previousLastModified) => {
         const lastModified = Math.max(...records.map(record => record.last_modified));
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => {
-          resolve(this.getLastModified()
-            .then(previousLastModified => {
-              if (lastModified > previousLastModified) {
-                return this.saveLastModified(lastModified);
-              }
-            }).then(() => records));
-        };
-      });
-    }).catch(this._handleError("loadDump"));
+        if (lastModified > previousLastModified) {
+          return this.saveLastModified(lastModified);
+        }
+      })
+      .then(() => records)
+      .catch(this._handleError("loadDump"));
   }
+}
 
+
+/**
+ * IDB transaction proxy.
+ *
+ * @param  {IDBStore} store     The IndexedDB database store.
+ * @param  {Array}    preloaded The list of records to make available to
+ *                              get() (default: []).
+ * @return {Object}
+ */
+function transactionProxy(store, preloaded = []) {
+  return {
+    create(record) {
+      store.add(record);
+    },
+
+    update(record) {
+      store.put(record);
+    },
+
+    delete(id) {
+      store.delete(id);
+    },
+
+    get(id) {
+      return preloaded[id];
+    },
+  };
 }

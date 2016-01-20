@@ -95,11 +95,11 @@ export default class FirefoxAdapter extends BaseAdapter {
   _init(connection) {
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doSetup() {
-        let schema = yield connection.getSchemaVersion();
+        const schema = yield connection.getSchemaVersion();
 
         if (schema == 0) {
 
-          for (let statementName of createStatements) {
+          for (const statementName of createStatements) {
             yield connection.execute(statements[statementName]);
           }
 
@@ -132,7 +132,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
   close() {
     if (this._connection) {
-      let promise = this._connection.close();
+      const promise = this._connection.close();
       this._connection = null;
       return promise;
     }
@@ -144,47 +144,43 @@ export default class FirefoxAdapter extends BaseAdapter {
     return this._executeStatement(statements.clearData, params);
   }
 
-  create(record) {
-    const params = {
-      collection_name: this.collection,
-      record_id: record.id,
-      record: JSON.stringify(record)
-    };
-    return this._executeStatement(statements.createData, params)
-               .then(() => record);
-  }
+  execute(callback, options={preload: []}) {
+    if (!this._connection) {
+      throw new Error("The storage adapter is not open");
+    }
+    const preloaded = options.preload.reduce((acc, record) => {
+      acc[record.id] = record;
+      return acc;
+    }, {});
 
-  update(record) {
-    const params = {
-      collection_name: this.collection,
-      record_id: record.id,
-      record: JSON.stringify(record)
-    };
-    return this._executeStatement(statements.updateData, params)
-               .then(() => record);
+    const proxy = transactionProxy(this.collection, preloaded);
+    let result;
+    try {
+      result = callback(proxy);
+    } catch(e) {
+      return Promise.reject(e);
+    }
+    const conn = this._connection;
+    return conn.executeTransaction(function* doExecuteTransaction() {
+      for (const {statement, params} of proxy.operations) {
+        yield conn.executeCached(statement, params);
+      }
+    })
+    .then(_ => result);
   }
 
   get(id) {
-      const params = {
-        collection_name: this.collection,
-        record_id: id,
-      };
-      return this._executeStatement(statements.getRecord, params)
-             .then(result => {
+    const params = {
+      collection_name: this.collection,
+      record_id: id,
+    };
+    return this._executeStatement(statements.getRecord, params)
+      .then(result => {
         if (result.length == 0) {
           return;
         }
         return JSON.parse(result[0].getResultByName("record"));
       });
-    }
-
-  delete(id) {
-    const params = {
-      collection_name: this.collection,
-      record_id: id,
-    };
-    return this._executeStatement(statements.deleteData, params)
-           .then(() => id);
   }
 
   list() {
@@ -192,14 +188,14 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.collection,
     };
     return this._executeStatement(statements.listRecords, params)
-           .then(result => {
-      const records = [];
-      for (let k = 0; k < result.length; k++) {
-        let row = result[k];
-        records.push(JSON.parse(row.getResultByName("record")));
-      }
-      return records;
-    });
+      .then(result => {
+        const records = [];
+        for (let k = 0; k < result.length; k++) {
+          const row = result[k];
+          records.push(JSON.parse(row.getResultByName("record")));
+        }
+        return records;
+      });
   }
 
   /**
@@ -213,11 +209,11 @@ export default class FirefoxAdapter extends BaseAdapter {
    * @return {Array} imported records.
    */
   loadDump(records) {
-    let connection = this._connection;
-    let collection_name = this.collection;
+    const connection = this._connection;
+    const collection_name = this.collection;
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doImport() {
-        for (let record of records) {
+        for (const record of records) {
           const params = {
             collection_name: collection_name,
             record_id: record.id,
@@ -260,11 +256,59 @@ export default class FirefoxAdapter extends BaseAdapter {
       collection_name: this.collection,
     };
     return this._executeStatement(statements.getLastModified, params)
-           .then(result => {
-      if (result.length == 0) {
-        return 0;
-      }
-      return result[0].getResultByName("last_modified");
-    });
+      .then(result => {
+        if (result.length == 0) {
+          return 0;
+        }
+        return result[0].getResultByName("last_modified");
+      });
   }
+}
+
+
+function transactionProxy(collection, preloaded) {
+  const _operations = [];
+
+  return {
+    get operations() {
+      return _operations;
+    },
+
+    create(record) {
+      _operations.push({
+        statement: statements.createData,
+        params: {
+          collection_name: collection,
+          record_id: record.id,
+          record: JSON.stringify(record)
+        }
+      });
+    },
+
+    update(record) {
+      _operations.push({
+        statement: statements.updateData,
+        params: {
+          collection_name: collection,
+          record_id: record.id,
+          record: JSON.stringify(record)
+        }
+      });
+    },
+
+    delete(id) {
+      _operations.push({
+        statement: statements.deleteData,
+        params: {
+          collection_name: collection,
+          record_id: id
+        }
+      });
+    },
+
+    get(id) {
+      // Gecko JS engine outputs undesired warnings if id is not in preloaded.
+      return id in preloaded ? preloaded[id] : undefined;
+    }
+  };
 }

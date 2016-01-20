@@ -146,6 +146,16 @@ describe("Utils", () => {
         {title: "b", unread: false, complete: true},
       ]);
     });
+
+    it("should support empty filter", () => {
+      const records = [{a: 1}, {a: 2}];
+      expect(reduceRecords({}, "-a", records)).eql(records.reverse());
+    });
+
+    it("should support empty sort order", () => {
+      const records = [{a: 1}, {b: 2}];
+      expect(reduceRecords({}, "", records)).eql(records);
+    });
   });
 
   /** @test {partition} */

@@ -37,26 +37,14 @@ export default class BaseAdapter {
   }
 
   /**
-   * Adds a record to the database.
-   *
-   * Note: An id value is required.
+   * Executes a batch of operations within a single transaction.
    *
    * @abstract
-   * @param  {Object} record The record object, including an id.
+   * @param  {Function} callback The operation callback.
+   * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  create(record) {
-    throw new Error("Not Implemented.");
-  }
-
-  /**
-   * Updates a record from the IndexedDB database.
-   *
-   * @abstract
-   * @param  {Object} record
-   * @return {Promise}
-   */
-  update(record) {
+  execute(callback, options={preload: []}) {
     throw new Error("Not Implemented.");
   }
 
@@ -68,17 +56,6 @@ export default class BaseAdapter {
    * @return {Promise}
    */
   get(id) {
-    throw new Error("Not Implemented.");
-  }
-
-  /**
-   * Deletes a record from the database.
-   *
-   * @abstract
-   * @param  {String} id The record id.
-   * @return {Promise}
-   */
-  delete(id) {
     throw new Error("Not Implemented.");
   }
 

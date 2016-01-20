@@ -6,7 +6,6 @@ import "babel-polyfill";
 import "isomorphic-fetch";
 
 import BaseAdapter from "./adapters/base";
-import LocalStorage from "./adapters/LocalStorage";
 import IDB from "./adapters/IDB";
 
 import KintoBase from "./KintoBase";
@@ -21,7 +20,6 @@ export default class Kinto extends KintoBase {
   static get adapters() {
     return {
       BaseAdapter: BaseAdapter,
-      LocalStorage: LocalStorage,
       IDB: IDB,
     };
   }

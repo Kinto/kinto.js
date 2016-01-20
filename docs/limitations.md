@@ -14,17 +14,18 @@ You can read more about Kinto features [here](http://kinto.readthedocs.org).
 
 Kinto.js won't try to outsmart you as a conflict resolver. Instead, it provides very explicit ways to know about conflicts, and [simple helpers to handle them](api.md#resolving-conflicts).
 
-## Transactions
+## Transactions & rollback
 
-Ideally, we should wrap the whole synchronization flow related operations within a single transaction. While that's a goal and [part of our roadmap](https://github.com/Kinto/kinto.js/issues/16), right now this isn't implemented.
+Ideally, we should wrap the whole synchronization flow related operations within a single transaction. While that's a goal and [part of our roadmap](https://github.com/Kinto/kinto.js/issues/16), right now this isn't fully implemented.
 
-That means if anything fails during the sync flow while some records have already been processed locally, there won't be any rollback performed — and you'll have to handle the situation by hand.
+That means if anything fails during a given step of the sync flow while some records have already been processed locally already in the previous one, the database should turn into an intermediate inconsistent state.
 
 Fortunately, as in theory records don't carry any relations information, usually that's simply matter of calling `#sync()` again once you've addressed the reported issues.
 
 ### Take away →
 
 > *If you don't emulate relations in your data schemas, you're safe.*
+
 
 ## Concurrency
 

@@ -8,7 +8,6 @@ import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/api";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
-import LocalStorage from "../src/adapters/LocalStorage";
 import IDB from "../src/adapters/IDB";
 import Kinto from "../src";
 
@@ -45,10 +44,6 @@ describe("Kinto", () => {
 
       it("should provide an adapters.BaseAdapter getter", () => {
         expect(Kinto.adapters.BaseAdapter).to.eql(BaseAdapter);
-      });
-
-      it("should provide an adapters.LocalStorage getter", () => {
-        expect(Kinto.adapters.LocalStorage).to.eql(LocalStorage);
       });
 
       it("should provide an adapters.IDB getter", () => {
