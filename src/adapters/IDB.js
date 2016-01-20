@@ -123,12 +123,14 @@ export default class IDB extends BaseAdapter {
   }
 
   execute(callback) {
-    return new Promise((resolve, reject) => {
-      const {transaction, store} = this.prepare("readwrite");
-      const handler = new TransactionHandler(transaction, store);
-      callback(handler);
-      transaction.onerror = event => reject(event.target.error);
-      transaction.oncomplete = event => resolve();
+    return this.open().then(() => {
+      return new Promise((resolve, reject) => {
+        const {transaction, store} = this.prepare("readwrite");
+        const handler = new TransactionHandler(store);
+        callback(handler);
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => resolve();
+      });
     });
   }
 
@@ -142,13 +144,11 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   create(record) {
-    return this.open().then(() => {
-      return this.execute((transaction) => {
-        transaction.create(record);
-      });
+    return this.execute((transaction) => {
+      transaction.create(record);
     })
-    .then(() => record)
-    .catch(this._handleError("create"));
+      .then(() => record)
+      .catch(this._handleError("create"));
   }
 
   /**
@@ -159,14 +159,11 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   update(record) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.put(record);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(record);
-      });
-    }).catch(this._handleError("update"));
+    return this.execute((transaction) => {
+      transaction.update(record);
+    })
+      .then(() => record)
+      .catch(this._handleError("update"));
   }
 
   /**
@@ -195,14 +192,11 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   delete(id) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        store.delete(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(id);
-      });
-    }).catch(this._handleError("delete"));
+    return this.execute(transaction => {
+      transaction.delete(id);
+    })
+      .then(() => id)
+      .catch(this._handleError("delete"));
   }
 
   /**
@@ -297,11 +291,17 @@ export default class IDB extends BaseAdapter {
 
 
 export class TransactionHandler {
-  constructor(transaction, store) {
-    this._transaction = transaction;
+  constructor(store) {
     this._store = store;
   }
   create(record) {
     this._store.add(record);
   }
+  update(record) {
+    this._store.put(record);
+  }
+  delete(id) {
+    this._store.delete(id);
+  }
 }
+

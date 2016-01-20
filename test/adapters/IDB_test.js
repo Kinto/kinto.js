@@ -8,7 +8,7 @@ import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
 
 /** @test {IDB} */
-describe.only("adapter.IDB", () => {
+describe("adapter.IDB", () => {
   adapterTestSuite(() => new IDB("test/foo"));
 
   describe("IDB specific tests", () => {
@@ -54,6 +54,13 @@ describe.only("adapter.IDB", () => {
           .should.be.fulfilled;
       });
 
+      it("should open a connection to the db", () => {
+        const open = sandbox.stub(db, "open").returns(Promise.resolve());
+
+        return db.execute(() => {})
+          .then(_ => sinon.assert.calledOnce(open));
+      });
+
       it("should execute the specified callback", () => {
         const callback = sandbox.spy();
         return db.execute(callback)
@@ -75,6 +82,31 @@ describe.only("adapter.IDB", () => {
           .then(() => db.list())
           .should.become([data]);
       });
+
+      it("should update a record", () => {
+        const data = {id: 1, foo: "bar"};
+        return db.create(data)
+          .then(_ => {
+            return db.execute(transaction => {
+              transaction.update(Object.assign({}, data, {foo: "baz"}));
+            });
+          })
+          .then(_ => db.get(data.id))
+          .then(res => res.foo)
+          .should.become("baz");
+      });
+
+      it("should delete a record", () => {
+        const data = {id: 1, foo: "bar"};
+        return db.create(data)
+          .then(_ => {
+            return db.execute(transaction => {
+              transaction.delete(data.id);
+            });
+          })
+          .then(_ => db.get(data.id))
+          .should.become(undefined);
+      });
     });
 
     /** @test {IDB#create} */
@@ -85,7 +117,7 @@ describe.only("adapter.IDB", () => {
           transaction: {
             get onerror() {},
             set onerror(onerror) {
-              onerror({target: {error: new Error("transaction error")}});
+              onerror({target: {error: "transaction error"}});
             }
           }
         });
