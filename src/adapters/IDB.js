@@ -122,16 +122,27 @@ export default class IDB extends BaseAdapter {
     }).catch(this._handleError("clear"));
   }
 
-  execute(callback) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        const handler = new TransactionHandler(store);
-        callback(handler);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => resolve();
+  execute(callback, options={preload: []}) {
+    return this.open()
+      .then(_ => {
+        return Promise.all(options.preload.map(id => this.get(id)))
+          .then(results => {
+            const preloaded = {};
+            results.forEach(record => {
+              preloaded[record.id] = record;
+            });
+            return preloaded;
+          });
+      })
+      .then((preloaded) => {
+        return new Promise((resolve, reject) => {
+          const {transaction, store} = this.prepare("readwrite");
+          const handler = new TransactionHandler(store, preloaded);
+          callback(handler);
+          transaction.onerror = event => reject(new Error(event.target.error));
+          transaction.oncomplete = event => resolve();
+        });
       });
-    });
   }
 
   /**
@@ -291,8 +302,9 @@ export default class IDB extends BaseAdapter {
 
 
 export class TransactionHandler {
-  constructor(store) {
+  constructor(store, preloaded) {
     this._store = store;
+    this._preloaded = preloaded;
   }
   create(record) {
     this._store.add(record);
@@ -302,6 +314,9 @@ export class TransactionHandler {
   }
   delete(id) {
     this._store.delete(id);
+  }
+  get(id) {
+    return this._preloaded[id];
   }
 }
 

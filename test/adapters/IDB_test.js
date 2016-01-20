@@ -54,58 +54,85 @@ describe("adapter.IDB", () => {
           .should.be.fulfilled;
       });
 
-      it("should open a connection to the db", () => {
-        const open = sandbox.stub(db, "open").returns(Promise.resolve());
+      describe("No preloading", () => {
+        it("should open a connection to the db", () => {
+          const open = sandbox.stub(db, "open").returns(Promise.resolve());
 
-        return db.execute(() => {})
-          .then(_ => sinon.assert.calledOnce(open));
-      });
+          return db.execute(() => {})
+            .then(_ => sinon.assert.calledOnce(open));
+        });
 
-      it("should execute the specified callback", () => {
-        const callback = sandbox.spy();
-        return db.execute(callback)
-          .then(() => sinon.assert.called(callback));
-      });
+        it("should execute the specified callback", () => {
+          const callback = sandbox.spy();
+          return db.execute(callback)
+            .then(() => sinon.assert.called(callback));
+        });
 
-      it("should provide a transaction parameter", () => {
-        const callback = sandbox.spy();
-        return db.execute(callback)
-          .then(() => {
-            const handler = callback.getCall(0).args[0];
-            expect(handler).to.be.an.instanceOf(TransactionHandler);
-          });
-      });
-
-      it("should create a record", () => {
-        const data = {id: 1, foo: "bar"};
-        return db.execute((t) => {t.create(data);})
-          .then(() => db.list())
-          .should.become([data]);
-      });
-
-      it("should update a record", () => {
-        const data = {id: 1, foo: "bar"};
-        return db.create(data)
-          .then(_ => {
-            return db.execute(transaction => {
-              transaction.update(Object.assign({}, data, {foo: "baz"}));
+        it("should provide a transaction parameter", () => {
+          const callback = sandbox.spy();
+          return db.execute(callback)
+            .then(() => {
+              const handler = callback.getCall(0).args[0];
+              expect(handler).to.be.an.instanceOf(TransactionHandler);
             });
-          })
-          .then(_ => db.get(data.id))
-          .then(res => res.foo)
-          .should.become("baz");
+        });
+
+        it("should create a record", () => {
+          const data = {id: 1, foo: "bar"};
+          return db.execute((t) => {t.create(data);})
+            .then(() => db.list())
+            .should.become([data]);
+        });
+
+        it("should update a record", () => {
+          const data = {id: 1, foo: "bar"};
+          return db.create(data)
+            .then(_ => {
+              return db.execute(transaction => {
+                transaction.update(Object.assign({}, data, {foo: "baz"}));
+              });
+            })
+            .then(_ => db.get(data.id))
+            .then(res => res.foo)
+            .should.become("baz");
+        });
+
+        it("should delete a record", () => {
+          const data = {id: 1, foo: "bar"};
+          return db.create(data)
+            .then(_ => {
+              return db.execute(transaction => {
+                transaction.delete(data.id);
+              });
+            })
+            .then(_ => db.get(data.id))
+            .should.become(undefined);
+        });
       });
 
-      it("should delete a record", () => {
-        const data = {id: 1, foo: "bar"};
-        return db.create(data)
-          .then(_ => {
-            return db.execute(transaction => {
-              transaction.delete(data.id);
+      describe("Preloading", () => {
+        it("should preload records with provided ids", () => {
+          var records;
+
+          const art1 = {id: 1, title: "title1"};
+          const art2 = {id: 2, title: "title2"};
+
+          return Promise.all([
+            db.create(art1),
+            db.create(art2),
+          ])
+            .then(_ => {
+              return db.execute(transaction => {
+                records = [
+                  transaction.get(1),
+                  transaction.get(2),
+                ];
+              }, {preload: [1, 2]});
+            })
+            .then(_ => {
+              expect(records).eql([art1, art2]);
             });
-          })
-          .then(_ => db.get(data.id))
-          .should.become(undefined);
+        });
       });
     });
 
