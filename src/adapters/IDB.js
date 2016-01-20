@@ -127,20 +127,19 @@ export default class IDB extends BaseAdapter {
       .then(_ => {
         return Promise.all(options.preload.map(id => this.get(id)))
           .then(results => {
-            const preloaded = {};
-            results.forEach(record => {
-              preloaded[record.id] = record;
-            });
-            return preloaded;
+            return results.reduce((acc, record) => {
+              acc[record.id] = record;
+              return acc;
+            }, {});
           });
       })
       .then((preloaded) => {
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");
           const handler = new TransactionHandler(store, preloaded);
-          callback(handler);
+          const result = callback(handler);
           transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => resolve();
+          transaction.oncomplete = event => resolve(result);
         });
       });
   }
@@ -301,20 +300,27 @@ export default class IDB extends BaseAdapter {
 }
 
 
+/**
+ * XXX: find a better name
+ */
 export class TransactionHandler {
   constructor(store, preloaded) {
     this._store = store;
     this._preloaded = preloaded;
   }
+
   create(record) {
     this._store.add(record);
   }
+
   update(record) {
     this._store.put(record);
   }
+
   delete(id) {
     this._store.delete(id);
   }
+
   get(id) {
     return this._preloaded[id];
   }

@@ -111,27 +111,22 @@ describe("adapter.IDB", () => {
       });
 
       describe("Preloading", () => {
+        const articles = [
+          {id: 1, title: "title1"},
+          {id: 2, title: "title2"}
+        ];
+
         it("should preload records with provided ids", () => {
-          var records;
-
-          const art1 = {id: 1, title: "title1"};
-          const art2 = {id: 2, title: "title2"};
-
-          return Promise.all([
-            db.create(art1),
-            db.create(art2),
-          ])
+          return Promise.all(articles.map(db.create.bind(db)))
             .then(_ => {
               return db.execute(transaction => {
-                records = [
+                return [
                   transaction.get(1),
                   transaction.get(2),
                 ];
               }, {preload: [1, 2]});
             })
-            .then(_ => {
-              expect(records).eql([art1, art2]);
-            });
+            .should.become(articles);
         });
       });
     });
