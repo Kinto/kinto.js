@@ -521,8 +521,72 @@ export default class Collection {
    */
   importChanges(syncResultObject, changeObject) {
     return Promise.all(changeObject.changes.map(change => {
-      return this._importChange(change);
+      if (change.deleted) {
+        return Promise.resolve(change);
+      }
+      return this._decodeRecord("remote", change);
     }))
+      .then(decodedChanges => {
+        const changeIds = decodedChanges.map(change => change.id);
+        return this.list()
+          .then(res => {
+            return {
+              decodedChanges,
+              existingRecords: res.data.filter(record => changeIds.indexOf(record.id) !== -1)
+            };
+          });
+      })
+      .then(({decodedChanges, existingRecords}) => {
+        return this.execute(transaction => {
+          return decodedChanges.map(remote => {
+            const local = transaction.get(remote.id);
+            if (!local) {
+              // Not found locally but remote change is marked as deleted; skip to
+              // avoid recreation.
+              if (remote.deleted) {
+                return {type: "skipped", data: remote};
+              }
+              const synced = Object.assign({}, remote, {_status: "synced"});
+              transaction.create(synced);
+              return {type: "created", data: synced};
+            }
+            const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
+            if (local._status !== "synced") {
+              // Locally deleted, unsynced: scheduled for remote deletion.
+              if (local._status === "deleted") {
+                return {type: "skipped", data: local};
+              }
+              if (identical) {
+                // If records are identical, import anyway, so we bump the
+                // local last_modified value from the server and set record
+                // status to "synced".
+                const synced = Object.assign({}, remote, {_status: "synced"});
+                transaction.update(synced);
+                return {type: "updated", data: synced};
+              }
+              return {
+                type: "conflicts",
+                data: {type: "incoming", local: local, remote: remote}
+              };
+            }
+            if (remote.deleted) {
+              transaction.delete(remote.id);
+              return {type: "deleted", data: local};
+            }
+            const synced = Object.assign({}, remote, {_status: "synced"});
+            transaction.update(synced);
+            // if identical, simply exclude it from all lists
+            const type = identical ? "void" : "updated";
+            return {type, data: synced};
+          });
+        }, {preload: existingRecords});
+      })
+      .catch(err => {
+        // XXX todo
+        err.type = "incoming";
+        // XXX one error of the whole transaction instead of one per atomic op
+        return [{type: "errors", data: err}];
+      })
       .then(imports => {
         for (const imported of imports) {
           if (imported.type !== "void") {
@@ -724,9 +788,12 @@ export default class Collection {
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
-          return Promise.all(resolvedUnsynced.map(record => {
-            return this.update(record, {synced: true});
-          })).then(_ => result);
+          return this.db.execute((transaction) => {
+            resolvedUnsynced.forEach((record) => {
+              transaction.update(Object.assign({}, record, {_status: "synced"}));
+            });
+            return result;
+          });
         }
       });
   }
