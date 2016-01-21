@@ -663,7 +663,7 @@ export default class Collection {
           this.db.execute((transaction) => {
             toDelete.forEach(record => {
               transaction.delete(record.id);
-            })
+            });
           }),
           // Send batch update requests
           this.api.batch(this.bucket, this.name, toSync, options)
