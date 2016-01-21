@@ -123,17 +123,12 @@ export default class IDB extends BaseAdapter {
   }
 
   execute(callback, options={preload: []}) {
+    const preloaded = options.preload.reduce((acc, record) => {
+      acc[record.id] = record;
+      return acc;
+    }, {});
     return this.open()
       .then(_ => {
-        return Promise.all(options.preload.map(id => this.get(id)))
-          .then(results => {
-            return results.reduce((acc, record) => {
-              acc[record.id] = record;
-              return acc;
-            }, {});
-          });
-      })
-      .then((preloaded) => {
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");
           const handler = new TransactionHandler(store, preloaded);
@@ -279,24 +274,21 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   loadDump(records) {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite");
-        records.forEach(record => store.put(record));
+    return this.execute((transaction) => {
+      records.forEach(record => transaction.update(record));
+    })
+      .then(() => {
+        return this.getLastModified();
+      })
+      .then((previousLastModified) => {
         const lastModified = Math.max(...records.map(record => record.last_modified));
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => {
-          resolve(this.getLastModified()
-            .then(previousLastModified => {
-              if (lastModified > previousLastModified) {
-                return this.saveLastModified(lastModified);
-              }
-            }).then(() => records));
-        };
-      });
-    }).catch(this._handleError("loadDump"));
+        if (lastModified > previousLastModified) {
+          return this.saveLastModified(lastModified);
+        }
+      })
+      .then(() => records)
+      .catch(this._handleError("loadDump"));
   }
-
 }
 
 

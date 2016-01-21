@@ -110,13 +110,13 @@ describe("adapter.IDB", () => {
         });
       });
 
-      describe("Preloading", () => {
+      describe("Preloaded records", () => {
         const articles = [
           {id: 1, title: "title1"},
           {id: 2, title: "title2"}
         ];
 
-        it("should preload records with provided ids", () => {
+        it("should expose preloaded records using get()", () => {
           return Promise.all(articles.map(db.create.bind(db)))
             .then(_ => {
               return db.execute(transaction => {
@@ -124,7 +124,7 @@ describe("adapter.IDB", () => {
                   transaction.get(1),
                   transaction.get(2),
                 ];
-              }, {preload: [1, 2]});
+              }, {preload: articles});
             })
             .should.become(articles);
         });
