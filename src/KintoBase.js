@@ -92,7 +92,7 @@ export default class KintoBase {
       dbPrefix:            this._options.dbPrefix,
       idSchema:            options.idSchema,
       remoteTransformers:  options.remoteTransformers,
-      collectionTransformers: options.collectionTransformers,
+      hooks:               options.hooks,
     });
   }
 }

@@ -23,21 +23,20 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Collection} */
 describe("Collection", () => {
-  let sandbox, events, idSchema, remoteTransformers, collectionTransformers,
-    api;
+  let sandbox, events, idSchema, remoteTransformers, hooks, api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
     events = new EventEmitter();
     idSchema = options.idSchema;
     remoteTransformers = options.remoteTransformers;
-    collectionTransformers = options.collectionTransformers;
+    hooks = options.hooks;
     api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
       events,
       idSchema,
       remoteTransformers,
-      collectionTransformers,
+      hooks,
       adapter: IDB
     });
   }
@@ -157,6 +156,45 @@ describe("Collection", () => {
       it("should throw an error on decode method missing", () => {
         expect(registerTransformers.bind(null, [{encode(){}}]))
           .to.Throw(Error, /transformer must provide a decode function/);
+      });
+    });
+
+    describe("hooks registration", () => {
+      function registerHooks(hooks) {
+        return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+          hooks,
+          adapter: IDB
+        });
+      }
+
+      it("should throw an error on non-object hooks", () => {
+        expect(registerHooks.bind(null, function() {}))
+          .to.Throw(Error, /hooks should be an object/);
+      });
+
+      it("should throw an error on array hooks", () => {
+        expect(registerHooks.bind(null, []))
+          .to.Throw(Error, /hooks should be an object, not an array./);
+      });
+
+      it("should return a empty object if no hook where specified", () => {
+        const collection = registerHooks();
+        expect(collection.hooks).to.eql({});
+      });
+
+      it("should throw an error on unknown hook", () => {
+        expect(registerHooks.bind(null, {"invalid": []}))
+          .to.Throw(Error, /The hook should be one of/);
+      });
+
+      it("should throw if the hook isn't a list", () => {
+        expect(registerHooks.bind(null, {"incoming-changes": {}}))
+          .to.Throw(Error, /A hook definition should be an array of functions./);
+      });
+
+      it("should throw an error if the hook is not an array of functions", () => {
+        expect(registerHooks.bind(null, {"incoming-changes": ["invalid"]}))
+          .to.Throw(Error, /A hook definition should be an array of functions./);
       });
     });
 
@@ -998,40 +1036,35 @@ describe("Collection", () => {
         });
       });
 
-      describe("collectionTransfomers", () => {
-        it("should call the collection transformer", () => {
-          let transformerEncoderCalled = false;
-          let transformerDecoderCalled = false;
+      describe("incoming changes hook", () => {
+        it("should be called", () => {
+          let hookCalled = false;
           articles = testCollection({
-            collectionTransformers: [{
-              encode: function(changes, collection) {
-                transformerEncoderCalled = true;
-                return changes;
-              },
-              decode: function(changes, collection) {
-                transformerDecoderCalled = true;
-                return changes;
-              }
-            }]
+            hooks: {
+              "incoming-changes": [
+                function(payload, collection) {
+                  hookCalled = true;
+                  return payload;
+                }
+              ]
+            }
           });
 
           return articles.pullChanges(result)
             .then(_ => {
-              expect(transformerDecoderCalled).to.be.true;
-              expect(transformerEncoderCalled).to.be.false;
+              expect(hookCalled).to.be.true;
             });
         });
 
-        it("should reject the promise if the transformer raises", () => {
+        it("should reject the promise if the hook raises", () => {
           articles = testCollection({
-            collectionTransformers: [{
-              encode: function(changes, collection) {
-                return changes;
-              },
-              decode: function(changes, collection) {
-                throw new Error("Invalid collection data");
-              }
-            }]
+            hooks: {
+              "incoming-changes": [
+                function(changes, collection) {
+                  throw new Error("Invalid collection data");
+                }
+              ]
+            }
           });
 
           return articles.pullChanges(result)

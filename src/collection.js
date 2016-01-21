@@ -6,6 +6,7 @@ import { waterfall } from "./utils";
 import { v4 as uuid4 } from "uuid";
 import { deepEquals, isUUID, pFinally } from "./utils";
 
+<<<<<<< e030e48ddf01fc99d081510a097865cdf55af165
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 
@@ -24,6 +25,9 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
     return acc;
   }, {});
 }
+=======
+const AVAILABLE_HOOKS = ["incoming-changes"];
+>>>>>>> Use a concept of hooks rather than transformers.
 
 /**
  * Synchronization result object.
@@ -221,7 +225,11 @@ export default class Collection {
      * @type {Array}
      */
     this.remoteTransformers = this._validateRemoteTransformers(options.remoteTransformers);
-    this.collectionTransformers = this._validateCollectionTransformers(options.collectionTransformers);
+    /**
+     * The list of hooks.
+     * @type {Object}
+     */
+    this.hooks = this._validateHooks(options.hooks);
   }
 
   /**
@@ -311,28 +319,49 @@ export default class Collection {
   }
 
   /**
-   * Validates a list of remote transformers.
+   * Validate the passed hook is correct.
    *
-   * @param  {Array|undefined} remoteTransformers
+   * @param {Array|undefined} hook.
    * @return {Array}
-   */
-  _validateCollectionTransformers(collectionTransformers) {
-    if (typeof collectionTransformers === "undefined") {
-      return [];
+   **/
+  _validateHook(hook) {
+    if (!Array.isArray(hook)) {
+      throw new Error("A hook definition should be an array of functions.");
     }
-    if (!Array.isArray(collectionTransformers)) {
-      throw new Error("collectionTransformers should be an array.");
-    }
-    return collectionTransformers.map(transformer => {
-      if (typeof transformer !== "object") {
-        throw new Error("A transformer must be an object.");
-      } else if (typeof transformer.encode !== "function") {
-        throw new Error("A transformer must provide an encode function.");
-      } else if (typeof transformer.decode !== "function") {
-        throw new Error("A transformer must provide a decode function.");
+    return hook.map(fun => {
+      if (typeof fun !== "function") {
+        throw new Error("A hook definition should be an array of functions.");
       }
-      return transformer;
+      return fun;
     });
+  }
+
+  /**
+   * Validates a list of hooks.
+   *
+   * @param  {Object|undefined} hooks
+   * @return {Object}
+   */
+  _validateHooks(hooks) {
+    if (typeof hooks === "undefined") {
+      return {};
+    }
+    if (Array.isArray(hooks)) {
+      throw new Error("hooks should be an object, not an array.");
+    }
+    if (typeof hooks !== "object") {
+      throw new Error("hooks should be an object.");
+    }
+
+    const validatedHooks = {};
+
+    for (const hook in hooks) {
+      if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
+        throw new Error("The hook should be one of " + AVAILABLE_HOOKS.join(", "));
+      }
+      validatedHooks[hook] = this._validateHook(hooks[hook]);
+    }
+    return validatedHooks;
   }
 
   /**
@@ -601,6 +630,7 @@ export default class Collection {
         if (!syncResultObject.ok) {
           return syncResultObject;
         }
+        // XXX import of data should be done after conflict handling.
         // No conflict occured, persist collection's lastModified value
         return this.db.saveLastModified(syncResultObject.lastModified)
           .then(lastModified => {
@@ -694,17 +724,20 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers
     })
-      .then(changes => this.applyCollectionTransformers("decode", changes))
+      .then(changes => this.applyHook("incoming-changes", {changes}))
       // Reflect these changes locally
-      .then(changes => this.importChanges(syncResultObject, changes))
+      .then(payload => this.importChanges(syncResultObject, payload.changes))
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy));
   }
 
-  applyCollectionTransformers(method, changes) {
-    return waterfall(this.collectionTransformers.map(transformer => {
-      return record => transformer[method](changes, this);
-    }), changes);
+  applyHook(hookName, payload) {
+    if (typeof this.hooks[hookName] == "undefined") {
+      return Promise.resolve(payload);
+    }
+    return waterfall(this.hooks[hookName].map(hook => {
+      return record => hook(payload, this);
+    }), payload);
   }
 
   /**
