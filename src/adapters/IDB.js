@@ -277,9 +277,7 @@ export default class IDB extends BaseAdapter {
     return this.execute((transaction) => {
       records.forEach(record => transaction.update(record));
     })
-      .then(() => {
-        return this.getLastModified();
-      })
+      .then(() => this.getLastModified())
       .then((previousLastModified) => {
         const lastModified = Math.max(...records.map(record => record.last_modified));
         if (lastModified > previousLastModified) {

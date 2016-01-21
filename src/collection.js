@@ -558,9 +558,10 @@ export default class Collection {
   resetSyncStatus() {
     let _count;
     return this.list({}, {includeDeleted: true})
-      .then(res => {
+      .then(result => {
         return this.db.execute(transaction => {
-          res.data.forEach(r => {
+          _count = result.data.length;
+          result.data.forEach(r => {
             // Garbage collect deleted records.
             if (r._status === "deleted") {
               transaction.delete(r.id);
@@ -572,13 +573,10 @@ export default class Collection {
               }));
             }
           });
-        }).then(_ => res.data);
+        });
       })
-      .then(res => {
-        _count = res.length;
-        return this.db.saveLastModified(null);
-      })
-      .then(_ => _count);
+      .then(() => this.db.saveLastModified(null))
+      .then(() => _count);
   }
 
   /**
@@ -662,9 +660,11 @@ export default class Collection {
       .then(({toDelete, toSync}) => {
         return Promise.all([
           // Delete never synced records marked for deletion
-          Promise.all(toDelete.map(record => {
-            return this.delete(record.id, {virtual: false});
-          })),
+          this.db.execute((transaction) => {
+            toDelete.forEach(record => {
+              transaction.delete(record.id);
+            })
+          }),
           // Send batch update requests
           this.api.batch(this.bucket, this.name, toSync, options)
         ]);
@@ -679,25 +679,36 @@ export default class Collection {
         }));
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
-        // Reflect publication results localy
+        // Reflect publication results locally
         const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
         const toApplyLocally = published.concat(missingRemotely);
-        return Promise.all(toApplyLocally.map(record => {
-          if (record.deleted) {
-            // Remote deletion, refect it locally
-            return this.delete(record.id, {virtual: false}).then(res => {
-              // Amend result data with the deleted attribute set
-              return {data: {id: res.data.id, deleted: true}};
+        // Deleted records are distributed accross local and missing records
+        const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
+        const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
+        // First, apply the decode transformers, if any
+        return Promise.all(toUpdateLocally.map(record => {
+          return this._decodeRecord("remote", record);
+        }))
+          // Process everything within a single transaction
+          .then((results) => {
+            return this.db.execute((transaction) => {
+              const updated = results.map((r) => {
+                const synced = Object.assign({}, r, {_status: "synced"});
+                transaction.update(synced);
+                return {data: synced};
+              });
+              const deleted = toDeleteLocally.map((r) => {
+                transaction.delete(r.id);
+                // Amend result data with the deleted attribute set
+                return {data: {id: r.id, deleted: true}};
+              });
+              return updated.concat(deleted);
             });
-          } else {
-            // Remote create/update was successful, reflect it locally
-            return this._decodeRecord("remote", record)
-              .then(record => this.update(record, {synced: true}));
-          }
-        })).then(published => {
-          syncResultObject.add("published", published.map(res => res.data));
-          return syncResultObject;
-        });
+          })
+          .then((published) => {
+            syncResultObject.add("published", published.map(res => res.data));
+            return syncResultObject;
+          });
       })
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy))
