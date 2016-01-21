@@ -434,85 +434,6 @@ export default class Collection {
   }
 
   /**
-   * Attempts to apply a remote change to its local matching record. Note that
-   * at this point, remote record data are already decoded.
-   *
-   * @param  {Object} local  The local record object.
-   * @param  {Object} remote The remote change object.
-   * @return {Promise}
-   */
-  _processChangeImport(local, remote) {
-    const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
-    if (local._status !== "synced") {
-      // Locally deleted, unsynced: scheduled for remote deletion.
-      if (local._status === "deleted") {
-        return {type: "skipped", data: local};
-      }
-      if (identical) {
-        // If records are identical, import anyway, so we bump the
-        // local last_modified value from the server and set record
-        // status to "synced".
-        return this.update(remote, {synced: true}).then(res => {
-          return {type: "updated", data: res.data};
-        });
-      }
-      return {
-        type: "conflicts",
-        data: {type: "incoming", local: local, remote: remote}
-      };
-    }
-    if (remote.deleted) {
-      return this.delete(remote.id, {virtual: false}).then(res => {
-        return {type: "deleted", data: res.data};
-      });
-    }
-    return this.update(remote, {synced: true}).then(updated => {
-      // if identical, simply exclude it from all lists
-      const type = identical ? "void" : "updated";
-      return {type, data: updated.data};
-    });
-  }
-
-  /**
-   * Import a single change into the local database.
-   *
-   * @param  {Object} change
-   * @return {Promise}
-   */
-  _importChange(change) {
-    let _decodedChange, decodePromise;
-    // if change is a deletion, skip decoding
-    if (change.deleted) {
-      decodePromise = Promise.resolve(change);
-    } else {
-      decodePromise = this._decodeRecord("remote", change);
-    }
-    return decodePromise
-      .then(change => {
-        _decodedChange = change;
-        return this.get(_decodedChange.id, {includeDeleted: true});
-      })
-      // Matching local record found
-      .then(res => this._processChangeImport(res.data, _decodedChange))
-      .catch(err => {
-        if (!(/not found/i).test(err.message)) {
-          err.type = "incoming";
-          return {type: "errors", data: err};
-        }
-        // Not found locally but remote change is marked as deleted; skip to
-        // avoid recreation.
-        if (_decodedChange.deleted) {
-          return {type: "skipped", data: _decodedChange};
-        }
-        return this.create(_decodedChange, {synced: true})
-          // If everything went fine, expose created record data
-          .then(res => ({type: "created", data: res.data}))
-          // Expose individual creation errors
-          .catch(err => ({type: "errors", data: err}));
-      });
-  }
-
-  /**
    * Import changes into the local database.
    *
    * @param  {SyncResultObject} syncResultObject The sync result object.
@@ -528,12 +449,12 @@ export default class Collection {
     }))
       .then(decodedChanges => {
         const changeIds = decodedChanges.map(change => change.id);
-        return this.list()
+        return this.list({}, {includeDeleted: true})
           .then(res => {
-            return {
-              decodedChanges,
-              existingRecords: res.data.filter(record => changeIds.indexOf(record.id) !== -1)
-            };
+            const existingRecords = res.data.filter(record => {
+              return changeIds.indexOf(record.id) !== -1;
+            });
+            return {decodedChanges, existingRecords};
           });
       })
       .then(({decodedChanges, existingRecords}) => {
@@ -571,7 +492,7 @@ export default class Collection {
             }
             if (remote.deleted) {
               transaction.delete(remote.id);
-              return {type: "deleted", data: local};
+              return {type: "deleted", data: {id: local.id}};
             }
             const synced = Object.assign({}, remote, {_status: "synced"});
             transaction.update(synced);
