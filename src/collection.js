@@ -537,7 +537,7 @@ export default class Collection {
           });
       })
       .then(({decodedChanges, existingRecords}) => {
-        return this.execute(transaction => {
+        return this.db.execute(transaction => {
           return decodedChanges.map(remote => {
             const local = transaction.get(remote.id);
             if (!local) {
