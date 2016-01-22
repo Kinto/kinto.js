@@ -396,7 +396,7 @@ export default class Collection {
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });
-    });
+      });
   }
 
   /**
@@ -553,6 +553,7 @@ export default class Collection {
    */
   resetSyncStatus() {
     let _count;
+    // XXX filter by status
     return this.list({}, {includeDeleted: true})
       .then(result => {
         return this.db.execute(transaction => {
@@ -585,6 +586,7 @@ export default class Collection {
    */
   gatherLocalChanges() {
     let _toDelete;
+    // XXX filter by status
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return res.data.reduce((acc, record) => {
@@ -845,6 +847,9 @@ export default class Collection {
 
     // Fetch all existing records from local database,
     // and skip those who are newer or not marked as synced.
+
+    // XXX filter by status / ids in records
+
     return this.list({}, {includeDeleted: true})
       .then(res => {
         return res.data.reduce((acc, record) => {
