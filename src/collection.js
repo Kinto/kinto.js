@@ -381,17 +381,20 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id).then(_ => {
-      let newStatus = "updated";
-      if (record._status === "deleted") {
-        newStatus = "deleted";
-      } else if (options.synced) {
-        newStatus = "synced";
-      }
-      const updatedRecord = Object.assign({}, record, {_status: newStatus});
-      return this.db.update(updatedRecord).then(record => {
-        return {data: record, permissions: {}};
-      });
+    return this.get(record.id)
+      .then(_ => {
+        let newStatus = "updated";
+        if (record._status === "deleted") {
+          newStatus = "deleted";
+        } else if (options.synced) {
+          newStatus = "synced";
+        }
+        return this.db.execute((transaction) => {
+          // XXX https://github.com/Kinto/kinto.js/pull/286
+          const updated = Object.assign({}, record, {_status: newStatus});
+          transaction.update(updated);
+          return {data: updated, permissions: {}};
+        });
     });
   }
 
