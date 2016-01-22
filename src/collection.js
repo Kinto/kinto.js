@@ -356,8 +356,9 @@ export default class Collection {
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
-    return this.db.create(newRecord).then(record => {
-      return {data: record, permissions: {}};
+    return this.db.execute((transaction) => {
+      transaction.create(newRecord);
+      return {data: newRecord, permissions: {}};
     });
   }
 
@@ -449,9 +450,9 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
+          return {data: {id: id}, permissions: {}};
         });
-      })
-      .then(_ => ({data: {id: id}, permissions: {}}));
+      });
   }
 
   /**
@@ -495,6 +496,7 @@ export default class Collection {
     }))
       .then(decodedChanges => {
         const changeIds = decodedChanges.map(change => change.id);
+        // XXX: this is not efficient at all.
         return this.list({}, {includeDeleted: true})
           .then(res => {
             const existingRecords = res.data.filter(record => {

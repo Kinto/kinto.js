@@ -122,6 +122,9 @@ export default class IDB extends BaseAdapter {
     }).catch(this._handleError("clear"));
   }
 
+  /**
+   * XXX
+   */
   execute(callback, options={preload: []}) {
     const preloaded = options.preload.reduce((acc, record) => {
       acc[record.id] = record;
