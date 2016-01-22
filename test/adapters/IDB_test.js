@@ -68,6 +68,12 @@ describe("adapter.IDB", () => {
             .then(() => sinon.assert.called(callback));
         });
 
+        it("should fail if the callback returns a promise", () => {
+          const callback = () => Promise.resolve();
+          return db.execute(callback)
+            .should.eventually.be.rejectedWith(Error, /promise/);
+        });
+
         it("should provide a transaction parameter", () => {
           const callback = sandbox.spy();
           return db.execute(callback)

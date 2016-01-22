@@ -133,6 +133,10 @@ export default class IDB extends BaseAdapter {
           const {transaction, store} = this.prepare("readwrite");
           const handler = new TransactionHandler(store, preloaded);
           const result = callback(handler);
+          if (result instanceof Promise) {
+            // XXX: investigate how to provide documentation details in error.
+            reject(new Error("execute() callback should not return a promise."));
+          }
           transaction.onerror = event => reject(new Error(event.target.error));
           transaction.oncomplete = event => resolve(result);
         });
