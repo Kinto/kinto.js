@@ -84,7 +84,25 @@ function createUUIDSchema() {
   };
 }
 
+function markStatus(record, status) {
+  return Object.assign({}, record, {_status: status});
+}
 
+function markDeleted(record) {
+  return markStatus(record, "deleted");
+}
+
+function markSynced(record) {
+  return markStatus(record, "synced");
+}
+
+/**
+ * Import a remote change into the local database.
+ *
+ * @param  {TransactionHandler} transaction The transaction handler.
+ * @param  {Object}             remote      The remote change object to import
+ * @return {Object}
+ */
 function importChange(transaction, remote) {
   const local = transaction.get(remote.id);
   if (!local) {
@@ -93,7 +111,7 @@ function importChange(transaction, remote) {
     if (remote.deleted) {
       return {type: "skipped", data: remote};
     }
-    const synced = Object.assign({}, remote, {_status: "synced"});
+    const synced = markSynced(remote);
     transaction.create(synced);
     return {type: "created", data: synced};
   }
@@ -107,7 +125,7 @@ function importChange(transaction, remote) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
-      const synced = Object.assign({}, remote, {_status: "synced"});
+      const synced = markSynced(remote);
       transaction.update(synced);
       return {type: "updated", data: synced};
     }
@@ -120,7 +138,7 @@ function importChange(transaction, remote) {
     transaction.delete(remote.id);
     return {type: "deleted", data: {id: local.id}};
   }
-  const synced = Object.assign({}, remote, {_status: "synced"});
+  const synced = markSynced(remote);
   transaction.update(synced);
   // if identical, simply exclude it from all lists
   const type = identical ? "void" : "updated";
@@ -392,7 +410,7 @@ export default class Collection {
         }
         return this.db.execute((transaction) => {
           // XXX https://github.com/Kinto/kinto.js/pull/286
-          const updated = Object.assign({}, record, {_status: newStatus});
+          const updated = markStatus(record, newStatus);
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });
@@ -442,10 +460,7 @@ export default class Collection {
         return this.db.execute((transaction) => {
           // Virtual updates status.
           if (options.virtual) {
-            const deleted = Object.assign({}, existing, {
-              _status: "deleted"
-            });
-            transaction.update(deleted);
+            transaction.update(markDeleted(existing));
           } else {
             // Delete for real.
             transaction.delete(id);
@@ -690,15 +705,15 @@ export default class Collection {
           // Process everything within a single transaction
           .then((results) => {
             return this.db.execute((transaction) => {
-              const updated = results.map((r) => {
-                const synced = Object.assign({}, r, {_status: "synced"});
+              const updated = results.map((record) => {
+                const synced = markSynced(record);
                 transaction.update(synced);
                 return {data: synced};
               });
-              const deleted = toDeleteLocally.map((r) => {
-                transaction.delete(r.id);
+              const deleted = toDeleteLocally.map((record) => {
+                transaction.delete(record.id);
                 // Amend result data with the deleted attribute set
-                return {data: {id: r.id, deleted: true}};
+                return {data: {id: record.id, deleted: true}};
               });
               return updated.concat(deleted);
             });
@@ -724,7 +739,7 @@ export default class Collection {
           // are in non-synced status, mark them as synced.
           return this.db.execute((transaction) => {
             resolvedUnsynced.forEach((record) => {
-              transaction.update(Object.assign({}, record, {_status: "synced"}));
+              transaction.update(markSynced(record));
             });
             return result;
           });
@@ -873,13 +888,7 @@ export default class Collection {
         return shouldKeep;
       });
     })
-    .then(newRecords => {
-      return newRecords.map(record => {
-        return Object.assign({}, record, {
-          _status: "synced"
-        });
-      });
-    })
+    .then(newRecords => newRecords.map(markSynced))
     .then(newRecords => this.db.loadDump(newRecords));
   }
 }
