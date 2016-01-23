@@ -3,7 +3,7 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import { TransactionHandler } from "../../src/adapters/IDB.js";
+import { IDBTransactionProxy } from "../../src/adapters/IDB.js";
 import IDB from "../../src/adapters/IDB.js";
 import { adapterTestSuite } from "./common";
 
@@ -79,7 +79,7 @@ describe("adapter.IDB", () => {
           return db.execute(callback)
             .then(() => {
               const handler = callback.getCall(0).args[0];
-              expect(handler).to.be.an.instanceOf(TransactionHandler);
+              expect(handler).to.be.an.instanceOf(IDBTransactionProxy);
             });
         });
 

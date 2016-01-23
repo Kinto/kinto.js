@@ -123,7 +123,34 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * XXX
+   * Executes the set of synchronous CRUD operations described in the provided
+   * callback within an IndexedDB transaction, for current db store.
+   *
+   * The callback will be provided a {@link IDBTransactionProxy} instance,
+   * exposing the following synchronous crud operation methods:
+   * get, create, update, delete.
+   *
+   * Important note: because limitations in IndexedDB implementations, no
+   * asynchronous code should be performed within the provided callback; the
+   * promise will therefore be rejected if the callback returns a Promise.
+   *
+   * Options:
+   * - {Array} preload: The list of records to make available to
+   *   {@link IDBTransactionProxy#get} (default: [])
+   *
+   * @example
+   * const db = new IDB("example");
+   * db.execute(transaction => {
+   *   transaction.create({id: 1, title: "foo"});
+   *   transaction.update({id: 2, title: "bar"});
+   *   transaction.delete(3);
+   * })
+   *   .catch(console.error.bind(console));
+   *   .then(console.log.bind(console));
+   *
+   * @param  {Function} callback The operation description callback.
+   * @param  {Object}   options  The options object.
+   * @return {Promise}
    */
   execute(callback, options={preload: []}) {
     const preloaded = options.preload.reduce((acc, record) => {
@@ -134,7 +161,7 @@ export default class IDB extends BaseAdapter {
       .then(_ => {
         return new Promise((resolve, reject) => {
           const {transaction, store} = this.prepare("readwrite");
-          const handler = new TransactionHandler(store, preloaded);
+          const handler = new IDBTransactionProxy(store, preloaded);
           const result = callback(handler);
           if (result instanceof Promise) {
             // XXX: investigate how to provide documentation details in error.
@@ -298,26 +325,53 @@ export default class IDB extends BaseAdapter {
 
 
 /**
- * XXX: find a better name
+ * IDB Transaction handler.
  */
-export class TransactionHandler {
-  constructor(store, preloaded) {
+export class IDBTransactionProxy {
+  /**
+   * Constructor.
+   * @param  {IDBStore} store     The IndexedDB database store.
+   * @param  {Array}    preloaded The list of records to make available to
+   *                              get() (default: []).
+   */
+  constructor(store, preloaded=[]) {
     this._store = store;
     this._preloaded = preloaded;
   }
 
+  /**
+   * Stack up a create operation to the store transaction operation list.
+   *
+   * @param  {Object} record The record object.
+   */
   create(record) {
     this._store.add(record);
   }
 
+  /**
+   * Stack up an update operation to the store transaction operation list.
+   *
+   * @param  {Object} record The record object.
+   */
   update(record) {
     this._store.put(record);
   }
 
+  /**
+   * Stack up a delete operation to the store transaction operation list.
+   *
+   * @param  {Any} id The record id to delete.
+   */
   delete(id) {
     this._store.delete(id);
   }
 
+  /**
+   * Retrieve a preloaded record by its id.
+   *
+   * @param  {Any} id The record id.
+   * @return {Object|undefined}
+   */
   get(id) {
     return this._preloaded[id];
   }

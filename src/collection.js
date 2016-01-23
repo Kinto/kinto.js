@@ -99,8 +99,8 @@ function markSynced(record) {
 /**
  * Import a remote change into the local database.
  *
- * @param  {TransactionHandler} transaction The transaction handler.
- * @param  {Object}             remote      The remote change object to import
+ * @param  {IDBTransactionProxy} transaction The transaction handler.
+ * @param  {Object}              remote      The remote change object to import.
  * @return {Object}
  */
 function importChange(transaction, remote) {
