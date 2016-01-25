@@ -144,18 +144,30 @@ export default class FirefoxAdapter extends BaseAdapter {
     return this._executeStatement(statements.clearData, params);
   }
 
-  execute(callback, preload=[]) {
+  execute(callback, options={preload: []}) {
     if (!this._connection) {
       throw new Error("The storage adapter is not open");
     }
+    const preloaded = options.preload.reduce((acc, record) => {
+      acc[record.id] = record;
+      return acc;
+    }, {});
+
+    let proxy, result;
+    try {
+      proxy = transactionProxy(this.collection, preloaded);
+      result = callback(proxy);
+    }
+    catch(e) {
+      return Promise.reject(e);
+    }
     const conn = this._connection;
-    const proxy = new TransactionProxy(conn, this.collection, preload);
-    const result = callback(proxy);
     return conn.executeTransaction(function* doExecuteTransaction() {
       for (const {statement, params} of proxy.operations) {
-        yield conn.execute(statement, params);
+        yield conn.executeCached(statement, params);
       }
-    }).then(_ => result);
+    })
+    .then(_ => result);
   }
 
   create(record) {
@@ -270,54 +282,52 @@ export default class FirefoxAdapter extends BaseAdapter {
 }
 
 
-class TransactionProxy {
-  constructor(conn, collection, preload=[]) {
-    this.conn = conn;
-    this.collection = collection;
-    this._operations = [];
-    this._preloaded = preload.reduce(function(acc, record) {
-      acc[record.id] = record;
-      return acc;
-    }, {});
-  }
+function transactionProxy(collection, preloaded) {
+  const _operations = [];
 
-  get operations() {
-    return this._operations;
-  }
+  return {
+    get operations() {
+      return _operations;
+    },
 
-  create(record) {
-    this._operations.push({
-      statement: statements.createData,
-      params: {
-        collection_name: this.collection,
-        record_id: record.id,
-        record: JSON.stringify(record)
-      }
-    });
-  }
+    create(record) {
+      _operations.push({
+        statement: statements.createData,
+        params: {
+          collection_name: collection,
+          record_id: record.id,
+          record: JSON.stringify(record)
+        }
+      });
+    },
 
-  update(record) {
-    this._operations.push({
-      statement: statements.updateData,
-      params: {
-        collection_name: this.collection,
-        record_id: record.id,
-        record: JSON.stringify(record)
-      }
-    });
-  }
+    update(record) {
+      _operations.push({
+        statement: statements.updateData,
+        params: {
+          collection_name: collection,
+          record_id: record.id,
+          record: JSON.stringify(record)
+        }
+      });
+    },
 
-  delete(id) {
-    this._operations.push({
-      statement: statements.deleteData,
-      params: {
-        collection_name: this.collection,
-        record_id: id
-      }
-    });
-  }
+    delete(id) {
+      _operations.push({
+        statement: statements.deleteData,
+        params: {
+          collection_name: collection,
+          record_id: id
+        }
+      });
+    },
 
-  get(id) {
-    return this._preloaded[id];
-  }
+    get(id) {
+      // Gecko JS engine outputs undesired warnings if id is not in preloaded.
+      return id in preloaded ? preloaded[id] : undefined;
+    }
+  };
+
+
+
 }
