@@ -314,7 +314,14 @@ export default class Collection {
     }
     return this.db.create(newRecord).then(record => {
       return {data: record, permissions: {}};
-    });
+    })
+      .catch(err => {
+        if (options.useRecordId) {
+          throw new Error(
+            "Couldn't create record. It may have been virtually deleted.");
+        }
+        throw err;
+      });
   }
 
   /**

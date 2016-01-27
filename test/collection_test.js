@@ -382,6 +382,13 @@ describe("Collection", () => {
       return articles.create({id: "deadbeef", title: "foo"}, {useRecordId: true})
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
+
+    it("should reject with a hint if useRecordId has been used", () => {
+      return articles.create({id: uuid4()}, {useRecordId: true})
+        .then((res) => articles.delete(res.data.id))
+        .then((res) => articles.create({id: res.data.id}, {useRecordId: true}))
+        .should.be.rejectedWith(Error, /virtually deleted/);
+    });
   });
 
   /** @test {Collection#update} */

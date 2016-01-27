@@ -64,6 +64,7 @@ Result is:
 >
 > - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29);
 but you can also define a [custom ID schema](#id-schemas));
+> - As deletions are [performed virtually by default](#deleting-records), attempting at creating a record reusing the id of a virtually deleted record will fail;
 > - Detailed API documentation for `Collection#create()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-create).
 
 ## Retrieving a single record
