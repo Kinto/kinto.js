@@ -69,6 +69,11 @@ describe("Integration tests", () => {
       });
   }
 
+  after((done) => {
+    // Ensure no pserve process remains after tests having been executed.
+    spawn("killall", ["pserve"]).on("close", () => done());
+  });
+
   beforeEach(function() {
     this.timeout(12500);
 

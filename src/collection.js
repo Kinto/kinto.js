@@ -392,12 +392,14 @@ export default class Collection {
    *
    * Options:
    * - {Boolean} synced: Sets record status to "synced" (default: false)
+   * - {Boolean} patch:  Extends the existing record instead of overwriting it
+   *   (default: false)
    *
    * @param  {Object} record
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options={synced: false}) {
+  update(record, options={synced: false, patch: false}) {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -408,7 +410,8 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
     return this.get(record.id)
-      .then(_ => {
+      .then((res) => {
+        const existing = res.data;
         let newStatus = "updated";
         if (record._status === "deleted") {
           newStatus = "deleted";
@@ -416,8 +419,9 @@ export default class Collection {
           newStatus = "synced";
         }
         return this.db.execute((transaction) => {
-          // XXX https://github.com/Kinto/kinto.js/pull/286
-          const updated = markStatus(record, newStatus);
+          const source = options.patch ? Object.assign({}, existing, record)
+                                       : record;
+          const updated = markStatus(source, newStatus);
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });
