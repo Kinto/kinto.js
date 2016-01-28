@@ -446,6 +446,19 @@ describe("Collection", () => {
       return articles.update({id: "deadbeef"})
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
+
+    it("should merge passed fields with existing ones", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => {
+          return articles.update(
+            Object.assign({}, {id: res.data.id}, {
+              title: "new title",
+            }));
+        })
+        .then(res => res.data)
+          .should.eventually.have.property("url").eql(article.url);
+    });
   });
 
   /** @test {Collection#resolve} */

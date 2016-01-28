@@ -344,14 +344,16 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id).then(_ => {
+    return this.get(record.id).then(res => {
       let newStatus = "updated";
       if (record._status === "deleted") {
         newStatus = "deleted";
       } else if (options.synced) {
         newStatus = "synced";
       }
-      const updatedRecord = Object.assign({}, record, {_status: newStatus});
+      const updatedRecord = Object.assign({}, res.data, record, {
+        _status: newStatus
+      });
       return this.db.update(updatedRecord).then(record => {
         return {data: record, permissions: {}};
       });
