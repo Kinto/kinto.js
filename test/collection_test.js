@@ -446,6 +446,21 @@ describe("Collection", () => {
       return articles.update({id: "deadbeef"})
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
+
+    it("should patch existing record when patch option is used", () => {
+      const id = uuid4();
+      return articles.create({id, title: "foo", last_modified: 42},
+                             {useRecordId: true})
+        .then(() => articles.update({id, rank: 99}, {patch: true}))
+        .then((res) => res.data)
+        .should.eventually.become({
+          id,
+          title: "foo",
+          rank: 99,
+          last_modified: 42,
+          _status: "updated"
+        });
+    });
   });
 
   /** @test {Collection#resolve} */

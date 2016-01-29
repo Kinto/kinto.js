@@ -120,6 +120,7 @@ Result is:
 > #### Notes
 >
 > - An ID is required, otherwise the promise will be rejected;
+> - The `patch` option allows amending the existing record with passed data. By default this option is set to `false`, so existing records are overriden with passed data;
 > - Detailed API documentation for `Collection#update()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-update).
 
 ## Deleting records
