@@ -1,7 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./adapters/base";
-import { reduceRecords, waterfall } from "./utils";
+import { waterfall } from "./utils";
 import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
@@ -95,6 +95,13 @@ function markDeleted(record) {
 function markSynced(record) {
   return markStatus(record, "synced");
 }
+
+function listStatuses(collection, statuses, options={includeDeleted: true}) {
+  return Promise.all(statuses.map(status => {
+    return collection.list({order: "", filters: {_status: status}}, options);
+  })).then((...results) => [].concat.apply([], results));
+}
+
 
 /**
  * Import a remote change into the local database.
@@ -488,7 +495,7 @@ export default class Collection {
    * Lists records from the local database.
    *
    * Params:
-   * - {Object} filters The filters to apply (default: `{}`).
+   * - {Object} filters Filter the results (default: `{}`).
    * - {String} order   The order to apply   (default: `-last_modified`).
    *
    * Options:
@@ -500,12 +507,12 @@ export default class Collection {
    */
   list(params={}, options={includeDeleted: false}) {
     params = Object.assign({order: "-last_modified", filters: {}}, params);
-    return this.db.list().then(results => {
-      let reduced = reduceRecords(params.filters, params.order, results);
+    return this.db.list(params).then(results => {
+      let data = results;
       if (!options.includeDeleted) {
-        reduced = reduced.filter(record => record._status !== "deleted");
+        data = results.filter(record => record._status !== "deleted");
       }
-      return {data: reduced, permissions: {}};
+      return {data, permissions: {}};
     });
   }
 
@@ -524,33 +531,37 @@ export default class Collection {
       return this._decodeRecord("remote", change);
     }))
       .then(decodedChanges => {
+        // No change, nothing to import.
+        if (decodedChanges.length === 0) {
+          return Promise.resolve(syncResultObject);
+        }
         // XXX: list() should filter only ids in changes.
         return this.list({order: ""}, {includeDeleted: true})
           .then(res => {
             return {decodedChanges, existingRecords: res.data};
+          })
+          .then(({decodedChanges, existingRecords}) => {
+            return this.db.execute(transaction => {
+              return decodedChanges.map(remote => {
+                // Store remote change into local database.
+                return importChange(transaction, remote);
+              });
+            }, {preload: existingRecords});
+          })
+          .catch(err => {
+            // XXX todo
+            err.type = "incoming";
+            // XXX one error of the whole transaction instead of per atomic op
+            return [{type: "errors", data: err}];
+          })
+          .then(imports => {
+            for (const imported of imports) {
+              if (imported.type !== "void") {
+                syncResultObject.add(imported.type, imported.data);
+              }
+            }
+            return syncResultObject;
           });
-      })
-      .then(({decodedChanges, existingRecords}) => {
-        return this.db.execute(transaction => {
-          return decodedChanges.map(remote => {
-            // Store remote change into local database.
-            return importChange(transaction, remote);
-          });
-        }, {preload: existingRecords});
-      })
-      .catch(err => {
-        // XXX todo
-        err.type = "incoming";
-        // XXX one error of the whole transaction instead of one per atomic op
-        return [{type: "errors", data: err}];
-      })
-      .then(imports => {
-        for (const imported of imports) {
-          if (imported.type !== "void") {
-            syncResultObject.add(imported.type, imported.data);
-          }
-        }
-        return syncResultObject;
       })
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
@@ -578,22 +589,20 @@ export default class Collection {
    */
   resetSyncStatus() {
     let _count;
-    // XXX filter by status
-    return this.list({}, {includeDeleted: true})
-      .then(result => {
+    return listStatuses(this, ["deleted", "synced"])
+      .then(([deleted, synced]) => {
         return this.db.execute(transaction => {
-          _count = result.data.length;
-          result.data.forEach(r => {
-            // Garbage collect deleted records.
-            if (r._status === "deleted") {
-              transaction.delete(r.id);
-            } else {
-              // Records that were synced become «created».
-              transaction.update(Object.assign({}, r, {
-                last_modified: undefined,
-                _status: "created"
-              }));
-            }
+          _count = deleted.data.length + synced.data.length;
+          // Garbage collect deleted records.
+          deleted.data.forEach((r) => {
+            transaction.delete(r.id);
+          });
+          // Records that were synced become «created».
+          synced.data.forEach((r) => {
+            transaction.update(Object.assign({}, r, {
+              last_modified: undefined,
+              _status: "created"
+            }));
           });
         });
       })
@@ -611,22 +620,12 @@ export default class Collection {
    */
   gatherLocalChanges() {
     let _toDelete;
-    // XXX filter by status
-    return this.list({}, {includeDeleted: true})
-      .then(res => {
-        return res.data.reduce((acc, record) => {
-          if (record._status === "deleted" && !record.last_modified) {
-            acc.toDelete.push(record);
-          } else if (record._status !== "synced") {
-            acc.toSync.push(record);
-          }
-          return acc;
-          // rename toSync to toPush or toPublish
-        }, {toDelete: [], toSync: []});
-      })
-      .then(({toDelete, toSync}) => {
-        _toDelete = toDelete;
-        return Promise.all(toSync.map(this._encodeRecord.bind(this, "remote")));
+    return listStatuses(this, ["created", "updated", "deleted"])
+      .then(([created, updated, deleted]) => {
+        _toDelete = deleted.data;
+        // Encode unsynced records.
+        const unsyncRecords = created.data.concat(updated.data);
+        return Promise.all(unsyncRecords.map(this._encodeRecord.bind(this, "remote")));
       })
       .then(toSync => ({toDelete: _toDelete, toSync}));
   }

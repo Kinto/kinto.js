@@ -741,12 +741,22 @@ describe("Collection", () => {
       const fixtures = [
         {title: "art1", last_modified: 3, unread: true, complete: true},
         {title: "art2", last_modified: 2, unread: false, complete: true},
-        {title: "art3", last_modified: 1, unread: true, complete: false},
+        {id: uuid4(), title: "art3", last_modified: 1, unread: true, complete: false},
       ];
 
       beforeEach(() => {
         articles = testCollection();
-        return Promise.all(fixtures.map(r => articles.create(r)));
+        return Promise.all([
+          articles.create(fixtures[0]),
+          articles.create(fixtures[1]),
+          articles.create(fixtures[2], {synced: true})
+        ]);
+      });
+
+      it("should filter records on indexed fields", () => {
+        return articles.list({filters: {_status: "created"}})
+          .then(res => res.data.map(r => r.title))
+          .should.eventually.become(["art1", "art2"]);
       });
 
       it("should filter records on existing field", () => {
@@ -761,7 +771,7 @@ describe("Collection", () => {
           .should.eventually.become([]);
       });
 
-      it("should filter records on multiple fields", () => {
+      it("should filter records on multiple fields using 'and'", () => {
         return articles.list({filters: {unread: true, complete: true}})
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art1"]);
@@ -885,8 +895,8 @@ describe("Collection", () => {
     beforeEach(() => {
       articles = testCollection();
       return Promise.all([
-        articles.create({title: "abcdef", last_modified: 2}),
-        articles.create({title: "ghijkl", last_modified: 1}),
+        articles.create({title: "abcdef"}),
+        articles.create({title: "ghijkl"}),
       ]);
     });
 
@@ -900,7 +910,7 @@ describe("Collection", () => {
         });
 
         return articles.gatherLocalChanges()
-          .then(res => res.toSync.map(r => r.title))
+          .then(res => res.toSync.map(r => r.title).sort())
           .should.become(["abcdef?!", "ghijkl?!"]);
       });
     });
