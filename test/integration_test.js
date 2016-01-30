@@ -636,6 +636,7 @@ describe("Integration tests", () => {
         let syncResult;
 
         beforeEach(() => {
+          let recordId;
           return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
             method: "POST",
             headers: {
@@ -647,12 +648,13 @@ describe("Integration tests", () => {
           })
             .then(_ => tasks.sync())
             .then(res => {
-              return tasks.update(Object.assign({}, res.created[0], {
-                title: "task1-local",
-                done: false,
-                last_modified: undefined
-              }));
-            });
+              recordId = res.created[0].id;
+              return tasks.delete(recordId, { virtual: false });
+            }).then(_ => tasks.create({
+              id: recordId,
+              title: "task1-local",
+              done: false
+            }, { useRecordId: true }));
         });
 
         describe("MANUAL strategy (default)", () => {
@@ -710,7 +712,7 @@ describe("Integration tests", () => {
               })))
               .should.become([
                 // For MANUAL strategy, local conficting record is left intact
-                {title: "task1-local", _status: "updated"},
+                {title: "task1-local", _status: "created"},
               ]);
           });
 

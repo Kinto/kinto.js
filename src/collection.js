@@ -422,6 +422,9 @@ export default class Collection {
           const source = options.patch ? Object.assign({}, existing, record)
                                        : record;
           const updated = markStatus(source, newStatus);
+          if (existing.last_modified && !updated.last_modified) {
+            updated.last_modified = existing.last_modified;
+          }
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });
