@@ -915,6 +915,8 @@ describe("Collection", () => {
         fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince").returns(
           Promise.resolve({
             lastModified: 42,
+            limit: null,
+            token: null,
             changes: serverChanges
           }));
         return Promise.all(localData.map(fixture => {
@@ -935,7 +937,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: null, headers: {}});
+              {lastModified: null, limit: null, token: null, headers: {}});
           });
       });
 
@@ -946,7 +948,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(fetchChangesSince,
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              {lastModified: 42, headers: {}});
+              {lastModified: 42, limit: null, token: null, headers: {}});
           });
       });
 
@@ -1124,6 +1126,26 @@ describe("Collection", () => {
     beforeEach(() => {
       articles = testCollection();
       result = new SyncResultObject();
+    });
+
+    it("should save lastModified if ok and no fetchToken present", () => {
+      return articles.importChanges(result, { changes: [], lastModified: 42 })
+        .then(_ => articles.db.getLastModified())
+        .should.become(42);
+    });
+
+    it("should not save lastModified if not ok", () => {
+      result.ok = false;
+      return articles.importChanges(result, { changes: [], lastModified: 42 })
+        .then(_ => articles.db.getLastModified())
+        .should.become(null);
+    });
+
+    it("should save lastModified if fetchToken present", () => {
+      result.fetchToken = "1234567890123:42";
+      return articles.importChanges(result, { changes: [], lastModified: 42 })
+        .then(_ => articles.db.getLastModified())
+        .should.become(null);
     });
 
     it("should return errors when encountered", () => {

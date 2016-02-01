@@ -229,7 +229,22 @@ describe("Api", () => {
 
       it("should request server changes since last modified", () =>{
         return api.fetchChangesSince("blog", "articles", {lastModified: 42})
-          .then(_ => expect(fetch.secondCall.args[0]).to.match(/\?_since=42/));
+          .then(_ => expect(fetch.secondCall.args[0]).to.match(/\&_since=42/));
+      });
+
+      it("should request sorting by last modified, ascending", () =>{
+        return api.fetchChangesSince("blog", "articles")
+          .then(_ => expect(fetch.secondCall.args[0]).to.match(/\?_sort=last_modified/));
+      });
+
+      it("should set the limit of number of records to retrieve", () =>{
+        return api.fetchChangesSince("blog", "articles", { limit: 42 })
+          .then(_ => expect(fetch.secondCall.args[0]).to.match(/\&_limit=42/));
+      });
+
+      it("should set the token when pagination is used", () =>{
+        return api.fetchChangesSince("blog", "articles", { token: "1234567890123:42" })
+          .then(_ => expect(fetch.secondCall.args[0]).to.match(/\&_token=1234567890123%3A42/));
       });
 
       it("should attach an If-None-Match header if lastModified is provided", () =>{
@@ -257,7 +272,25 @@ describe("Api", () => {
         return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
           .should.eventually.become({
             lastModified: 41,
-            changes: []
+            changes: [],
+            fetchToken: null
+          });
+      });
+
+      it("should parse fetchToken from Next-Page response header", () => {
+        sandbox.stub(root, "fetch").returns(
+          fakeServerResponse(200, {data: []}, {
+            "ETag": quote(41),
+            "Next-Page": "https://syncto.dev.mozaws.net/v1/buckets/d83134db8e" +
+                "5cf927624742e63e5e9f8f/collections/history/records?_sort=las" +
+                "t_modified&_limit=50&_token=1451832797410%3A50"
+          }));
+
+        return api.fetchChangesSince("blog", "articles", { lastModified: 42 })
+          .should.eventually.become({
+            lastModified: 41,
+            changes: [],
+            fetchToken: "1451832797410:50"
           });
       });
 
