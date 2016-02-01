@@ -11,7 +11,7 @@
     "dist-dev": "browserify -s Kinto -d -e src/index.js -o dist/kinto-$npm_package_version.js -t [ babelify --sourceMapRelative . ]",
     "dist-noshim": "browserify -s Kinto -g uglifyify --ignore isomorphic-fetch --ignore babel-polyfill -e src/index.js -o dist/kinto-$npm_package_version.noshim.js -t [ babelify --sourceMapRelative . ]",
     "dist-prod": "browserify -s Kinto -g uglifyify -e src/index.js -o dist/kinto-$npm_package_version.min.js -t [ babelify --sourceMapRelative . ]",
-    "dist-fx": "browserify -s loadKinto -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . --plugins [ transform-es2015-modules-commonjs transform-es2015-for-of ] ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat temp.jsm >> dist/moz-kinto-client.js && rm temp.jsm",
+    "dist-fx": "BABEL_ENV=firefox browserify -s loadKinto -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-client.js && cat temp.jsm >> dist/moz-kinto-client.js && rm temp.jsm",
     "publish-demo": "npm run dist-prod && cp dist/kinto-$npm_package_version.js demo/kinto.js && gh-pages -d demo",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "tdd": "babel-node node_modules/.bin/_mocha --watch --require ./test/_setup.js 'test/**/*_test.js'",
