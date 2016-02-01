@@ -461,6 +461,36 @@ describe("Collection", () => {
           _status: "updated"
         });
     });
+
+    it("should remove previous record fields", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => {
+          return articles.update(
+            Object.assign({}, {id: res.data.id}, {
+              title: "new title",
+            }));
+        })
+        .then(res => res.data)
+          .should.eventually.not.have.property("url");
+    });
+
+    it("should preserve record.last_modified", () => {
+      return articles.create({
+        title: "foo",
+        url: "http://foo",
+        last_modified: 123456789012
+      })
+        .then(res => articles.get(res.data.id))
+        .then(res => {
+          return articles.update(
+            Object.assign({}, {id: res.data.id}, {
+              title: "new title",
+            }));
+        })
+        .then(res => res.data)
+          .should.eventually.have.property("last_modified").eql(123456789012);
+    });
   });
 
   /** @test {Collection#resolve} */
