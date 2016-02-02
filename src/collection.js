@@ -96,10 +96,8 @@ function markSynced(record) {
   return markStatus(record, "synced");
 }
 
-function listStatuses(collection, statuses, options={includeDeleted: true}) {
-  return Promise.all(statuses.map(status => {
-    return collection.list({order: "", filters: {_status: status}}, options);
-  })).then((...results) => [].concat.apply([], results));
+function listStatuses(db, statuses) {
+  return Promise.all(statuses.map(_status => db.list({filters: {_status}})));
 }
 
 
@@ -589,16 +587,14 @@ export default class Collection {
    */
   resetSyncStatus() {
     let _count;
-    return listStatuses(this, ["deleted", "synced"])
+    return listStatuses(this.db, ["deleted", "synced"])
       .then(([deleted, synced]) => {
         return this.db.execute(transaction => {
-          _count = deleted.data.length + synced.data.length;
+          _count = deleted.length + synced.length;
           // Garbage collect deleted records.
-          deleted.data.forEach((r) => {
-            transaction.delete(r.id);
-          });
+          deleted.forEach((r) => transaction.delete(r.id));
           // Records that were synced become «created».
-          synced.data.forEach((r) => {
+          synced.forEach((r) => {
             transaction.update(Object.assign({}, r, {
               last_modified: undefined,
               _status: "created"
@@ -620,12 +616,13 @@ export default class Collection {
    */
   gatherLocalChanges() {
     let _toDelete;
-    return listStatuses(this, ["created", "updated", "deleted"])
+    return listStatuses(this.db, ["created", "updated", "deleted"])
       .then(([created, updated, deleted]) => {
-        _toDelete = deleted.data;
+        _toDelete = deleted;
         // Encode unsynced records.
-        const unsyncRecords = created.data.concat(updated.data);
-        return Promise.all(unsyncRecords.map(this._encodeRecord.bind(this, "remote")));
+        const unsyncRecords = created.concat(updated);
+        const encodeRemote = this._encodeRecord.bind(this, "remote");
+        return Promise.all(unsyncRecords.map(encodeRemote));
       })
       .then(toSync => ({toDelete: _toDelete, toSync}));
   }
