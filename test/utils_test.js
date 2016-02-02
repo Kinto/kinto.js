@@ -132,6 +132,18 @@ describe("Utils", () => {
         {existing: true},
       ])).eql([]);
     });
+
+    it("should filter on multiple field values", () => {
+      expect(filterObjects({title: ["a", "c"]}, [
+        {title: "a"},
+        {title: "b"},
+        {title: "c"},
+        {title: "d"},
+      ])).eql([
+        {title: "a"},
+        {title: "c"},
+      ]);
+    });
   });
 
   /** @test {reduceRecords} */

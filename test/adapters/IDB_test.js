@@ -248,17 +248,16 @@ describe("adapter.IDB", () => {
   describe("#list", () => {
     beforeEach(() => {
       return db.execute(transaction => {
-        transaction.create({id: 1, foo: "bar"});
-        transaction.create({id: 2, foo: "baz"});
+        for (let id=1; id<=10; id++) {
+          // id is indexed, name is not
+          transaction.create({id, name: "#" + id});
+        }
       });
     });
 
     it("should retrieve the list of records", () => {
       return db.list()
-        .should.eventually.eql([
-          {id: 1, foo: "bar"},
-          {id: 2, foo: "baz"},
-        ]);
+        .should.eventually.have.length.of(10);
     });
 
     it("should prefix error encountered", () => {
@@ -278,6 +277,64 @@ describe("adapter.IDB", () => {
       });
       return db.list()
         .should.be.rejectedWith(Error, "transaction error");
+    });
+
+    describe("Filters", () => {
+      describe("on non-indexed fields", () => {
+        describe("single value", () => {
+          it("should filter the list on a single pre-indexed column", () => {
+            return db.list({filters: {name: "#4"}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+              ]);
+          });
+        });
+
+        describe("multiple values", () => {
+          it("should filter the list on a single pre-indexed column", () => {
+            return db.list({filters: {name: ["#4", "#5"]}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+                {id: 5, name: "#5"},
+              ]);
+          });
+
+          it("should handle non-existent keys", () => {
+            return db.list({filters: {name: ["#4", "qux"]}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+              ]);
+          });
+        });
+      });
+
+      describe("on indexed fields", () => {
+        describe("single value", () => {
+          it("should filter the list on a single pre-indexed column", () => {
+            return db.list({filters: {id: 4}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+              ]);
+          });
+        });
+
+        describe("multiple values", () => {
+          it("should filter the list on a single pre-indexed column", () => {
+            return db.list({filters: {id: [5, 4]}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+                {id: 5, name: "#5"},
+              ]);
+          });
+
+          it("should handle non-existent keys", () => {
+            return db.list({filters: {id: [4, 9999]}})
+              .should.eventually.eql([
+                {id: 4, name: "#4"},
+              ]);
+          });
+        });
+      });
     });
   });
 

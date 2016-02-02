@@ -1208,6 +1208,23 @@ describe("Collection", () => {
         .then(res => res.created[0].title)
         .should.become("bar?!"); // reversed because we decode in the opposite order
     });
+
+    it("should only retrieve the changed record", () => {
+      const id1 = uuid4();
+      const id2 = uuid4();
+      const list = sandbox.stub(articles, "list").returns(Promise.resolve());
+
+      return articles.importChanges(result, {changes: [
+        {id: id1, title: "foo"},
+        {id: id2, title: "bar"},
+      ]})
+        .then(() => {
+          sinon.assert.calledWithExactly(list, {
+            filters: {id: [id1, id2]},
+            order: ""
+          }, {includeDeleted: true});
+        });
+    });
   });
 
   /** @test {Collection#pushChanges} */

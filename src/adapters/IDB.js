@@ -3,6 +3,104 @@
 import BaseAdapter from "./base.js";
 import { reduceRecords } from "../utils";
 
+const INDEXED_FIELDS = ["id", "_status", "last_modified"];
+
+
+/**
+ * IDB cursor handlers.
+ * @type {Object}
+ */
+const cursorHandlers = {
+  all(done) {
+    const results = [];
+    return function(event) {
+      const cursor = event.target.result;
+      if (cursor) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else {
+        done(results);
+      }
+    };
+  },
+
+  in(values, done) {
+    const sortedValues = [].slice.call(values).sort();
+    const results = [];
+    return function(event) {
+      const cursor = event.target.result;
+      if (!cursor) {
+        done(results);
+        return;
+      }
+      const {key, value} = cursor;
+      let i = 0;
+      while (key > sortedValues[i]) {
+        // The cursor has passed beyond this key. Check next.
+        ++i;
+        if (i === sortedValues.length) {
+          done(results); // There is no next. Stop searching.
+          return;
+        }
+      }
+      if (key === sortedValues[i]) {
+        results.push(value);
+        cursor.continue();
+      } else {
+        cursor.continue(sortedValues[i]);
+      }
+    };
+  }
+};
+
+/**
+ * Extract from filters definition the first indexed field. Since indexes were
+ * created on single-columns, extracting a single one makes sense.
+ *
+ * @param  {Object} filters The filters object.
+ * @return {String|undefined}
+ */
+function findIndexedField(filters) {
+  const filteredFields = Object.keys(filters);
+  const indexedFields = filteredFields.filter(field => {
+    return INDEXED_FIELDS.indexOf(field) !== -1;
+  });
+  return indexedFields[0];
+}
+
+/**
+ * Creates an IDB request and attach it the appropriate cursor event handler to
+ * perform a list query.
+ *
+ * Multiple matching values are handled by passing an array.
+ *
+ * @param  {IDBStore}         store      The IDB store.
+ * @param  {String|undefined} indexField The indexed field to query, if any.
+ * @param  {Any}              value      The value to filter, if any.
+ * @param  {Function}         done       The operation completion handler.
+ * @return {IDBRequest}
+ */
+function createListRequest(store, indexField, value, done) {
+  if (!indexField) {
+    // Get all records.
+    const request = store.openCursor();
+    request.onsuccess = cursorHandlers.all(done);
+    return request;
+  }
+
+  // WHERE IN equivalent clause
+  if (Array.isArray(value)) {
+    const request = store.index(indexField).openCursor();
+    request.onsuccess = cursorHandlers.in(value, done);
+    return request;
+  }
+
+  // WHERE field = value clause
+  const request = store.index(indexField).openCursor(IDBKeyRange.only(value));
+  request.onsuccess = cursorHandlers.all(done);
+  return request;
+}
+
 /**
  * IndexedDB adapter.
  */
@@ -207,49 +305,28 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   list(params={filters: {}}) {
-    // Extract from `params.filters` the fields that are indexed.
-    const filteredFields = Object.keys(params.filters);
-    const indexedFields = filteredFields.filter(f => {
-      return ["id", "_status", "last_modified"].indexOf(f) !== -1;
-    });
-    // Since indices were created on single-columns, use the first one only.
-    const indexField = indexedFields[0];
-
+    const {filters} = params;
+    const indexField = findIndexedField(filters);
+    const value = filters[indexField];
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
-        const results = [];
+        let results = [];
         const {transaction, store} = this.prepare();
-
-        let request;
-        if (indexField) {
-          // Filter using index.
-          const value = params.filters[indexField];
-          const range = IDBKeyRange.only(value);
-          const index = store.index(indexField);
-          request = index.openCursor(range);
-        }
-        else {
-          // Get all records.
-          request = store.openCursor();
-        }
-
-        request.onsuccess = function(event) {
-          const cursor = event.target.result;
-          if (cursor) {
-            results.push(cursor.value);
-            cursor.continue();
-          }
-        };
+        createListRequest(store, indexField, value, (_results) => {
+          // we have received all requested records, parking them within
+          // current scope
+          results = _results;
+        });
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => resolve(results);
       });
     })
     .then((results) => {
       // The resulting list of records is filtered and sorted.
-      const remainingFilters = Object.assign({}, params.filters);
+      const remainingFilters = Object.assign({}, filters);
       // If `indexField` was used already, don't filter again.
       delete remainingFilters[indexField];
-      // XXX: with some efforts, this could be implemented using IDB API.
+      // XXX: with some efforts, this could be fully implemented using IDB API.
       return reduceRecords(remainingFilters, params.order, results);
     })
     .catch(this._handleError("list"));

@@ -96,11 +96,6 @@ function markSynced(record) {
   return markStatus(record, "synced");
 }
 
-function listStatuses(db, statuses) {
-  return Promise.all(statuses.map(_status => db.list({filters: {_status}})));
-}
-
-
 /**
  * Import a remote change into the local database.
  *
@@ -533,11 +528,11 @@ export default class Collection {
         if (decodedChanges.length === 0) {
           return Promise.resolve(syncResultObject);
         }
-        // XXX: list() should filter only ids in changes.
-        return this.list({order: ""}, {includeDeleted: true})
-          .then(res => {
-            return {decodedChanges, existingRecords: res.data};
-          })
+        // Retrieve records matching change ids.
+        const remoteIds = decodedChanges.map((change) => change.id);
+        return this.list({filters: {id: remoteIds}, order: ""},
+                         {includeDeleted: true})
+          .then(res => ({decodedChanges, existingRecords: res.data}))
           .then(({decodedChanges, existingRecords}) => {
             return this.db.execute(transaction => {
               return decodedChanges.map(remote => {
@@ -580,25 +575,29 @@ export default class Collection {
    * Resets the local records as if they were never synced; existing records are
    * marked as newly created, deleted records are dropped.
    *
-   * A next call to {@link Collection.sync} will thus republish the whole content of the
-   * local collection to the server.
+   * A next call to {@link Collection.sync} will thus republish the whole
+   * content of the local collection to the server.
    *
    * @return {Promise} Resolves with the number of processed records.
    */
   resetSyncStatus() {
     let _count;
-    return listStatuses(this.db, ["deleted", "synced"])
-      .then(([deleted, synced]) => {
+    return this.list({filters: {_status: ["deleted", "synced"]}, order: ""},
+                     {includeDeleted: true})
+      .then((unsynced) => {
         return this.db.execute(transaction => {
-          _count = deleted.length + synced.length;
-          // Garbage collect deleted records.
-          deleted.forEach((r) => transaction.delete(r.id));
-          // Records that were synced become «created».
-          synced.forEach((r) => {
-            transaction.update(Object.assign({}, r, {
-              last_modified: undefined,
-              _status: "created"
-            }));
+          _count = unsynced.data.length;
+          unsynced.data.forEach((record) => {
+            if (record._status === "deleted") {
+              // Garbage collect deleted records.
+              transaction.delete(record.id);
+            } else {
+              // Records that were synced become «created».
+              transaction.update(Object.assign({}, record, {
+                last_modified: undefined,
+                _status: "created"
+              }));
+            }
           });
         });
       })
@@ -616,13 +615,16 @@ export default class Collection {
    */
   gatherLocalChanges() {
     let _toDelete;
-    return listStatuses(this.db, ["created", "updated", "deleted"])
-      .then(([created, updated, deleted]) => {
-        _toDelete = deleted;
+    return Promise.all([
+      this.list({filters: {_status: ["created", "updated"]}, order: ""}),
+      this.list({filters: {_status: "deleted"}, order: ""},
+                {includeDeleted: true}),
+    ])
+      .then(([unsynced, deleted]) => {
+        _toDelete = deleted.data;
         // Encode unsynced records.
-        const unsyncRecords = created.concat(updated);
-        const encodeRemote = this._encodeRecord.bind(this, "remote");
-        return Promise.all(unsyncRecords.map(encodeRemote));
+        return Promise.all(
+          unsynced.data.map(this._encodeRecord.bind(this, "remote")));
       })
       .then(toSync => ({toDelete: _toDelete, toSync}));
   }

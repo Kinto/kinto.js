@@ -78,13 +78,17 @@ export function sortObjects(order, list) {
  * Filters records in a list matching all given filters.
  *
  * @param  {String} filters  The filters object.
- * @param  {Array}  list     The collection to order.
+ * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
 export function filterObjects(filters, list) {
   return list.filter(entry => {
     return Object.keys(filters).every(filter => {
-      return entry[filter] === filters[filter];
+      const value = filters[filter];
+      if (Array.isArray(value)) {
+        return value.some(candidate => candidate === entry[filter]);
+      }
+      return entry[filter] === value;
     });
   });
 }

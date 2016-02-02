@@ -166,20 +166,47 @@ Result is:
   data: [
     {
       id: "705b17be-e957-4c14-8f4c-86f8eaac29c0",
-      title: "foo"
+      title: "foo",
+      rank: 2,
+      _status: "created"
     },
     {
       id: "68e63131-3859-40cc-a4f7-b237ca179329",
       last_modified: 1432222889336,
-      title: "Web page"
+      title: "Web page",
+      rank: 3,
+      _status: "synced"
+    },
+    {
+      id: "86f8baac-4d12-4957-805c-8f4c17bc29c0",
+      title: "Another page",
+      rank: 1,
+      _status: "created"
     },
   ]
 }
 ```
 
+### List filtering and ordering
+
+The `#list()` method accepts an object argument allowing to define filters and ordering:
+
+```js
+articles.list({filters: {_status: "created"}, order: "rank"})
+  .then(console.log.bind(console));
+```
+
+Filters accepts an object where a key is the column name and the property value the pattern to filter the column with. For now this pattern can be either a single value or an array of values; in the latter case, results will contain all records having the filtered column value containing any of the provided ones:
+
+```js
+articles.list({filters: {_status: ["created", "updated"]}})
+  .then(console.log.bind(console));
+```
+
 > #### Notes
 >
-> - Records with `last_modified` attribute were sync'ed on a server.
+> - Records with `last_modified` attribute denote they've already been synced on a server.
+> - By default, results are ordered by `last_modified` DESC.
 > - Detailed API documentation for `Collection#list()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-list).
 
 ### Filtering
