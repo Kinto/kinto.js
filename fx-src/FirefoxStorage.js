@@ -13,6 +13,7 @@
  */
 
 import BaseAdapter from "../src/adapters/base";
+import { reduceRecords } from "../src/utils";
 
 Components.utils.import("resource://gre/modules/Sqlite.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");
@@ -183,11 +184,11 @@ export default class FirefoxAdapter extends BaseAdapter {
       });
   }
 
-  list() {
-    const params = {
+  list(params={filters: {}, order: ""}) {
+    const parameters = {
       collection_name: this.collection,
     };
-    return this._executeStatement(statements.listRecords, params)
+    return this._executeStatement(statements.listRecords, parameters)
       .then(result => {
         const records = [];
         for (let k = 0; k < result.length; k++) {
@@ -195,6 +196,11 @@ export default class FirefoxAdapter extends BaseAdapter {
           records.push(JSON.parse(row.getResultByName("record")));
         }
         return records;
+      })
+      .then(results => {
+        // The resulting list of records is filtered and sorted.
+        // XXX: with some efforts, this could be implemented using SQL.
+        return reduceRecords(params.filters, params.order, results);
       });
   }
 

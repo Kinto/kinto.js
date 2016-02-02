@@ -1,6 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
+import { reduceRecords } from "../utils";
 
 /**
  * IndexedDB adapter.
@@ -205,12 +206,33 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  list() {
+  list(params={filters: {}}) {
+    // Extract from `params.filters` the fields that are indexed.
+    const filteredFields = Object.keys(params.filters);
+    const indexedFields = filteredFields.filter(f => {
+      return ["id", "_status", "last_modified"].indexOf(f) !== -1;
+    });
+    // Since indices were created on single-columns, use the first one only.
+    const indexField = indexedFields[0];
+
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const results = [];
         const {transaction, store} = this.prepare();
-        const request = store.openCursor();
+
+        let request;
+        if (indexField) {
+          // Filter using index.
+          const value = params.filters[indexField];
+          const range = IDBKeyRange.only(value);
+          const index = store.index(indexField);
+          request = index.openCursor(range);
+        }
+        else {
+          // Get all records.
+          request = store.openCursor();
+        }
+
         request.onsuccess = function(event) {
           const cursor = event.target.result;
           if (cursor) {
@@ -221,7 +243,16 @@ export default class IDB extends BaseAdapter {
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => resolve(results);
       });
-    }).catch(this._handleError("list"));
+    })
+    .then((results) => {
+      // The resulting list of records is filtered and sorted.
+      const remainingFilters = Object.assign({}, params.filters);
+      // If `indexField` was used already, don't filter again.
+      delete remainingFilters[indexField];
+      // XXX: with some efforts, this could be implemented using IDB API.
+      return reduceRecords(remainingFilters, params.order, results);
+    })
+    .catch(this._handleError("list"));
   }
 
   /**

@@ -63,9 +63,10 @@ export default class BaseAdapter {
    * Lists all records from the database.
    *
    * @abstract
+   * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
-  list() {
+  list(params={filters: {}, order: ""}) {
     throw new Error("Not Implemented.");
   }
 

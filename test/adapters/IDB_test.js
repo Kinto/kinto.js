@@ -276,7 +276,7 @@ describe("adapter.IDB", () => {
           }
         }
       });
-      return db.list({})
+      return db.list()
         .should.be.rejectedWith(Error, "transaction error");
     });
   });
