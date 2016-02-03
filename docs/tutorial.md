@@ -490,4 +490,4 @@ We're using [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class
 
 ## Now what?
 
-That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/Kinto/kinto.js/issues/new), learn how to [contribute](hacking.md), but most of all: have fun.
+That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/Kinto/kinto.js/issues/new), learn how to [contribute](contributing.md), but most of all: have fun.
