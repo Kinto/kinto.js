@@ -12,7 +12,7 @@ Source code is [hosted on Github](https://github.com/Kinto/kinto.js).
 
 > #### Notes
 >
-> Tagged versions are also available from [npm](https://www.npmjs.com/package/kinto), though cloning the repository is the prefered way for hacking and contributing code.
+> Tagged versions are also available from [npm](https://www.npmjs.com/package/kinto), though cloning the repository is the prefered way for contributing code.
 
 ## Tests
 

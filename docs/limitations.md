@@ -64,4 +64,4 @@ Here's what's planned for future versions, outside of fixing the known limitatio
 - Allowing to use **other local storage backend than IndexedDB** (localStorage, WebSQL) in the form of alternative drivers/adapters;
 - Providing an **admin Web UI** allowing easy management of your Kinto buckets and collections.
 
-These are really higher goals, so feedback and help are [warmly welcome](hacking.md)!
+These are really higher goals, so feedback and help are [warmly welcome](contributing.md)!

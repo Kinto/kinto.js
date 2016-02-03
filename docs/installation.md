@@ -10,7 +10,7 @@ $ npm install kinto --save
 
 > #### Notes
 >
-> *Read more about how to build Kinto.js in the [Hacking section](hacking.md).*
+> *Read more about how to build Kinto.js in the [Contributing section](contributing.md).*
 
 ## Static assets
 
@@ -22,7 +22,7 @@ Dev and production ready assets are available in the [`gh-pages` branch of the r
 
 > #### Notes
 >
-> Only stable tags are released as dist files; if you plan on using latest versions from master, you need to [build them manually](hacking.md#generating-dist-files).
+> Only stable tags are released as dist files; if you plan on using latest versions from master, you need to [build them manually](contributing.md#generating-dist-files).
 
 
 ### Subresource integrity
