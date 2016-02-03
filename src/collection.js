@@ -559,7 +559,8 @@ export default class Collection {
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
         // Don't persist lastModified value if any conflict or error occured
-        if (!syncResultObject.ok) {
+        // or if pagination is still in progress.
+        if (!syncResultObject.ok || syncResultObject.fetchToken) {
           return syncResultObject;
         }
         // No conflict occured, persist collection's lastModified value
@@ -636,6 +637,8 @@ export default class Collection {
    *
    * Options:
    * - {String} strategy: The selected sync strategy.
+   * - {Number} fetchLimit: Number of items to fetch (oldest first).
+   * - {Number} fetchToken: Page to fetch (combine this with fetchLimit).
    *
    * @param  {SyncResultObject} syncResultObject
    * @param  {Object}           options
@@ -648,13 +651,27 @@ export default class Collection {
     options = Object.assign({
       strategy: Collection.strategy.MANUAL,
       lastModified: this.lastModified,
+      limit: options.fetchLimit || null,
+      token: options.fetchToken || null,
       headers: {},
     }, options);
     // First fetch remote changes from the server
     return this.api.fetchChangesSince(this.bucket, this.name, {
       lastModified: options.lastModified,
+      limit: options.limit,
+      token: options.token,
       headers: options.headers
     })
+      // Deal with pagination
+      .then(changes => {
+        if (changes.fetchToken) {
+          syncResultObject.fetchToken = changes.fetchToken;
+        }
+        // TODO: deal with the case where records disappear from
+        // pages already fetched, due to updates to the server
+        // while the paginating query series is in progress.
+        return changes;
+      })
       // Reflect these changes locally
       .then(changes => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
@@ -801,8 +818,10 @@ export default class Collection {
    * - if the server has been detected flushed.
    *
    * Options:
-   * - {Object} headers: HTTP headers to attach to outgoing requests.
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
+   * - {Number} fetchLimit: Number of items to fetch from the server.
+   * - {Number} fetchToken: Page to fetch (combine this with fetchLimit).
+   * - {Object} headers: HTTP headers to attach to outgoing requests.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
    * - {String} remote The remote Kinto server endpoint to use (default: null).
@@ -813,6 +832,8 @@ export default class Collection {
    */
   sync(options={
     strategy: Collection.strategy.MANUAL,
+    fetchLimit: null,
+    fetchToken: null,
     headers: {},
     ignoreBackoff: false,
     remote: null,

@@ -433,6 +433,7 @@ Here's a sample result object:
   skipped:   [],
   published: [],
   resolved:  [],
+  fetchToken: '1234567890123:50'
 }
 ```
 
@@ -448,7 +449,7 @@ The synchronization result object exposes the following properties:
 - `skipped`:   The list of remotely deleted records missing locally.
 - `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
 - `resolved`:  The list of conflicting records which have been successfully resolved according to the selected [strategy](#synchronization-strategies) (note that when using the default `MANUAL` strategy, this list is always empty).
-
+- `fetchToken`:  When the `fetchLimit` option was used and more results are available, use this as the next `fetchToken` value.
 > #### Notes
 > - Detailed API documentation for `SyncResultObject` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~SyncResultObject.html).
 
@@ -499,6 +500,14 @@ function sync() {
 ```
 
 Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again, until no conflicts occur.
+
+## Other options for `Collection#sync`
+
+Apart from the `headers` and `strategy` options, you can also pass the following options to the `sync` function of a Kinto collection:
+
+- `timeout`: The network timeout in milliseconds (default: 5000)
+- `fetchLimit`: The maximum number of records to retrieve (does not restrict number of records uploaded; any records not retrieved will be retrieved in the next call to `sync`; default: null, meaning unlimited)
+- `fetchToken`: When using `fetchLimit`, if the SyncResults contain a `fetchToken` value, repeat the call to `sync`, setting the `fetchToken` option to that value to retrieve the next page. The sync state of the collection (last_modified) will not be updated until you have fetched the last page.
 
 ## The case of a new/flushed server
 

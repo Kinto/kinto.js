@@ -181,12 +181,20 @@ export default class Api {
    */
   fetchChangesSince(bucketName, collName, options={lastModified: null, headers: {}}) {
     const recordsUrl = this.endpoints().records(bucketName, collName);
-    let queryString = "";
+    let queryString = "?_sort=last_modified";
     const headers = Object.assign({}, this.optionHeaders, options.headers);
 
     if (options.lastModified) {
-      queryString = "?_since=" + options.lastModified;
+      queryString += "&_since=" + options.lastModified;
       headers["If-None-Match"] = quote(options.lastModified);
+    }
+
+    if (options.limit) {
+      queryString += "&_limit=" + options.limit;
+    }
+
+    if (options.token) {
+      queryString += "&_token=" + encodeURIComponent(options.token);
     }
 
     return this.fetchServerSettings()
@@ -199,6 +207,28 @@ export default class Api {
             changes: []
           };
         }
+
+        // Example response header:
+        // Next-Page:"https://syncto.dev.mozaws.net/v1/buckets/d83134db8e5cf927\
+        // 624742e63e5e9f8f/collections/history/records?_sort=last_modified&_li\
+        // mit=50&_token=1451832797410%3A50"
+        function getQueryParam(url, key) {
+          const queryStartPos = url.indexOf("?");
+          if (queryStartPos === -1) {
+            return;
+          }
+          const params = url.substring(queryStartPos + 1).split("#")[0].split("&");
+          for (let i = 0; i < params.length; i++) {
+            const pairs = params[i].split("=");
+            if (decodeURIComponent(pairs.shift()) == key) {
+              return decodeURIComponent(pairs.join("="));
+            }
+          }
+        }
+
+        const nextPageHeader = res.headers.get("Next-Page");
+        const fetchToken = (nextPageHeader ? getQueryParam(nextPageHeader, "_token") : null);
+
         // XXX: ETag are supposed to be opaque and stored «as-is».
         // Extract response data
         let etag = res.headers.get("ETag");  // e.g. '"42"'
@@ -213,7 +243,7 @@ export default class Api {
           throw Error("Server has been flushed.");
         }
 
-        return {lastModified: etag, changes: records};
+        return {lastModified: etag, changes: records, fetchToken};
       });
   }
 
