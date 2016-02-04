@@ -4,7 +4,7 @@
       "presets": ["es2015"]
     },
     "firefox": {
-      "plugins": ["transform-es2015-modules-commonjs", "transform-es2015-for-of"]
+      "plugins": ["transform-es2015-modules-commonjs"]
     }
   }
 }

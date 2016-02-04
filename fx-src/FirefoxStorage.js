@@ -100,7 +100,7 @@ export default class FirefoxAdapter extends BaseAdapter {
 
         if (schema == 0) {
 
-          for (const statementName of createStatements) {
+          for (let statementName of createStatements) {
             yield connection.execute(statements[statementName]);
           }
 
@@ -163,7 +163,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     }
     const conn = this._connection;
     return conn.executeTransaction(function* doExecuteTransaction() {
-      for (const {statement, params} of proxy.operations) {
+      for (let {statement, params} of proxy.operations) {
         yield conn.executeCached(statement, params);
       }
     })
@@ -219,7 +219,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     const collection_name = this.collection;
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doImport() {
-        for (const record of records) {
+        for (let record of records) {
           const params = {
             collection_name: collection_name,
             record_id: record.id,
