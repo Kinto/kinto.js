@@ -548,7 +548,7 @@ export default class Collection {
             return [{type: "errors", data: err}];
           })
           .then(imports => {
-            for (const imported of imports) {
+            for (let imported of imports) {
               if (imported.type !== "void") {
                 syncResultObject.add(imported.type, imported.data);
               }
@@ -858,7 +858,7 @@ export default class Collection {
       return reject("Records is not an array.");
     }
 
-    for(const record of records) {
+    for (let record of records) {
       if (!record.id || !this.idSchema.validate(record.id)) {
         return reject("Record has invalid ID: " + JSON.stringify(record));
       }
