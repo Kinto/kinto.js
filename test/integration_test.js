@@ -136,6 +136,40 @@ describe("Integration tests", () => {
           })));
       }
 
+      describe("No change", () => {
+        const testData = {
+          localSynced: [],
+          localUnsynced: [],
+          server: [
+            {id: uuid4(), title: "task1", done: true},
+          ]
+        };
+        let syncResult1;
+        let syncResult2;
+
+        beforeEach(() => {
+          // Sync twice.
+          return testSync(testData)
+            .then(res => {
+              syncResult1 = res;
+              return tasks.sync();
+            })
+            .then(res => syncResult2 = res);
+        });
+
+        it("should have an ok status", () => {
+          expect(syncResult2.ok).eql(true);
+        });
+
+        it("should not contain conflicts", () => {
+          expect(syncResult2.conflicts).to.have.length.of(0);
+        });
+
+        it("should have same lastModified value", () => {
+          expect(syncResult1.lastModified).to.eql(syncResult2.lastModified);
+        });
+      });
+
       describe("No conflict", () => {
         const testData = {
           localSynced: [
