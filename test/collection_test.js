@@ -9,7 +9,8 @@ import { v4 as uuid4 } from "uuid";
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
-import Api from "../src/api";
+import Api from "kinto-client";
+import { cleanRecord } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
 chai.use(chaiAsPromised);
@@ -66,6 +67,16 @@ describe("Collection", () => {
 
   afterEach(() => {
     sandbox.restore();
+  });
+
+  describe("Helpers", () => {
+    /** @test {cleanRecord} */
+    describe("#cleanRecord", () => {
+      it("should clean record data", () => {
+        expect(cleanRecord({title: "foo", _status: "foo"}))
+          .eql({title: "foo"});
+      });
+    });
   });
 
   /** @test {Collection#constructor} */
@@ -490,6 +501,14 @@ describe("Collection", () => {
         })
         .then(res => res.data)
           .should.eventually.have.property("last_modified").eql(123456789012);
+    });
+
+    it("should optionally mark a record as synced", () => {
+      return articles.create({title: "foo"})
+        .then(res => articles.update(Object.assign({}, res.data, {title: "bar"}),
+                                     {synced: true}))
+        .then(res => res.data)
+        .should.eventually.have.property("_status").eql("synced");
     });
   });
 

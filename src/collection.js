@@ -2,10 +2,28 @@
 
 import BaseAdapter from "./adapters/base";
 import { waterfall } from "./utils";
-import { cleanRecord } from "./api";
 
 import { v4 as uuid4 } from "uuid";
 import { deepEquals, isUUID, pFinally } from "./utils";
+
+
+const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+
+/**
+ * Cleans a record object, excluding passed keys.
+ *
+ * @param  {Object} record        The record object.
+ * @param  {Array}  excludeFields The list of keys to exclude.
+ * @return {Object}               A clean copy of source record object.
+ */
+export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
+  return Object.keys(record).reduce((acc, key) => {
+    if (excludeFields.indexOf(key) === -1) {
+      acc[key] = record[key];
+    }
+    return acc;
+  }, {});
+}
 
 /**
  * Synchronization result object.
@@ -412,12 +430,7 @@ export default class Collection {
     return this.get(record.id)
       .then((res) => {
         const existing = res.data;
-        let newStatus = "updated";
-        if (record._status === "deleted") {
-          newStatus = "deleted";
-        } else if (options.synced) {
-          newStatus = "synced";
-        }
+        const newStatus = options.synced ? "synced" : "updated";
         return this.db.execute((transaction) => {
           const source = options.patch ? Object.assign({}, existing, record)
                                        : record;
@@ -679,6 +692,14 @@ export default class Collection {
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
+        // XXX this name stinks
+        const batchChanges = toSync.map(record => {
+          if (record._status === "deleted") {
+            return cleanRecord(Object.assign({}, record, {deleted: true}));
+          } else {
+            return record;
+          }
+        });
         return Promise.all([
           // Delete never synced records marked for deletion
           this.db.execute((transaction) => {
@@ -687,7 +708,7 @@ export default class Collection {
             });
           }),
           // Send batch update requests
-          this.api.batch(this.bucket, this.name, toSync, options)
+          this.api.batch(this.bucket, this.name, batchChanges, options)
         ]);
       })
       // Update published local records

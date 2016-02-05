@@ -3,12 +3,9 @@
 import chai, { expect } from "chai";
 
 import {
-  quote,
-  unquote,
   sortObjects,
   filterObjects,
   reduceRecords,
-  partition,
   isUUID,
   waterfall,
   pFinally
@@ -18,27 +15,6 @@ chai.should();
 chai.config.includeStack = true;
 
 describe("Utils", () => {
-  /** @test {quote} */
-  describe("#quote", () => {
-    it("should add quotes to provided string", () => {
-      const quoted = quote("42");
-      expect(quoted).eql("\"42\"");
-    });
-  });
-
-  /** @test {unquote} */
-  describe("#unquote", () => {
-    it("should remove quotes to provided string", () => {
-      const unquoted = unquote("\"42\"");
-      expect(unquoted).eql("42");
-    });
-
-    it("should return the same string is not quoted", () => {
-      const unquoted = unquote("42");
-      expect(unquoted).eql("42");
-    });
-  });
-
   /** @test {sortObjects} */
   describe("#sortObjects", () => {
     it("should order on field ASC", () => {
@@ -167,21 +143,6 @@ describe("Utils", () => {
     it("should support empty sort order", () => {
       const records = [{a: 1}, {b: 2}];
       expect(reduceRecords({}, "", records)).eql(records);
-    });
-  });
-
-  /** @test {partition} */
-  describe("#partition", () => {
-    it("should chunk array", () => {
-      expect(partition([1, 2, 3], 2)).eql([[1, 2], [3]]);
-      expect(partition([1, 2, 3], 1)).eql([[1], [2], [3]]);
-      expect(partition([1, 2, 3, 4, 5], 3)).eql([[1, 2, 3], [4, 5]]);
-      expect(partition([1, 2], 2)).eql([[1, 2]]);
-    });
-
-    it("should not chunk array with n<=0", () => {
-      expect(partition([1, 2, 3], 0)).eql([1, 2, 3]);
-      expect(partition([1, 2, 3], -1)).eql([1, 2, 3]);
     });
   });
 
