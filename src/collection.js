@@ -692,27 +692,14 @@ export default class Collection {
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
-        // XXX this name stinks
-        const batchChanges = toSync.map(record => {
-          if (record._status === "deleted") {
-            return cleanRecord(Object.assign({}, record, {deleted: true}));
-          } else {
-            return record;
-          }
-        });
-        return Promise.all([
-          // Delete never synced records marked for deletion
-          this.db.execute((transaction) => {
-            toDelete.forEach(record => {
-              transaction.delete(record.id);
-            });
-          }),
-          // Send batch update requests
-          this.api.batch(this.bucket, this.name, batchChanges, options)
-        ]);
+        const batchChanges = toSync.concat(toDelete.map((record) => {
+          return cleanRecord(Object.assign({}, record, {deleted: true}));
+        }));
+        // Send batch update requests
+        return this.api.batch(this.bucket, this.name, batchChanges, options);
       })
       // Update published local records
-      .then(([deleted, synced]) => {
+      .then((synced) => {
         const {errors, conflicts, published, skipped} = synced;
         // Merge outgoing errors into sync result object
         syncResultObject.add("errors", errors.map(error => {
@@ -725,6 +712,9 @@ export default class Collection {
         const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
         const toApplyLocally = published.concat(missingRemotely);
         // Deleted records are distributed accross local and missing records
+        // XXX: When tackling the issue to avoid downloading our own changes
+        // from the server. `toDeleteLocally` should be obtained from local db.
+        // See https://github.com/Kinto/kinto.js/issues/144
         const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
         const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
         // First, apply the decode transformers, if any
