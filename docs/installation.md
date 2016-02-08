@@ -32,13 +32,13 @@ integrity with the hash provided below:
 
 ```html
     <script src="//npmcdn.com/kinto@1.2.0/dist/kinto-1.2.0.min.js"
-            integrity="sha384-0bOd4qkbXoEiD3nL5tca70NfXWiFprRx1X+xEYVL+0oT/ZlKIoNW0jOcng4I1gGS"
+            integrity="sha384-aaty4B6Fzw+pZ9DbNdrlGsFu9f8x06+N0aCAXCn1QMpWVgB79PC9KSdWqqagm6E9"
             crossorigin="anonymous">
     </script>
 ```
 
 | Filename                | Hash                                                                    |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto-1.2.0.js          | sha384-zceqJ0xPeewNQ7bpILFGzCtsfoih/dOwop8kxkQ3RCiFuOPeQBC0RGnsaLO0lyhR |
-| kinto-1.2.0.min.js      | sha384-0bOd4qkbXoEiD3nL5tca70NfXWiFprRx1X+xEYVL+0oT/ZlKIoNW0jOcng4I1gGS |
-| kinto-1.2.0.noshim.js   | sha384-9f0I3QY+QWeXbCgrgvzWfMX/oCL9SHKcoOlACws/VvaARcrVGtgfpIfFvzu1UM4N |
+| kinto-1.2.0.js          | sha384-rn0oNAl6rWA/VxPyRivzf9Ad+LrmqnnaO1V6lujBhVWnA90pJDVR5XFR3GRGx/mM |
+| kinto-1.2.0.min.js      | sha384-aaty4B6Fzw+pZ9DbNdrlGsFu9f8x06+N0aCAXCn1QMpWVgB79PC9KSdWqqagm6E9 |
+| kinto-1.2.0.noshim.js   | sha384-WeYjSGsF3rAvWa7r3+tDr/AUzIa3fiWP/xditLak/kw76bQfUtENbx3VhaytTrK+ |
