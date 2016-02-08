@@ -378,7 +378,7 @@ articles.sync()
 
 ### Error handling
 
-If anything goes wrong during sync, `colllection.sync()` will reject its promise with an `error` object, as follows:
+If anything goes wrong during sync, `collection.sync()` will reject its promise with an `error` object, as follows:
 
 * If an unexpected HTTP status is received from the server, `error.response` will contain that response, for you to inspect
     (see the example above for detecting 401 Unauthorized errors).
