@@ -394,6 +394,14 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
+    it("should reject with any encountered transaction error", () => {
+      sandbox.stub(articles.db, "execute")
+        .returns(Promise.reject(new Error("transaction error")));
+
+      return articles.create({title: "foo"})
+        .should.be.rejectedWith(Error, /transaction error/);
+    });
+
     it("should reject with a hint if useRecordId has been used", () => {
       return articles.create({id: uuid4()}, {useRecordId: true})
         .then((res) => articles.delete(res.data.id))

@@ -355,6 +355,23 @@ describe("adapter.IDB", () => {
     });
   });
 
+  describe("#getLastModified", () => {
+    it("should reject with any encountered transaction error", () => {
+      sandbox.stub(db, "prepare").returns({
+        store: {get() {}},
+        transaction: {
+          get onerror() {},
+          set onerror(onerror) {
+            onerror({target: {error: "transaction error"}});
+          }
+        }
+      });
+
+      return db.getLastModified()
+        .should.be.rejectedWith(/transaction error/);
+    });
+  });
+
   describe("#saveLastModified", () => {
     it("should resolve with lastModified value", () => {
       return db.saveLastModified(42)
