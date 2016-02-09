@@ -34,7 +34,7 @@ describe("Integration tests", () => {
       });
       server.on("close", code => {
         if (code && code > 0) {
-          new Error("Server errors encountered:\n" +
+          throw new Error("Server errors encountered:\n" +
             serverLogs.map(line => line.toString()).join(""));
         }
       });
