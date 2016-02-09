@@ -18,7 +18,7 @@
     "tdd": "babel-node node_modules/.bin/_mocha --watch --require ./test/_setup.js 'test/**/*_test.js'",
     "test": "npm run lint && npm run test-nocover",
     "test-cover": "babel-node node_modules/.bin/babel-istanbul cover --report text $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
-    "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && open coverage/index.html",
+    "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && echo 'Coverage report generated in coverage/index.html'",
     "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'",
     "lint": "eslint src test"
   },
