@@ -3,7 +3,6 @@
 import { EventEmitter } from "events";
 
 import "babel-polyfill";
-import "isomorphic-fetch";
 
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
