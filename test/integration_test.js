@@ -119,7 +119,7 @@ describe("Integration tests", () => {
           // Create local synced records
           data.localSynced.map(record => tasks.create(record, {synced: true})),
           // Create remote records
-          tasks.api.batch("default", "tasks", data.server)
+          tasks.api.batch("default", "tasks", data.server.concat(data.localSynced))
         )).then(_ => {
           return tasks.sync(options);
         });
@@ -185,6 +185,18 @@ describe("Integration tests", () => {
           expect(cleanRecord(syncResult.published[0])).eql(testData.localUnsynced[0]);
         });
 
+        it("should publish deletion of locally deleted records", () => {
+          const locallyDeletedId = testData.localSynced[0].id;
+          return tasks.delete(locallyDeletedId)
+            .then(_ => tasks.sync())
+            .then(_ => getRemoteList())
+            .should.eventually.become([
+              {title: "task1", done: true},
+              {title: "task3", done: true},
+              {title: "task4", done: false}
+            ]);
+        });
+
         it("should not update anything", () => {
           expect(syncResult.updated).to.have.length.of(0);
         });
@@ -206,12 +218,11 @@ describe("Integration tests", () => {
 
         it("should put remote test server data in the expected state", () => {
           return getRemoteList().should.become([
-            // task1 and task4 are actually published to the server:
-            // task1 was preexisting, task4 has been published through sync.
-            // Note: task2 and task3 aren't listed because their synced local
-            // status was faked, so they were not actually synced remotely.
+            // task1, task2, task3 were prexisting.
             {title: "task1", done: true},
-            {title: "task4", done: false},
+            {title: "task2", done: false},
+            {title: "task3", done: true},
+            {title: "task4", done: false},  // published via sync.
           ]);
         });
 
@@ -345,6 +356,10 @@ describe("Integration tests", () => {
 
           it("should put remote test server data in the expected state", () => {
             return getRemoteList().should.become([
+              // task1, task2, task3 were prexisting.
+              {title: "task1", done: true},
+              {title: "task2", done: false},
+              {title: "task3", done: true},
               // Remote record should have been left intact.
               {title: "task4-remote", done: true},
             ]);
@@ -465,6 +480,9 @@ describe("Integration tests", () => {
           it("should put remote test server data in the expected state", () => {
             return getRemoteList().should.become([
               // local task4 should have been published to the server.
+              {title: "task1", done: true},
+              {title: "task2", done: false},
+              {title: "task3", done: true},
               {title: "task4-local", done: false},
             ]);
           });
@@ -583,6 +601,9 @@ describe("Integration tests", () => {
 
           it("should put remote test server data in the expected state", () => {
             return getRemoteList().should.become([
+              {title: "task1", done: true},
+              {title: "task2", done: false},
+              {title: "task3", done: true},
               // remote task4 should have been published to the server.
               {title: "task4-remote", done: true},
             ]);

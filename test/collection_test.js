@@ -953,6 +953,7 @@ describe("Collection", () => {
       const id_6 = uuid4();
       const id_7 = uuid4();
       const id_8 = uuid4();
+      const id_9 = uuid4();
 
       const localData = [
         {id: id_1, title: "art1"},
@@ -960,6 +961,7 @@ describe("Collection", () => {
         {id: id_4, title: "art4"},
         {id: id_5, title: "art5"},
         {id: id_7, title: "art7-a"},
+        {id: id_9, title: "art9"},  // will be deleted in beforeEach().
       ];
       const serverChanges = [
         {id: id_2, title: "art2"},   // existing & untouched, skipped
@@ -968,6 +970,7 @@ describe("Collection", () => {
         {id: id_6, deleted: true},   // remotely deleted & missing locally, skipped
         {id: id_7, title: "art7-b"}, // remotely conflicting
         {id: id_8, title: "art8"},   // to be created
+        {id: id_9, deleted: true},   // remotely deleted & deleted locally, skipped
       ];
 
       beforeEach(() => {
@@ -978,7 +981,10 @@ describe("Collection", () => {
           }));
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
-        }));
+        }))
+        .then(_ => {
+          return articles.delete(id_9);
+        });
       });
 
       it("should not fetch remote records if result status isn't ok", () => {
@@ -1054,10 +1060,13 @@ describe("Collection", () => {
           ]);
       });
 
-      it("should skip already locally deleted data", () => {
+      it("should skip deleted data missing locally", () => {
         return articles.pullChanges(result)
           .then(res => {
-            expect(res.skipped).eql([{id: id_6, deleted: true}]);
+            expect(res.skipped).eql([
+              {id: id_6, deleted: true},
+              {id: id_9, title: "art9", _status: "deleted"}
+            ]);
           });
       });
 
@@ -1316,10 +1325,32 @@ describe("Collection", () => {
         ]);
     });
 
-    it("should delete unsynced virtually deleted local records", () => {
+    it("should batch deletion of locally deleted records", (done) => {
+      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
+      }));
       return articles.delete(records[0].id)
         .then(_ => articles.pushChanges(result))
-        .then(_ => articles.get(records[0].id, {includeDeleted: true}))
+        .then(_ => {
+          expect(batch.firstCall.args[2][0].deleted).eql(true);
+          done();
+        });
+    });
+
+    it("should delete unsynced virtually deleted local records", () => {
+      const locallyDeletedId = records[0].id;
+      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        published: [{id: locallyDeletedId, deleted: true}],
+        errors:    [],
+        conflicts: [],
+        skipped:   [],
+      }));
+      return articles.delete(locallyDeletedId)
+        .then(_ => articles.pushChanges(result))
+        .then(_ => articles.get(locallyDeletedId, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
 
