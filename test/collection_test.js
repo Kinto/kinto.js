@@ -1042,7 +1042,7 @@ describe("Collection", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(payload, collection) {
+                function(payload) {
                   hookCalled = true;
                   return payload;
                 }
@@ -1051,16 +1051,14 @@ describe("Collection", () => {
           });
 
           return articles.pullChanges(result)
-            .then(_ => {
-              expect(hookCalled).to.be.true;
-            });
+            .then(_ => {expect(hookCalled).to.be.true;});
         });
 
-        it("should reject the promise if the hook raises", () => {
+        it("should reject the promise if the hook throws", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(changes, collection) {
+                function(changes) {
                   throw new Error("Invalid collection data");
                 }
               ]

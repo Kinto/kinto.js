@@ -570,7 +570,7 @@ kinto.events.on("deprecated", function(event) {
 
 Transformers are basically hooks for encoding and decoding records, which can work synchronously or asynchronously.
 
-For now, only *remote transformers* and *collection transformers* have been implemented, but there are plans to implement local transformers in a next version.
+For now, only *remote transformers* and *hooks* have been implemented, but there are plans to implement local transformers in a next version.
 
 ### Remote transformers
 
@@ -623,8 +623,7 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 
 ### Local transformers
 
-In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally. If you are interested into
-making this happen, [don't hesitate to connect with us](https://kiwiirc.com/client/irc.freenode.net/?#kinto).
+In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally.
 
 ### Async transformers
 
