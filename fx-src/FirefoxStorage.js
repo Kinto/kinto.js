@@ -233,7 +233,8 @@ export default class FirefoxAdapter extends BaseAdapter {
         };
         const previousLastModified = yield connection.execute(
           statements.getLastModified, params).then(result => {
-            return result ? result[0].getResultByName('last_modified') : -1;
+            return result.length > 0 ?
+              result[0].getResultByName('last_modified') : -1;
           });
         if (lastModified > previousLastModified) {
           const params = {
