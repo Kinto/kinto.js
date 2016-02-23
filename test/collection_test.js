@@ -1051,7 +1051,7 @@ describe("Collection", () => {
           });
 
           return articles.pullChanges(result)
-            .then(_ => {expect(hookCalled).to.be.true;});
+            .then(_ => expect(hookCalled).to.eql(true));
         });
 
         it("should reject the promise if the hook throws", () => {
@@ -1067,6 +1067,94 @@ describe("Collection", () => {
 
           return articles.pullChanges(result)
             .should.eventually.be.rejectedWith(Error, /Invalid collection data/);
+        });
+
+        it("should use the results of the hooks", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(incoming) {
+                  const returnedChanges = incoming;
+                  const changes = returnedChanges.changes.changes;
+
+                  returnedChanges.changes.changes = changes.map(r => {
+                    r.foo = "bar";
+                    return r;
+                  });
+                  return returnedChanges;
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then((result) => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+              });
+              expect(result.updated.length).to.eql(2);
+              result.updated.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+              });
+            });
+        });
+
+        it("should be able to chain hooks", () => {
+          function hookFactory(fn) {
+            return function(incoming) {
+              const returnedChanges = incoming;
+              const changes = returnedChanges.changes.changes;
+              returnedChanges.changes.changes = changes.map(fn);
+              return returnedChanges;
+            };
+          }
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                hookFactory(r => {
+                  r.foo = "bar";
+                  return r;
+                }),
+                hookFactory(r => {
+                  r.bar = "baz";
+                  return r;
+                }),]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then((result) => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+                expect(r.bar).to.eql("baz");
+              });
+              expect(result.updated.length).to.eql(2);
+              result.updated.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+                expect(r.bar).to.eql("baz");
+              });
+            });
+        });
+
+        it("should pass the collection as the second argument", () => {
+          let passedCollection = null;
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(payload, collection) {
+                  passedCollection = collection;
+                  return payload;
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then(_ => {
+              expect(passedCollection).to.eql(articles);
+            });
         });
       });
 

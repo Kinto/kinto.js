@@ -324,11 +324,11 @@ export default class Collection {
     if (!Array.isArray(hook)) {
       throw new Error("A hook definition should be an array of functions.");
     }
-    return hook.map(fun => {
-      if (typeof fun !== "function") {
+    return hook.map(fn => {
+      if (typeof fn !== "function") {
         throw new Error("A hook definition should be an array of functions.");
       }
-      return fun;
+      return fn;
     });
   }
 
@@ -731,7 +731,7 @@ export default class Collection {
       return Promise.resolve(payload);
     }
     return waterfall(this.hooks[hookName].map(hook => {
-      return record => hook(payload);
+      return record => hook(payload, this);
     }), payload);
   }
 

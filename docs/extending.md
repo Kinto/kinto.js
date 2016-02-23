@@ -46,7 +46,6 @@ Then create the Kinto object passing a reference to your adapter class:
 const kinto = new Kinto({adapter: MyAdapter});
 ```
 
-<<<<<<< bb86b694d73101136b4c6c39b47bcf8e27afd4f0
 Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly. The [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.js) adapter is also worth a read if you need guidance writing your own.
 
 ## Supporting transactions
@@ -97,13 +96,13 @@ Hooks can be called to extend the behaviour of kinto. So far it is only possible
 To install a hook, you need to pass it to the collection:
 
 ```
-function doSomething(payload) {
+function doSomething(payload, collection) {
   // Do something with the payload here.
 };
 
 let collection = db.collection(collectionName, {
-    "hooks": {
-      "incoming-changes": doSomething
-    }
+  "hooks": {
+    "incoming-changes": doSomething
+  }
 });
 ```
