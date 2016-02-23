@@ -1187,7 +1187,7 @@ describe("Integration tests", () => {
     it("should reject sync when the server sends a Backoff header", () => {
       // Note: first call receive the Backoff header, second actually rejects.
       return tasks.sync().then(_ => tasks.sync())
-        .should.be.rejectedWith(Error, /Server is backed off; retry in 10s/);
+        .should.be.rejectedWith(Error, /Server is asking clients to back off; retry in 10s/);
     });
   });
 

@@ -570,7 +570,7 @@ kinto.events.on("deprecated", function(event) {
 
 Transformers are basically hooks for encoding and decoding records, which can work synchronously or asynchronously.
 
-For now, only *remote transformers* have been implemented, but there are plans to implement local transformers and collection transformers in a next version.
+For now, only *remote transformers* and *hooks* have been implemented, but there are plans to implement local transformers in a next version.
 
 ### Remote transformers
 

@@ -23,18 +23,20 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Collection} */
 describe("Collection", () => {
-  let sandbox, events, idSchema, remoteTransformers, api;
+  let sandbox, events, idSchema, remoteTransformers, hooks, api;
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
     events = new EventEmitter();
     idSchema = options.idSchema;
     remoteTransformers = options.remoteTransformers;
+    hooks = options.hooks;
     api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
       events,
       idSchema,
       remoteTransformers,
+      hooks,
       adapter: IDB
     });
   }
@@ -154,6 +156,45 @@ describe("Collection", () => {
       it("should throw an error on decode method missing", () => {
         expect(registerTransformers.bind(null, [{encode(){}}]))
           .to.Throw(Error, /transformer must provide a decode function/);
+      });
+    });
+
+    describe("hooks registration", () => {
+      function registerHooks(hooks) {
+        return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+          hooks,
+          adapter: IDB
+        });
+      }
+
+      it("should throw an error on non-object hooks", () => {
+        expect(registerHooks.bind(null, function() {}))
+          .to.Throw(Error, /hooks should be an object/);
+      });
+
+      it("should throw an error on array hooks", () => {
+        expect(registerHooks.bind(null, []))
+          .to.Throw(Error, /hooks should be an object, not an array./);
+      });
+
+      it("should return a empty object if no hook where specified", () => {
+        const collection = registerHooks();
+        expect(collection.hooks).to.eql({});
+      });
+
+      it("should throw an error on unknown hook", () => {
+        expect(registerHooks.bind(null, {"invalid": []}))
+          .to.Throw(Error, /The hook should be one of/);
+      });
+
+      it("should throw if the hook isn't a list", () => {
+        expect(registerHooks.bind(null, {"incoming-changes": {}}))
+          .to.Throw(Error, /A hook definition should be an array of functions./);
+      });
+
+      it("should throw an error if the hook is not an array of functions", () => {
+        expect(registerHooks.bind(null, {"incoming-changes": ["invalid"]}))
+          .to.Throw(Error, /A hook definition should be an array of functions./);
       });
     });
 
@@ -995,6 +1036,128 @@ describe("Collection", () => {
         });
       });
 
+      describe("incoming changes hook", () => {
+        it("should be called", () => {
+          let hookCalled = false;
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(payload) {
+                  hookCalled = true;
+                  return payload;
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then(_ => expect(hookCalled).to.eql(true));
+        });
+
+        it("should reject the promise if the hook throws", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(changes) {
+                  throw new Error("Invalid collection data");
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .should.eventually.be.rejectedWith(Error, /Invalid collection data/);
+        });
+
+        it("should use the results of the hooks", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(incoming) {
+                  const returnedChanges = incoming;
+                  const changes = returnedChanges.changes.changes;
+
+                  returnedChanges.changes.changes = changes.map(r => {
+                    r.foo = "bar";
+                    return r;
+                  });
+                  return returnedChanges;
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then((result) => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+              });
+              expect(result.updated.length).to.eql(2);
+              result.updated.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+              });
+            });
+        });
+
+        it("should be able to chain hooks", () => {
+          function hookFactory(fn) {
+            return function(incoming) {
+              const returnedChanges = incoming;
+              const changes = returnedChanges.changes.changes;
+              returnedChanges.changes.changes = changes.map(fn);
+              return returnedChanges;
+            };
+          }
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                hookFactory(r => {
+                  r.foo = "bar";
+                  return r;
+                }),
+                hookFactory(r => {
+                  r.bar = "baz";
+                  return r;
+                }),]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then((result) => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+                expect(r.bar).to.eql("baz");
+              });
+              expect(result.updated.length).to.eql(2);
+              result.updated.forEach((r) => {
+                expect(r.foo).to.eql("bar");
+                expect(r.bar).to.eql("baz");
+              });
+            });
+        });
+
+        it("should pass the collection as the second argument", () => {
+          let passedCollection = null;
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [
+                function(payload, collection) {
+                  passedCollection = collection;
+                  return payload;
+                }
+              ]
+            }
+          });
+
+          return articles.pullChanges(result)
+            .then(_ => {
+              expect(passedCollection).to.eql(articles);
+            });
+        });
+      });
+
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;
         return articles.pullChanges(result)
@@ -1646,7 +1809,7 @@ describe("Collection", () => {
       it("should reject on server backoff by default", () => {
         articles.api = {backoff: 30000};
         return articles.sync()
-          .should.be.rejectedWith(Error, /Server is backed off; retry in 30s/);
+          .should.be.rejectedWith(Error, /back off; retry in 30s/);
       });
 
       it("should perform sync on server backoff when ignoreBackoff is true", () => {

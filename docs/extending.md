@@ -85,3 +85,24 @@ db.list()
     }, {preload});
   });
 ```
+
+## Hooks
+
+Hooks can be called to extend the behaviour of kinto. So far it is only possible to hook when incoming changes are to be applied.
+
+- `incoming-changes` hooks are called just after new changes are retrieved, and
+  before these changes are reflected locally.
+
+To install a hook, you need to pass it to the collection:
+
+```
+function doSomething(payload, collection) {
+  // Do something with the payload here.
+};
+
+let collection = db.collection(collectionName, {
+  "hooks": {
+    "incoming-changes": doSomething
+  }
+});
+```

@@ -6,8 +6,8 @@ import { waterfall } from "./utils";
 import { v4 as uuid4 } from "uuid";
 import { deepEquals, isUUID, pFinally } from "./utils";
 
-
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const AVAILABLE_HOOKS = ["incoming-changes"];
 
 /**
  * Cleans a record object, excluding passed keys.
@@ -221,6 +221,11 @@ export default class Collection {
      * @type {Array}
      */
     this.remoteTransformers = this._validateRemoteTransformers(options.remoteTransformers);
+    /**
+     * The list of hooks.
+     * @type {Object}
+     */
+    this.hooks = this._validateHooks(options.hooks);
   }
 
   /**
@@ -307,6 +312,52 @@ export default class Collection {
       }
       return transformer;
     });
+  }
+
+  /**
+   * Validate the passed hook is correct.
+   *
+   * @param {Array|undefined} hook.
+   * @return {Array}
+   **/
+  _validateHook(hook) {
+    if (!Array.isArray(hook)) {
+      throw new Error("A hook definition should be an array of functions.");
+    }
+    return hook.map(fn => {
+      if (typeof fn !== "function") {
+        throw new Error("A hook definition should be an array of functions.");
+      }
+      return fn;
+    });
+  }
+
+  /**
+   * Validates a list of hooks.
+   *
+   * @param  {Object|undefined} hooks
+   * @return {Object}
+   */
+  _validateHooks(hooks) {
+    if (typeof hooks === "undefined") {
+      return {};
+    }
+    if (Array.isArray(hooks)) {
+      throw new Error("hooks should be an object, not an array.");
+    }
+    if (typeof hooks !== "object") {
+      throw new Error("hooks should be an object.");
+    }
+
+    const validatedHooks = {};
+
+    for (const hook in hooks) {
+      if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
+        throw new Error("The hook should be one of " + AVAILABLE_HOOKS.join(", "));
+      }
+      validatedHooks[hook] = this._validateHook(hooks[hook]);
+    }
+    return validatedHooks;
   }
 
   /**
@@ -668,10 +719,20 @@ export default class Collection {
       lastModified: options.lastModified,
       headers: options.headers
     })
+      .then(changes => this.applyHook("incoming-changes", {changes}))
       // Reflect these changes locally
-      .then(changes => this.importChanges(syncResultObject, changes))
+      .then(({changes}) => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
       .then(result => this._handleConflicts(result, options.strategy));
+  }
+
+  applyHook(hookName, payload) {
+    if (typeof this.hooks[hookName] == "undefined") {
+      return Promise.resolve(payload);
+    }
+    return waterfall(this.hooks[hookName].map(hook => {
+      return record => hook(payload, this);
+    }), payload);
   }
 
   /**
@@ -836,7 +897,7 @@ export default class Collection {
     if (!options.ignoreBackoff && this.api.backoff > 0) {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
-        new Error(`Server is backed off; retry in ${seconds}s or use the ignoreBackoff option.`));
+        new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
     const result = new SyncResultObject();
     const syncPromise = this.db.getLastModified()
