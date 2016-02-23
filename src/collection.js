@@ -145,7 +145,7 @@ function importChange(transaction, remote) {
       // status to "synced".
       const synced = markSynced(remote);
       transaction.update(synced);
-      return {type: "updated", data: synced};
+      return {type: "updated", data: synced, previous: local};
     }
     return {
       type: "conflicts",

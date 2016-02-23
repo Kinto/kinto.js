@@ -24,7 +24,7 @@ Take the [tutorial](tutorial.md) to get you started, then read about [API usage]
 * [Code repository](https://github.com/Kinto/kinto.js)
 * [Issue tracker](https://github.com/Kinto/kinto.js/issues)
 * [Mailing list](https://mail.mozilla.org/listinfo/kinto)
-* IRC: irc.mozilla.org#storage
+* IRC: [irc.freenode.org#kinto](https://kiwiirc.com/client/irc.freenode.net/?#kinto)
 
 ## License
 
