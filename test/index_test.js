@@ -133,7 +133,7 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api.optionHeaders).eql({Authorization: "Basic plop"});
+      expect(coll.api.defaultReqOptions.headers).eql({Authorization: "Basic plop"});
     });
 
     it("should create collection using an optional adapter", () => {

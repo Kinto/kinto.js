@@ -61,7 +61,7 @@ export default class KintoBase {
     }
 
     const {remote, events, headers, requestMode} = this._options;
-    this._api = new Api(remote, events, {headers, requestMode});
+    this._api = new Api(remote, {events, headers, requestMode});
 
     // public properties
     /**
