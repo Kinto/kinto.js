@@ -63,7 +63,7 @@
   "dependencies": {
     "btoa": "^1.1.2",
     "fake-indexeddb": "^1.0.3",
-    "kinto-client": "^0.1.1",
+    "kinto-client": "^0.2.3",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
