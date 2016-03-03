@@ -715,11 +715,12 @@ export default class Collection {
       headers: {},
     }, options);
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.bucket, this.name, {
-      lastModified: options.lastModified,
-      headers: options.headers
-    })
-      .then(changes => this.applyHook("incoming-changes", {changes}))
+    return this.api.bucket(this.bucket).collection(this.name)
+      .listRecords({
+        since: options.lastModified,
+        headers: options.headers
+      })
+      .then(({data, next, lastModified}) => this.applyHook("incoming-changes", {changes: {lastModified, changes: data}}))
       // Reflect these changes locally
       .then(({changes}) => this.importChanges(syncResultObject, changes))
       // Handle conflicts, if any
@@ -753,11 +754,19 @@ export default class Collection {
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
-        const batchChanges = toSync.concat(toDelete.map((record) => {
-          return cleanRecord(Object.assign({}, record, {deleted: true}));
-        }));
         // Send batch update requests
-        return this.api.batch(this.bucket, this.name, batchChanges, options);
+        return this.api.bucket(this.bucket).collection(this.name)
+          .batch(batch => {
+            toDelete.forEach((r) => batch.deleteRecord(r));
+            toSync.forEach((r) => {
+              if (r.last_modified) {
+                batch.updateRecord(cleanRecord(r));
+              }
+              else {
+                batch.createRecord(cleanRecord(r));
+              }
+            });
+          }, {headers: options.headers, safe: true, aggregate: true});
       })
       // Update published local records
       .then((synced) => {

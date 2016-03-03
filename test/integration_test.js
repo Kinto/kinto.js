@@ -119,7 +119,10 @@ describe("Integration tests", () => {
           // Create local synced records
           data.localSynced.map(record => tasks.create(record, {synced: true})),
           // Create remote records
-          tasks.api.batch("default", "tasks", data.server.concat(data.localSynced))
+          tasks.api.bucket("default").collection("tasks").batch((batch) => {
+            data.server.forEach((r) => batch.createRecord(r));
+            data.localSynced.forEach((r) => batch.createRecord(r));
+          }, {safe: true})
         )).then(_ => {
           return tasks.sync(options);
         });
@@ -1234,7 +1237,7 @@ describe("Integration tests", () => {
 
       it("should reject with a 410 Gone when hard EOL is received", () => {
         return tasks.sync()
-          .should.be.rejectedWith(Error, /HTTP 410; Service deprecated/);
+          .should.be.rejectedWith(Error, /HTTP 410 Gone: Service deprecated/);
       });
     });
   });
