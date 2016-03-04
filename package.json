@@ -85,7 +85,7 @@
     "esdoc-importpath-plugin": "0.0.1",
     "eslint": "^2.2.0",
     "gh-pages": "^0.11.0",
-    "http-server": "^0.8.0",
+    "http-server": "^0.9.0",
     "mocha": "^2.3.4",
     "sinon": "^1.17.2",
     "uglifyify": "^3.0.1"
