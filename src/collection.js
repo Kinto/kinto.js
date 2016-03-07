@@ -203,9 +203,10 @@ export default class Collection {
     this.db = db;
     /**
      * The Api instance.
-     * @type {Api}
+     * @type {KintoClient}
      */
     this.api = api;
+    this._apiCollection = this.api.bucket(this.bucket).collection(this.name);
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -351,7 +352,7 @@ export default class Collection {
 
     const validatedHooks = {};
 
-    for (const hook in hooks) {
+    for (let hook in hooks) {
       if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
         throw new Error("The hook should be one of " + AVAILABLE_HOOKS.join(", "));
       }
@@ -715,15 +716,35 @@ export default class Collection {
       headers: {},
     }, options);
     // First fetch remote changes from the server
-    return this.api.fetchChangesSince(this.bucket, this.name, {
-      lastModified: options.lastModified,
+    return this._apiCollection.listRecords({
+      since: options.lastModified || undefined,
       headers: options.headers
     })
-      .then(changes => this.applyHook("incoming-changes", {changes}))
-      // Reflect these changes locally
-      .then(({changes}) => this.importChanges(syncResultObject, changes))
-      // Handle conflicts, if any
-      .then(result => this._handleConflicts(result, options.strategy));
+    .then(({data, last_modified}) => {
+      // last_modified is the ETag header value (string).
+      // For retro-compatibility with first kinto.js versions
+      // parse it to integer.
+      const unquoted = last_modified ?
+        parseInt(last_modified.replace(/"/g, ""), 10) : undefined;
+
+      // Check if server was flushed.
+      // This is relevant for the Kinto demo server
+      // (and thus for many new comers).
+      const localSynced = options.lastModified;
+      const serverChanged = unquoted > options.lastModified;
+      const emptyCollection = data.length === 0;
+      if (localSynced && serverChanged && emptyCollection) {
+        throw Error("Server has been flushed.");
+      }
+
+      const payload = {changes: {lastModified: unquoted, changes: data}};
+      // XXX would be better to directly pass the changes here
+      return this.applyHook("incoming-changes", payload);
+    })
+    // Reflect these changes locally
+    .then(({changes}) => this.importChanges(syncResultObject, changes))
+    // Handle conflicts, if any
+    .then(result => this._handleConflicts(result, options.strategy));
   }
 
   applyHook(hookName, payload) {
@@ -753,20 +774,44 @@ export default class Collection {
     // Fetch local changes
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
-        const batchChanges = toSync.concat(toDelete.map((record) => {
-          return cleanRecord(Object.assign({}, record, {deleted: true}));
-        }));
         // Send batch update requests
-        return this.api.batch(this.bucket, this.name, batchChanges, options);
+        return this._apiCollection.batch(batch => {
+          toDelete.forEach((r) => {
+            // never published locally deleted records should not be pusblished
+            if (r.last_modified) {
+              batch.deleteRecord(r);
+            }
+          });
+          toSync.forEach((r) => {
+            const isCreated = r._status === "created";
+            // Do not store status on server.
+            // XXX: cleanRecord() removes last_modified, required by safe.
+            delete r._status;
+            if (isCreated) {
+              batch.createRecord(r);
+            }
+            else {
+              batch.updateRecord(r);
+            }
+          });
+        }, {headers: options.headers, safe: true, aggregate: true});
       })
       // Update published local records
       .then((synced) => {
-        const {errors, conflicts, published, skipped} = synced;
         // Merge outgoing errors into sync result object
-        syncResultObject.add("errors", errors.map(error => {
+        syncResultObject.add("errors", synced.errors.map(error => {
           error.type = "outgoing";
           return error;
         }));
+
+        // The result of a batch returns data and permissions.
+        // XXX: permissions are ignored currently.
+        const conflicts = synced.conflicts.map((c) => {
+          return {type: c.type, local: c.local.data, remote: c.remote};
+        });
+        const published = synced.published.map((c) => c.data);
+        const skipped = synced.skipped.map((c) => c.data);
+
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
         // Reflect publication results locally

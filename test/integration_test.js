@@ -97,20 +97,6 @@ describe("Integration tests", () => {
       return tasks.clear().then(_ => flushServer());
     });
 
-    describe("Settings", () => {
-      it("should retrieve server settings", () => {
-        return tasks.sync()
-          .then(_ => tasks.api.serverSettings)
-          .should.eventually.have.property("batch_max_requests").eql(25);
-      });
-
-      it("should share server settings across collections", () => {
-        return tasks.sync()
-          .then(_ => kinto.collection("articles").api.serverSettings)
-          .should.eventually.have.property("batch_max_requests").eql(25);
-      });
-    });
-
     describe("Synchronization", () => {
       function testSync(data, options={}) {
         return Promise.all([].concat(
@@ -119,7 +105,10 @@ describe("Integration tests", () => {
           // Create local synced records
           data.localSynced.map(record => tasks.create(record, {synced: true})),
           // Create remote records
-          tasks.api.batch("default", "tasks", data.server.concat(data.localSynced))
+          tasks.api.bucket("default").collection("tasks").batch((batch) => {
+            data.server.forEach((r) => batch.createRecord(r));
+            data.localSynced.forEach((r) => batch.createRecord(r));
+          }, {safe: true})
         )).then(_ => {
           return tasks.sync(options);
         });
@@ -211,12 +200,24 @@ describe("Integration tests", () => {
 
         it("should import server data", () => {
           expect(syncResult.created).to.have.length.of(1);
-          expect(cleanRecord(syncResult.created[0])).eql(testData.server[0]);
+          expect(syncResult.created[0])
+            .to.have.property("title")
+            .eql(testData.server[0].title);
+
+          expect(syncResult.created[0])
+            .to.have.property("done")
+            .eql(testData.server[0].done);
         });
 
         it("should publish local unsynced records", () => {
           expect(syncResult.published).to.have.length.of(1);
-          expect(cleanRecord(syncResult.published[0])).eql(testData.localUnsynced[0]);
+          expect(cleanRecord(syncResult.published[0]))
+            .to.have.property("done")
+            .eql(testData.localUnsynced[0].done);
+
+          expect(cleanRecord(syncResult.published[0]))
+            .to.have.property("title")
+            .eql(testData.localUnsynced[0].title);
         });
 
         it("should publish deletion of locally deleted records", () => {
@@ -1234,7 +1235,7 @@ describe("Integration tests", () => {
 
       it("should reject with a 410 Gone when hard EOL is received", () => {
         return tasks.sync()
-          .should.be.rejectedWith(Error, /HTTP 410; Service deprecated/);
+          .should.be.rejectedWith(Error, /HTTP 410 Gone: Service deprecated/);
       });
     });
   });

@@ -10,6 +10,8 @@ import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "kinto-client";
+import KintoClient from "kinto-client";
+import KintoClientCollection from "kinto-client/lib/collection.js";
 import { cleanRecord } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
@@ -23,7 +25,9 @@ const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {Collection} */
 describe("Collection", () => {
+  /*eslint-disable */
   let sandbox, events, idSchema, remoteTransformers, hooks, api;
+  /*eslint-enable */
   const article = {title: "foo", url: "http://foo"};
 
   function testCollection(options={}) {
@@ -85,14 +89,14 @@ describe("Collection", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
       expect(collection.events).to.eql(events);
     });
 
     it("should propagate its events property to child dependencies", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
       expect(collection.api.events).eql(collection.events);
       expect(collection.api.http.events).eql(collection.events);
@@ -108,7 +112,7 @@ describe("Collection", () => {
 
     it("should complain if a database adapter is not provided", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
       expect(() => {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
       }).to.Throw(Error,/No adapter provided/);
@@ -116,7 +120,7 @@ describe("Collection", () => {
 
     it("should throw incompatible adapter options", () => {
       const events = new EventEmitter();
-      const api = new Api(FAKE_SERVER_URL, events);
+      const api = new Api(FAKE_SERVER_URL, {events});
       expect(() => {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {adapter: function(){}});
       }).to.Throw(Error, /Unsupported adapter/);
@@ -128,6 +132,21 @@ describe("Collection", () => {
         adapter: MyAdapter
       });
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
+    });
+
+    it("should select the KintoClient configured bucket and collection", () => {
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+        adapter: BaseAdapter
+      });
+
+      expect(collection._apiCollection)
+        .to.have.property("options")
+        .to.have.property("bucket")
+        .eql(TEST_BUCKET_NAME);
+
+      expect(collection._apiCollection)
+        .to.have.property("name")
+        .eql(TEST_COLLECTION_NAME);
     });
 
     describe("transformers registration", () => {
@@ -986,7 +1005,7 @@ describe("Collection", () => {
 
   /** @test {Collection#pullChanges} */
   describe("#pullChanges", () => {
-    let fetchChangesSince, articles, result;
+    let listRecords, articles, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1023,10 +1042,11 @@ describe("Collection", () => {
       ];
 
       beforeEach(() => {
-        fetchChangesSince = sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+        listRecords = sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
-            lastModified: 42,
-            changes: serverChanges
+            data: serverChanges,
+            next: () => {},
+            last_modified: "\"42\"",
           }));
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
@@ -1161,28 +1181,28 @@ describe("Collection", () => {
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;
         return articles.pullChanges(result)
-          .then(_ => sinon.assert.notCalled(fetchChangesSince));
+          .then(_ => sinon.assert.notCalled(listRecords));
       });
 
       it("should fetch remote changes from the server", () => {
         return articles.pullChanges(result)
           .then(_ => {
-            sinon.assert.calledOnce(fetchChangesSince);
-            sinon.assert.calledWithExactly(fetchChangesSince,
-              TEST_BUCKET_NAME,
-              TEST_COLLECTION_NAME,
-              {lastModified: null, headers: {}});
+            sinon.assert.calledOnce(listRecords);
+            sinon.assert.calledWithExactly(listRecords, {
+              since: undefined,
+              headers: {}
+            });
           });
       });
 
       it("should use timestamp to fetch remote changes from the server", () => {
         return articles.pullChanges(result, {lastModified: 42})
           .then(_ => {
-            sinon.assert.calledOnce(fetchChangesSince);
-            sinon.assert.calledWithExactly(fetchChangesSince,
-              TEST_BUCKET_NAME,
-              TEST_COLLECTION_NAME,
-              {lastModified: 42, headers: {}});
+            sinon.assert.calledOnce(listRecords);
+            sinon.assert.calledWithExactly(listRecords, {
+              since: 42,
+              headers: {}
+            });
           });
       });
 
@@ -1273,12 +1293,13 @@ describe("Collection", () => {
       });
 
       it("should resolve listing conflicting changes with MANUAL strategy", () => {
-        sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+        sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
-            lastModified: 42,
-            changes: [
+            data: [
               {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
-            ]
+            ],
+            next: () => {},
+            last_modified: "\"42\"",
           }));
 
         return articles.pullChanges(result)
@@ -1315,12 +1336,13 @@ describe("Collection", () => {
         return articles.create({title: "art2"})
           .then(res => {
             createdId = res.data.id;
-            sandbox.stub(Api.prototype, "fetchChangesSince").returns(
+            sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
               Promise.resolve({
-                lastModified: 42,
-                changes: [
+                data: [
                   {id: createdId, title: "art2"}, // resolvable conflict
-                ]
+                ],
+                next: () => {},
+                last_modified: "\"42\"",
               }));
           });
       });
@@ -1441,21 +1463,16 @@ describe("Collection", () => {
     });
 
     it("should publish local changes to the server", () => {
-      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [],
-        errors:    [],
-        conflicts: [],
-        skipped:   [],
-      }));
+      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
+        .returns(Promise.resolve([{}]));
 
       return articles.pushChanges(result)
         .then(_ => {
-          sinon.assert.calledOnce(batch);
-          sinon.assert.calledWithExactly(batch,
-            TEST_BUCKET_NAME,
-            TEST_COLLECTION_NAME,
-            sinon.match(v => v.length === 1 && v[0].title === "foo"),
-            { safe: true });
+          const requests = batchRequests.firstCall.args[0];
+          const options = batchRequests.firstCall.args[1];
+          expect(requests).to.have.length.of(1);
+          expect(requests[0].body.data.title).eql("foo");
+          expect(options.safe).eql(true);
         });
     });
 
@@ -1467,20 +1484,19 @@ describe("Collection", () => {
         ]
       });
 
-      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [],
-        errors:    [],
-        conflicts: [],
-        skipped:   [],
-      }));
+      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
+        .returns(Promise.resolve([{}]));
 
       return articles.pushChanges(result)
-        .then(_ => expect(batch.firstCall.args[2][0].title).eql("foo?!"));
+        .then(_ => {
+          const requests = batchRequests.firstCall.args[0];
+          expect(requests[0].body.data.title).eql("foo?!");
+        });
     });
 
     it("should update published records local status", () => {
-      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [records[0]],
+      sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
+        published: [{data: records[0]}],
         errors:    [],
         conflicts: [],
         skipped:   [],
@@ -1496,25 +1512,22 @@ describe("Collection", () => {
         ]);
     });
 
-    it("should batch deletion of locally deleted records", (done) => {
-      const batch = sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [],
-        errors:    [],
-        conflicts: [],
-        skipped:   [],
-      }));
+    it("should not publish records created and deleted locally and never synced", () => {
+      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
+        .returns(Promise.resolve([]));
+
       return articles.delete(records[0].id)
         .then(_ => articles.pushChanges(result))
         .then(_ => {
-          expect(batch.firstCall.args[2][0].deleted).eql(true);
-          done();
+          const requests = batchRequests.firstCall.args[0];
+          expect(requests).eql([]);
         });
     });
 
     it("should delete unsynced virtually deleted local records", () => {
       const locallyDeletedId = records[0].id;
-      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [{id: locallyDeletedId, deleted: true}],
+      sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
+        published: [{data: {id: locallyDeletedId, deleted: true}}],
         errors:    [],
         conflicts: [],
         skipped:   [],
@@ -1525,9 +1538,9 @@ describe("Collection", () => {
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
 
-    it("should locally delete remotely deleted records", () => {
-      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
-        published: [Object.assign({}, records[1], {deleted: true})],
+    it("should delete locally the records deleted remotely", () => {
+      sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
+        published: [{data: Object.assign({}, records[1], {deleted: true})}],
         errors:    [],
         conflicts: [],
         skipped:   [],
@@ -1542,12 +1555,12 @@ describe("Collection", () => {
         ]);
     });
 
-    it("should delete local records when already deleted on server", () => {
-      sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+    it("should delete locally the records already deleted remotely", () => {
+      sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
         published: [],
         errors:    [],
         conflicts: [],
-        skipped:   [{id: records[0].id}]
+        skipped:   [{data: {id: records[0].id}}]
       }));
       return articles.pushChanges(result)
         .then(_ => articles.get(records[0].id, {includeDeleted: true}))
@@ -1558,7 +1571,7 @@ describe("Collection", () => {
       const error = new Error("publish error");
 
       beforeEach(() => {
-        sandbox.stub(articles.api, "batch").returns(Promise.resolve({
+        sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
           errors:    [error],
           published: [],
           conflicts: [],
@@ -1664,7 +1677,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
       const fetch = sandbox.stub(root, "fetch")
-        .returns(fakeServerResponse(200, {}, {}));
+        .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
         then(res => {
@@ -1676,7 +1689,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
       sandbox.stub(root, "fetch")
-        .returns(fakeServerResponse(200, {}, {}));
+        .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
         then(_ => {
@@ -1688,7 +1701,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
       sandbox.stub(root, "fetch")
-        .returns(fakeServerResponse(200, {}, {}));
+        .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
         catch(_ => {
@@ -1703,21 +1716,24 @@ describe("Collection", () => {
     });
 
     it("should fetch latest changes from the server", () => {
-      const fetchChangesSince = sandbox.stub(articles.api, "fetchChangesSince")
+      const listRecords = sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          lastModified: 42,
-          changes: []
+          last_modified: "\"42\"",
+          next: () => {},
+          data: []
         }));
       return articles.sync().then(res => {
-        sinon.assert.calledOnce(fetchChangesSince);
+        // Never synced so we fetch all the records from the server
+        sinon.assert.calledWithMatch(listRecords, {since: undefined});
       });
     });
 
     it("should store latest lastModified value when no conflicts", () => {
-      sandbox.stub(articles.api, "fetchChangesSince")
+      sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          lastModified: 42,
-          changes: []
+          last_modified: "\"42\"",
+          next: () => {},
+          data: []
         }));
       return articles.sync().then(res => {
         expect(articles.lastModified).eql(42);
@@ -1725,10 +1741,11 @@ describe("Collection", () => {
     });
 
     it("shouldn't store latest lastModified on conflicts", () => {
-      sandbox.stub(articles.api, "fetchChangesSince")
+      sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          lastModified: 43,
-          changes: [{
+          last_modified: "\"43\"",
+          next: () => {},
+          data: [{
             id: ids[0],
             title: "art1mod",
           }]
@@ -1739,10 +1756,11 @@ describe("Collection", () => {
     });
 
     it("shouldn't store latest lastModified on errors", () => {
-      sandbox.stub(articles.api, "fetchChangesSince")
+      sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          lastModified: 43,
-          changes: [{
+          last_modified: "\"43\"",
+          next: () => {},
+          data: [{
             id: ids[0],
             title: "art1mod",
           }]
