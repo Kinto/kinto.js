@@ -5,17 +5,19 @@ node_js:
 - "4"
 python:
 - "2.7"
+env:
+- SERVER=1.11.2 ACTION=test
+- SERVER=development ACTION=test
+- ACTION="run lint"
+- ACTION="run dist"       # ensures building dist files doesn't break
+- ACTION="run build-demo" # ensures building the demo doesn't break
 before_install:
 - export PATH=$HOME/.local/bin:$PATH
 - pip install --user `whoami` virtualenv
 - virtualenv .env
-- .env/bin/pip install kinto==1.11.2
+- if [[ $SERVER && $SERVER != development ]]; then .env/bin/pip install kinto==$SERVER; fi
+- if [[ $SERVER && $SERVER == development ]]; then .env/bin/pip install https://github.com/Kinto/kinto/zipball/master; fi
 - export KINTO_PSERVE_EXECUTABLE=.env/bin/pserve
-env:
-- ACTION=test
-- ACTION="run lint"
-- ACTION="run dist"       # ensures building dist files doesn't break
-- ACTION="run build-demo" # ensures building the demo doesn't break
 script:
 - npm $ACTION
 after_script:
