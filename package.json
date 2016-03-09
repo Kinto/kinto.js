@@ -60,6 +60,10 @@
     "ISTANBUL_OPTS": "--report lcovonly --root ./src"
   },
   "homepage": "https://github.com/Kinto/kinto.js",
+  "engines" : {
+    "npm": "^2.14.7",
+    "node": ">=4"
+  },
   "dependencies": {
     "btoa": "^1.1.2",
     "fake-indexeddb": "^1.0.3",
