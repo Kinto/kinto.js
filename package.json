@@ -60,7 +60,7 @@
     "ISTANBUL_OPTS": "--report lcovonly --root ./src"
   },
   "homepage": "https://github.com/Kinto/kinto.js",
-  "engines" : {
+  "engines": {
     "npm": "^2.14.7",
     "node": ">=4"
   },
@@ -74,7 +74,7 @@
     "babel-cli": "^6.5.1",
     "babel-core": "^6.5.1",
     "babel-eslint": "^5.0.0-beta6",
-    "babel-istanbul": "^0.6.0",
+    "babel-istanbul": "^0.7.0",
     "babel-loader": "^6.2.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.4.3",
     "babel-polyfill": "^6.3.14",
