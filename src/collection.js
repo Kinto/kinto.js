@@ -737,12 +737,11 @@ export default class Collection {
         throw Error("Server has been flushed.");
       }
 
-      const payload = {changes: {lastModified: unquoted, changes: data}};
-      // XXX would be better to directly pass the changes here
+      const payload = {lastModified: unquoted, changes: data};
       return this.applyHook("incoming-changes", payload);
     })
     // Reflect these changes locally
-    .then(({changes}) => this.importChanges(syncResultObject, changes))
+    .then((changes) => this.importChanges(syncResultObject, changes))
     // Handle conflicts, if any
     .then(result => this._handleConflicts(result, options.strategy));
   }
