@@ -1095,9 +1095,9 @@ describe("Collection", () => {
               "incoming-changes": [
                 function(incoming) {
                   const returnedChanges = incoming;
-                  const changes = returnedChanges.changes.changes;
+                  const changes = returnedChanges.changes;
 
-                  returnedChanges.changes.changes = changes.map(r => {
+                  returnedChanges.changes = changes.map(r => {
                     r.foo = "bar";
                     return r;
                   });
@@ -1124,8 +1124,8 @@ describe("Collection", () => {
           function hookFactory(fn) {
             return function(incoming) {
               const returnedChanges = incoming;
-              const changes = returnedChanges.changes.changes;
-              returnedChanges.changes.changes = changes.map(fn);
+              const changes = returnedChanges.changes;
+              returnedChanges.changes = changes.map(fn);
               return returnedChanges;
             };
           }
