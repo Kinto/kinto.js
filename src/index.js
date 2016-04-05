@@ -1,8 +1,11 @@
 "use strict";
 
-import { EventEmitter } from "events";
+// babel-polyfill can only be imported once
+if (!global._babelPolyfill) {
+  require("babel-polyfill");
+}
 
-import "babel/polyfill";
+import { EventEmitter } from "events";
 import "isomorphic-fetch";
 
 import BaseAdapter from "./adapters/base";
