@@ -103,7 +103,7 @@ function createUUIDSchema() {
 }
 
 function markStatus(record, status) {
-  return Object.assign({}, record, {_status: status});
+  return Object.assign({}, record, _status: status);
 }
 
 function markDeleted(record) {
@@ -814,7 +814,7 @@ export default class Collection {
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
         // Reflect publication results locally
-        const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
+        const missingRemotely = skipped.map(r => Object.assign({}, r, deleted: true));
         const toApplyLocally = published.concat(missingRemotely);
         // Deleted records are distributed accross local and missing records
         // XXX: When tackling the issue to avoid downloading our own changes
@@ -857,7 +857,7 @@ export default class Collection {
           return result;
         } else if (options.strategy === Collection.strategy.CLIENT_WINS && !options.resolved) {
           // We need to push local versions of the records to the server
-          return this.pushChanges(result, Object.assign({}, options, {resolved: true}));
+          return this.pushChanges(result, Object.assign({}, options, resolved: true));
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.

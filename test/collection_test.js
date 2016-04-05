@@ -482,7 +482,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.update(
-            Object.assign({}, existing, {title: "new title"}));
+            Object.assign({}, existing, title: "new title"));
         })
         .then(res => articles.get(res.data.id))
         .then(res => res.data.title)
@@ -492,7 +492,7 @@ describe("Collection", () => {
     it("should update record status on update", () => {
       return articles.create(article)
         .then(res => res.data)
-        .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
+        .then(data => articles.update(Object.assign({}, data, title: "blah")))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
     });
@@ -573,7 +573,7 @@ describe("Collection", () => {
 
     it("should optionally mark a record as synced", () => {
       return articles.create({title: "foo"})
-        .then(res => articles.update(Object.assign({}, res.data, {title: "bar"}),
+        .then(res => articles.update(Object.assign({}, res.data, title: "bar"),
                                      {synced: true}))
         .then(res => res.data)
         .should.eventually.have.property("_status").eql("synced");
@@ -600,7 +600,7 @@ describe("Collection", () => {
         local: local,
         remote: remote,
       };
-      const resolution = Object.assign({}, local, {title: "resolved"});
+      const resolution = Object.assign({}, local, title: "resolved");
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
@@ -950,7 +950,7 @@ describe("Collection", () => {
       const record = {id: uuid4(), title: "foo", last_modified: 1457896541};
       return articles.loadDump([record])
         .then(() => {
-          const updated = Object.assign({}, record, {last_modified: 1457896543});
+          const updated = Object.assign({}, record, last_modified: 1457896543);
           return articles.loadDump([updated]);
         })
         .should.eventually.have.length(1);
@@ -1377,7 +1377,7 @@ describe("Collection", () => {
       return {
         encode() {},
         decode(record) {
-          return Object.assign({}, record, {title: record.title + char});
+          return Object.assign({}, record, title: record.title + char);
         }
       };
     }
@@ -1540,7 +1540,7 @@ describe("Collection", () => {
 
     it("should delete locally the records deleted remotely", () => {
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
-        published: [{data: Object.assign({}, records[1], {deleted: true})}],
+        published: [{data: Object.assign({}, records[1], deleted: true)}],
         errors:    [],
         conflicts: [],
         skipped:   [],
