@@ -1,25 +1,44 @@
 # Change Log
 
-## [v1.2.0](https://github.com/Kinto/kinto.js/tree/v1.2.0)
+## [v1.2.1](https://github.com/Kinto/kinto.js/tree/v1.2.1)
 
+[Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.2.0...v1.2.1)
+
+**Merged pull requests:**
+
+- \[1.2\] Ensure a single instance of babel-polyfill is imported. [\#379](https://github.com/Kinto/kinto.js/pull/379) ([n1k0](https://github.com/n1k0))
+
+## [v1.2.0](https://github.com/Kinto/kinto.js/tree/v1.2.0) (2016-01-14)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.2...v1.2.0)
 
 **Implemented enhancements:**
 
-- Allowing defining the remote endpoint in `#sync()`. [\#257](https://github.com/Kinto/kinto.js/issues/257)
 - Lightweight dist files for modern browsers  [\#249](https://github.com/Kinto/kinto.js/issues/249)
 
 **Fixed bugs:**
 
-- Broken links in the doc [\#293](https://github.com/Kinto/kinto.js/issues/293)
-- Fix JSM compatibility for Firefox adapter [\#274](https://github.com/Kinto/kinto.js/pull/274) ([leplatrem](https://github.com/leplatrem))
+- broken links in the doc [\#293](https://github.com/Kinto/kinto.js/issues/293)
+
+**Closed issues:**
+
+- Expose Chrome APIs [\#289](https://github.com/Kinto/kinto.js/issues/289)
+
+**Merged pull requests:**
+
+- Prepare v1.2.0. [\#301](https://github.com/Kinto/kinto.js/pull/301) ([n1k0](https://github.com/n1k0))
+- Update browserify to version 13.0.0 🚀 [\#300](https://github.com/Kinto/kinto.js/pull/300) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
 - Fix parsing of ES7 code in esdoc [\#294](https://github.com/Kinto/kinto.js/pull/294) ([leplatrem](https://github.com/leplatrem))
+- coveralls@2.11.5 breaks build 🚨 [\#287](https://github.com/Kinto/kinto.js/pull/287) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
+- Update gh-pages to version 0.8.0 🚀 [\#283](https://github.com/Kinto/kinto.js/pull/283) ([greenkeeperio-bot](https://github.com/greenkeeperio-bot))
+- refs \#257: Allowing defining the remote endpoint in \#sync\(\). [\#276](https://github.com/Kinto/kinto.js/pull/276) ([n1k0](https://github.com/n1k0))
+- Fix JSM compatibility for Firefox adapter [\#274](https://github.com/Kinto/kinto.js/pull/274) ([leplatrem](https://github.com/leplatrem))
 
 ## [v1.1.2](https://github.com/Kinto/kinto.js/tree/v1.1.2) (2015-12-16)
 [Full Changelog](https://github.com/Kinto/kinto.js/compare/v1.1.1...v1.1.2)
 
 **Implemented enhancements:**
 
+- Upgrade to Babel 6 [\#242](https://github.com/Kinto/kinto.js/issues/242)
 - Fixes \#263: Handle network request timeouts. r=@leplatrem [\#273](https://github.com/Kinto/kinto.js/pull/273) ([michielbdejong](https://github.com/michielbdejong))
 - Add support for db.import [\#265](https://github.com/Kinto/kinto.js/pull/265) ([mozmark](https://github.com/mozmark))
 
@@ -27,6 +46,10 @@
 
 - Records not deleted locally when already deleted on server \(404 on delete\) [\#284](https://github.com/Kinto/kinto.js/issues/284)
 - Delete records locally when already deleted remotely \(fixes \#284\) [\#285](https://github.com/Kinto/kinto.js/pull/285) ([leplatrem](https://github.com/leplatrem))
+
+**Closed issues:**
+
+- `npm run demo` does not use local build [\#298](https://github.com/Kinto/kinto.js/issues/298)
 
 **Merged pull requests:**
 
