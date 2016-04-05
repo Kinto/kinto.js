@@ -74,8 +74,8 @@ This should have created the following assets, with the current version in the f
 
 Once a new version is packaged and [published to npm](#publishing-to-npm), the [npmcdn](https://npmcdn.com/ service) makes ready-to-use kinto.js assets available from the following urls:
 
-- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js) for the development version;
-- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js) for the production version.
+- [http://npmcdn.com/kinto@1.2.2/dist/kinto-1.2.2.js](http://npmcdn.com/kinto@1.2.2/dist/kinto-1.2.2.js) for the development version;
+- [http://npmcdn.com/kinto@1.2.2/dist/kinto-1.2.2.min.js](http://npmcdn.com/kinto@1.2.2/dist/kinto-1.2.2.min.js) for the production version.
 
 ## Updating docs
 
