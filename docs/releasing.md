@@ -6,14 +6,6 @@ In order to prepare and publish a new release, the following steps are required.
 
     $ git co -b prepare-1.1.0
 
-### Update the changelog
-
-We use [github-changelog-generator](https://github.com/skywinder/github-changelog-generator):
-
-    $ github_changelog_generator
-
-In the generated `CHANGELOG.md`, replace `HEAD` by `vX.Y.Z` in full changelog and link to the upcoming tag instead of `unreleased`.
-
 ### Updating `package.json`
 
 * Bump the `version`;
