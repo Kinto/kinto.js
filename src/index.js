@@ -2,7 +2,10 @@
 
 import { EventEmitter } from "events";
 
-import "babel-polyfill";
+// babel-polyfill can only be imported once
+if (!global._babelPolyfill) {
+  require("babel-polyfill");
+}
 
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
