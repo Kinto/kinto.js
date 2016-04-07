@@ -2,9 +2,9 @@
 
 import BaseAdapter from "./adapters/base";
 import { waterfall } from "./utils";
-
 import { v4 as uuid4 } from "uuid";
-import { deepEquals, isUUID, pFinally } from "./utils";
+import deepEqual from "deeper";
+import { isUUID, pFinally } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
@@ -133,7 +133,7 @@ function importChange(transaction, remote) {
     transaction.create(synced);
     return {type: "created", data: synced};
   }
-  const identical = deepEquals(cleanRecord(local), cleanRecord(remote));
+  const identical = deepEqual(cleanRecord(local), cleanRecord(remote));
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
