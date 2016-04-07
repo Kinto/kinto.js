@@ -1,24 +1,6 @@
 "use strict";
 
-import { deepEqual } from "deeper";
-
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Deeply checks if two structures are equals.
- *
- * @param  {Any} a
- * @param  {Any} b
- * @return {Boolean}
- */
-export function deepEquals(a, b) {
-  try {
-    deepEqual(a, b);
-  } catch(err) {
-    return false;
-  }
-  return true;
-}
 
 /**
  * Checks if a value is undefined.
