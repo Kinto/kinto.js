@@ -15,17 +15,29 @@
 
 "use strict";
 
-const Cu = Components.utils;
+const { classes: Cc, interfaces: Ci, utils: Cu }  = Components;
 
 import BaseAdapter from "../src/adapters/base";
 import KintoBase from "../src/KintoBase";
 import FirefoxAdapter from "./FirefoxStorage";
+import { RE_UUID } from "../src/utils";
 
 export default function loadKinto() {
   const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
+  const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
 
   Cu.import("resource://gre/modules/Timer.jsm");
   Cu.importGlobalProperties(['fetch']);
+
+  // Leverage Gecko service to generate UUIDs.
+  function makeIDSchema() {
+    return {
+      validate: RE_UUID.test.bind(RE_UUID),
+      generate: function() {
+        return generateUUID().toString().replace(/[{}]/g, "");
+      }
+    };
+  }
 
   class KintoFX extends KintoBase {
     static get adapters() {
@@ -45,6 +57,12 @@ export default function loadKinto() {
 
       const expandedOptions = Object.assign(defaults, options);
       super(expandedOptions);
+    }
+
+    collection(collName, options={}) {
+      const idSchema = makeIDSchema();
+      const expandedOptions = Object.assign({idSchema}, options);
+      return super.collection(collName, expandedOptions);
     }
   }
 
