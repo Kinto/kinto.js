@@ -7,10 +7,11 @@ if (!global._babelPolyfill) {
   require("babel-polyfill");
 }
 
+import Api from "kinto-client";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
-
 import KintoBase from "./KintoBase";
+
 
 export default class Kinto extends KintoBase {
   /**
@@ -29,7 +30,8 @@ export default class Kinto extends KintoBase {
   constructor(options={}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
-      events: new EventEmitter()
+      events: new EventEmitter(),
+      ApiClass: Api,
     };
 
     super(Object.assign({}, defaults, options));

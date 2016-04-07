@@ -1,6 +1,5 @@
 "use strict";
 
-import Api from "kinto-client";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
 
@@ -60,8 +59,8 @@ export default class KintoBase {
       throw new Error("No adapter provided");
     }
 
-    const {remote, events, headers, requestMode} = this._options;
-    this._api = new Api(remote, {events, headers, requestMode});
+    const {remote, events, headers, requestMode, ApiClass} = this._options;
+    this._api = new ApiClass(remote, {events, headers, requestMode});
 
     // public properties
     /**
