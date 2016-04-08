@@ -70,7 +70,7 @@
     "btoa": "^1.1.2",
     "deeper": "^2.1.0",
     "fake-indexeddb": "1.0.5",
-    "kinto-client": "^0.5.0",
+    "kinto-client": "^0.6.0",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
