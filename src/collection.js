@@ -127,17 +127,17 @@ function importChange(transaction, remote) {
     // Not found locally but remote change is marked as deleted; skip to
     // avoid recreation.
     if (remote.deleted) {
-      return {type: "skipped", data: remote};
+      return {type: "skipped", data: remote, previous: local};
     }
     const synced = markSynced(remote);
     transaction.create(synced);
-    return {type: "created", data: synced};
+    return {type: "created", data: synced, previous: local};
   }
   const identical = deepEqual(cleanRecord(local), cleanRecord(remote));
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
-      return {type: "skipped", data: local};
+      return {type: "skipped", data: local, previous: local};
     }
     if (identical) {
       // If records are identical, import anyway, so we bump the
@@ -149,18 +149,18 @@ function importChange(transaction, remote) {
     }
     return {
       type: "conflicts",
-      data: {type: "incoming", local: local, remote: remote}
+      data: {type: "incoming", local: local, remote: remote, previous: local}
     };
   }
   if (remote.deleted) {
     transaction.delete(remote.id);
-    return {type: "deleted", data: {id: local.id}};
+    return {type: "deleted", data: {id: local.id}, previous: local};
   }
   const synced = markSynced(remote);
   transaction.update(synced);
   // if identical, simply exclude it from all lists
   const type = identical ? "void" : "updated";
-  return {type, data: synced};
+  return {type, data: synced, previous: local};
 }
 
 
