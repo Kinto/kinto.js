@@ -66,18 +66,18 @@ Of course, as for `npm test`, you can explictly pass the pass to the Kinto serve
 
     $ npm run dist
 
-This should have created the following assets, with the current version in the filename (for instance, `1.0.0`):
+This should have created the following assets, with the current version in the filename (for instance, `2.0.0`):
 
--  `dist/kinto-1.0.0.js`: Development version, unminified, embedding source maps;
--  `dist/kinto-1.0.0.min.js`: Production version, minified, no source maps;
--  `dist/kinto-1.0.0.noshim.js`: Production version, minified, no polyfills;
--  `dist/moz-kinto-client.js`: Firefox internal component bundle (for Mozilla specific use).
+-  `dist/kinto-2.0.0.js`: Development version, unminified, embedding source maps;
+-  `dist/kinto-2.0.0.min.js`: Production version, minified, no source maps;
+-  `dist/kinto-2.0.0.noshim.js`: Production version, minified, no polyfills;
+-  `dist/moz-kinto-offline-client.js`: Firefox internal component bundle (for Mozilla specific use).
 
 Once a new version is packaged and [published to npm](#publishing-to-npm), the [npmcdn](https://npmcdn.com/ service) makes ready-to-use kinto.js assets available from the following urls:
 
-- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.js) for the development version;
-- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.min.js) for the production version.
-- [http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.noshim.js](http://npmcdn.com/kinto@1.1.0/dist/kinto-1.1.0.noshim.js) for the production version without polyfills.
+- [http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.js) for the development version;
+- [http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.min.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.min.js) for the production version.
+- [http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.noshim.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.noshim.js) for the production version without polyfills.
 
 ## Updating docs
 

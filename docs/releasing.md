@@ -48,6 +48,7 @@ Check that the demo has been [published](http://kinto.github.io/kinto.js/) and w
 
 ### Update docs
 
+- Update versions in `docs/contributing.md`
 - Update CDN URL in `docs/tutorial.md`
 - Update CDN URL in `docs/installation.md`.
 - Obtain the new sub-resource integrity hashes with:
