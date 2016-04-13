@@ -18,6 +18,8 @@ import { reduceRecords } from "../src/utils";
 Components.utils.import("resource://gre/modules/Sqlite.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");
 
+const SQLITE_PATH = "kinto.sqlite";
+
 const statements = {
   "createCollectionData": `
     CREATE TABLE collection_data (
@@ -124,7 +126,7 @@ export default class FirefoxAdapter extends BaseAdapter {
   open() {
     const self = this;
     return Task.spawn(function* (){
-      const opts = { path: "kinto.sqlite", sharedMemoryCache: false }
+      const opts = { path: SQLITE_PATH, sharedMemoryCache: false }
       if (!self._connection) {
         self._connection = yield Sqlite.openConnection(opts).then(self._init);
       }
