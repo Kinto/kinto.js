@@ -1320,10 +1320,10 @@ describe("Collection", () => {
                 id: createdId,
                 title: "art2",
               },
-              previous:{
+              previous: {
                 _status: "created",
                 id: createdId,
-                title: "atr2"
+                title: "art2"
               },
               remote: {
                 id: createdId,
