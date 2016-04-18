@@ -555,6 +555,7 @@ describe("Collection", () => {
     });
 
     it("should preserve record.last_modified", () => {
+
       return articles.create({
         title: "foo",
         url: "http://foo",
@@ -1319,6 +1320,11 @@ describe("Collection", () => {
                 id: createdId,
                 title: "art2",
               },
+              previous:{
+                _status: "created",
+                id: createdId,
+                title: "atr2"
+              }
               remote: {
                 id: createdId,
                 title: "art2mod",
