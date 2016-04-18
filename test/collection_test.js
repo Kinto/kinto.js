@@ -1324,7 +1324,7 @@ describe("Collection", () => {
                 _status: "created",
                 id: createdId,
                 title: "atr2"
-              }
+              },
               remote: {
                 id: createdId,
                 title: "art2mod",
