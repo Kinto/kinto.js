@@ -6,7 +6,7 @@ import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import KintoServer from "./server_utils";
+import KintoServer from "kinto-node-test-server";
 import Kinto from "../src";
 import { cleanRecord } from "../src/collection";
 
