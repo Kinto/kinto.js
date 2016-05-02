@@ -62,8 +62,7 @@
   },
   "homepage": "https://github.com/Kinto/kinto.js",
   "engines": {
-    "npm": "^2.14.7",
-    "node": ">=4"
+    "node": ">=6"
   },
   "dependencies": {
     "babel-polyfill": "^6.7.4",

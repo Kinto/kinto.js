@@ -2,7 +2,7 @@ language:
 - node_js
 - python
 node_js:
-- "4"
+- "6"
 python:
 - "3.5"
 env:
