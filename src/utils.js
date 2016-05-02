@@ -109,3 +109,24 @@ export function pFinally(promise, fn) {
     reason => Promise.resolve(fn()).then(() => { throw reason; })
   );
 }
+
+export function deepEqual(a, b) {
+  if (a === b) {
+    return true;
+  }
+  if (typeof(a) !== typeof(a)) {
+    return false;
+  }
+  if (!(a instanceof Object) || !(b instanceof Object)) {
+    return false;
+  }
+  if (Object.keys(a).length !== Object.keys(b).length) {
+    return false;
+  }
+  for(let k in a) {
+    if (!deepEqual(a[k], b[k])) {
+      return false;
+    }
+  }
+  return true;
+}

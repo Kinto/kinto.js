@@ -1,9 +1,8 @@
 "use strict";
 
 import BaseAdapter from "./adapters/base";
-import { waterfall } from "./utils";
+import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import deepEqual from "deeper";
 import { isUUID, pFinally } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];

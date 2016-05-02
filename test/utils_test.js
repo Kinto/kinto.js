@@ -3,6 +3,7 @@
 import chai, { expect } from "chai";
 
 import {
+  deepEqual,
   sortObjects,
   filterObjects,
   reduceRecords,
@@ -216,6 +217,45 @@ describe("Utils", () => {
           expect(flag).eql(true);
           expect(err).eql("err");
         });
+    });
+  });
+
+  describe("deepEqual", () => {
+    it("should return true if values are equal", () => {
+      expect(deepEqual(1, 1)).eql(true);
+      expect(deepEqual("a", "a")).eql(true);
+      expect(deepEqual({}, {})).eql(true);
+      expect(deepEqual([], [])).eql(true);
+    });
+
+    it("should return true if key are not sorted", () => {
+      expect(deepEqual({a: "1", b: 2}, {b: 2, a: "1"})).eql(true);
+    });
+
+    it("should return true if array values are equal", () => {
+      expect(deepEqual({a: [1, 2, 3]}, {a: [1, 2, 3]})).eql(true);
+    });
+
+    it("should return true if sub-objects are equal", () => {
+      expect(deepEqual({a: {b: 1, c: 2}}, {a: {b: 1, c: 2}})).eql(true);
+    });
+
+    it("should return false if one is falsy", () => {
+      expect(deepEqual({id: "1"}, null)).eql(false);
+      expect(deepEqual({id: "1"}, undefined)).eql(false);
+      expect(deepEqual(null, undefined)).eql(false);
+    });
+
+    it("should return false with extra keys", () => {
+      expect(deepEqual({a: 1}, {a: 1, b: "a"})).eql(false);
+    });
+
+    it("should return false with different types", () => {
+      expect(deepEqual({a: 1}, {a: "1"})).eql(false);
+    });
+
+    it("should return false if sub-object differs", () => {
+      expect(deepEqual({a: {b: 1, c: 2}}, {a: {b: 1, c: 3}})).eql(false);
     });
   });
 });
