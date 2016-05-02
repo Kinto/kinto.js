@@ -122,7 +122,7 @@ export function deepEqual(a, b) {
   if (a === b) {
     return true;
   }
-  if (typeof(a) !== typeof(a)) {
+  if (typeof(a) !== typeof(b)) {
     return false;
   }
   if (!(a instanceof Object) || !(b instanceof Object)) {
