@@ -222,7 +222,10 @@ describe("Utils", () => {
 
   describe("deepEqual", () => {
     it("should return true if values are equal", () => {
+      expect(deepEqual(null, null)).eql(true);
+      expect(deepEqual(undefined, undefined)).eql(true);
       expect(deepEqual(1, 1)).eql(true);
+      expect(deepEqual(1, 1.0)).eql(true);
       expect(deepEqual("a", "a")).eql(true);
       expect(deepEqual({}, {})).eql(true);
       expect(deepEqual([], [])).eql(true);
@@ -254,8 +257,20 @@ describe("Utils", () => {
       expect(deepEqual({a: 1}, {a: "1"})).eql(false);
     });
 
+    it("should return true when object keys order differs", () => {
+      expect(deepEqual({a: {b: 1, c: 2}}, {a: {c: 2, b: 1}})).eql(true);
+    });
+
     it("should return false if sub-object differs", () => {
       expect(deepEqual({a: {b: 1, c: 2}}, {a: {b: 1, c: 3}})).eql(false);
+    });
+
+    it("should return true if sub-arrays of objects are equal", () => {
+      expect(deepEqual({a: [{b: 1}, {c: 1}]}, {a: [{b: 1}, {c: 1}]})).eql(true);
+    });
+
+    it("should return false if sub-array orders differ", () => {
+      expect(deepEqual({a: [{b: 1}, {c: 1}]}, {a: [{c: 1}, {b: 1}]})).eql(false);
     });
   });
 });
