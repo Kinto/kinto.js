@@ -6,6 +6,7 @@ import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
+import KintoServer from "./server_utils";
 import Kinto from "../src";
 import { cleanRecord } from "../src/collection";
 
@@ -14,60 +15,21 @@ chai.should();
 chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
-const PSERVE_EXECUTABLE = process.env.KINTO_PSERVE_EXECUTABLE || "pserve";
-const KINTO_CONFIG = __dirname + "/kinto.ini";
 
-describe("Integration tests", () => {
+
+describe("Integration tests", function() {
   let sandbox, server, kinto, tasks;
-  const MAX_ATTEMPTS = 50;
-  const serverLogs = [];
 
-  function startServer(env) {
-    return new Promise(resolve => {
-      // Add the provided environment variables to the child process environment.
-      // Keeping parent's environment is needed so that pserve's executable
-      // can be found (with PATH) if KINTO_PSERVE_EXECUTABLE env variable was not provided.
-      env = Object.assign({}, process.env, env);
-      server = spawn(PSERVE_EXECUTABLE, [KINTO_CONFIG], {env, detached: true});
-      server.stderr.on("data", data => {
-        serverLogs.push(data);
-      });
-      server.on("close", code => {
-        if (code && code > 0) {
-          throw new Error("Server errors encountered:\n" +
-            serverLogs.map(line => line.toString()).join(""));
-        }
-      });
-      // Allow some time for the server to start.
-      setTimeout(resolve, 1000);
+  // Disabling test timeouts until pserve gets decent startup time.
+  this.timeout(0);
+
+  before(() => {
+    server = new KintoServer(TEST_KINTO_SERVER, {
+      kintoConfigPath: __dirname + "/kinto.ini"
     });
-  }
+  });
 
-  function stopServer() {
-    server.kill();
-    return new Promise(resolve => {
-      setTimeout(() => resolve(), 500);
-    });
-  }
-
-  function flushServer(attempt=1) {
-    return fetch(`${TEST_KINTO_SERVER}/__flush__`, {method: "POST"})
-      .then(res => {
-        if ([202, 410].indexOf(res.status) === -1) {
-          throw new Error("Unable to flush test server.");
-        }
-      })
-      .catch(err => {
-        // Prevent race condition where integration tests start while server
-        // isn't running yet.
-        if (/ECONNREFUSED/.test(err.message) && attempt < MAX_ATTEMPTS) {
-          return new Promise(resolve => {
-            setTimeout(_ => resolve(flushServer(attempt++)), 250);
-          });
-        }
-        throw err;
-      });
-  }
+  after(() => server.killAll());
 
   after((done) => {
     // Ensure no pserve process remains after tests having been executed.
@@ -89,12 +51,12 @@ describe("Integration tests", () => {
   afterEach(() => sandbox.restore());
 
   describe("Default server configuration", () => {
-    before(() => startServer());
+    before(() => server.start());
 
-    after(() => stopServer());
+    after(() => server.stop());
 
     beforeEach(() => {
-      return tasks.clear().then(_ => flushServer());
+      return tasks.clear().then(_ => server.flush());
     });
 
     describe("Synchronization", () => {
@@ -1147,9 +1109,9 @@ describe("Integration tests", () => {
   });
 
   describe("Flushed server", function() {
-    before(() => startServer());
+    before(() => server.start());
 
-    after(() => stopServer());
+    after(() => server.stop());
 
     beforeEach(() => {
       return tasks.clear()
@@ -1160,7 +1122,7 @@ describe("Integration tests", () => {
           ]);
         })
         .then(_ => tasks.sync())
-        .then(_ => flushServer());
+        .then(_ => server.flush());
     });
 
     it("should reject a call to sync() with appropriate message", () => {
@@ -1177,12 +1139,12 @@ describe("Integration tests", () => {
   });
 
   describe("Backed off server", () => {
-    before(() => startServer({CLIQUET_BACKOFF: 10}));
+    before(() => server.start({CLIQUET_BACKOFF: 10}));
 
-    after(() => stopServer());
+    after(() => server.stop());
 
     beforeEach(() => {
-      return tasks.clear().then(_ => flushServer());
+      return tasks.clear().then(_ => server.flush());
     });
 
     it("should reject sync when the server sends a Backoff header", () => {
@@ -1194,20 +1156,20 @@ describe("Integration tests", () => {
 
   describe("Deprecated protocol version", () => {
     beforeEach(() => {
-      return tasks.clear().then(_ => flushServer());
+      return tasks.clear().then(_ => server.flush());
     });
 
     describe("Soft EOL", () => {
       before(() => {
         const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
-        return startServer({
+        return server.start({
           CLIQUET_EOS: tomorrow,
           CLIQUET_EOS_URL: "http://www.perdu.com",
           CLIQUET_EOS_MESSAGE: "Boom",
         });
       });
 
-      after(() => stopServer());
+      after(() => server.stop());
 
       beforeEach(() => sandbox.stub(console, "warn"));
 
@@ -1222,14 +1184,14 @@ describe("Integration tests", () => {
     describe("Hard EOL", () => {
       before(() => {
         const lastWeek = new Date(new Date().getTime() - (7 * 86400000)).toJSON().slice(0, 10);
-        return startServer({
+        return server.start({
           CLIQUET_EOS: lastWeek,
           CLIQUET_EOS_URL: "http://www.perdu.com",
           CLIQUET_EOS_MESSAGE: "Boom",
         });
       });
 
-      after(() => stopServer());
+      after(() => server.stop());
 
       beforeEach(() => sandbox.stub(console, "warn"));
 
