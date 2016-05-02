@@ -1279,7 +1279,11 @@ describe("Collection", () => {
 
           return articles.pullChanges(result)
           .then(res => res.errors)
-          .should.become([error]);
+          .should.become([{
+            type: "incoming",
+            message: error.message,
+            stack: error.stack
+          }]);
         });
       });
     });
@@ -1393,7 +1397,11 @@ describe("Collection", () => {
 
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
-        .should.eventually.become([error]);
+        .should.eventually.become([{
+          type: "incoming",
+          message: error.message,
+          stack: error.stack,
+        }]);
     });
 
     it("should return typed errors", () => {
