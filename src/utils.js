@@ -110,6 +110,14 @@ export function pFinally(promise, fn) {
   );
 }
 
+/**
+ * Simple deep object comparison function. This only supports comparison of
+ * serializable JavaScript objects.
+ *
+ * @param  {Object} a The source object.
+ * @param  {Object} b The compared object.
+ * @return {Boolean}
+ */
 export function deepEqual(a, b) {
   if (a === b) {
     return true;
