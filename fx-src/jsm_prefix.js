@@ -18,16 +18,3 @@
  */
 
 this.EXPORTED_SYMBOLS = ["loadKinto"];
-
-/* Fix for Kinto/kinto.js#400
- * This is a mock for the Buffer object, missing from Gecko environment
- * and used by deeper.deepEqual() function.
- * Since browserify is used with --bare option for the Gecko client,
- * it is not included in the resulting dist file.
- *
- * XXX: We could get rid of deeper and clean this.
- * https://github.com/Kinto/kinto.js/issues/402
- */
-this.Buffer = {
-  isBuffer: function() { return false; }
-};
