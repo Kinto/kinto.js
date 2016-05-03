@@ -19,7 +19,7 @@ Source code is [hosted on Github](https://github.com/Kinto/kinto.js).
 In order to run the tests, you'll need:
 
 1. to have [Python](http://python.org/) available on your system;
-2. to [install Kinto locally](https://kinto.readthedocs.org/en/latest/get-started.html#using-python-package);
+2. to [install Kinto locally](https://kinto.readthedocs.io/en/latest/get-started.html#using-python-package);
 3. to export the location of the installed `pserve` accordingly.
 
 The simplest way to install Kinto is to do so in a [virtual environment](http://docs.python-guide.org/en/latest/dev/virtualenvs/) and activate it:

@@ -8,7 +8,7 @@ The final demo code is [available](https://github.com/Kinto/kinto.js/tree/master
 
 > #### Notes
 >
-> **For this tutorial we'll be using a public test server instance of [Kinto](http://kinto.readthedocs.org/); data stored on this instance are purged every 24 hours. Don't rely on this server for production use.**
+> **For this tutorial we'll be using a public test server instance of [Kinto](http://kinto.readthedocs.io/); data stored on this instance are purged every 24 hours. Don't rely on this server for production use.**
 >
 > If you plan on using your own version of Kinto, please refer to the [setup instructions](http://kinto.readthedocs.io/en/latest/get-started.html).
 
