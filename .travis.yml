@@ -2,9 +2,9 @@ language:
 - node_js
 - python
 node_js:
-- "4"
+- "6"
 python:
-- "2.7"
+- "3.5"
 env:
 - SERVER=2.1.0 ACTION=test
 - SERVER=development ACTION=test

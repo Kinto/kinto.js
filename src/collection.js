@@ -1,9 +1,8 @@
 "use strict";
 
 import BaseAdapter from "./adapters/base";
-import { waterfall } from "./utils";
+import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import deepEqual from "deeper";
 import { isUUID, pFinally } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
@@ -607,10 +606,13 @@ export default class Collection {
             }, {preload: existingRecords});
           })
           .catch(err => {
-            // XXX todo
-            err.type = "incoming";
+            const data = {
+              type: "incoming",
+              message: err.message,
+              stack: err.stack
+            };
             // XXX one error of the whole transaction instead of per atomic op
-            return [{type: "errors", data: err}];
+            return [{type: "errors", data}];
           })
           .then(imports => {
             for (let imported of imports) {

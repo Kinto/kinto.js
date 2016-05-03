@@ -16,9 +16,9 @@ $ npm install kinto --save
 
 Dev and production ready assets are available in the [`gh-pages` branch of the repository](https://github.com/Kinto/kinto.js/tree/gh-pages). In general, you should download these files and ship them along your own projects, though you can also link them during development:
 
-- Dev version, including source maps: [kinto-2.0.0.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.js)
-- Production version, minified, no source maps: [kinto-2.0.0.min.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.min.js)
-- Minimalist version, without polyfills [kinto-2.0.0.noshim.js](http://npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.noshim.js)
+- Dev version, including source maps: [kinto.js](http://npmcdn.com/kinto/dist/kinto.js)
+- Production version, minified, no source maps: [kinto.min.js](http://npmcdn.com/kinto/dist/kinto.min.js)
+- Minimalist version, without polyfills [kinto.noshim.js](http://npmcdn.com/kinto/dist/kinto.noshim.js)
 
 > #### Notes
 >
@@ -31,14 +31,16 @@ To make sure that you are using the right code when loading from a CDN, you can 
 integrity with the hash provided below:
 
 ```html
-    <script src="//npmcdn.com/kinto@2.0.0/dist/kinto-2.0.0.min.js"
-            integrity="sha384-aaty4B6Fzw+pZ9DbNdrlGsFu9f8x06+N0aCAXCn1QMpWVgB79PC9KSdWqqagm6E9"
+    <script src="//npmcdn.com/kinto@X.Y.Z/dist/kinto.min.js"
+            integrity="sha384-<refer to the table below to retrieve the proper hash>"
             crossorigin="anonymous">
     </script>
 ```
 
 | Filename                | Hash                                                                    |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto-2.0.0.js          | sha384-nhccqZvXYLdLpbp4w0BRCgd4zKKNbGnL6RO7+u+xbB/MplGoc3m6GWhQz3i0S0ly |
-| kinto-2.0.0.min.js      | sha384-zP6aS9TKQ8AOwwcfSJjHcCVaHBEYnMIPnUea01uVKzB8AayzlHEyHgdyFaJxEUCT |
-| kinto-2.0.0.noshim.js   | sha384-xzkr5lhJnBvqOTfbcIVSQbUlVfEdXGCen/DUUkDUxljasft0dVk6cG8Y/eV+MoGv |
+| kinto.js                | sha384-wOOIJGZhGCWgy9NpG/9u5Z/P/+QhmXEn7sRIaWhIn/LtpFF4AEue7g8Q9ALFuL78 |
+| kinto.min.js            | sha384-+nl5SVE5KtBDyiHKcKwqe1AA2aEj+fhrqhUCYiKN5MMPK8FAk3P7TI7bR+4Z8LoG |
+| kinto.noshim.js         | sha384-rKJ9KxJS7RaeHjdZu3o6HVdf/EL8U26eNcHwZoWcyDxRT01RABMGVGh+Sc+Qmr3i |
+
+
