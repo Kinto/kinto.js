@@ -63,7 +63,7 @@ Submit new version of the js api docs at [doc.esdoc.org](https://doc.esdoc.org/-
 
 ### Check that the new tag is active on readthedocs
 
-Ensure the new version of the docs is available, eg. http://kintojs.readthedocs.org/en/vX.Y.Z/
+Ensure the new version of the docs is available, eg. http://kintojs.readthedocs.io/en/vX.Y.Z/
 
 ### Post-release
 
