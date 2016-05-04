@@ -621,8 +621,9 @@ describe("Collection", () => {
         local: local,
         remote: remote,
       };
-      const syncResult = new SyncResultObject();
-      const resolution = Object.assign({}, local, {title: "resolved"});
+      const resolution = Object.assign({}, local, {
+        title: "resolved"
+      });
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           data: [
@@ -631,6 +632,7 @@ describe("Collection", () => {
           next: () => {},
           last_modified: "\"42\"",
         }));
+      const syncResult = new SyncResultObject();
       return articles.resolve(conflict, resolution)
         .then(() => articles.pullChanges(syncResult))
         .should.eventually.become({
@@ -639,16 +641,16 @@ describe("Collection", () => {
           errors:    [],
           created:   [],
           published: [],
-          updated:   [{
+          resolved:   [{
             id: local.id,
             last_modified: 42,
             title: "resolved",
-            _status: "synced",
+            _status: "updated",
           }],
           skipped:   [],
           deleted:   [],
           conflicts: [],
-          resolved:  [],
+          updated: []
         });
     });
   });
