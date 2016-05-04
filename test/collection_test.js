@@ -641,6 +641,7 @@ describe("Collection", () => {
           published: [],
           updated:   [{
             id: local.id,
+            last_modified: 42,
             title: "resolved",
             _status: "synced",
           }],

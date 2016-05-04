@@ -146,6 +146,13 @@ function importChange(transaction, remote) {
       transaction.update(synced);
       return {type: "updated", data: synced, previous: local};
     }
+    if (local.last_modified === remote.last_modified) {
+      // If our local version has the same last_modified as the remote
+      // one, this represents an object that corresponds to a resolved
+      // conflict. Our local version represents the final output, so
+      // we keep that one.
+      return {type: "updated", data: markSynced(local), previous: local};
+    }
     return {
       type: "conflicts",
       data: {type: "incoming", local: local, remote: remote}
