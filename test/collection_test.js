@@ -604,7 +604,7 @@ describe("Collection", () => {
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
-          _status: "updated",
+          _status: "resolved",
           id: local.id,
           title: resolution.title,
           last_modified: remote.last_modified

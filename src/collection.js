@@ -468,7 +468,7 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options={synced: false, patch: false}) {
+  update(record, options={synced: false, resolved: false, patch: false}) {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -481,7 +481,8 @@ export default class Collection {
     return this.get(record.id)
       .then((res) => {
         const existing = res.data;
-        const newStatus = options.synced ? "synced" : "updated";
+        const newStatus = options.synced ? "synced" :
+                          options.resolved ? "resolved" : "updated";
         return this.db.execute((transaction) => {
           const source = options.patch ? Object.assign({}, existing, record)
                                        : record;
@@ -683,7 +684,7 @@ export default class Collection {
   gatherLocalChanges() {
     let _toDelete;
     return Promise.all([
-      this.list({filters: {_status: ["created", "updated"]}, order: ""}),
+      this.list({filters: {_status: ["created", "updated", "resolved"]}, order: ""}),
       this.list({filters: {_status: "deleted"}, order: ""},
                 {includeDeleted: true}),
     ])
@@ -785,13 +786,15 @@ export default class Collection {
           });
           toSync.forEach((r) => {
             const isCreated = r._status === "created";
+            const isResolved = r._status === "resolved";
             // Do not store status on server.
             // XXX: cleanRecord() removes last_modified, required by safe.
             delete r._status;
             if (isCreated) {
               batch.createRecord(r);
-            }
-            else {
+            } else if (isResolved) {
+              batch.updateRecord(r, {safe: false});
+            } else {
               batch.updateRecord(r);
             }
           });
@@ -886,7 +889,7 @@ export default class Collection {
     return this.update(Object.assign({}, resolution, {
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote.last_modified
-    }));
+    }), {resolved: true});
   }
 
   /**
