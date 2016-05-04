@@ -143,7 +143,7 @@ describe("adapter.IDB", () => {
         return db.execute(t => t.create(data))
           .then(_ => {
             return db.execute(transaction => {
-              transaction.update(Object.assign({}, data, {foo: "baz"}));
+              transaction.update(Object.assign({}, data, foo: "baz"));
             });
           })
           .then(_ => db.get(data.id))
