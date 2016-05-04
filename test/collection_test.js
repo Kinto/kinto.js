@@ -610,6 +610,46 @@ describe("Collection", () => {
           last_modified: remote.last_modified
         });
     });
+
+    it("should ignore resolved conflicts during sync", () => {
+      const remote = Object.assign({}, local, {
+        title: "blah",
+        last_modified: 42,
+      });
+      const conflict = {
+        type: "incoming",
+        local: local,
+        remote: remote,
+      };
+      const syncResult = new SyncResultObject();
+      const resolution = Object.assign({}, local, {title: "resolved"});
+      sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
+        Promise.resolve({
+          data: [
+            remote,
+          ],
+          next: () => {},
+          last_modified: "\"42\"",
+        }));
+      return articles.resolve(conflict, resolution)
+        .then(() => articles.pullChanges(syncResult))
+        .should.eventually.become({
+          ok: true,
+          lastModified: 42,
+          errors:    [],
+          created:   [],
+          published: [],
+          updated:   [{
+            id: local.id,
+            title: "resolved",
+            _status: "synced",
+          }],
+          skipped:   [],
+          deleted:   [],
+          conflicts: [],
+          resolved:  [],
+        });
+    });
   });
 
   /** @test {Collection#get} */
