@@ -648,6 +648,48 @@ describe("Integration tests", function() {
             });
           });
         });
+
+        describe.only("Resolving conflicts doesn't interfere with sync", () => {
+          const conflictingId = uuid4();
+          const testData = {
+            localSynced: [
+              {id: conflictingId, title: "conflicting task", done: false}
+            ],
+            localUnsynced: [],
+            server: [],
+          };
+          beforeEach(() => testSync(testData));
+          it("should sync over resolved records", () => {
+            return tasks.update({id: conflictingId, title: "locally changed title"},
+                         {patch: true})
+              .then(newRecord => {
+                expect(newRecord.data.last_modified).to.exist;
+                return tasks.api.bucket("default").collection("tasks").updateRecord(
+                  {id: conflictingId, title: "remotely changed title"}, {patch: true});
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(1);
+                // always pick our version, which has an older last_modified
+                return tasks.resolve(syncResult.conflicts[0], syncResult.conflicts[0].local);
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(true);
+                expect(syncResult.conflicts).to.have.length.of(0);
+                expect(syncResult.updated).to.have.length.of(0);
+              })
+              .then(() => tasks.get(conflictingId))
+              .then(record => {
+                expect(record.data.title).eql("locally changed title");
+                expect(record.data._status).eql("synced");
+              });
+          });
+
+          it("should not skip other conflicts", () => {});  // FIXME
+        });
+
       });
 
       describe("Outgoing conflict", () => {
