@@ -1300,7 +1300,7 @@ describe("Collection", () => {
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
             data: [
-              {id: createdId, title: "art2mod"}, // will conflict with unsynced local record
+              {id: createdId, title: "art2mod", last_modified: 42}, // will conflict with unsynced local record
             ],
             next: () => {},
             last_modified: "\"42\"",
@@ -1326,6 +1326,7 @@ describe("Collection", () => {
               remote: {
                 id: createdId,
                 title: "art2mod",
+                last_modified: 42,
               }
             }],
             resolved:  [],
@@ -1756,6 +1757,7 @@ describe("Collection", () => {
           data: [{
             id: ids[0],
             title: "art1mod",
+            last_modified: 43,
           }]
         }));
       return articles.sync().then(res => {
