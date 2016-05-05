@@ -150,12 +150,11 @@ function importChange(transaction, remote) {
       // If our local version has the same last_modified as the remote
       // one, this represents an object that corresponds to a resolved
       // conflict. Our local version represents the final output, so
-      // we keep that one. (no transaction operation to do).
+      // we keep that one. (No transaction operation to do.)
       // But if our last_modifieds is undefined,
       // that means we've created the same object locally as one on
       // the server, which *must* be a conflict.
-      const updated = markStatus(local, "updated");
-      return {type: "resolved", data: updated, previous: local};
+      return {type: "void"};
     }
     return {
       type: "conflicts",
