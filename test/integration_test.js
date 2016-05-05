@@ -687,7 +687,39 @@ describe("Integration tests", function() {
               });
           });
 
-          it("should not skip other conflicts", () => {});  // FIXME
+          it("should not skip other conflicts", () => {
+            const conflictingId2 = uuid4();
+            const rawCollection = tasks.api.bucket("default").collection("tasks");
+            return tasks.create({id: conflictingId2, title: "second title"},
+                                {useRecordId: true})
+              .then(() => tasks.sync())
+              .then(() =>
+                rawCollection.updateRecord(
+                  {id: conflictingId, title: "remotely changed title"}, {patch: true})
+                   )
+              .then(() =>
+                rawCollection.updateRecord(
+                  {id: conflictingId2, title: "remotely changed title2"}, {patch: true}))
+              .then(() => tasks.update({id: conflictingId, title: "locally changed title"},
+                                       {patch: true}))
+              .then(() => tasks.update({id: conflictingId2, title: "local title2"},
+                                       {patch: true}))
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(2);
+                // resolve just one conflict and ensure that the other
+                // one continues preventing the sync, even though it
+                // happened "after" the first conflict
+                return tasks.resolve(syncResult.conflicts[1], syncResult.conflicts[1].local);
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(1);
+                expect(syncResult.updated).to.have.length.of(0);
+              });
+          });
         });
 
       });
