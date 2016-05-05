@@ -649,7 +649,7 @@ describe("Integration tests", function() {
           });
         });
 
-        describe.only("Resolving conflicts doesn't interfere with sync", () => {
+        describe("Resolving conflicts doesn't interfere with sync", () => {
           const conflictingId = uuid4();
           const testData = {
             localSynced: [
