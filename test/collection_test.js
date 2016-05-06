@@ -641,12 +641,7 @@ describe("Collection", () => {
           errors:    [],
           created:   [],
           published: [],
-          resolved:   [{
-            id: local.id,
-            last_modified: 42,
-            title: "resolved",
-            _status: "updated",
-          }],
+          resolved:  [],
           skipped:   [],
           deleted:   [],
           conflicts: [],
