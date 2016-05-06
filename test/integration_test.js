@@ -664,8 +664,8 @@ describe("Integration tests", function() {
           it("should sync over resolved records", () => {
             return tasks.update({id: conflictingId, title: "locally changed title"},
                                 {patch: true})
-              .then(newRecord => {
-                expect(newRecord.data.last_modified).to.exist;
+              .then(({data: newRecord}) => {
+                expect(newRecord.last_modified).to.exist;
                 return tasks.api.bucket("default").collection("tasks").updateRecord(
                   {id: conflictingId, title: "remotely changed title"}, {patch: true});
               })
@@ -685,9 +685,9 @@ describe("Integration tests", function() {
                 expect(syncResult.published).to.have.length.of(1);
               })
               .then(() => tasks.get(conflictingId))
-              .then(record => {
-                expect(record.data.title).eql("locally changed title");
-                expect(record.data._status).eql("synced");
+              .then(({data: record}) => {
+                expect(record.title).eql("locally changed title");
+                expect(record._status).eql("synced");
               });
           });
 
