@@ -151,7 +151,7 @@ function importChange(transaction, remote) {
       // one, this represents an object that corresponds to a resolved
       // conflict. Our local version represents the final output, so
       // we keep that one. (No transaction operation to do.)
-      // But if our last_modifieds is undefined,
+      // But if our last_modified is undefined,
       // that means we've created the same object locally as one on
       // the server, which *must* be a conflict.
       return {type: "void"};
