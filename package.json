@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
@@ -51,6 +51,10 @@
     {
       "name": "Mark Goodwin",
       "url": "https://www.computerist.org/"
+    },
+    {
+      "name": "Ethan Glasser-Camp",
+      "url": "http://betacantrips.com/"
     }
   ],
   "license": "Apache-2.0",
