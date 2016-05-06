@@ -673,7 +673,8 @@ describe("Integration tests", function() {
               .then(syncResult => {
                 expect(syncResult.ok).eql(false);
                 expect(syncResult.conflicts).to.have.length.of(1);
-                // always pick our version, which has an older last_modified
+                // Always pick our version.
+                // #resolve will copy the remote last_modified.
                 return tasks.resolve(syncResult.conflicts[0], syncResult.conflicts[0].local);
               })
               .then(() => tasks.sync())
