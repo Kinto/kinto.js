@@ -648,6 +648,85 @@ describe("Integration tests", function() {
             });
           });
         });
+
+        describe("Resolving conflicts doesn't interfere with sync", () => {
+          const conflictingId = uuid4();
+          const testData = {
+            localSynced: [
+              {id: conflictingId, title: "conflicting task", done: false}
+            ],
+            localUnsynced: [],
+            server: [],
+          };
+          let rawCollection;
+
+          beforeEach(() => {
+            rawCollection = tasks.api.bucket("default").collection("tasks");
+            return testSync(testData);
+          });
+
+          it("should sync over resolved records", () => {
+            return tasks.update({id: conflictingId, title: "locally changed title"},
+                                {patch: true})
+              .then(({data: newRecord}) => {
+                expect(newRecord.last_modified).to.exist;
+                // Change the record remotely to introduce a comment
+                return rawCollection.updateRecord({id: conflictingId, title: "remotely changed title"},
+                                                  {patch: true});
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(1);
+                // Always pick our version.
+                // #resolve will copy the remote last_modified.
+                return tasks.resolve(syncResult.conflicts[0], syncResult.conflicts[0].local);
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(true);
+                expect(syncResult.conflicts).to.have.length.of(0);
+                expect(syncResult.updated).to.have.length.of(0);
+                expect(syncResult.published).to.have.length.of(1);
+              })
+              .then(() => tasks.get(conflictingId))
+              .then(({data: record}) => {
+                expect(record.title).eql("locally changed title");
+                expect(record._status).eql("synced");
+              });
+          });
+
+          it("should not skip other conflicts", () => {
+            const conflictingId2 = uuid4();
+            return tasks.create({id: conflictingId2, title: "second title"},
+                                {useRecordId: true})
+              .then(() => tasks.sync())
+              .then(() => rawCollection.updateRecord({id: conflictingId, title: "remotely changed title"},
+                                                     {patch: true}))
+              .then(() => rawCollection.updateRecord({id: conflictingId2, title: "remotely changed title2"},
+                                                     {patch: true}))
+              .then(() => tasks.update({id: conflictingId, title: "locally changed title"},
+                                       {patch: true}))
+              .then(() => tasks.update({id: conflictingId2, title: "local title2"},
+                                       {patch: true}))
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(2);
+                // resolve just one conflict and ensure that the other
+                // one continues preventing the sync, even though it
+                // happened "after" the first conflict
+                return tasks.resolve(syncResult.conflicts[1], syncResult.conflicts[1].local);
+              })
+              .then(() => tasks.sync())
+              .then(syncResult => {
+                expect(syncResult.ok).eql(false);
+                expect(syncResult.conflicts).to.have.length.of(1);
+                expect(syncResult.updated).to.have.length.of(0);
+              });
+          });
+        });
+
       });
 
       describe("Outgoing conflict", () => {

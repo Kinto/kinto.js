@@ -1289,11 +1289,14 @@ describe("Collection", () => {
     });
 
     describe("When a conflict occured", () => {
-      let createdId;
+      let createdId, local;
 
       beforeEach(() => {
         return articles.create({title: "art2"})
-          .then(res => createdId = res.data.id);
+          .then(res => {
+            local = res.data;
+            createdId = local.id;
+          });
       });
 
       it("should resolve listing conflicting changes with MANUAL strategy", () => {
@@ -1330,6 +1333,44 @@ describe("Collection", () => {
               }
             }],
             resolved:  [],
+          });
+      });
+
+      it("should ignore resolved conflicts during sync", () => {
+        const remote = Object.assign({}, local, {
+          title: "blah",
+          last_modified: 42,
+        });
+        const conflict = {
+          type: "incoming",
+          local: local,
+          remote: remote,
+        };
+        const resolution = Object.assign({}, local, {
+          title: "resolved"
+        });
+        sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
+          Promise.resolve({
+            data: [
+              remote,
+            ],
+            next: () => {},
+            last_modified: "\"42\"",
+          }));
+        const syncResult = new SyncResultObject();
+        return articles.resolve(conflict, resolution)
+          .then(() => articles.pullChanges(syncResult))
+          .should.eventually.become({
+            ok: true,
+            lastModified: 42,
+            errors:    [],
+            created:   [],
+            published: [],
+            resolved:  [],
+            skipped:   [],
+            deleted:   [],
+            conflicts: [],
+            updated: []
           });
       });
     });
