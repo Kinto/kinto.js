@@ -658,10 +658,12 @@ describe("Integration tests", function() {
             localUnsynced: [],
             server: [],
           };
+
           beforeEach(() => testSync(testData));
+
           it("should sync over resolved records", () => {
             return tasks.update({id: conflictingId, title: "locally changed title"},
-                         {patch: true})
+                                {patch: true})
               .then(newRecord => {
                 expect(newRecord.data.last_modified).to.exist;
                 return tasks.api.bucket("default").collection("tasks").updateRecord(
@@ -693,13 +695,10 @@ describe("Integration tests", function() {
             return tasks.create({id: conflictingId2, title: "second title"},
                                 {useRecordId: true})
               .then(() => tasks.sync())
-              .then(() =>
-                rawCollection.updateRecord(
-                  {id: conflictingId, title: "remotely changed title"}, {patch: true})
-                   )
-              .then(() =>
-                rawCollection.updateRecord(
-                  {id: conflictingId2, title: "remotely changed title2"}, {patch: true}))
+              .then(() => rawCollection.updateRecord({id: conflictingId, title: "remotely changed title"},
+                                                     {patch: true}))
+              .then(() => rawCollection.updateRecord({id: conflictingId2, title: "remotely changed title2"},
+                                                     {patch: true}))
               .then(() => tasks.update({id: conflictingId, title: "locally changed title"},
                                        {patch: true}))
               .then(() => tasks.update({id: conflictingId2, title: "local title2"},
