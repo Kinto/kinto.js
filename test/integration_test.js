@@ -670,6 +670,7 @@ describe("Integration tests", function() {
                                 {patch: true})
               .then(({data: newRecord}) => {
                 expect(newRecord.last_modified).to.exist;
+                // Change the record remotely to introduce a comment
                 return rawCollection.updateRecord({id: conflictingId, title: "remotely changed title"},
                                                   {patch: true});
               })
