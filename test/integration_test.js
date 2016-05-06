@@ -681,6 +681,7 @@ describe("Integration tests", function() {
                 expect(syncResult.ok).eql(true);
                 expect(syncResult.conflicts).to.have.length.of(0);
                 expect(syncResult.updated).to.have.length.of(0);
+                expect(syncResult.published).to.have.length.of(1);
               })
               .then(() => tasks.get(conflictingId))
               .then(record => {
