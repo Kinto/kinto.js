@@ -443,7 +443,7 @@ The synchronization result object exposes the following properties:
 - `conflicts`: The list of unresolved conflicts encountered during both import and export operations (see *[Resolving conflicts manually](#resolving-conflicts-manually)*);
 - `errors`:    The list of encountered errors, if any. Each error has a `type` property, which value can either be `incoming` or `outgoing` depending on which part of the sync flow it's been caught from;
 - `created`:   The list of remote records which have been successfully imported into the local database.
-- `updated`:   The list of remote record updates which have been successfully reflected into the local database.
+- `updated`:   The list of updates with old and new record which have been successfully reflected into the local database.
 - `deleted`:   The list of remotely deleted records which have been successfully deleted as well locally.
 - `skipped`:   The list of remotely deleted records missing locally.
 - `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
