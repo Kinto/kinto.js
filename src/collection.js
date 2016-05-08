@@ -794,15 +794,14 @@ export default class Collection {
             }
           });
           toSync.forEach((r) => {
-            const isCreated = r._status === "created";
-            // Do not store status on server.
-            // XXX: cleanRecord() removes last_modified, required by safe.
-            delete r._status;
-            if (isCreated) {
-              batch.createRecord(r);
+            // Clean local fields (like _status) before sending to server.
+            // Keep last_modified required for option safe: true.
+            const published = Object.assign({last_modified: r.last_modified}, cleanRecord(r));
+            if (r._status === "created") {
+              batch.createRecord(published);
             }
             else {
-              batch.updateRecord(r);
+              batch.updateRecord(published);
             }
           });
         }, {headers: options.headers, safe: true, aggregate: true});
