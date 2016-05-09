@@ -728,11 +728,13 @@ export default class Collection {
       headers: {},
     }, options);
 
-    // Optionally ignore records when pulling for changes.
+    // Optionally ignore some records when pulling for changes.
     // (avoid redownloading our own changes on last step of #sync())
     let filters;
     if (options.exclude) {
-      // Take the first 50 records to limit size of querystring (~2000 chars).
+      // Limit the list of excluded records to the first 50 records in order
+      // to remain under de-facto URL size limit (~2000 chars).
+      // http://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers/417184#417184
       const exclude_id = options.exclude.slice(0, 50).map((r) => r.id).join(",");
       filters = {exclude_id};
     }
