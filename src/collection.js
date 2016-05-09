@@ -126,7 +126,7 @@ function importChange(transaction, remote) {
     // Not found locally but remote change is marked as deleted; skip to
     // avoid recreation.
     if (remote.deleted) {
-      return {type: "skipped", data: remote, previous: local};
+      return {type: "skipped", data: remote};
     }
     const synced = markSynced(remote);
     transaction.create(synced);
