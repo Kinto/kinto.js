@@ -505,14 +505,22 @@ export default class Collection {
     return this.get(record.id)
       .then((res) => {
         const existing = res.data;
-        const newStatus = options.synced ? "synced" : "updated";
+        const source = options.patch ? Object.assign({}, existing, record)
+                                     : record;
+        // Make sure to never loose the existing timestamp.
+        if (existing.last_modified && !source.last_modified) {
+          source.last_modified = existing.last_modified;
+        }
+
+        // If only local fields have changed, then keep record as synced.
+        const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
+        const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
+        const isIdentical = deepEqual(cleanLocal(existing), cleanLocal(source));
+        const keepSynced = isIdentical && existing._status == "synced";
+        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        const updated = markStatus(source, newStatus);
+
         return this.db.execute((transaction) => {
-          const source = options.patch ? Object.assign({}, existing, record)
-                                       : record;
-          const updated = markStatus(source, newStatus);
-          if (existing.last_modified && !updated.last_modified) {
-            updated.last_modified = existing.last_modified;
-          }
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });

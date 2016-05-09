@@ -546,6 +546,17 @@ describe("Collection", () => {
           .should.eventually.not.have.property("url");
     });
 
+    it("should change sync status when only local fields changed", () => {
+      const id = uuid4();
+      const synced = Object.assign({id: id}, article);
+      articles = testCollection({localFields: ["size"]});
+      return articles.create(synced, {synced: true})
+        .then(_ => articles.update(Object.assign({}, synced, {size: 14})))
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data._status)
+          .should.eventually.eql("synced");
+    });
+
     it("should preserve record.last_modified", () => {
       return articles.create({
         title: "foo",
