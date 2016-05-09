@@ -893,10 +893,15 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
-    return this.update(Object.assign({}, resolution, {
+    const resolved = Object.assign({}, resolution, {
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote.last_modified
-    }));
+    });
+    // If the resolution object is strictly equal to the
+    // remote record, then we can mark it as synced locally.
+    // Otherwise, mark it as updated (so that the resolution is pushed).
+    const synced = deepEqual(resolved, conflict.remote);
+    return this.update(resolved, {synced});
   }
 
   /**
