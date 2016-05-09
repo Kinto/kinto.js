@@ -558,13 +558,8 @@ describe("Integration tests", function() {
             expect(syncResult.created).to.have.length.of(0);
           });
 
-          it("should publish resolved conflict using remote version", () => {
-            expect(syncResult.published).to.have.length.of(1);
-            expect(cleanRecord(syncResult.published[0])).eql({
-              id: conflictingId,
-              title: "task4-remote",
-              done: true,
-            });
+          it("should not publish resolved conflict using remote version", () => {
+            expect(syncResult.published).to.have.length.of(0);
           });
 
           it("should not update anything", () => {

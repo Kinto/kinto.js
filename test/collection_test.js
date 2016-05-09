@@ -582,29 +582,43 @@ describe("Collection", () => {
 
   /** @test {Collection#resolve} */
   describe("#resolve", () => {
-    let articles, local;
+    let articles, local, remote, conflict;
 
     beforeEach(() => {
       articles = testCollection();
       return articles.create({title: "local title", last_modified: 41})
-        .then(res => local = res.data);
+        .then(res => {
+          local = res.data;
+          remote = Object.assign({}, local, {
+            title: "blah",
+            last_modified: 42,
+          });
+          conflict = {
+            type: "incoming",
+            local: local,
+            remote: remote,
+          };
+        });
     });
 
-    it("should mark a conflict as resolved", () => {
-      const remote = Object.assign({}, local, {
-        title: "blah",
-        last_modified: 42,
-      });
-      const conflict = {
-        type: "incoming",
-        local: local,
-        remote: remote,
-      };
+    it("should mark a record as updated", () => {
       const resolution = Object.assign({}, local, {title: "resolved"});
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
           _status: "updated",
+          id: local.id,
+          title: resolution.title,
+          last_modified: remote.last_modified
+        });
+    });
+
+    it("should mark a record as synced if resolved with remote", () => {
+      const resolution = Object.assign({}, local, {title: remote.title});
+      return articles.resolve(conflict, resolution)
+        .then(res => res.data)
+        .should.eventually.become({
+          _status: "synced",
           id: local.id,
           title: resolution.title,
           last_modified: remote.last_modified
