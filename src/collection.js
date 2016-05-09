@@ -249,7 +249,7 @@ export default class Collection {
      * The list of fields names that will remain local.
      * @type {Array}
      */
-    this.localFields = [];
+    this.localFields = options.localFields || [];
   }
 
   /**

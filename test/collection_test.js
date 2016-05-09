@@ -32,17 +32,9 @@ describe("Collection", () => {
 
   function testCollection(options={}) {
     events = new EventEmitter();
-    idSchema = options.idSchema;
-    remoteTransformers = options.remoteTransformers;
-    hooks = options.hooks;
+    const opts = Object.assign({events, adapter: IDB}, options);
     api = new Api(FAKE_SERVER_URL, events);
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-      events,
-      idSchema,
-      remoteTransformers,
-      hooks,
-      adapter: IDB
-    });
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, opts);
   }
 
   function createEncodeTransformer(char, delay) {
@@ -1496,6 +1488,39 @@ describe("Collection", () => {
           }, {includeDeleted: true});
         });
     });
+
+    it("should merge remote with local fields", () => {
+      const id1 = uuid4();
+      return articles.create({id: id1, title: "bar", size: 12},
+                             {synced: true})
+        .then(() => articles.importChanges(result, {changes: [
+          {id: id1, title: "foo"},
+        ]}))
+        .then((res) => {
+          expect(res.updated[0].title).eql("foo");
+          expect(res.updated[0].size).eql(12);
+        });
+    });
+
+    it("should ignore local fields when detecting conflicts", () => {
+      const id1 = uuid4();
+      articles = testCollection({localFields: ["size"]});
+      // Create record with status not synced.
+      return articles.create({id: id1, title: "bar", size: 12, last_modified: 42},
+                             {useRecordId: true})
+        .then(() => articles.importChanges(result, {changes: [
+          {id: id1, title: "bar", last_modified: 43},
+        ]}))
+        .then((res) => {
+          // No conflict, local.title == remote.title.
+          expect(res.ok).eql(true);
+          expect(res.updated[0].title).eql("bar");
+          // Local field is preserved
+          expect(res.updated[0].size).eql(12);
+          // Timestamp was taken from remote
+          expect(res.updated[0].last_modified).eql(43);
+        });
+    });
   });
 
   /** @test {Collection#pushChanges} */
@@ -1523,6 +1548,20 @@ describe("Collection", () => {
           expect(requests).to.have.length.of(1);
           expect(requests[0].body.data.title).eql("foo");
           expect(options.safe).eql(true);
+        });
+    });
+
+    it("should not publish local fields to the server", () => {
+      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
+        .returns(Promise.resolve([{}]));
+
+      articles = testCollection({localFields: ["size"]});
+      return articles.update(Object.assign({}, records[0], {title: "ah", size: 3.14}))
+        .then(() => articles.pushChanges(result))
+        .then(_ => {
+          const requests = batchRequests.firstCall.args[0];
+          expect(requests[0].body.data.title).eql("ah");
+          expect(requests[0].body.data.size).to.not.exist;
         });
     });
 
