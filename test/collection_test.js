@@ -1124,7 +1124,7 @@ describe("Collection", () => {
               });
               expect(result.updated.length).to.eql(2);
               result.updated.forEach((r) => {
-                expect(r.foo).to.eql("bar");
+                expect(r.new.foo).to.eql("bar");
               });
             });
         });
@@ -1161,8 +1161,8 @@ describe("Collection", () => {
               });
               expect(result.updated.length).to.eql(2);
               result.updated.forEach((r) => {
-                expect(r.foo).to.eql("bar");
-                expect(r.bar).to.eql("baz");
+                expect(r.new.foo).to.eql("bar");
+                expect(r.new.bar).to.eql("baz");
               });
             });
         });
@@ -1199,7 +1199,8 @@ describe("Collection", () => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
               since: undefined,
-              headers: {}
+              headers: {},
+              filters: undefined
             });
           });
       });
@@ -1210,7 +1211,8 @@ describe("Collection", () => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
               since: 42,
-              headers: {}
+              headers: {},
+              filters: undefined
             });
           });
       });
@@ -1227,16 +1229,17 @@ describe("Collection", () => {
       it("should resolve with imported updates", () => {
         return articles.pullChanges(result)
           .then(res => res.updated)
-          .should.eventually.become([
-            {id: id_7, title: "art7-b", _status: "synced"}
-          ]);
+          .should.eventually.become([{
+            old: {id: id_7, title: "art7-a", _status: "synced"},
+            new: {id: id_7, title: "art7-b", _status: "synced"}
+          }]);
       });
 
       it("should resolve with imported deletions", () => {
         return articles.pullChanges(result)
           .then(res => res.deleted)
           .should.eventually.become([
-            {id: id_4}
+            {id: id_4, title: "art4", _status: "synced"}
           ]);
       });
 
@@ -1411,9 +1414,16 @@ describe("Collection", () => {
             created:   [],
             published: [],
             updated:   [{
-              id: createdId,
-              title: "art2",
-              _status: "synced",
+              old: {
+                id: createdId,
+                title: "art2",
+                _status: "created",
+              },
+              new: {
+                id: createdId,
+                title: "art2",
+                _status: "synced"
+              }
             }],
             skipped:   [],
             deleted:   [],
@@ -1514,8 +1524,8 @@ describe("Collection", () => {
           {id: id1, title: "foo"},
         ]}))
         .then((res) => {
-          expect(res.updated[0].title).eql("foo");
-          expect(res.updated[0].size).eql(12);
+          expect(res.updated[0].new.title).eql("foo");
+          expect(res.updated[0].new.size).eql(12);
         });
     });
 
@@ -1531,11 +1541,11 @@ describe("Collection", () => {
         .then((res) => {
           // No conflict, local.title == remote.title.
           expect(res.ok).eql(true);
-          expect(res.updated[0].title).eql("bar");
+          expect(res.updated[0].new.title).eql("bar");
           // Local field is preserved
-          expect(res.updated[0].size).eql(12);
+          expect(res.updated[0].new.size).eql(12);
           // Timestamp was taken from remote
-          expect(res.updated[0].last_modified).eql(43);
+          expect(res.updated[0].new.last_modified).eql(43);
         });
     });
   });

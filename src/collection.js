@@ -147,7 +147,7 @@ function importChange(transaction, remote, localFields) {
       // local last_modified value from the server and set record
       // status to "synced".
       transaction.update(synced);
-      return {type: "updated", data: synced, previous: local};
+      return {type: "updated", data: {old: local, new: synced}};
     }
     if (local.last_modified !== undefined && local.last_modified === remote.last_modified) {
       // If our local version has the same last_modified as the remote
@@ -166,13 +166,13 @@ function importChange(transaction, remote, localFields) {
   }
   if (remote.deleted) {
     transaction.delete(remote.id);
-    return {type: "deleted", data: {id: local.id}};
+    return {type: "deleted", data: local};
   }
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
   const type = isIdentical ? "void" : "updated";
-  return {type, data: synced};
+  return {type, data: {old: local, new: synced}};
 }
 
 
@@ -741,10 +741,22 @@ export default class Collection {
       lastModified: this.lastModified,
       headers: {},
     }, options);
+
+    // Optionally ignore some records when pulling for changes.
+    // (avoid redownloading our own changes on last step of #sync())
+    let filters;
+    if (options.exclude) {
+      // Limit the list of excluded records to the first 50 records in order
+      // to remain under de-facto URL size limit (~2000 chars).
+      // http://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers/417184#417184
+      const exclude_id = options.exclude.slice(0, 50).map((r) => r.id).join(",");
+      filters = {exclude_id};
+    }
     // First fetch remote changes from the server
     return this._apiCollection.listRecords({
       since: options.lastModified || undefined,
-      headers: options.headers
+      headers: options.headers,
+      filters
     })
     .then(({data, last_modified}) => {
       // last_modified is the ETag header value (string).
@@ -759,7 +771,7 @@ export default class Collection {
       const localSynced = options.lastModified;
       const serverChanged = unquoted > options.lastModified;
       const emptyCollection = data.length === 0;
-      if (localSynced && serverChanged && emptyCollection) {
+      if (!options.exclude && localSynced && serverChanged && emptyCollection) {
         throw Error("Server has been flushed.");
       }
 
@@ -834,25 +846,28 @@ export default class Collection {
         const conflicts = synced.conflicts.map((c) => {
           return {type: c.type, local: c.local.data, remote: c.remote};
         });
+        // Merge outgoing conflicts into sync result object
+        syncResultObject.add("conflicts", conflicts);
+
+        // Reflect publication results locally using the response from
+        // the batch request.
+        // For created and updated records, the last_modified coming from server
+        // will be stored locally.
         const published = synced.published.map((c) => c.data);
         const skipped = synced.skipped.map((c) => c.data);
 
-        // Merge outgoing conflicts into sync result object
-        syncResultObject.add("conflicts", conflicts);
-        // Reflect publication results locally
+        // Records that must be deleted are either deletions that were pushed
+        // to server (published) or deleted records that were never pushed (skipped).
         const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
         const toApplyLocally = published.concat(missingRemotely);
-        // Deleted records are distributed accross local and missing records
-        // XXX: When tackling the issue to avoid downloading our own changes
-        // from the server. `toDeleteLocally` should be obtained from local db.
-        // See https://github.com/Kinto/kinto.js/issues/144
+
         const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
         const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
         // First, apply the decode transformers, if any
         return Promise.all(toUpdateLocally.map(record => {
           return this._decodeRecord("remote", record);
         }))
-          // Process everything within a single transaction
+          // Process everything within a single transaction.
           .then((results) => {
             return this.db.execute((transaction) => {
               const updated = results.map((record) => {
@@ -907,10 +922,15 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
-    return this.update(Object.assign({}, resolution, {
+    const resolved = Object.assign({}, resolution, {
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote.last_modified
-    }));
+    });
+    // If the resolution object is strictly equal to the
+    // remote record, then we can mark it as synced locally.
+    // Otherwise, mark it as updated (so that the resolution is pushed).
+    const synced = deepEqual(resolved, conflict.remote);
+    return this.update(resolved, {synced});
   }
 
   /**
@@ -979,7 +999,9 @@ export default class Collection {
         if (result.published.length === 0) {
           return result;
         }
-        return this.pullChanges(result, options);
+        // Avoid redownloading our own changes during the last pull.
+        const pullOpts = Object.assign({}, options, {exclude: result.published});
+        return this.pullChanges(result, pullOpts);
       });
     // Ensure API default remote is reverted if a custom one's been used
     return pFinally(syncPromise, () => this.api.remote = previousRemote);
