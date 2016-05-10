@@ -552,17 +552,6 @@ describe("Collection", () => {
           .should.eventually.not.have.property("url");
     });
 
-    it("should change sync status when only local fields changed", () => {
-      const id = uuid4();
-      const synced = Object.assign({id: id}, article);
-      articles = testCollection({localFields: ["size"]});
-      return articles.create(synced, {synced: true})
-        .then(_ => articles.update(Object.assign({}, synced, {size: 14})))
-        .then(res => articles.get(res.data.id))
-        .then(res => res.data._status)
-          .should.eventually.eql("synced");
-    });
-
     it("should preserve record.last_modified", () => {
       return articles.create({
         title: "foo",
@@ -591,29 +580,43 @@ describe("Collection", () => {
 
   /** @test {Collection#resolve} */
   describe("#resolve", () => {
-    let articles, local;
+    let articles, local, remote, conflict;
 
     beforeEach(() => {
       articles = testCollection();
       return articles.create({title: "local title", last_modified: 41})
-        .then(res => local = res.data);
+        .then(res => {
+          local = res.data;
+          remote = Object.assign({}, local, {
+            title: "blah",
+            last_modified: 42,
+          });
+          conflict = {
+            type: "incoming",
+            local: local,
+            remote: remote,
+          };
+        });
     });
 
-    it("should mark a conflict as resolved", () => {
-      const remote = Object.assign({}, local, {
-        title: "blah",
-        last_modified: 42,
-      });
-      const conflict = {
-        type: "incoming",
-        local: local,
-        remote: remote,
-      };
+    it("should mark a record as updated", () => {
       const resolution = Object.assign({}, local, {title: "resolved"});
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
           _status: "updated",
+          id: local.id,
+          title: resolution.title,
+          last_modified: remote.last_modified
+        });
+    });
+
+    it("should mark a record as synced if resolved with remote", () => {
+      const resolution = Object.assign({}, local, {title: remote.title});
+      return articles.resolve(conflict, resolution)
+        .then(res => res.data)
+        .should.eventually.become({
+          _status: "synced",
           id: local.id,
           title: resolution.title,
           last_modified: remote.last_modified
@@ -1199,8 +1202,8 @@ describe("Collection", () => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
               since: undefined,
-              headers: {},
-              filters: undefined
+              filters: undefined,
+              headers: {}
             });
           });
       });
@@ -1211,8 +1214,21 @@ describe("Collection", () => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
               since: 42,
-              headers: {},
-              filters: undefined
+              filters: undefined,
+              headers: {}
+            });
+          });
+      });
+
+      it("should pass provided filters when polling changes from server", () => {
+        const exclude = [{id: 1}, {id: 2}, {id: 3}];
+        return articles.pullChanges(result, {lastModified: 42, exclude})
+          .then(_ => {
+            sinon.assert.calledOnce(listRecords);
+            sinon.assert.calledWithExactly(listRecords, {
+              since: 42,
+              filters: {exclude_id: "1,2,3"},
+              headers: {}
             });
           });
       });
@@ -1231,7 +1247,7 @@ describe("Collection", () => {
           .then(res => res.updated)
           .should.eventually.become([{
             old: {id: id_7, title: "art7-a", _status: "synced"},
-            new: {id: id_7, title: "art7-b", _status: "synced"}
+            new: {id: id_7, title: "art7-b", _status: "synced"},
           }]);
       });
 
@@ -1414,16 +1430,8 @@ describe("Collection", () => {
             created:   [],
             published: [],
             updated:   [{
-              old: {
-                id: createdId,
-                title: "art2",
-                _status: "created",
-              },
-              new: {
-                id: createdId,
-                title: "art2",
-                _status: "synced"
-              }
+              old: {id: createdId, title: "art2", _status: "created"},
+              new: {id: createdId, title: "art2", _status: "synced"}
             }],
             skipped:   [],
             deleted:   [],
@@ -1914,6 +1922,20 @@ describe("Collection", () => {
         .returns(Promise.resolve(new SyncResultObject()));
       return articles.sync().then(res => {
         sinon.assert.calledOnce(pullChanges);
+      });
+    });
+
+    it("should not redownload pushed changes", () => {
+      const record1 = {id: uuid4(), title: "blog"};
+      const record2 = {id: uuid4(), title: "post"};
+      const syncResult = new SyncResultObject();
+      syncResult.add("published", record1);
+      syncResult.add("published", record2);
+      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(syncResult));
+      sandbox.stub(articles, "pushChanges").returns(Promise.resolve(syncResult));
+      return articles.sync().then(res => {
+        expect(res.published).to.have.length(2);
+        expect(articles.pullChanges.lastCall.args[1].exclude).eql([record1, record2]);
       });
     });
 
