@@ -3,34 +3,22 @@
 import BaseAdapter from "./adapters/base";
 import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import { isUUID, pFinally } from "./utils";
+import { isUUID, pFinally, omitKeys } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
 
-/**
- * Cleans a record object, excluding passed keys.
- *
- * @param  {Object} record        The record object.
- * @param  {Array}  excludeFields The list of keys to exclude.
- * @return {Object}               A clean copy of source record object.
- */
-export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
-  return Object.keys(record).reduce((acc, key) => {
-    if (excludeFields.indexOf(key) === -1) {
-      acc[key] = record[key];
-    }
-    return acc;
-  }, {});
-}
 
 /**
  * Compare two records omitting local fields and synchronization
  * attributes (like _status and last_modified)
+ * @param {Object} a    A record to compare.
+ * @param {Object} b    A record to compare.
+ * @return {boolean}
  */
 export function recordsEqual(a, b, localFields=[]) {
   const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(localFields);
-  const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
+  const cleanLocal = (r) => omitKeys(r, fieldsToClean);
   return deepEqual(cleanLocal(a), cleanLocal(b));
 }
 
@@ -821,7 +809,8 @@ export default class Collection {
           });
           toSync.forEach((r) => {
             // Clean local fields (like _status) before sending to server.
-            const published = cleanRecord(r, RECORD_FIELDS_TO_CLEAN.concat(this.localFields));
+            const localKeys = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
+            const published = omitKeys(r, localKeys);
             // Keep last_modified required for option safe: true.
             published.last_modified = r.last_modified;
             if (r._status === "created") {

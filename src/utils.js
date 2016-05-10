@@ -138,3 +138,19 @@ export function deepEqual(a, b) {
   }
   return true;
 }
+
+/**
+ * Return an object without the specified keys.
+ *
+ * @param  {Object} obj        The original object.
+ * @param  {Array}  keys       The list of keys to exclude.
+ * @return {Object}            A copy without the specified keys.
+ */
+export function omitKeys(obj, keys=[]) {
+  return Object.keys(obj).reduce((acc, key) => {
+    if (keys.indexOf(key) === -1) {
+      acc[key] = obj[key];
+    }
+    return acc;
+  }, {});
+}
