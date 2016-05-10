@@ -2,6 +2,72 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 2.x to 3.x
+
+The format of updates and deletions in the `SyncResultObject` has changed.
+
+* The ``updated`` list now contains a list of objects with ``old`` and ``new`` attributes
+* The ``deleted`` list now contains the full old record instead of just a stripped object containing ``id``
+
+Before with 2.X:
+
+```js
+{
+  ok: true,
+  lastModified: 1434270764485,
+  conflicts: [],
+  errors:    [],
+  created:   [],
+  updated:   [{
+    id: "08d5ae32-7f73-46bb-a8a6-c2bd80b15705",
+    title: "blog post",
+    _status: "synced",
+    last_modified: 1434270764485
+  }],
+  skipped:   [],
+  published: [],
+  resolved:  [],
+  deleted:   [{
+    id: "131a100d-0732-494e-aa3c-e4a15e23eb77"
+  }],
+}
+```
+
+Now with 3.X:
+
+```js
+{
+  ok: true,
+  lastModified: 1434270764485,
+  conflicts: [],
+  errors:    [],
+  created:   [],
+  updated:   [{
+    old: {
+      id: "08d5ae32-7f73-46bb-a8a6-c2bd80b15705",
+      title: "draft",
+      _status: "synced",
+      last_modified: 1434243221112
+    },
+    new: {
+      id: "08d5ae32-7f73-46bb-a8a6-c2bd80b15705",
+      title: "blog post",
+      _status: "synced",
+      last_modified: 1434270764485
+    }
+  }],
+  skipped:   [],
+  published: [],
+  resolved:  [],
+  deleted:   [{
+    id: "131a100d-0732-494e-aa3c-e4a15e23eb77",
+    _status: "synced",
+    last_modified: 1434223456788
+  }],
+}
+```
+
+
 ## 1.x to 2.x
 
 Kinto.js 2.x introduces general usage of transactions in database adapters. This change doesn't impact the `Collection` API, so most users shouldn't be impacted by this change.

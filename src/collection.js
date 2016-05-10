@@ -144,7 +144,7 @@ function importChange(transaction, remote) {
       // status to "synced".
       const synced = markSynced(remote);
       transaction.update(synced);
-      return {type: "updated", data: synced, previous: local};
+      return {type: "updated", data: {old: local, new: synced}};
     }
     if (local.last_modified !== undefined && local.last_modified === remote.last_modified) {
       // If our local version has the same last_modified as the remote
@@ -163,13 +163,13 @@ function importChange(transaction, remote) {
   }
   if (remote.deleted) {
     transaction.delete(remote.id);
-    return {type: "deleted", data: {id: local.id}};
+    return {type: "deleted", data: local};
   }
   const synced = markSynced(remote);
   transaction.update(synced);
   // if identical, simply exclude it from all lists
   const type = identical ? "void" : "updated";
-  return {type, data: synced};
+  return {type, data: {old: local, new: synced}};
 }
 
 
