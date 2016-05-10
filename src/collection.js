@@ -25,6 +25,16 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
 }
 
 /**
+ * Compare two records omitting local fields and synchronization
+ * attributes (like _status and last_modified)
+ */
+function recordsEqual(a, b, localFields=[]) {
+  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(localFields);
+  const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
+  return deepEqual(cleanLocal(a), cleanLocal(b));
+}
+
+/**
  * Synchronization result object.
  */
 export class SyncResultObject {
@@ -134,11 +144,7 @@ function importChange(transaction, remote, localFields) {
     return {type: "created", data: synced};
   }
 
-  // Compare remote with local record. Omit local fields and synchronization
-  // attributes (like _status and last_modified).
-  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(localFields);
-  const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
-  const identical = deepEqual(cleanLocal(local), cleanLocal(remote));
+  const isIdentical = recordsEqual(local, remote, localFields);
 
   // Apply remote changes on local record.
   const synced = Object.assign({}, local, markSynced(remote));
@@ -148,7 +154,7 @@ function importChange(transaction, remote, localFields) {
     if (local._status === "deleted") {
       return {type: "skipped", data: local};
     }
-    if (identical) {
+    if (isIdentical) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
@@ -177,7 +183,7 @@ function importChange(transaction, remote, localFields) {
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
-  const type = identical ? "void" : "updated";
+  const type = isIdentical ? "void" : "updated";
   return {type, data: synced};
 }
 
@@ -513,9 +519,7 @@ export default class Collection {
         }
 
         // If only local fields have changed, then keep record as synced.
-        const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
-        const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
-        const isIdentical = deepEqual(cleanLocal(existing), cleanLocal(source));
+        const isIdentical = recordsEqual(existing, source, this.localFields);
         const keepSynced = isIdentical && existing._status == "synced";
         const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
         const updated = markStatus(source, newStatus);
@@ -817,12 +821,12 @@ export default class Collection {
           });
           toSync.forEach((r) => {
             // Clean local fields (like _status) before sending to server.
+            const published = cleanRecord(r, RECORD_FIELDS_TO_CLEAN.concat(this.localFields));
             // Keep last_modified required for option safe: true.
-            const published = cleanRecord(r, ["_status"].concat(this.localFields));
+            published.last_modified = r.last_modified;
             if (r._status === "created") {
               batch.createRecord(published);
-            }
-            else {
+            } else {
               batch.updateRecord(published);
             }
           });
