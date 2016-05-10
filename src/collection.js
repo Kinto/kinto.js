@@ -131,12 +131,11 @@ function importChange(transaction, remote, localFields) {
     transaction.create(synced);
     return {type: "created", data: synced};
   }
-
+  // Compare local and remote, ignoring local fields.
   const isIdentical = recordsEqual(local, remote, localFields);
-
   // Apply remote changes on local record.
   const synced = Object.assign({}, local, markSynced(remote));
-
+  // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
@@ -164,6 +163,7 @@ function importChange(transaction, remote, localFields) {
       data: {type: "incoming", local: local, remote: remote}
     };
   }
+  // Local record was synced.
   if (remote.deleted) {
     transaction.delete(remote.id);
     return {type: "deleted", data: local};
@@ -505,13 +505,11 @@ export default class Collection {
         if (existing.last_modified && !source.last_modified) {
           source.last_modified = existing.last_modified;
         }
-
         // If only local fields have changed, then keep record as synced.
         const isIdentical = recordsEqual(existing, source, this.localFields);
         const keepSynced = isIdentical && existing._status == "synced";
         const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
         const updated = markStatus(source, newStatus);
-
         return this.db.execute((transaction) => {
           transaction.update(updated);
           return {data: updated, permissions: {}};
