@@ -28,7 +28,7 @@ export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
  * Compare two records omitting local fields and synchronization
  * attributes (like _status and last_modified)
  */
-function recordsEqual(a, b, localFields=[]) {
+export function recordsEqual(a, b, localFields=[]) {
   const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(localFields);
   const cleanLocal = (r) => cleanRecord(r, fieldsToClean);
   return deepEqual(cleanLocal(a), cleanLocal(b));

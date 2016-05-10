@@ -12,7 +12,7 @@ import Collection, { SyncResultObject } from "../src/collection";
 import Api from "kinto-client";
 import KintoClient from "kinto-client";
 import KintoClientCollection from "kinto-client/lib/collection.js";
-import { cleanRecord } from "../src/collection";
+import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
 chai.use(chaiAsPromised);
@@ -68,11 +68,17 @@ describe("Collection", () => {
   });
 
   describe("Helpers", () => {
-    /** @test {cleanRecord} */
-    describe("#cleanRecord", () => {
-      it("should clean record data", () => {
-        expect(cleanRecord({title: "foo", _status: "foo"}))
-          .eql({title: "foo"});
+    /** @test {recordsEqual} */
+    describe("#recordsEqual", () => {
+      it("should compare record data without metadata", () => {
+        expect(recordsEqual({title: "foo", _status: "foo", last_modified: 32},
+                            {title: "foo"})).eql(true);
+      });
+
+      it("should compare record data without metadata nor local fields", () => {
+        expect(recordsEqual({title: "foo", _status: "foo", size: 32},
+                            {title: "foo"},
+                            ["size"])).eql(true);
       });
     });
   });
