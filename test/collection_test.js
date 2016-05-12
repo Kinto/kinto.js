@@ -584,6 +584,7 @@ describe("Collection", () => {
       const collection = testCollection();
       const record = {id: "1", _status: "synced", last_modified: 42};
       const cleaned = collection.cleanLocalFields(record);
+
       expect(cleaned).eql({id: "1", last_modified: 42});
     });
 
@@ -591,6 +592,7 @@ describe("Collection", () => {
       const collection = testCollection({localFields: ["size"]});
       const record = {id: "1", size: 3.14, _status: "synced", last_modified: 42};
       const cleaned = collection.cleanLocalFields(record);
+
       expect(cleaned).eql({id: "1", last_modified: 42});
     });
   });

@@ -504,8 +504,7 @@ Here we're solving encountered conflicts by picking all remote versions. After c
 
 By default, kinto.js sends every record attribute stored locally.
 
-In order to store some field only locally, and never publish them to the server,
-you can provide a list of field names in the `localFields` option of `Kinto#collection`:
+In order to store some field only locally, and never publish them to the server, you can provide a list of field names in the `localFields` option of `Kinto#collection`:
 
 ```js
 collection = kinto.collection("articles", {
@@ -517,7 +516,6 @@ A [`#cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/
 
 ```js
 stripped = collection.cleanLocalFields(record);
-
 ```
 
 
