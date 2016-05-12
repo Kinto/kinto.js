@@ -508,10 +508,18 @@ In order to store some field only locally, and never publish them to the server,
 you can provide a list of field names in the `localFields` option of `Kinto#collection`:
 
 ```js
-coll = kinto.collection("articles", {
+collection = kinto.collection("articles", {
   localFields: ["captain", "age"]
 });
 ```
+
+A [`#cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-cleanLocalFields) method is available to clean a record from the local fields:
+
+```js
+stripped = collection.cleanLocalFields(record);
+
+```
+
 
 ## The case of a new/flushed server
 

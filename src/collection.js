@@ -5,7 +5,7 @@ import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
 import { isUUID, pFinally, omitKeys } from "./utils";
 
-const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
 
 
@@ -17,7 +17,7 @@ const AVAILABLE_HOOKS = ["incoming-changes"];
  * @return {boolean}
  */
 export function recordsEqual(a, b, localFields=[]) {
-  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(localFields);
+  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(["last_modified"]).concat(localFields);
   const cleanLocal = (r) => omitKeys(r, fieldsToClean);
   return deepEqual(cleanLocal(a), cleanLocal(b));
 }
@@ -819,10 +819,7 @@ export default class Collection {
           });
           toSync.forEach((r) => {
             // Clean local fields (like _status) before sending to server.
-            const localKeys = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
-            const published = omitKeys(r, localKeys);
-            // Keep last_modified required for option safe: true.
-            published.last_modified = r.last_modified;
+            const published = this.cleanLocalFields(r);
             if (r._status === "created") {
               batch.createRecord(published);
             } else {
@@ -908,6 +905,17 @@ export default class Collection {
           });
         }
       });
+  }
+
+  /**
+   * Return a copy of the specified record without the local fields.
+   *
+   * @param  {Object} record  A record with potential local fields.
+   * @return {Object}
+   */
+  cleanLocalFields(record) {
+    const localKeys = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
+    return omitKeys(record, localKeys);
   }
 
   /**
