@@ -4,10 +4,17 @@ This page lists the breaking API changes between major versions of Kinto.js, as 
 
 ## 2.x to 3.x
 
+### cleanRecord()
+
+The `cleanRecord()` function from the collection module was dropped. Since local fields can be defined at the collection level, a [`cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-cleanLocalFields) method was introduced instead.
+
+
+### SyncResultObject
+
 The format of updates and deletions in the `SyncResultObject` has changed.
 
-* The ``updated`` list now contains a list of objects with ``old`` and ``new`` attributes
-* The ``deleted`` list now contains the full old record instead of just a stripped object containing ``id``
+* The `updated` list now contains a list of objects with `old` and `new` attributes
+* The `deleted` list now contains the full old record instead of just a stripped object containing `id`
 
 Before with 2.X:
 

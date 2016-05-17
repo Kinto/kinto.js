@@ -12,7 +12,7 @@ import Collection, { SyncResultObject } from "../src/collection";
 import Api from "kinto-client";
 import KintoClient from "kinto-client";
 import KintoClientCollection from "kinto-client/lib/collection.js";
-import { cleanRecord } from "../src/collection";
+import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
 chai.use(chaiAsPromised);
@@ -32,17 +32,9 @@ describe("Collection", () => {
 
   function testCollection(options={}) {
     events = new EventEmitter();
-    idSchema = options.idSchema;
-    remoteTransformers = options.remoteTransformers;
-    hooks = options.hooks;
+    const opts = Object.assign({events, adapter: IDB}, options);
     api = new Api(FAKE_SERVER_URL, events);
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-      events,
-      idSchema,
-      remoteTransformers,
-      hooks,
-      adapter: IDB
-    });
+    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, opts);
   }
 
   function createEncodeTransformer(char, delay) {
@@ -76,11 +68,17 @@ describe("Collection", () => {
   });
 
   describe("Helpers", () => {
-    /** @test {cleanRecord} */
-    describe("#cleanRecord", () => {
-      it("should clean record data", () => {
-        expect(cleanRecord({title: "foo", _status: "foo"}))
-          .eql({title: "foo"});
+    /** @test {recordsEqual} */
+    describe("#recordsEqual", () => {
+      it("should compare record data without metadata", () => {
+        expect(recordsEqual({title: "foo", _status: "foo", last_modified: 32},
+                            {title: "foo"})).eql(true);
+      });
+
+      it("should compare record data without metadata nor local fields", () => {
+        expect(recordsEqual({title: "foo", _status: "foo", size: 32},
+                            {title: "foo"},
+                            ["size"])).eql(true);
       });
     });
   });
@@ -577,6 +575,25 @@ describe("Collection", () => {
                                      {synced: true}))
         .then(res => res.data)
         .should.eventually.have.property("_status").eql("synced");
+    });
+  });
+
+  /** @test {Collection#cleanLocalFields} */
+  describe("#cleanLocalFields", () => {
+    it("should remove the local fields", () => {
+      const collection = testCollection();
+      const record = {id: "1", _status: "synced", last_modified: 42};
+      const cleaned = collection.cleanLocalFields(record);
+
+      expect(cleaned).eql({id: "1", last_modified: 42});
+    });
+
+    it("should take into account collection local fields", () => {
+      const collection = testCollection({localFields: ["size"]});
+      const record = {id: "1", size: 3.14, _status: "synced", last_modified: 42};
+      const cleaned = collection.cleanLocalFields(record);
+
+      expect(cleaned).eql({id: "1", last_modified: 42});
     });
   });
 
@@ -1525,6 +1542,39 @@ describe("Collection", () => {
           }, {includeDeleted: true});
         });
     });
+
+    it("should merge remote with local fields", () => {
+      const id1 = uuid4();
+      return articles.create({id: id1, title: "bar", size: 12},
+                             {synced: true})
+        .then(() => articles.importChanges(result, {changes: [
+          {id: id1, title: "foo"},
+        ]}))
+        .then((res) => {
+          expect(res.updated[0].new.title).eql("foo");
+          expect(res.updated[0].new.size).eql(12);
+        });
+    });
+
+    it("should ignore local fields when detecting conflicts", () => {
+      const id1 = uuid4();
+      articles = testCollection({localFields: ["size"]});
+      // Create record with status not synced.
+      return articles.create({id: id1, title: "bar", size: 12, last_modified: 42},
+                             {useRecordId: true})
+        .then(() => articles.importChanges(result, {changes: [
+          {id: id1, title: "bar", last_modified: 43},
+        ]}))
+        .then((res) => {
+          // No conflict, local.title == remote.title.
+          expect(res.ok).eql(true);
+          expect(res.updated[0].new.title).eql("bar");
+          // Local field is preserved
+          expect(res.updated[0].new.size).eql(12);
+          // Timestamp was taken from remote
+          expect(res.updated[0].new.last_modified).eql(43);
+        });
+    });
   });
 
   /** @test {Collection#pushChanges} */
@@ -1552,6 +1602,20 @@ describe("Collection", () => {
           expect(requests).to.have.length.of(1);
           expect(requests[0].body.data.title).eql("foo");
           expect(options.safe).eql(true);
+        });
+    });
+
+    it("should not publish local fields to the server", () => {
+      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
+        .returns(Promise.resolve([{}]));
+
+      articles = testCollection({localFields: ["size"]});
+      return articles.update(Object.assign({}, records[0], {title: "ah", size: 3.14}))
+        .then(() => articles.pushChanges(result))
+        .then(_ => {
+          const requests = batchRequests.firstCall.args[0];
+          expect(requests[0].body.data.title).eql("ah");
+          expect(requests[0].body.data.size).to.not.exist;
         });
     });
 

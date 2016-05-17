@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
 import Kinto from "../src";
-import { cleanRecord } from "../src/collection";
+import { recordsEqual } from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -173,13 +173,8 @@ describe("Integration tests", function() {
 
         it("should publish local unsynced records", () => {
           expect(syncResult.published).to.have.length.of(1);
-          expect(cleanRecord(syncResult.published[0]))
-            .to.have.property("done")
-            .eql(testData.localUnsynced[0].done);
-
-          expect(cleanRecord(syncResult.published[0]))
-            .to.have.property("title")
-            .eql(testData.localUnsynced[0].title);
+          expect(recordsEqual(syncResult.published[0],
+                              testData.localUnsynced[0])).eql(true);
         });
 
         it("should publish deletion of locally deleted records", () => {
@@ -303,16 +298,16 @@ describe("Integration tests", function() {
           it("should have the incoming conflict listed", () => {
             expect(syncResult.conflicts).to.have.length.of(1);
             expect(syncResult.conflicts[0].type).eql("incoming");
-            expect(cleanRecord(syncResult.conflicts[0].local)).eql({
+            expect(recordsEqual(syncResult.conflicts[0].local, {
               id: conflictingId,
               title: "task4-local",
               done: false,
-            });
-            expect(cleanRecord(syncResult.conflicts[0].remote)).eql({
+            })).eql(true);
+            expect(recordsEqual(syncResult.conflicts[0].remote, {
               id: conflictingId,
               title: "task4-remote",
               done: true,
-            });
+            })).eql(true);
           });
 
           it("should not skip records", () => {
@@ -438,11 +433,11 @@ describe("Integration tests", function() {
 
           it("should publish resolved conflict using local version", () => {
             expect(syncResult.published).to.have.length.of(1);
-            expect(cleanRecord(syncResult.published[0])).eql({
+            expect(recordsEqual(syncResult.published[0], {
               id: conflictingId,
               title: "task4-local",
               done: false,
-            });
+            })).eql(true);
           });
 
           it("should not update anything", () => {
@@ -451,11 +446,11 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(cleanRecord(syncResult.resolved[0])).eql({
+            expect(recordsEqual(syncResult.resolved[0], {
               id: conflictingId,
               title: "task4-local",
               done: false,
-            });
+            })).eql(true);
           });
 
           it("should put local database in the expected state", () => {
@@ -568,11 +563,11 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(cleanRecord(syncResult.resolved[0])).eql({
+            expect(recordsEqual(syncResult.resolved[0], {
               id: conflictingId,
               title: "task4-remote",
               done: true,
-            });
+            })).eql(true);
           });
 
           it("should put local database in the expected state", () => {

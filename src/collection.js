@@ -3,25 +3,23 @@
 import BaseAdapter from "./adapters/base";
 import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import { isUUID, pFinally } from "./utils";
+import { isUUID, pFinally, omitKeys } from "./utils";
 
-const RECORD_FIELDS_TO_CLEAN = ["_status", "last_modified"];
+const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
 
+
 /**
- * Cleans a record object, excluding passed keys.
- *
- * @param  {Object} record        The record object.
- * @param  {Array}  excludeFields The list of keys to exclude.
- * @return {Object}               A clean copy of source record object.
+ * Compare two records omitting local fields and synchronization
+ * attributes (like _status and last_modified)
+ * @param {Object} a    A record to compare.
+ * @param {Object} b    A record to compare.
+ * @return {boolean}
  */
-export function cleanRecord(record, excludeFields=RECORD_FIELDS_TO_CLEAN) {
-  return Object.keys(record).reduce((acc, key) => {
-    if (excludeFields.indexOf(key) === -1) {
-      acc[key] = record[key];
-    }
-    return acc;
-  }, {});
+export function recordsEqual(a, b, localFields=[]) {
+  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(["last_modified"]).concat(localFields);
+  const cleanLocal = (r) => omitKeys(r, fieldsToClean);
+  return deepEqual(cleanLocal(a), cleanLocal(b));
 }
 
 /**
@@ -118,9 +116,10 @@ function markSynced(record) {
  *
  * @param  {IDBTransactionProxy} transaction The transaction handler.
  * @param  {Object}              remote      The remote change object to import.
+ * @param  {Array<String>}       localFields The list of fields that remain local.
  * @return {Object}
  */
-function importChange(transaction, remote) {
+function importChange(transaction, remote, localFields) {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -132,17 +131,20 @@ function importChange(transaction, remote) {
     transaction.create(synced);
     return {type: "created", data: synced};
   }
-  const identical = deepEqual(cleanRecord(local), cleanRecord(remote));
+  // Compare local and remote, ignoring local fields.
+  const isIdentical = recordsEqual(local, remote, localFields);
+  // Apply remote changes on local record.
+  const synced = Object.assign({}, local, markSynced(remote));
+  // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
       return {type: "skipped", data: local};
     }
-    if (identical) {
+    if (isIdentical) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
-      const synced = markSynced(remote);
       transaction.update(synced);
       return {type: "updated", data: {old: local, new: synced}};
     }
@@ -161,14 +163,15 @@ function importChange(transaction, remote) {
       data: {type: "incoming", local: local, remote: remote}
     };
   }
+  // Local record was synced.
   if (remote.deleted) {
     transaction.delete(remote.id);
     return {type: "deleted", data: local};
   }
-  const synced = markSynced(remote);
+  // Import locally.
   transaction.update(synced);
-  // if identical, simply exclude it from all lists
-  const type = identical ? "void" : "updated";
+  // if identical, simply exclude it from all SyncResultObject lists
+  const type = isIdentical ? "void" : "updated";
   return {type, data: {old: local, new: synced}};
 }
 
@@ -236,6 +239,11 @@ export default class Collection {
      * @type {Object}
      */
     this.hooks = this._validateHooks(options.hooks);
+    /**
+     * The list of fields names that will remain local.
+     * @type {Array}
+     */
+    this.localFields = options.localFields || [];
   }
 
   /**
@@ -491,14 +499,18 @@ export default class Collection {
     return this.get(record.id)
       .then((res) => {
         const existing = res.data;
-        const newStatus = options.synced ? "synced" : "updated";
+        const source = options.patch ? Object.assign({}, existing, record)
+                                     : record;
+        // Make sure to never loose the existing timestamp.
+        if (existing.last_modified && !source.last_modified) {
+          source.last_modified = existing.last_modified;
+        }
+        // If only local fields have changed, then keep record as synced.
+        const isIdentical = recordsEqual(existing, source, this.localFields);
+        const keepSynced = isIdentical && existing._status == "synced";
+        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        const updated = markStatus(source, newStatus);
         return this.db.execute((transaction) => {
-          const source = options.patch ? Object.assign({}, existing, record)
-                                       : record;
-          const updated = markStatus(source, newStatus);
-          if (existing.last_modified && !updated.last_modified) {
-            updated.last_modified = existing.last_modified;
-          }
           transaction.update(updated);
           return {data: updated, permissions: {}};
         });
@@ -611,7 +623,7 @@ export default class Collection {
             return this.db.execute(transaction => {
               return decodedChanges.map(remote => {
                 // Store remote change into local database.
-                return importChange(transaction, remote);
+                return importChange(transaction, remote, this.localFields);
               });
             }, {preload: existingRecords});
           })
@@ -806,15 +818,12 @@ export default class Collection {
             }
           });
           toSync.forEach((r) => {
-            const isCreated = r._status === "created";
-            // Do not store status on server.
-            // XXX: cleanRecord() removes last_modified, required by safe.
-            delete r._status;
-            if (isCreated) {
-              batch.createRecord(r);
-            }
-            else {
-              batch.updateRecord(r);
+            // Clean local fields (like _status) before sending to server.
+            const published = this.cleanLocalFields(r);
+            if (r._status === "created") {
+              batch.createRecord(published);
+            } else {
+              batch.updateRecord(published);
             }
           });
         }, {headers: options.headers, safe: true, aggregate: true});
@@ -849,7 +858,6 @@ export default class Collection {
 
         const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
         const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
-
         // First, apply the decode transformers, if any
         return Promise.all(toUpdateLocally.map(record => {
           return this._decodeRecord("remote", record);
@@ -897,6 +905,17 @@ export default class Collection {
           });
         }
       });
+  }
+
+  /**
+   * Return a copy of the specified record without the local fields.
+   *
+   * @param  {Object} record  A record with potential local fields.
+   * @return {Object}
+   */
+  cleanLocalFields(record) {
+    const localKeys = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
+    return omitKeys(record, localKeys);
   }
 
   /**

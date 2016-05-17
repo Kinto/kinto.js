@@ -500,6 +500,25 @@ function sync() {
 
 Here we're solving encountered conflicts by picking all remote versions. After conflicts being properly addressed, we're syncing the collection again, until no conflicts occur.
 
+## Local fields
+
+By default, kinto.js sends every record attribute stored locally.
+
+In order to store some field only locally, and never publish them to the server, you can provide a list of field names in the `localFields` option of `Kinto#collection`:
+
+```js
+collection = kinto.collection("articles", {
+  localFields: ["captain", "age"]
+});
+```
+
+A [`#cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-cleanLocalFields) method is available to clean a record from the local fields:
+
+```js
+stripped = collection.cleanLocalFields(record);
+```
+
+
 ## The case of a new/flushed server
 
 In case a pristine or [flushed](http://kinto.readthedocs.io/en/latest/configuration/settings.html?highlight=flush#activating-the-flush-endpoint) server is used against an existing local database, [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) will reject with a *«Server has been flushed»* error. That means the remote server doesn't hold any data, while your local database is marked as synchronized and probably contains records you don't want to lose.

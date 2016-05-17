@@ -6,6 +6,7 @@ import {
   deepEqual,
   sortObjects,
   filterObjects,
+  omitKeys,
   reduceRecords,
   isUUID,
   waterfall,
@@ -271,6 +272,17 @@ describe("Utils", () => {
 
     it("should return false if sub-array orders differ", () => {
       expect(deepEqual({a: [{b: 1}, {c: 1}]}, {a: [{c: 1}, {b: 1}]})).eql(false);
+    });
+  });
+
+  describe("omitKeys", () => {
+    it("should return same object if no key is passed", () => {
+      const input = {a: 1, b: 2};
+      expect(omitKeys(input)).eql(input);
+    });
+
+    it("should omit specified keys", () => {
+      expect(omitKeys({a: 1, b: 2}, ["b", "c"])).eql({a: 1});
     });
   });
 });
