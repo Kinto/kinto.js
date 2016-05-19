@@ -1,7 +1,7 @@
 {
   "name": "kinto",
-  "version": "3.0.0-dev",
-  "description": "JavaScript client for Kinto.",
+  "version": "3.0.0",
+  "description": "An Offline-First JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
     "build": "babel -d lib/ src/",
@@ -28,6 +28,7 @@
     "url": "https://github.com/Kinto/kinto.js.git"
   },
   "keywords": [
+    "offline",
     "sync",
     "api",
     "rest",
@@ -55,6 +56,38 @@
     {
       "name": "Ethan Glasser-Camp",
       "url": "http://betacantrips.com/"
+    },
+    {
+      "name": "Alexis Metaireau",
+      "url": "https://blog.notmyidea.org"
+    },
+    {
+      "name": "Remy Hubscher",
+      "url": "http://natim.ionyse.com"
+    },
+    {
+      "name": "Masataka Takeuchi",
+      "url": "https://github.com/happy-tanuki"
+    },
+    {
+      "name": "Peter deHaan",
+      "url": "https://about.me/peterdehaan"
+    },
+    {
+      "name": "Quentin Roy",
+      "url": "http://quentinroy.fr"
+    },
+    {
+      "name": "Fernando Jiménez Moreno",
+      "url": "http://ferjm.github.io"
+    },
+    {
+      "name": "Lavish Aggarwal",
+      "url": "http://lavishaggarwal.com/"
+    },
+    {
+      "name": "Mark Striemer ",
+      "url": "https://github.com/mstriemer"
     }
   ],
   "license": "Apache-2.0",
@@ -71,7 +104,6 @@
   "dependencies": {
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
-    "fake-indexeddb": "1.0.6",
     "kinto-client": "^0.6.0",
     "uuid": "^2.0.1"
   },
@@ -93,6 +125,7 @@
     "esdoc-importpath-plugin": "0.0.1",
     "eslint": "2.10.2",
     "estraverse-fb": "^1.3.1",
+    "fake-indexeddb": "1.0.6",
     "gh-pages": "^0.11.0",
     "http-server": "^0.9.0",
     "kinto-node-test-server": "0.0.1",
