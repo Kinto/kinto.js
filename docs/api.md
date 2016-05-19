@@ -539,7 +539,7 @@ articles.sync()
 
 ## Handling server backoff
 
-If the Kinto server instance is under heavy load or maintenance, their admins can [send a Backoff header](http://kinto.readthedocs.io/en/latest/api/cliquet/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
+If the Kinto server instance is under heavy load or maintenance, their admins can [send a Backoff header](http://kinto.readthedocs.io/en/stable/core/api/backoff.html) and it's the responsibily for clients to hold on performing more requests for a given amount of time, expressed in seconds.
 
 When this happens, Kinto.js will reject calls to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) with an appropriate error message specifying the number of seconds you need to wait before calling it again.
 
