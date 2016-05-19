@@ -1074,7 +1074,7 @@ describe("Integration tests", function() {
         function loadFixtures() {
           return tasks.api.fetchServerSettings()
             .then(serverSettings => {
-              nbFixtures = serverSettings["cliquet.batch_max_requests"] + 10;
+              nbFixtures = serverSettings["batch_max_requests"] + 10;
               const fixtures = [];
               for (let i=0; i<nbFixtures; i++) {
                 fixtures.push({title: "title" + i, position: i});
@@ -1208,7 +1208,7 @@ describe("Integration tests", function() {
   });
 
   describe("Backed off server", () => {
-    before(() => server.start({CLIQUET_BACKOFF: 10}));
+    before(() => server.start({KINTO_BACKOFF: 10}));
 
     after(() => server.stop());
 
@@ -1232,9 +1232,9 @@ describe("Integration tests", function() {
       before(() => {
         const tomorrow = new Date(new Date().getTime() + 86400000).toJSON().slice(0, 10);
         return server.start({
-          CLIQUET_EOS: tomorrow,
-          CLIQUET_EOS_URL: "http://www.perdu.com",
-          CLIQUET_EOS_MESSAGE: "Boom",
+          KINTO_EOS: tomorrow,
+          KINTO_EOS_URL: "http://www.perdu.com",
+          KINTO_EOS_MESSAGE: "Boom",
         });
       });
 
@@ -1254,9 +1254,9 @@ describe("Integration tests", function() {
       before(() => {
         const lastWeek = new Date(new Date().getTime() - (7 * 86400000)).toJSON().slice(0, 10);
         return server.start({
-          CLIQUET_EOS: lastWeek,
-          CLIQUET_EOS_URL: "http://www.perdu.com",
-          CLIQUET_EOS_MESSAGE: "Boom",
+          KINTO_EOS: lastWeek,
+          KINTO_EOS_URL: "http://www.perdu.com",
+          KINTO_EOS_MESSAGE: "Boom",
         });
       });
 
