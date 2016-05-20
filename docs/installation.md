@@ -39,8 +39,6 @@ integrity with the hash provided below:
 
 | Filename                | Hash                                                                    |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto.js                | sha384-wOOIJGZhGCWgy9NpG/9u5Z/P/+QhmXEn7sRIaWhIn/LtpFF4AEue7g8Q9ALFuL78 |
-| kinto.min.js            | sha384-+nl5SVE5KtBDyiHKcKwqe1AA2aEj+fhrqhUCYiKN5MMPK8FAk3P7TI7bR+4Z8LoG |
-| kinto.noshim.js         | sha384-rKJ9KxJS7RaeHjdZu3o6HVdf/EL8U26eNcHwZoWcyDxRT01RABMGVGh+Sc+Qmr3i |
-
-
+| kinto.js                | sha384-plrTdjpwcXMNMlAd4eokWiccyvOUm6igiyZgMlh53m9DlanJisaYhaQliW6WduGM |
+| kinto.min.js            | sha384-02u+ciqs/RCvBgFWA+O/PpoxBBStKjnBHmjAe4TXEaTNaljsY2vTsBz6knXTolmg |
+| kinto.noshim.js         | sha384-bkFJ4o9l2kcRvz0WL1HlryCW3bF1VhOqeAfjkuExv5W9W4u7l93ap9m0PcFEEbyO |
