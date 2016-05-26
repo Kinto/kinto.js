@@ -518,6 +518,42 @@ A [`#cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/
 stripped = collection.cleanLocalFields(record);
 ```
 
+## Raw HTTP calls
+
+Every CRUD operations are performed locally using the *database adapter* and the HTTP calls to the remote API are performed automatically during *synchronization*.
+
+However, in some situations — like setting permissions on objects or checking server capabilities — it may be useful to interact with the remote API manually.
+
+A [kinto-client instance](https://github.com/Kinto/kinto-client) is available on the Kinto object:
+
+```js
+const kinto = new Kinto({
+  remote: "https://my.server.tld/v1",
+  headers: {
+    Authorization: `Bearer ` + oauthBearerToken)
+  }
+});
+
+kinto.api.listBuckets()
+  .then(({data}) => ...);
+```
+
+On a collection, the `api` instance must be set to a bucket and a collection name:
+
+```js
+const kinto = new Kinto({
+  bucket: "blog"
+});
+const collection = kinto.collection("articles");
+
+// List records from "articles" collection in "blog" bucket:
+collection.api
+  .bucket(collection.bucket)
+  .collection(collection.name)
+  .listRecords()
+    .then(({data}) => ...);
+```
+
 
 ## The case of a new/flushed server
 
