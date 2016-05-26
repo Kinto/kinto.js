@@ -82,6 +82,12 @@ describe("Kinto", () => {
         .eql(requestMode);
     });
 
+    it("should propagate the timeout option to child dependencies", () => {
+      const timeout = 5000;
+      expect(new Kinto({timeout}).collection("x").api.http.timeout)
+        .eql(timeout);
+    });
+
     it("should propagate the dbPrefix option to child dependencies", () => {
       expect(new Kinto({dbPrefix: "app--"}).collection("x").db.dbname)
         .eql("app--default/x");
