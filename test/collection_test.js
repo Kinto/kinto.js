@@ -1209,6 +1209,17 @@ describe("Collection", () => {
         });
       });
 
+      it("should reject the promise if the hook throws", () => {
+        articles = testCollection({
+          hooks: {
+            "incoming-changes": [() => 42]
+          }
+        });
+        return articles.pullChanges(result)
+          .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'changes' property/);
+      });
+
+
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;
         return articles.pullChanges(result)
