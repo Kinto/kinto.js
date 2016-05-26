@@ -60,9 +60,14 @@ export default class KintoBase {
     }
 
     const {remote, events, headers, requestMode, ApiClass} = this._options;
-    this._api = new ApiClass(remote, {events, headers, requestMode});
 
     // public properties
+
+    /**
+     * The kinto HTTP client instance.
+     * @type {KintoClient}
+     */
+    this.api = new ApiClass(remote, {events, headers, requestMode});
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -85,7 +90,7 @@ export default class KintoBase {
     }
 
     const bucket = this._options.bucket;
-    return new Collection(bucket, collName, this._api, {
+    return new Collection(bucket, collName, this.api, {
       events:              this._options.events,
       adapter:             this._options.adapter,
       dbPrefix:            this._options.dbPrefix,
