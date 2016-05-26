@@ -790,7 +790,7 @@ export default class Collection {
       return record => {
         const result = hook(payload, this);
         if (!result || !result.hasOwnProperty("changes")) {
-          throw new Error(`Invalid return value for hook: ${result} has no 'changes' property`);
+          throw new Error(`Invalid return value for hook: ${JSON.stringify(result)} has no 'changes' property`);
         }
         return result;
       };
