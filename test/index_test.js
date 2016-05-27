@@ -83,7 +83,7 @@ describe("Kinto", () => {
     });
 
     it("should propagate the timeout option to child dependencies", () => {
-      const timeout = 5000;
+      const timeout = 1000;
       expect(new Kinto({timeout}).collection("x").api.http.timeout)
         .eql(timeout);
     });
