@@ -1,6 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./adapters/base";
+import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
 import { isUUID, pFinally, omitKeys } from "./utils";
@@ -198,7 +199,7 @@ export default class Collection {
     this._name = name;
     this._lastModified = null;
 
-    const DBAdapter = options.adapter;
+    const DBAdapter = options.adapter || IDB;
     if (!DBAdapter) {
       throw new Error("No adapter provided");
     }

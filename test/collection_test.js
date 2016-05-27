@@ -32,7 +32,7 @@ describe("Collection", () => {
 
   function testCollection(options={}) {
     events = new EventEmitter();
-    const opts = Object.assign({events, adapter: IDB}, options);
+    const opts = Object.assign({events}, options);
     api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, opts);
   }
@@ -88,32 +88,31 @@ describe("Collection", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, {events});
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
       expect(collection.events).to.eql(events);
     });
 
     it("should propagate its events property to child dependencies", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, {events});
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events, adapter: IDB});
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {events});
       expect(collection.api.events).eql(collection.events);
       expect(collection.api.http.events).eql(collection.events);
     });
 
     it("should allow providing a prefix for the db name", () => {
       const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        dbPrefix: "user-x/",
-        adapter: IDB,
+        dbPrefix: "user-x/"
       });
       expect(collection.db.dbname).eql("user-x/kinto-test/kinto-test");
     });
 
-    it("should complain if a database adapter is not provided", () => {
+    it("should use the default adapter if not any is provided", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, {events});
-      expect(() => {
-        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api);
-      }).to.Throw(Error,/No adapter provided/);
+      const hooks = {};
+      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {hooks});
+      expect(collection.db).to.be.an.instanceof(IDB);
     });
 
     it("should throw incompatible adapter options", () => {
@@ -150,8 +149,7 @@ describe("Collection", () => {
     describe("transformers registration", () => {
       function registerTransformers(transformers) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          remoteTransformers: transformers,
-          adapter: IDB
+          remoteTransformers: transformers
         });
       }
 
@@ -179,8 +177,7 @@ describe("Collection", () => {
     describe("hooks registration", () => {
       function registerHooks(hooks) {
         return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          hooks,
-          adapter: IDB
+          hooks
         });
       }
 
@@ -218,8 +215,7 @@ describe("Collection", () => {
     describe("idSchema registration", () => {
       function registerIdSchema(idSchema) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          idSchema: idSchema,
-          adapter: IDB
+          idSchema: idSchema
         });
       }
 
@@ -654,8 +650,7 @@ describe("Collection", () => {
     });
 
     it("should isolate records by bucket", () => {
-      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api, {
-        adapter: IDB});
+      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api);
       return otherbucket.get(id)
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);

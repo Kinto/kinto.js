@@ -56,7 +56,8 @@ export default function loadKinto() {
 
       const defaults = {
         events: emitter,
-        ApiClass: KintoHttpClient
+        ApiClass: KintoHttpClient,
+        adapter: FirefoxAdapter
       };
 
       const expandedOptions = Object.assign(defaults, options);
