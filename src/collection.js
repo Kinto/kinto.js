@@ -753,7 +753,8 @@ export default class Collection {
     }
     // First fetch remote changes from the server
     return this._apiCollection.listRecords({
-      since: options.lastModified || undefined,
+      // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
+      since: options.lastModified ? `"${options.lastModified}"`: undefined,
       headers: options.headers,
       filters
     })
