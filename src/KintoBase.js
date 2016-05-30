@@ -46,6 +46,7 @@ export default class KintoBase {
    * - `{String}`       `dbPrefix`    The DB name prefix.
    * - `{Object}`       `headers`     The HTTP headers to use.
    * - `{String}`       `requestMode` The HTTP CORS mode to use.
+   * - `{Number}`       `timeout`     The requests timeout in ms (default: `5000`).
    *
    * @param  {Object} options The options object.
    */
@@ -59,7 +60,7 @@ export default class KintoBase {
       throw new Error("No adapter provided");
     }
 
-    const {remote, events, headers, requestMode, ApiClass} = this._options;
+    const {remote, events, headers, requestMode, timeout, ApiClass} = this._options;
 
     // public properties
 
@@ -67,7 +68,7 @@ export default class KintoBase {
      * The kinto HTTP client instance.
      * @type {KintoClient}
      */
-    this.api = new ApiClass(remote, {events, headers, requestMode});
+    this.api = new ApiClass(remote, {events, headers, requestMode, timeout});
     /**
      * The event emitter instance.
      * @type {EventEmitter}
