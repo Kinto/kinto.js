@@ -1238,7 +1238,7 @@ describe("Collection", () => {
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
-              since: 42,
+              since: "\"42\"",
               filters: undefined,
               headers: {}
             });
@@ -1251,7 +1251,7 @@ describe("Collection", () => {
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
-              since: 42,
+              since: "\"42\"",
               filters: {exclude_id: "1,2,3"},
               headers: {}
             });
