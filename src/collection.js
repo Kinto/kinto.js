@@ -521,6 +521,9 @@ export default class Collection {
   /**
    * Retrieve a record by its id from the local database.
    *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   *
    * @param  {String} id
    * @param  {Object} options
    * @return {Promise}
@@ -529,13 +532,31 @@ export default class Collection {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(Error(`Invalid Id: ${id}`));
     }
-    return this.db.get(id).then(record => {
-      if (!record ||
-         (!options.includeDeleted && record._status === "deleted")) {
+    return this.getRaw(id).then(res => {
+      if (!res.data ||
+         (!options.includeDeleted && res.data._status === "deleted")) {
         throw new Error(`Record with id=${id} not found.`);
       } else {
-        return {data: record, permissions: {}};
+        return res;
       }
+    });
+  }
+
+  /**
+   * Retrieve a record by its id from the local database, or
+   * undefined if none exists.
+   *
+   * This will also return virtually deleted records.
+   *
+   * @param  {String} id
+   * @return {Promise}
+   */
+  getRaw(id) {
+    if (!this.idSchema.validate(id)) {
+      return Promise.reject(Error(`Invalid Id: ${id}`));
+    }
+    return this.db.get(id).then(record => {
+      return {data: record, permissions: {}};
     });
   }
 

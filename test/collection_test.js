@@ -697,7 +697,49 @@ describe("Collection", () => {
 
     it("should reject on virtually deleted record", () => {
       return articles.delete(id)
+        .then(res => articles.get(id))
+        .then(res => res.data)
+        .should.be.rejectedWith(Error, /not found/);
+    });
+
+    it("should retrieve deleted record with includeDeleted", () => {
+      return articles.delete(id)
         .then(res => articles.get(id, {includeDeleted: true}))
+        .then(res => res.data)
+        .should.eventually.become({
+          _status: "deleted",
+          id: id,
+          title: "foo",
+          url: "http://foo",
+        });
+    });
+  });
+
+  /** @test {Collection#getRaw} */
+  describe("#getRaw", () => {
+    let articles, id;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return articles.create(article)
+        .then(result => id = result.data.id);
+    });
+
+    it("should retrieve a record from its id", () => {
+      return articles.getRaw(id)
+        .then(res => res.data.title)
+        .should.eventually.eql(article.title);
+    });
+
+    it("should resolve to undefined if not present", () => {
+      return articles.getRaw(uuid4())
+        .then(res => res.data)
+        .should.eventually.eql(undefined);
+    });
+
+    it("should resolve to virtually deleted record", () => {
+      return articles.delete(id)
+        .then(res => articles.getRaw(id))
         .then(res => res.data)
         .should.eventually.become({
           _status: "deleted",
