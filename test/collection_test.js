@@ -927,6 +927,31 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#deleteAny} */
+  describe("#deleteAny", () => {
+    let articles, id;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return articles.create(article)
+        .then(result => id = result.data.id);
+    });
+
+    it("should delete an existing record", () => {
+      return articles.deleteAny(id)
+        .then(res => articles.getRaw(res.data.id))
+        .then(res => res.data._status)
+        .should.eventually.eql("deleted");
+    });
+
+    it("should resolve on non-existant record", () => {
+      let id = uuid4();
+      return articles.deleteAny(id)
+        .then(res => res.data.id)
+        .should.eventually.eql(id);
+    });
+  });
+
   /** @test {Collection#list} */
   describe("#list", () => {
     let articles;
