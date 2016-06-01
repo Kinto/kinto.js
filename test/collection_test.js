@@ -788,6 +788,13 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
+
+      it("should resolve on non-existant record when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: true, unconditional: true})
+          .then(res => res.data.id)
+          .should.eventually.eql(id);
+      });
     });
 
     describe("Factual", () => {
@@ -807,6 +814,13 @@ describe("Collection", () => {
         return articles.delete(uuid4(), {virtual: false})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should resolve on non-existant record when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: false, unconditional: true})
+          .then(res => res.data.id)
+          .should.eventually.eql(id);
       });
     });
   });
