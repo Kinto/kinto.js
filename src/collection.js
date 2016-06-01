@@ -637,6 +637,30 @@ export default class Collection {
   }
 
   /**
+   * Deletes a record from the local database, if any exists.
+   * Otherwise, do nothing.
+   *
+   * @param  {String} id       The record's Id.
+   * @return {Promise}
+   */
+  deleteAny(id) {
+    if (!this.idSchema.validate(id)) {
+      return Promise.reject(new Error(`Invalid Id: ${id}`));
+    }
+    return this.getRaw(id)
+      .then(res => {
+        const existing = res.data;
+        if (!existing) {
+          return Promise.resolve({data: {id: id}, permissions: {}});
+        }
+        return this.db.execute((transaction) => {
+          transaction.update(markDeleted(existing));
+          return {data: {id: id}, permissions: {}};
+        });
+      });
+  }
+
+  /**
    * Lists records from the local database.
    *
    * Params:
