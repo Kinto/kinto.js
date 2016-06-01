@@ -482,12 +482,14 @@ export default class Collection {
    * - {Boolean} synced: Sets record status to "synced" (default: false)
    * - {Boolean} patch:  Extends the existing record instead of overwriting it
    *   (default: false)
+   * - {Boolean} unconditional: If false, error when no existing
+   *   record (default: false)
    *
    * @param  {Object} record
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options={synced: false, patch: false}) {
+  update(record, options={synced: false, patch: false, unconditional: false}) {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -497,19 +499,22 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id)
+    return this.get(record.id, {includeMissing: options.unconditional})
       .then((res) => {
         const existing = res.data;
         const source = options.patch ? Object.assign({}, existing, record)
                                      : record;
         // Make sure to never loose the existing timestamp.
-        if (existing.last_modified && !source.last_modified) {
+        if (existing && existing.last_modified && !source.last_modified) {
           source.last_modified = existing.last_modified;
         }
         // If only local fields have changed, then keep record as synced.
-        const isIdentical = recordsEqual(existing, source, this.localFields);
+        const isIdentical = existing && recordsEqual(existing, source, this.localFields);
         const keepSynced = isIdentical && existing._status == "synced";
-        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        let newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        if (!existing) {
+          newStatus = "created";
+        }
         const updated = markStatus(source, newStatus);
         return this.db.execute((transaction) => {
           transaction.update(updated);

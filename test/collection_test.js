@@ -496,6 +496,20 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /not found/);
     });
 
+    it("should resolve updates on a new record if unconditional is set", () => {
+      return articles.update({id: uuid4(), title: "new title"},
+                             {unconditional: true})
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status to created if it created a record", () => {
+      return articles.update({id: uuid4()},
+                             {unconditional: true})
+        .then(res => res.data._status)
+        .should.eventually.become("created");
+    });
+
     it("should reject updates on a non-object record", () => {
       return articles.update("invalid")
         .should.be.rejectedWith(Error, /Record is not an object/);
@@ -509,6 +523,26 @@ describe("Collection", () => {
     it("should validate record's id when provided", () => {
       return articles.update({id: 42})
         .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should update deleted records when unconditional is set", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.update(
+          Object.assign({}, res.data, {title: "new title"}), {unconditional: true}))
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status of deleted records to updated", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.update(
+          Object.assign({}, res.data, {title: "new title"}), {unconditional: true}))
+        .then(res => res.data._status)
+        .should.eventually.become("updated");
     });
 
     it("should validate record's id when provided (custom IdSchema)", () => {
