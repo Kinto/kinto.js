@@ -555,19 +555,26 @@ export default class Collection {
    * Options:
    * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
    *   update its `_status` attribute to `deleted` instead (default: true)
+   * - {Boolean} unconditional: When set to `false`, will throw if the
+   *   record doesn't exist (default: false)
    *
    * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
    * @return {Promise}
    */
-  delete(id, options={virtual: true}) {
+  delete(id, options={virtual: true, unconditional: false}) {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
+    return this.get(id, {includeDeleted: true,
+                         includeMissing: options.unconditional})
       .then(res => {
         const existing = res.data;
+        const ret = {data: {id: id}, permissions: {}};
+        if (!existing) {
+          return Promise.resolve(ret);
+        }
         return this.db.execute((transaction) => {
           // Virtual updates status.
           if (options.virtual) {
@@ -576,7 +583,7 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
-          return {data: {id: id}, permissions: {}};
+          return ret;
         });
       });
   }
