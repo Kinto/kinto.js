@@ -789,6 +789,12 @@ describe("Collection", () => {
           .should.eventually.eql("deleted");
       });
 
+      it("should indicate that it deleted something", () => {
+        return articles.delete(id, {virtual: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(true);
+      });
+
       it("should resolve with an already deleted record data", () => {
         return articles.delete(id, {virtual: true})
           .then(res => articles.delete(id, {virtual: true}))
@@ -808,6 +814,13 @@ describe("Collection", () => {
           .then(res => res.data.id)
           .should.eventually.eql(id);
       });
+
+      it("should indicate that it didn't delete when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: true, unconditional: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(false);
+      });
     });
 
     describe("Factual", () => {
@@ -823,6 +836,12 @@ describe("Collection", () => {
           .should.eventually.eql({id: id});
       });
 
+      it("should indicate that it deleted something", () => {
+        return articles.delete(id, {virtual: false})
+          .then(res => res.deleted)
+          .should.eventually.eql(true);
+      });
+
       it("should reject on non-existent record", () => {
         return articles.delete(uuid4(), {virtual: false})
           .then(res => res.data)
@@ -834,6 +853,13 @@ describe("Collection", () => {
         return articles.delete(id, {virtual: false, unconditional: true})
           .then(res => res.data.id)
           .should.eventually.eql(id);
+      });
+
+      it("should indicate that it didn't delete when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: false, unconditional: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(false);
       });
     });
   });

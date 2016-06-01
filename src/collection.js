@@ -571,9 +571,9 @@ export default class Collection {
                          includeMissing: options.unconditional})
       .then(res => {
         const existing = res.data;
-        const ret = {data: {id: id}, permissions: {}};
         if (!existing) {
-          return Promise.resolve(ret);
+          return Promise.resolve({data: {id: id}, deleted: false,
+                                  permissions: {}});
         }
         return this.db.execute((transaction) => {
           // Virtual updates status.
@@ -583,7 +583,7 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
-          return ret;
+          return {data: {id: id}, deleted: true, permissions: {}};
         });
       });
   }
