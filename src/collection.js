@@ -521,17 +521,22 @@ export default class Collection {
   /**
    * Retrieve a record by its id from the local database.
    *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   * - {Boolean} includeMissing: Raise an exception if the record
+   *     doesn't exist (or is deleted). (default: true)
+   *
    * @param  {String} id
    * @param  {Object} options
    * @return {Promise}
    */
-  get(id, options={includeDeleted: false}) {
+  get(id, options={includeDeleted: false, includeMissing: false}) {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(Error(`Invalid Id: ${id}`));
     }
     return this.db.get(id).then(record => {
-      if (!record ||
-         (!options.includeDeleted && record._status === "deleted")) {
+      if (!options.includeMissing && (!record ||
+         (!options.includeDeleted && record._status === "deleted"))) {
         throw new Error(`Record with id=${id} not found.`);
       } else {
         return {data: record, permissions: {}};

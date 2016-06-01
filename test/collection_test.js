@@ -706,6 +706,12 @@ describe("Collection", () => {
           url: "http://foo",
         });
     });
+
+    it("should resolve if includeMissing is true", () => {
+      return articles.get(uuid4(), {includeMissing: true})
+        .then(res => res.data)
+        .should.eventually.become(undefined);
+    });
   });
 
   /** @test {Collection#delete} */
