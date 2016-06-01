@@ -483,6 +483,19 @@ describe("Collection", () => {
         .should.become("new title");
     });
 
+    it("should return the old data for the record", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data)
+        .then(existing => {
+          return articles.update(
+            Object.assign({}, existing, {title: "new title"}));
+        })
+        .then(res => res.old.title)
+        .should.become("foo");
+
+    });
+
     it("should update record status on update", () => {
       return articles.create(article)
         .then(res => res.data)

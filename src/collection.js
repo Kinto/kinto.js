@@ -518,7 +518,7 @@ export default class Collection {
         const updated = markStatus(source, newStatus);
         return this.db.execute((transaction) => {
           transaction.update(updated);
-          return {data: updated, permissions: {}};
+          return {data: updated, old: existing, permissions: {}};
         });
       });
   }
