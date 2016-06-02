@@ -104,7 +104,7 @@
   "dependencies": {
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
-    "kinto-client": "^0.8.2",
+    "kinto-client": "^0.9.0",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
