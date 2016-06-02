@@ -497,25 +497,26 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id)
-      .then((res) => {
-        const existing = res.data;
-        const source = options.patch ? Object.assign({}, existing, record)
-                                     : record;
-        // Make sure to never loose the existing timestamp.
-        if (existing.last_modified && !source.last_modified) {
-          source.last_modified = existing.last_modified;
-        }
-        // If only local fields have changed, then keep record as synced.
-        const isIdentical = recordsEqual(existing, source, this.localFields);
-        const keepSynced = isIdentical && existing._status == "synced";
-        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
-        const updated = markStatus(source, newStatus);
-        return this.db.execute((transaction) => {
-          transaction.update(updated);
-          return {data: updated, permissions: {}};
-        });
-      });
+    return this.db.execute(transaction => {
+      const existing = transaction.get(record.id);
+      if (!existing) {
+        throw new Error(`Record with id=${record.id} not found.`);
+      }
+      const source = options.patch ? Object.assign({}, existing, record)
+                                   : record;
+      // Make sure to never loose the existing timestamp.
+      if (existing.last_modified && !source.last_modified) {
+        source.last_modified = existing.last_modified;
+      }
+      // If only local fields have changed, then keep record as synced.
+      const isIdentical = recordsEqual(existing, source, this.localFields);
+      const keepSynced = isIdentical && existing._status == "synced";
+      const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+      const updated = markStatus(source, newStatus);
+
+      transaction.update(updated);
+      return {data: updated, permissions: {}};
+    }, {preload: [record]});
   }
 
   /**
@@ -554,21 +555,21 @@ export default class Collection {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
-    // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
-      .then(res => {
-        const existing = res.data;
-        return this.db.execute((transaction) => {
-          // Virtual updates status.
-          if (options.virtual) {
-            transaction.update(markDeleted(existing));
-          } else {
-            // Delete for real.
-            transaction.delete(id);
-          }
-          return {data: {id: id}, permissions: {}};
-        });
-      });
+
+    return this.db.execute((transaction) => {
+      const existing = transaction.get(id);
+      if (!existing) {
+        throw new Error(`Record with id=${id} not found.`);
+      }
+      // Virtual updates status.
+      if (options.virtual) {
+        transaction.update(markDeleted(existing));
+      } else {
+        // Delete for real.
+        transaction.delete(id);
+      }
+      return {data: existing, permissions: {}};
+    }, {preload: [{id}]});
   }
 
   /**
