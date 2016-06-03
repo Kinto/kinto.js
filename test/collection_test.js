@@ -574,6 +574,120 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#put} */
+  describe("#put", () => {
+    let articles;
+
+    beforeEach(() => articles = testCollection());
+
+    it("should update a record", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data)
+        .then(existing => {
+          return articles.put(
+            Object.assign({}, existing, {title: "new title"}));
+        })
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data.title)
+        .should.become("new title");
+    });
+
+    it("should change record status to updated", () => {
+      return articles.create(article)
+        .then(res => res.data)
+        .then(data => articles.put(Object.assign({}, data, {title: "blah"})))
+        .then(res => res.data._status)
+        .should.eventually.eql("updated");
+    });
+
+    it("should create a new record if non-existent", () => {
+      return articles.put({id: uuid4(), title: "new title"})
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status to created if it created a record", () => {
+      return articles.put({id: uuid4()})
+        .then(res => res.data._status)
+        .should.eventually.become("created");
+    });
+
+    it("should reject updates on a non-object record", () => {
+      return articles.put("invalid")
+        .should.be.rejectedWith(Error, /Record is not an object/);
+    });
+
+    it("should reject updates on a record without an id", () => {
+      return articles.put({title: "foo"})
+        .should.be.rejectedWith(Error, /missing id/);
+    });
+
+    it("should validate record's id when provided", () => {
+      return articles.put({id: 42})
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should update deleted records", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.put(
+          Object.assign({}, res.data, {title: "new title"})))
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status of deleted records to updated", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.put(
+          Object.assign({}, res.data, {title: "new title"})))
+        .then(res => res.data._status)
+        .should.eventually.become("updated");
+    });
+
+    it("should validate record's id when provided (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: createIntegerIdSchema()
+      });
+
+      return articles.put({id: "deadbeef"})
+        .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should remove previous record fields", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => {
+          return articles.put(
+            Object.assign({}, {id: res.data.id}, {
+              title: "new title",
+            }));
+        })
+        .then(res => res.data)
+          .should.eventually.not.have.property("url");
+    });
+
+    it("should preserve record.last_modified", () => {
+      return articles.create({
+        title: "foo",
+        url: "http://foo",
+        last_modified: 123456789012
+      })
+        .then(res => articles.get(res.data.id))
+        .then(res => {
+          return articles.put(
+            Object.assign({}, {id: res.data.id}, {
+              title: "new title",
+            }));
+        })
+        .then(res => res.data)
+          .should.eventually.have.property("last_modified").eql(123456789012);
+    });
+  });
+
   /** @test {Collection#cleanLocalFields} */
   describe("#cleanLocalFields", () => {
     it("should remove the local fields", () => {

@@ -517,19 +517,49 @@ export default class Collection {
   _updateRaw(existing, source, {synced = false} = {}) {
     let updated;
     // Make sure to never loose the existing timestamp.
-    if (existing.last_modified && !source.last_modified) {
+    if (existing && existing.last_modified && !source.last_modified) {
       source.last_modified = existing.last_modified;
     }
     // If only local fields have changed, then keep record as synced.
-    const isIdentical = recordsEqual(existing, source, this.localFields);
+    const isIdentical = existing && recordsEqual(existing, source, this.localFields);
     const keepSynced = isIdentical && existing._status == "synced";
-    const newStatus = (keepSynced || synced) ? "synced" : "updated";
+    let newStatus = (keepSynced || synced) ? "synced" : "updated";
+    if (!existing) {
+      newStatus = "created";
+    }
     updated = markStatus(source, newStatus);
 
     return this.db.execute((transaction) => {
       transaction.update(updated);
       return {data: updated, permissions: {}};
     });
+  }
+
+  /**
+   * Upsert a record into the local database.
+   *
+   * This record must have an ID.
+   *
+   * If a record with this ID already exists, it will be replaced.
+   * Otherwise, this record will be inserted.
+   *
+   * @param  {Object} record
+   * @return {Promise}
+   */
+  put(record) {
+    if (typeof(record) !== "object") {
+      return Promise.reject(new Error("Record is not an object."));
+    }
+    if (!record.id) {
+      return Promise.reject(new Error("Cannot update a record missing id."));
+    }
+    if (!this.idSchema.validate(record.id)) {
+      return Promise.reject(new Error(`Invalid Id: ${record.id}`));
+    }
+    return this.getRaw(record.id)
+      .then((res) => {
+        return this._updateRaw(res.data, record);
+      });
   }
 
   /**
