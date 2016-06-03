@@ -763,10 +763,11 @@ describe("Collection", () => {
           .should.eventually.eql({id: id});
       });
 
-      it("should reject on non-existent record", () => {
-        return articles.delete(uuid4(), {virtual: false})
+      it("should not reject on non-existent record", () => {
+        const id = uuid4();
+        return articles.delete(id, {virtual: false})
           .then(res => res.data)
-          .should.eventually.be.rejectedWith(Error, /not found/);
+          .should.eventually.eql({id});
       });
     });
   });
