@@ -555,20 +555,19 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
-      .then(res => {
-        const existing = res.data;
-        return this.db.execute((transaction) => {
-          // Virtual updates status.
-          if (options.virtual) {
-            transaction.update(markDeleted(existing));
-          } else {
-            // Delete for real.
-            transaction.delete(id);
-          }
-          return {data: {id: id}, permissions: {}};
-        });
-      });
+    const getExisting = options.virtual ? this.get(id, {includeDeleted: true})
+                                        : Promise.resolve({data: {id}});
+    return getExisting
+      .then(({data: existing}) => this.db.execute((transaction) => {
+        // Virtual updates status.
+        if (options.virtual) {
+          transaction.update(markDeleted(existing));
+        } else {
+          // Delete for real.
+          transaction.delete(id);
+        }
+        return {data: {id: id}, permissions: {}};
+      }));
   }
 
   /**
