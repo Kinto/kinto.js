@@ -502,20 +502,34 @@ export default class Collection {
         const existing = res.data;
         const source = options.patch ? Object.assign({}, existing, record)
                                      : record;
-        // Make sure to never loose the existing timestamp.
-        if (existing.last_modified && !source.last_modified) {
-          source.last_modified = existing.last_modified;
-        }
-        // If only local fields have changed, then keep record as synced.
-        const isIdentical = recordsEqual(existing, source, this.localFields);
-        const keepSynced = isIdentical && existing._status == "synced";
-        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
-        const updated = markStatus(source, newStatus);
-        return this.db.execute((transaction) => {
-          transaction.update(updated);
-          return {data: updated, permissions: {}};
-        });
+        return this._updateRaw(existing, source, {synced: options.synced});
       });
+  }
+
+  /**
+   * Lower-level primitive for updating a record while respecting
+   * _status and last_modified.
+   *
+   * @param  {Object} existing: the record retrieved from the DB
+   * @param  {Object} source: the record to replace it with
+   * @return {Promise}
+   */
+  _updateRaw(existing, source, {synced = false} = {}) {
+    let updated;
+    // Make sure to never loose the existing timestamp.
+    if (existing.last_modified && !source.last_modified) {
+      source.last_modified = existing.last_modified;
+    }
+    // If only local fields have changed, then keep record as synced.
+    const isIdentical = recordsEqual(existing, source, this.localFields);
+    const keepSynced = isIdentical && existing._status == "synced";
+    const newStatus = (keepSynced || synced) ? "synced" : "updated";
+    updated = markStatus(source, newStatus);
+
+    return this.db.execute((transaction) => {
+      transaction.update(updated);
+      return {data: updated, permissions: {}};
+    });
   }
 
   /**
