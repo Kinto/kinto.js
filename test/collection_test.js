@@ -483,6 +483,19 @@ describe("Collection", () => {
         .should.become("new title");
     });
 
+    it("should return the old data for the record", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data)
+        .then(existing => {
+          return articles.update(
+            Object.assign({}, existing, {title: "new title"}));
+        })
+        .then(res => res.old.title)
+        .should.become("foo");
+
+    });
+
     it("should update record status on update", () => {
       return articles.create(article)
         .then(res => res.data)
@@ -494,6 +507,20 @@ describe("Collection", () => {
     it("should reject updates on a non-existent record", () => {
       return articles.update({id: uuid4()})
         .should.be.rejectedWith(Error, /not found/);
+    });
+
+    it("should resolve updates on a new record if unconditional is set", () => {
+      return articles.update({id: uuid4(), title: "new title"},
+                             {unconditional: true})
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status to created if it created a record", () => {
+      return articles.update({id: uuid4()},
+                             {unconditional: true})
+        .then(res => res.data._status)
+        .should.eventually.become("created");
     });
 
     it("should reject updates on a non-object record", () => {
@@ -509,6 +536,26 @@ describe("Collection", () => {
     it("should validate record's id when provided", () => {
       return articles.update({id: 42})
         .should.be.rejectedWith(Error, /Invalid Id/);
+    });
+
+    it("should update deleted records when unconditional is set", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.update(
+          Object.assign({}, res.data, {title: "new title"}), {unconditional: true}))
+        .then(res => res.data.title)
+        .should.eventually.become("new title");
+    });
+
+    it("should set status of deleted records to updated", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => articles.delete(res.data.id))
+        .then(res => articles.update(
+          Object.assign({}, res.data, {title: "new title"}), {unconditional: true}))
+        .then(res => res.data._status)
+        .should.eventually.become("updated");
     });
 
     it("should validate record's id when provided (custom IdSchema)", () => {
@@ -706,6 +753,12 @@ describe("Collection", () => {
           url: "http://foo",
         });
     });
+
+    it("should resolve if includeMissing is true", () => {
+      return articles.get(uuid4(), {includeMissing: true})
+        .then(res => res.data)
+        .should.eventually.become(undefined);
+    });
   });
 
   /** @test {Collection#delete} */
@@ -736,6 +789,12 @@ describe("Collection", () => {
           .should.eventually.eql("deleted");
       });
 
+      it("should indicate that it deleted something", () => {
+        return articles.delete(id, {virtual: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(true);
+      });
+
       it("should resolve with an already deleted record data", () => {
         return articles.delete(id, {virtual: true})
           .then(res => articles.delete(id, {virtual: true}))
@@ -747,6 +806,20 @@ describe("Collection", () => {
         return articles.delete(uuid4(), {virtual: true})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should resolve on non-existant record when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: true, unconditional: true})
+          .then(res => res.data.id)
+          .should.eventually.eql(id);
+      });
+
+      it("should indicate that it didn't delete when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: true, unconditional: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(false);
       });
     });
 
@@ -763,10 +836,30 @@ describe("Collection", () => {
           .should.eventually.eql({id: id});
       });
 
+      it("should indicate that it deleted something", () => {
+        return articles.delete(id, {virtual: false})
+          .then(res => res.deleted)
+          .should.eventually.eql(true);
+      });
+
       it("should reject on non-existent record", () => {
         return articles.delete(uuid4(), {virtual: false})
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should resolve on non-existant record when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: false, unconditional: true})
+          .then(res => res.data.id)
+          .should.eventually.eql(id);
+      });
+
+      it("should indicate that it didn't delete when unconditional is true", () => {
+        let id = uuid4();
+        return articles.delete(id, {virtual: false, unconditional: true})
+          .then(res => res.deleted)
+          .should.eventually.eql(false);
       });
     });
   });

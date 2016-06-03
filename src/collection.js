@@ -482,12 +482,14 @@ export default class Collection {
    * - {Boolean} synced: Sets record status to "synced" (default: false)
    * - {Boolean} patch:  Extends the existing record instead of overwriting it
    *   (default: false)
+   * - {Boolean} unconditional: If false, error when no existing
+   *   record (default: false)
    *
    * @param  {Object} record
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options={synced: false, patch: false}) {
+  update(record, options={synced: false, patch: false, unconditional: false}) {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -497,23 +499,26 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id)
+    return this.get(record.id, {includeMissing: options.unconditional})
       .then((res) => {
         const existing = res.data;
         const source = options.patch ? Object.assign({}, existing, record)
                                      : record;
         // Make sure to never loose the existing timestamp.
-        if (existing.last_modified && !source.last_modified) {
+        if (existing && existing.last_modified && !source.last_modified) {
           source.last_modified = existing.last_modified;
         }
         // If only local fields have changed, then keep record as synced.
-        const isIdentical = recordsEqual(existing, source, this.localFields);
+        const isIdentical = existing && recordsEqual(existing, source, this.localFields);
         const keepSynced = isIdentical && existing._status == "synced";
-        const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        let newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+        if (!existing) {
+          newStatus = "created";
+        }
         const updated = markStatus(source, newStatus);
         return this.db.execute((transaction) => {
           transaction.update(updated);
-          return {data: updated, permissions: {}};
+          return {data: updated, old: existing, permissions: {}};
         });
       });
   }
@@ -521,17 +526,22 @@ export default class Collection {
   /**
    * Retrieve a record by its id from the local database.
    *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   * - {Boolean} includeMissing: Raise an exception if the record
+   *     doesn't exist (or is deleted). (default: true)
+   *
    * @param  {String} id
    * @param  {Object} options
    * @return {Promise}
    */
-  get(id, options={includeDeleted: false}) {
+  get(id, options={includeDeleted: false, includeMissing: false}) {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(Error(`Invalid Id: ${id}`));
     }
     return this.db.get(id).then(record => {
-      if (!record ||
-         (!options.includeDeleted && record._status === "deleted")) {
+      if (!options.includeMissing && (!record ||
+         (!options.includeDeleted && record._status === "deleted"))) {
         throw new Error(`Record with id=${id} not found.`);
       } else {
         return {data: record, permissions: {}};
@@ -545,19 +555,26 @@ export default class Collection {
    * Options:
    * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
    *   update its `_status` attribute to `deleted` instead (default: true)
+   * - {Boolean} unconditional: When set to `false`, will throw if the
+   *   record doesn't exist (default: false)
    *
    * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
    * @return {Promise}
    */
-  delete(id, options={virtual: true}) {
+  delete(id, options={virtual: true, unconditional: false}) {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
+    return this.get(id, {includeDeleted: true,
+                         includeMissing: options.unconditional})
       .then(res => {
         const existing = res.data;
+        if (!existing) {
+          return Promise.resolve({data: {id: id}, deleted: false,
+                                  permissions: {}});
+        }
         return this.db.execute((transaction) => {
           // Virtual updates status.
           if (options.virtual) {
@@ -566,7 +583,7 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
-          return {data: {id: id}, permissions: {}};
+          return {data: {id: id}, deleted: true, permissions: {}};
         });
       });
   }
