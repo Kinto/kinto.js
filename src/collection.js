@@ -497,9 +497,10 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id)
-      .then((res) => {
-        const existing = res.data;
+    const getExisting = options.patch ? this.get(record.id)
+                                      : Promise.resolve({data: record});
+    return getExisting
+      .then(({data: existing}) => this.db.execute(transaction => {
         const source = options.patch ? Object.assign({}, existing, record)
                                      : record;
         // Make sure to never loose the existing timestamp.
@@ -511,11 +512,10 @@ export default class Collection {
         const keepSynced = isIdentical && existing._status == "synced";
         const newStatus = (keepSynced || options.synced) ? "synced" : "updated";
         const updated = markStatus(source, newStatus);
-        return this.db.execute((transaction) => {
-          transaction.update(updated);
-          return {data: updated, permissions: {}};
-        });
-      });
+
+        transaction.update(updated);
+        return {data: updated, permissions: {}};
+      }));
   }
 
   /**
@@ -554,21 +554,20 @@ export default class Collection {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
-    // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
-      .then(res => {
-        const existing = res.data;
-        return this.db.execute((transaction) => {
-          // Virtual updates status.
-          if (options.virtual) {
-            transaction.update(markDeleted(existing));
-          } else {
-            // Delete for real.
-            transaction.delete(id);
-          }
-          return {data: {id: id}, permissions: {}};
-        });
-      });
+
+    const getExisting = options.virtual ? this.get(id)
+                                        : Promise.resolve({data: {id}});
+    return getExisting
+      .then(({data: existing}) => this.db.execute((transaction) => {
+        // Virtual updates status.
+        if (options.virtual) {
+          transaction.update(markDeleted(existing));
+        } else {
+          // Delete for real.
+          transaction.delete(id);
+        }
+        return {data: existing, permissions: {}};
+      }));
   }
 
   /**
