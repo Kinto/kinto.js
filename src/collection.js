@@ -811,8 +811,7 @@ export default class Collection {
     if (!syncResultObject.ok) {
       return Promise.resolve(syncResultObject);
     }
-    const safe = options.strategy === Collection.SERVER_WINS;
-    options = Object.assign({safe}, options);
+    const safe = !options.strategy || options.strategy !== Collection.CLIENT_WINS;
 
     // Fetch local changes
     return this.gatherLocalChanges()
@@ -834,7 +833,7 @@ export default class Collection {
               batch.updateRecord(published);
             }
           });
-        }, {headers: options.headers, safe: true, aggregate: true});
+        }, {headers: options.headers, safe, aggregate: true});
       })
       // Update published local records
       .then((synced) => {
