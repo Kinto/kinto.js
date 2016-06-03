@@ -651,11 +651,12 @@ export default class Collection {
       .then(res => {
         const existing = res.data;
         if (!existing) {
-          return Promise.resolve({data: {id: id}, permissions: {}});
+          return Promise.resolve({data: {id: id}, deleted: false,
+                                  permissions: {}});
         }
         return this.db.execute((transaction) => {
           transaction.update(markDeleted(existing));
-          return {data: {id: id}, permissions: {}};
+          return {data: {id: id}, deleted: true, permissions: {}};
         });
       });
   }

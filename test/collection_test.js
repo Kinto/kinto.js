@@ -981,6 +981,19 @@ describe("Collection", () => {
         .then(res => res.data.id)
         .should.eventually.eql(id);
     });
+
+    it("should indicate that it deleted", () => {
+      return articles.deleteAny(id)
+        .then(res => res.deleted)
+        .should.eventually.eql(true);
+    });
+
+    it("should indicate that it didn't delete when record is gone", () => {
+      let id = uuid4();
+      return articles.deleteAny(id)
+        .then(res => res.deleted)
+        .should.eventually.eql(false);
+    });
   });
 
   /** @test {Collection#list} */
