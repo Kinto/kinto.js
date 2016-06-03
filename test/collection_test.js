@@ -483,6 +483,19 @@ describe("Collection", () => {
         .should.become("new title");
     });
 
+    it("should return the old data for the record", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data)
+        .then(existing => {
+          return articles.update(
+            Object.assign({}, existing, {title: "new title"}));
+        })
+        .then(res => res.oldRecord.title)
+        .should.become("foo");
+
+    });
+
     it("should update record status on update", () => {
       return articles.create(article)
         .then(res => res.data)
@@ -685,6 +698,24 @@ describe("Collection", () => {
         })
         .then(res => res.data)
           .should.eventually.have.property("last_modified").eql(123456789012);
+    });
+
+    it("should return the old data for the record", () => {
+      return articles.create(article)
+        .then(res => articles.get(res.data.id))
+        .then(res => res.data)
+        .then(existing => {
+          return articles.put(
+            Object.assign({}, existing, {title: "new title"}));
+        })
+        .then(res => res.oldRecord.title)
+        .should.become("foo");
+    });
+
+    it("should signal when a record was created by oldRecord=undefined", () => {
+      return articles.put({id: uuid4()})
+        .then(res => res.oldRecord)
+        .should.become(undefined);
     });
   });
 

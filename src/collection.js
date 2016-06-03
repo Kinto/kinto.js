@@ -531,7 +531,7 @@ export default class Collection {
 
     return this.db.execute((transaction) => {
       transaction.update(updated);
-      return {data: updated, permissions: {}};
+      return {data: updated, oldRecord: oldRecord, permissions: {}};
     });
   }
 
