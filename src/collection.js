@@ -510,24 +510,24 @@ export default class Collection {
    * Lower-level primitive for updating a record while respecting
    * _status and last_modified.
    *
-   * @param  {Object} existing: the record retrieved from the DB
-   * @param  {Object} source: the record to replace it with
+   * @param  {Object} oldRecord: the record retrieved from the DB
+   * @param  {Object} newRecord: the record to replace it with
    * @return {Promise}
    */
-  _updateRaw(existing, source, {synced = false} = {}) {
+  _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
     let updated;
     // Make sure to never loose the existing timestamp.
-    if (existing && existing.last_modified && !source.last_modified) {
-      source.last_modified = existing.last_modified;
+    if (oldRecord && oldRecord.last_modified && !newRecord.last_modified) {
+      newRecord.last_modified = oldRecord.last_modified;
     }
     // If only local fields have changed, then keep record as synced.
-    const isIdentical = existing && recordsEqual(existing, source, this.localFields);
-    const keepSynced = isIdentical && existing._status == "synced";
+    const isIdentical = oldRecord && recordsEqual(oldRecord, newRecord, this.localFields);
+    const keepSynced = isIdentical && oldRecord._status == "synced";
     let newStatus = (keepSynced || synced) ? "synced" : "updated";
-    if (!existing) {
+    if (!oldRecord) {
       newStatus = "created";
     }
-    updated = markStatus(source, newStatus);
+    updated = markStatus(newRecord, newStatus);
 
     return this.db.execute((transaction) => {
       transaction.update(updated);
