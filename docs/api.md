@@ -61,6 +61,7 @@ Result is:
 >
 > - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29);
 but you can also define a [custom ID schema](#id-schemas));
+> - Trying to create a record with the ID of a record that already exists is an error;
 > - As deletions are [performed virtually by default](#deleting-records), attempting at creating a record reusing the id of a virtually deleted record will fail;
 > - Detailed API documentation for `Collection#create()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-create).
 
@@ -89,6 +90,26 @@ Result:
 >
 > - The promise will be rejected if no record is found for that ID;
 > - Detailed API documentation for `Collection#get()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-get).
+
+## Retrieving a single record (raw)
+
+```js
+articles.getRaw("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
+  .then(console.log.bind(console))
+  .error(console.error.bind(console))
+```
+
+Result:
+
+```js
+undefined
+```
+
+> #### Notes
+>
+> - This is a lower-level version of `get()` which does not fail if called on a missing or deleted record;
+> - This might be useful for using Kinto as a plain key-value store, but otherwise you should probably use `get()`;
+> - Detailed API documentation for `Collection#getRaw()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-getRaw).
 
 ## Updating a record
 
@@ -121,8 +142,55 @@ Result is:
 > #### Notes
 >
 > - An ID is required, otherwise the promise will be rejected;
+> - If no record has this ID, or if the record with this ID was deleted, the promise will be rejected;
 > - The `patch` option allows amending the existing record with passed data. By default this option is set to `false`, so existing records are overriden with passed data;
 > - Detailed API documentation for `Collection#update()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-update).
+
+## Upserting records
+
+```js
+var existing = {
+  id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
+  title: "bar"
+};
+
+articles.put(existing)
+  .then(console.log.bind(console));
+
+var updated = Object.assign(existing, {
+  title: "baz"
+});
+
+articles.put(updated)
+  .then(console.log.bind(console));
+```
+
+Result is:
+
+```js
+{
+  data: {
+    id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
+    title: "bar",
+    last_modified: 1432222889337
+  }
+}
+{
+  data: {
+    id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
+    title: "baz",
+    last_modified: 1432222889337
+  }
+}
+```
+
+> #### Notes
+>
+> - An ID is required, otherwise the promise will be rejected;
+> - If the record with this ID does not exist, or is deleted, a new one will be created;
+> - If the record with this ID does exist, it will be updated;
+> - This method may be useful when using Kinto as a key-value store;
+> - Detailed API documentation for `Collection#put()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-put).
 
 ## Deleting records
 
@@ -152,6 +220,28 @@ Result:
 > - An ID is required, otherwise the promise will be rejected;
 > - Virtual deletions aren't retrieved when calling [`#get()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-get) and [`#list()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-list);
 > - Detailed API documentation for `Collection#delete()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-delete).
+
+## Deleting records if present
+
+```js
+articles.deleteAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f7")
+  .then(console.log.bind(console));
+```
+
+Result:
+
+```js
+{
+  data: undefined
+}
+```
+
+> #### Notes
+>
+> - An ID is required, otherwise the promise will be rejected;
+> - If the record with this ID doesn't exist or is already deleted, this is a no-op;
+> - Otherwise this will perform a virtual delete, as with `Collection#delete`;
+> - Detailed API documentation for `Collection#deleteAny()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-deleteAny).
 
 ## Listing records
 
