@@ -620,20 +620,21 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: !options.virtual})
-      .then(res => {
-        const existing = res.data;
-        return this.db.execute((transaction) => {
-          // Virtual updates status.
-          if (options.virtual) {
-            transaction.update(markDeleted(existing));
-          } else {
-            // Delete for real.
-            transaction.delete(id);
-          }
-          return {data: {id: id}, permissions: {}};
-        });
-      });
+    return this.db.execute((transaction) => {
+      const existing = transaction.get(id);
+      const alreadyDeleted = existing && existing.deleted;
+      if (!existing || (alreadyDeleted && !options.virtual)) {
+        throw new Error(`Record with id=${id} not found.`);
+      }
+      // Virtual updates status.
+      if (options.virtual) {
+        transaction.update(markDeleted(existing));
+      } else {
+        // Delete for real.
+        transaction.delete(id);
+      }
+      return {data: existing, permissions: {}};
+    }, {preload: [{id}]});
   }
 
   /**

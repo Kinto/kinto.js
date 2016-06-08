@@ -946,7 +946,7 @@ describe("Collection", () => {
       it("should resolve with deletion information", () => {
         return articles.delete(id, {virtual: false})
           .then(res => res.data)
-          .should.eventually.eql({id: id});
+          .should.eventually.have.property("id").eql(id);
       });
 
       it("should reject on non-existent record", () => {
