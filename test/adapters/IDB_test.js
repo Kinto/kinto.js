@@ -166,6 +166,7 @@ describe("adapter.IDB", () => {
       it("should reject on store method error", () => {
         sandbox.stub(db, "prepare").returns({
           store: {
+            index() {return { openCursor: () => ({ set onsuccess (cb) { cb({target: {}}); }}) };},
             add() {throw new Error("add error");}
           },
           transaction: {
@@ -178,7 +179,10 @@ describe("adapter.IDB", () => {
 
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
-          store: {add() {}},
+          store: {
+            index() {return { openCursor: () => ({ set onsuccess (cb) { cb({target: {}}); }}) };},
+            add() {}
+          },
           transaction: {
             get onerror() {},
             set onerror(onerror) {

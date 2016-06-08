@@ -253,31 +253,38 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   execute(callback, options={preload: []}) {
-    const preloaded = options.preload.reduce((acc, record) => {
-      acc[record.id] = record;
-      return acc;
-    }, {});
     return this.open()
-      .then(_ => {
-        return new Promise((resolve, reject) => {
-          const {transaction, store} = this.prepare("readwrite");
-          const proxy = transactionProxy(store, preloaded);
-          let result;
-          try {
-            result = callback(proxy);
-          } catch (e) {
-            transaction.abort();
-            reject(e);
-          }
-          if (result instanceof Promise) {
-            // XXX: investigate how to provide documentation details in error.
-            reject(new Error("execute() callback should not return a Promise."));
-          }
-          // XXX unsure if we should manually abort the transaction on error
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => resolve(result);
+      .then(_ => new Promise((resolve, reject) => {
+        // Start transaction.
+        const {transaction, store} = this.prepare("readwrite");
+
+        // Preload specified records using index.
+        const ids = options.preload.map(r => r.id);
+        store.index("id").openCursor().onsuccess = cursorHandlers.in(ids, (records) => {
+          const preloaded = records.reduce((acc, record) => {
+            acc[record.id] = record;
+            return acc;
+          }, {});
+          resolve({preloaded, transaction, store});
         });
-      });
+      }))
+      .then(({preloaded, transaction, store}) => new Promise((resolve, reject) => {
+        const proxy = transactionProxy(store, preloaded);
+        let result;
+        try {
+          result = callback(proxy);
+        } catch (e) {
+          transaction.abort();
+          reject(e);
+        }
+        if (result instanceof Promise) {
+          // XXX: investigate how to provide documentation details in error.
+          reject(new Error("execute() callback should not return a Promise."));
+        }
+        // XXX unsure if we should manually abort the transaction on error
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => resolve(result);
+      }));
   }
 
   /**
