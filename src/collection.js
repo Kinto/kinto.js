@@ -497,13 +497,28 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.get(record.id)
-      .then((res) => {
-        const existing = res.data;
-        const source = options.patch ? Object.assign({}, existing, record)
-                                     : record;
-        return this._updateRaw(existing, source, {synced: options.synced});
-      });
+    return this.db.execute((transaction) => {
+      const oldRecord = transaction.get(record.id);
+      if (!oldRecord) {
+        throw new Error(`Record with id=${record.id} not found.`);
+      }
+      const newRecord = options.patch ? Object.assign({}, oldRecord, record)
+                                      : record;
+      // Make sure to never loose the existing timestamp.
+      if (oldRecord && oldRecord.last_modified && !newRecord.last_modified) {
+        newRecord.last_modified = oldRecord.last_modified;
+      }
+      // If only local fields have changed, then keep record as synced.
+      const isIdentical = oldRecord && recordsEqual(oldRecord, newRecord, this.localFields);
+      const keepSynced = isIdentical && oldRecord._status == "synced";
+      let newStatus = (keepSynced || options.synced) ? "synced" : "updated";
+      if (!oldRecord) {
+        newStatus = "created";
+      }
+      const updated = markStatus(newRecord, newStatus);
+      transaction.update(updated);
+      return {data: updated, oldRecord: oldRecord, permissions: {}};
+    }, {preload: [record]});
   }
 
   /**
