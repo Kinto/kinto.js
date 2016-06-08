@@ -131,21 +131,6 @@ describe("Collection", () => {
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
 
-    it("should select the KintoClient configured bucket and collection", () => {
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        adapter: BaseAdapter
-      });
-
-      expect(collection._apiCollection)
-        .to.have.property("options")
-        .to.have.property("bucket")
-        .eql(TEST_BUCKET_NAME);
-
-      expect(collection._apiCollection)
-        .to.have.property("name")
-        .eql(TEST_COLLECTION_NAME);
-    });
-
     describe("transformers registration", () => {
       function registerTransformers(transformers) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
@@ -2233,14 +2218,14 @@ describe("Collection", () => {
       it("should transfer the headers option", () => {
         return articles.sync({headers: {Foo: "Bar"}})
           .then(() => {
-            expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
+            expect(pullChanges.firstCall.args[1]).to.have.property("headers").eql({Foo: "Bar"});
           });
       });
 
       it("should transfer the strategy option", () => {
         return articles.sync({strategy: Collection.strategy.SERVER_WINS})
           .then(() => {
-            expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
+            expect(pullChanges.firstCall.args[1]).to.have.property("strategy").eql(Collection.strategy.SERVER_WINS);
           });
       });
     });

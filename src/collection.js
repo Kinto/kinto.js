@@ -219,7 +219,6 @@ export default class Collection {
      * @type {KintoClient}
      */
     this.api = api;
-    this._apiCollection = this.api.bucket(this.bucket).collection(this.name);
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -836,7 +835,7 @@ export default class Collection {
       filters = {exclude_id};
     }
     // First fetch remote changes from the server
-    return this._apiCollection.listRecords({
+    return this.api.bucket(options.bucket).collection(options.collection).listRecords({
       // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
       since: options.lastModified ? `"${options.lastModified}"`: undefined,
       headers: options.headers,
@@ -901,7 +900,7 @@ export default class Collection {
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
         // Send batch update requests
-        return this._apiCollection.batch(batch => {
+        return this.api.bucket(options.bucket).collection(options.collection).batch(batch => {
           toDelete.forEach((r) => {
             // never published locally deleted records should not be pusblished
             if (r.last_modified) {
@@ -1066,6 +1065,8 @@ export default class Collection {
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
+   * - {String} bucket: The remove bucket id to use (default: null)
+   * - {String} collection: The remove collection id to use (default: null)
    * - {String} remote The remote Kinto server endpoint to use (default: null).
    *
    * @param  {Object} options Options.
@@ -1076,6 +1077,8 @@ export default class Collection {
     strategy: Collection.strategy.MANUAL,
     headers: {},
     ignoreBackoff: false,
+    bucket: null,
+    collection: null,
     remote: null,
   }) {
     const previousRemote = this.api.remote;
@@ -1088,6 +1091,13 @@ export default class Collection {
       return Promise.reject(
         new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
+    if (!options.bucket) {
+      options.bucket = this.bucket;
+    }
+    if (!options.collection) {
+      options.collection = this.name;
+    }
+
     const result = new SyncResultObject();
     const syncPromise = this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
