@@ -526,8 +526,10 @@ export default class Collection {
     }
     // If only local fields have changed, then keep record as synced.
     const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
+    const neverSynced = oldRecord && oldRecord._status == "created";
     const keepSynced = isIdentical && oldRecord._status == "synced";
-    let newStatus = (keepSynced || synced) ? "synced" : "updated";
+    const newStatus = (keepSynced || synced) ? "synced"
+                                             : neverSynced ? "created" : "updated";
     if (!oldRecord) {
       newStatus = "created";
     }

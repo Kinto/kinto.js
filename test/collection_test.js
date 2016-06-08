@@ -497,7 +497,7 @@ describe("Collection", () => {
     });
 
     it("should update record status on update", () => {
-      return articles.create(article)
+      return articles.create({id: uuid4()}, {synced: true})
         .then(res => res.data)
         .then(data => articles.update({...data, title: "blah"}))
         .then(res => res.data._status)
@@ -536,7 +536,7 @@ describe("Collection", () => {
     it("should patch existing record when patch option is used", () => {
       const id = uuid4();
       return articles.create({id, title: "foo", last_modified: 42},
-                             {useRecordId: true})
+                             {useRecordId: true, synced: true})
         .then(() => articles.update({id, rank: 99}, {patch: true}))
         .then((res) => res.data)
         .should.eventually.become({
@@ -582,6 +582,13 @@ describe("Collection", () => {
         .then(res => res.data)
         .should.eventually.have.property("_status").eql("synced");
     });
+
+    it("should preserve created status if record was never synced", () => {
+      return articles.create({title: "foo"})
+        .then(res => articles.update(Object.assign({}, res.data, {title: "bar"})))
+        .then(res => res.data)
+        .should.eventually.have.property("_status").eql("created");
+    });
   });
 
   /** @test {Collection#put} */
@@ -604,11 +611,18 @@ describe("Collection", () => {
     });
 
     it("should change record status to updated", () => {
-      return articles.create(article)
+      return articles.create({id: uuid4()}, {synced: true})
         .then(res => res.data)
         .then(data => articles.put({...data, title: "blah"}))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
+    });
+
+    it("should preserve created status if record was never synced", () => {
+      return articles.create({title: "foo"})
+        .then(res => articles.put(Object.assign({}, res.data, {title: "bar"})))
+        .then(res => res.data)
+        .should.eventually.have.property("_status").eql("created");
     });
 
     it("should create a new record if non-existent", () => {
@@ -755,7 +769,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create({title: "local title", last_modified: 41})
+      return articles.create({id: uuid4(), title: "local title", last_modified: 41}, {synced: true})
         .then(res => {
           local = res.data;
           remote = {...local,
