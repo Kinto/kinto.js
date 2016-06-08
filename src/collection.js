@@ -722,35 +722,29 @@ export default class Collection {
           return Promise.resolve(syncResultObject);
         }
         // Retrieve records matching change ids.
-        const remoteIds = decodedChanges.map((change) => change.id);
-        return this.list({filters: {id: remoteIds}, order: ""},
-                         {includeDeleted: true})
-          .then(res => ({decodedChanges, existingRecords: res.data}))
-          .then(({decodedChanges, existingRecords}) => {
-            return this.db.execute(transaction => {
-              return decodedChanges.map(remote => {
-                // Store remote change into local database.
-                return importChange(transaction, remote, this.localFields);
-              });
-            }, {preload: existingRecords});
-          })
-          .catch(err => {
-            const data = {
-              type: "incoming",
-              message: err.message,
-              stack: err.stack
-            };
-            // XXX one error of the whole transaction instead of per atomic op
-            return [{type: "errors", data}];
-          })
-          .then(imports => {
-            for (let imported of imports) {
-              if (imported.type !== "void") {
-                syncResultObject.add(imported.type, imported.data);
-              }
-            }
-            return syncResultObject;
+        return this.db.execute(transaction => {
+          return decodedChanges.map(remote => {
+            // Store remote change into local database.
+            return importChange(transaction, remote, this.localFields);
           });
+        }, {preload: decodedChanges})
+        .catch(err => {
+          const data = {
+            type: "incoming",
+            message: err.message,
+            stack: err.stack
+          };
+          // XXX one error of the whole transaction instead of per atomic op
+          return [{type: "errors", data}];
+        })
+        .then(imports => {
+          for (let imported of imports) {
+            if (imported.type !== "void") {
+              syncResultObject.add(imported.type, imported.data);
+            }
+          }
+          return syncResultObject;
+        });
       })
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
