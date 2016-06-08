@@ -923,16 +923,15 @@ describe("Collection", () => {
           .should.eventually.eql("deleted");
       });
 
-      it("should resolve with an already deleted record data", () => {
-        return articles.delete(id, {virtual: true})
-          .then(res => articles.delete(id, {virtual: true}))
-          .then(res => res.data.id)
-          .should.eventually.eql(id);
-      });
-
       it("should reject on non-existent record", () => {
         return articles.delete(uuid4(), {virtual: true})
           .then(res => res.data)
+          .should.eventually.be.rejectedWith(Error, /not found/);
+      });
+
+      it("should reject on already deleted record", () => {
+        return articles.delete(id, {virtual: true})
+          .then(res => articles.delete(id, {virtual: true}))
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
     });
