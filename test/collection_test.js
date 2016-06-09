@@ -959,7 +959,7 @@ describe("Collection", () => {
         return articles.delete(id)
           .then(_ => articles.delete(id, {virtual: false}))
           .then(res => res.data)
-          .should.eventually.eql({id: id});
+          .should.eventually.have.property("id").eql(id);
       });
     });
   });

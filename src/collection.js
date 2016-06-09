@@ -637,8 +637,8 @@ export default class Collection {
     // Ensure the record actually exists.
     return this.db.execute((transaction) => {
       const existing = transaction.get(id);
-      const alreadyDeleted = existing && existing.deleted;
-      if (!existing || (alreadyDeleted && !options.virtual)) {
+      const alreadyDeleted = existing && existing._status == "deleted";
+      if (!existing || (alreadyDeleted && options.virtual)) {
         throw new Error(`Record with id=${id} not found.`);
       }
       // Virtual updates status.
