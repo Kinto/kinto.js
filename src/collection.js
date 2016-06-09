@@ -620,7 +620,7 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
+    return this.get(id, {includeDeleted: !options.virtual})
       .then(res => {
         const existing = res.data;
         return this.db.execute((transaction) => {
