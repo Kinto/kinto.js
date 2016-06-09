@@ -954,6 +954,13 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
+
+      it("should delete if already virtually deleted", () => {
+        return articles.delete(id)
+          .then(_ => articles.delete(id, {virtual: false}))
+          .then(res => res.data)
+          .should.eventually.eql({id: id});
+      });
     });
   });
 

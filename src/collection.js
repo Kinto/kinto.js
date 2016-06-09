@@ -623,7 +623,7 @@ export default class Collection {
     return this.get(id, {includeDeleted: true})
       .then(res => {
         const existing = res.data;
-        if (existing._status === "deleted") {
+        if (options.virtual && existing._status === "deleted") {
           throw new Error(`Record with id=${id} not found.`);
         }
         return this.db.execute((transaction) => {
