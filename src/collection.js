@@ -620,12 +620,9 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
     // Ensure the record actually exists.
-    return this.get(id, {includeDeleted: true})
+    return this.get(id, {includeDeleted: !options.virtual})
       .then(res => {
         const existing = res.data;
-        if (options.virtual && existing._status === "deleted") {
-          throw new Error(`Record with id=${id} not found.`);
-        }
         return this.db.execute((transaction) => {
           // Virtual updates status.
           if (options.virtual) {
