@@ -631,7 +631,7 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
-          return {data: {id: id}, permissions: {}};
+          return {data: existing, permissions: {}};
         });
       });
   }
@@ -656,7 +656,7 @@ export default class Collection {
         }
         return this.db.execute((transaction) => {
           transaction.update(markDeleted(existing));
-          return {data: {id: id}, deleted: true, permissions: {}};
+          return {data: existing, deleted: true, permissions: {}};
         });
       });
   }
