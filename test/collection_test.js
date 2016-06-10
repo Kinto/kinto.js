@@ -1000,6 +1000,12 @@ describe("Collection", () => {
         .then(res => res.deleted)
         .should.eventually.eql(false);
     });
+
+    it("should return deleted record", () => {
+      return articles.deleteAny(id)
+        .then(res => res.data)
+        .should.eventually.have.property("title").eql("foo");
+    });
   });
 
   /** @test {Collection#list} */
