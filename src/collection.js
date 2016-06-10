@@ -631,7 +631,7 @@ export default class Collection {
             // Delete for real.
             transaction.delete(id);
           }
-          return {data: {id: id}, permissions: {}};
+          return {data: existing, permissions: {}};
         });
       });
   }
