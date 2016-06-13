@@ -77,6 +77,12 @@ const statements = {
       FROM collection_data
         WHERE collection_name = :collection_name;`,
 
+  "listRecordsById": `
+    SELECT record_id, record
+      FROM collection_data
+        WHERE collection_name = :collection_name
+          AND record_id IN (:record_ids);`,
+
   "importData": `
     REPLACE INTO collection_data (collection_name, record_id, record)
       VALUES (:collection_name, :record_id, :record);`
@@ -151,20 +157,26 @@ export default class FirefoxAdapter extends BaseAdapter {
     if (!this._connection) {
       throw new Error("The storage adapter is not open");
     }
-    const preloaded = options.preload.reduce((acc, record) => {
-      acc[record.id] = record;
-      return acc;
-    }, {});
 
-    const proxy = transactionProxy(this.collection, preloaded);
     let result;
-    try {
-      result = callback(proxy);
-    } catch(e) {
-      return Promise.reject(e);
-    }
     const conn = this._connection;
+    const collection = this.collection;
     return conn.executeTransaction(function* doExecuteTransaction() {
+      // Preload specified records from DB, within transaction.
+      const parameters = {
+        collection_name: collection,
+        record_ids: options.preload.map(r => r.id).join("','")
+      };
+      const rows = yield conn.executeCached(statements.listRecordsById, parameters);
+
+      const preloaded = rows.reduce((acc, row) => {
+        const record = JSON.parse(row.getResultByName("record"));
+        acc[row.getResultByName("record_id")] = record;
+        return acc;
+      }, {});
+
+      const proxy = transactionProxy(collection, preloaded);
+      result = callback(proxy);
       for (let {statement, params} of proxy.operations) {
         yield conn.executeCached(statement, params);
       }
@@ -236,7 +248,7 @@ export default class FirefoxAdapter extends BaseAdapter {
         const previousLastModified = yield connection.execute(
           statements.getLastModified, params).then(result => {
             return result.length > 0 ?
-              result[0].getResultByName('last_modified') : -1;
+              result[0].getResultByName("last_modified") : -1;
           });
         if (lastModified > previousLastModified) {
           const params = {
