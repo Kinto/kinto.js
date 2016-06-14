@@ -47,10 +47,8 @@ const statements = {
       VALUES (:collection_name, :record_id, :record);`,
 
   "updateData": `
-    UPDATE collection_data
-      SET record = :record
-        WHERE collection_name = :collection_name
-        AND record_id = :record_id;`,
+    INSERT OR REPLACE INTO collection_data (collection_name, record_id, record)
+      VALUES (:collection_name, :record_id, :record);`,
 
   "deleteData": `
     DELETE FROM collection_data

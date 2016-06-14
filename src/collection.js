@@ -559,6 +559,13 @@ export default class Collection {
     return this.getRaw(record.id)
       .then((res) => {
         return this._updateRaw(res.data, record);
+      })
+      .then(res => {
+        // Don't return deleted records -- pretend they are gone
+        if(res.oldRecord && res.oldRecord._status == "deleted") {
+          delete res.oldRecord;
+        }
+        return res;
       });
   }
 
