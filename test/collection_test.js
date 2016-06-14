@@ -934,6 +934,12 @@ describe("Collection", () => {
           .then(res => articles.delete(id, {virtual: true}))
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
+
+      it("should return deleted record", () => {
+        return articles.delete(id, {virtual: true})
+          .then(res => res.data)
+          .should.eventually.have.property("title").eql("foo");
+      });
     });
 
     describe("Factual", () => {
@@ -946,7 +952,7 @@ describe("Collection", () => {
       it("should resolve with deletion information", () => {
         return articles.delete(id, {virtual: false})
           .then(res => res.data)
-          .should.eventually.eql({id: id});
+          .should.eventually.have.property("id").eql(id);
       });
 
       it("should reject on non-existent record", () => {
@@ -959,7 +965,13 @@ describe("Collection", () => {
         return articles.delete(id)
           .then(_ => articles.delete(id, {virtual: false}))
           .then(res => res.data)
-          .should.eventually.eql({id: id});
+          .should.eventually.have.property("id").eql(id);
+      });
+
+      it("should return deleted record", () => {
+        return articles.delete(id, {virtual: false})
+          .then(res => res.data)
+          .should.eventually.have.property("title").eql("foo");
       });
     });
   });
@@ -999,6 +1011,12 @@ describe("Collection", () => {
       return articles.deleteAny(id)
         .then(res => res.deleted)
         .should.eventually.eql(false);
+    });
+
+    it("should return deleted record", () => {
+      return articles.deleteAny(id)
+        .then(res => res.data)
+        .should.eventually.have.property("title").eql("foo");
     });
   });
 
