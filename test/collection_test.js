@@ -712,6 +712,20 @@ describe("Collection", () => {
         .should.become("foo");
     });
 
+    it("should not return the old data for a deleted record", () => {
+      let articleId;
+      return articles.create(article)
+        .then(res => {
+          articleId = res.data.id;
+          return articles.delete(articleId);
+        })
+        .then(res =>
+          articles.put(
+            {id: articleId, title: "new title"}))
+        .then(res => res.oldRecord)
+        .should.become(undefined);
+    });
+
     it("should signal when a record was created by oldRecord=undefined", () => {
       return articles.put({id: uuid4()})
         .then(res => res.oldRecord)
