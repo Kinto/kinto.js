@@ -323,7 +323,7 @@ export default class IDB extends BaseAdapter {
     })
     .then((results) => {
       // The resulting list of records is filtered and sorted.
-      const remainingFilters = Object.assign({}, filters);
+      const remainingFilters = {...filters};
       // If `indexField` was used already, don't filter again.
       delete remainingFilters[indexField];
       // XXX: with some efforts, this could be fully implemented using IDB API.

@@ -60,13 +60,13 @@ export default function loadKinto() {
         adapter: FirefoxAdapter
       };
 
-      const expandedOptions = Object.assign(defaults, options);
+      const expandedOptions = {...defaults, ...options};
       super(expandedOptions);
     }
 
     collection(collName, options={}) {
       const idSchema = makeIDSchema();
-      const expandedOptions = Object.assign({idSchema}, options);
+      const expandedOptions = {...idSchema, ...options};
       return super.collection(collName, expandedOptions);
     }
   }

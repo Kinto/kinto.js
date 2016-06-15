@@ -101,7 +101,7 @@ function createUUIDSchema() {
 }
 
 function markStatus(record, status) {
-  return Object.assign({}, record, {_status: status});
+  return {...record, _status: status};
 }
 
 function markDeleted(record) {
@@ -135,7 +135,7 @@ function importChange(transaction, remote, localFields) {
   // Compare local and remote, ignoring local fields.
   const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
-  const synced = Object.assign({}, local, markSynced(remote));
+  const synced = {...local, markSynced(remote)};
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
@@ -453,12 +453,12 @@ export default class Collection {
     if (!options.synced && !options.useRecordId && record.id) {
       return reject("Extraneous Id; can't create a record having one set.");
     }
-    const newRecord = Object.assign({}, record, {
+    const newRecord = {...record, 
       id:      options.synced ||
                    options.useRecordId ? record.id :
                                      this.idSchema.generate(),
       _status: options.synced ? "synced" : "created"
-    });
+    };
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
@@ -500,7 +500,7 @@ export default class Collection {
     return this.get(record.id)
       .then((res) => {
         const existing = res.data;
-        const source = options.patch ? Object.assign({}, existing, record)
+        const source = options.patch ? {...existing, ...record}
                                      : record;
         return this._updateRaw(existing, source, {synced: options.synced});
       });
@@ -683,7 +683,7 @@ export default class Collection {
    * @return {Promise}
    */
   list(params={}, options={includeDeleted: false}) {
-    params = Object.assign({order: "-last_modified", filters: {}}, params);
+    params = {order: "-last_modified", filters: {}, ...params};
     return this.db.list(params).then(results => {
       let data = results;
       if (!options.includeDeleted) {
@@ -780,10 +780,10 @@ export default class Collection {
               transaction.delete(record.id);
             } else {
               // Records that were synced become «created».
-              transaction.update(Object.assign({}, record, {
+              transaction.update({...record,
                 last_modified: undefined,
                 _status: "created"
-              }));
+              });
             }
           });
         });
@@ -832,11 +832,10 @@ export default class Collection {
     if (!syncResultObject.ok) {
       return Promise.resolve(syncResultObject);
     }
-    options = Object.assign({
-      strategy: Collection.strategy.MANUAL,
+    options = {strategy: Collection.strategy.MANUAL, 
       lastModified: this.lastModified,
       headers: {},
-    }, options);
+      ...options};
 
     // Optionally ignore some records when pulling for changes.
     // (avoid redownloading our own changes on last step of #sync())
@@ -957,7 +956,9 @@ export default class Collection {
 
         // Records that must be deleted are either deletions that were pushed
         // to server (published) or deleted records that were never pushed (skipped).
-        const missingRemotely = skipped.map(r => Object.assign({}, r, {deleted: true}));
+        const missingRemotely = skipped.map(r => {
+          return {...r, deleted: true}
+        });
         const toApplyLocally = published.concat(missingRemotely);
 
         const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
@@ -997,7 +998,7 @@ export default class Collection {
           return result;
         } else if (options.strategy === Collection.strategy.CLIENT_WINS && !options.resolved) {
           // We need to push local versions of the records to the server
-          return this.pushChanges(result, Object.assign({}, options, {resolved: true}));
+          return this.pushChanges(result, {...options, resolved: true});
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
@@ -1032,10 +1033,10 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
-    const resolved = Object.assign({}, resolution, {
+    const resolved = {...resolution,
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote.last_modified
-    });
+    };
     // If the resolution object is strictly equal to the
     // remote record, then we can mark it as synced locally.
     // Otherwise, mark it as updated (so that the resolution is pushed).
@@ -1110,7 +1111,7 @@ export default class Collection {
           return result;
         }
         // Avoid redownloading our own changes during the last pull.
-        const pullOpts = Object.assign({}, options, {exclude: result.published});
+        const pullOpts = {...options, exclude: result.published};
         return this.pullChanges(result, pullOpts);
       });
     // Ensure API default remote is reverted if a custom one's been used

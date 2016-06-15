@@ -119,9 +119,9 @@ var existing = {
   title: "bar"
 };
 
-var updated = Object.assign(existing, {
+var updated = {...existing,
   title: "baz"
-});
+};
 
 articles.update(updated)
   .then(console.log.bind(console));
@@ -157,9 +157,9 @@ var existing = {
 articles.put(existing)
   .then(console.log.bind(console));
 
-var updated = Object.assign(existing, {
+var updated = {...existing,
   title: "baz"
-});
+};
 
 articles.put(updated)
   .then(console.log.bind(console));
@@ -728,7 +728,7 @@ A transformer object is basically an object literal having and `encode` and a `d
 import Kinto from "kinto";
 
 function update(obj1, obj2) {
-  return Object.assign({}, obj1, obj2);
+  return {...obj1, ...obj2};
 }
 
 const exclamationMarkTransformer = {
