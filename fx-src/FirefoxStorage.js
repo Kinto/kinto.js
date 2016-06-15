@@ -161,13 +161,14 @@ export default class FirefoxAdapter extends BaseAdapter {
     let result;
     const conn = this._connection;
     const collection = this.collection;
+
     return conn.executeTransaction(function* doExecuteTransaction() {
       // Preload specified records from DB, within transaction.
       const parameters = {
         collection_name: collection,
         record_ids: options.preload.map(r => r.id).join("','")
       };
-      const rows = yield conn.executeCached(statements.listRecordsById, parameters);
+      const rows = yield conn.execute(statements.listRecordsById, parameters);
 
       const preloaded = rows.reduce((acc, row) => {
         const record = JSON.parse(row.getResultByName("record"));
