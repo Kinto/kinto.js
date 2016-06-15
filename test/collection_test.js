@@ -712,6 +712,20 @@ describe("Collection", () => {
         .should.become("foo");
     });
 
+    it("should not return the old data for a deleted record", () => {
+      let articleId;
+      return articles.create(article)
+        .then(res => {
+          articleId = res.data.id;
+          return articles.delete(articleId);
+        })
+        .then(res =>
+          articles.put(
+            {id: articleId, title: "new title"}))
+        .then(res => res.oldRecord)
+        .should.become(undefined);
+    });
+
     it("should signal when a record was created by oldRecord=undefined", () => {
       return articles.put({id: uuid4()})
         .then(res => res.oldRecord)
@@ -934,6 +948,12 @@ describe("Collection", () => {
           .then(res => articles.delete(id, {virtual: true}))
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
+
+      it("should return deleted record", () => {
+        return articles.delete(id, {virtual: true})
+          .then(res => res.data)
+          .should.eventually.have.property("title").eql("foo");
+      });
     });
 
     describe("Factual", () => {
@@ -960,6 +980,12 @@ describe("Collection", () => {
           .then(_ => articles.delete(id, {virtual: false}))
           .then(res => res.data)
           .should.eventually.have.property("id").eql(id);
+      });
+
+      it("should return deleted record", () => {
+        return articles.delete(id, {virtual: false})
+          .then(res => res.data)
+          .should.eventually.have.property("title").eql("foo");
       });
     });
   });
@@ -999,6 +1025,12 @@ describe("Collection", () => {
       return articles.deleteAny(id)
         .then(res => res.deleted)
         .should.eventually.eql(false);
+    });
+
+    it("should return deleted record", () => {
+      return articles.deleteAny(id)
+        .then(res => res.data)
+        .should.eventually.have.property("title").eql("foo");
     });
   });
 
