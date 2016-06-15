@@ -99,6 +99,7 @@ export default class FirefoxAdapter extends BaseAdapter {
   constructor(collection) {
     super();
     this.collection = collection;
+    this._connection = null;
   }
 
   _init(connection) {
@@ -178,10 +179,11 @@ export default class FirefoxAdapter extends BaseAdapter {
 
       const proxy = transactionProxy(collection, preloaded);
       result = callback(proxy);
+
       for (let {statement, params} of proxy.operations) {
         yield conn.executeCached(statement, params);
       }
-    })
+    }, conn.TRANSACTION_EXCLUSIVE)
     .then(_ => result);
   }
 
