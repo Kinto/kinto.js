@@ -81,7 +81,7 @@ db.list()
       if (!existing) {
         throw new Error("Missing record #1");
       }
-      transaction.update(Object.assign({}, existing, {foo: "bar"}));
+      transaction.update({...existing, foo: "bar"});
     }, {preload});
   });
 ```

@@ -34,7 +34,7 @@ export default class Kinto extends KintoBase {
       ApiClass: Api,
     };
 
-    super(Object.assign({}, defaults, options));
+    super({...defaults, ...options});
   }
 }
 
