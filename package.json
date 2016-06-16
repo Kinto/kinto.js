@@ -11,7 +11,7 @@
     "dist-dev": "browserify --ignore process -s Kinto -d -e src/index.js -o dist/kinto.js -t [ babelify --sourceMapRelative . ]",
     "dist-noshim": "browserify --ignore process -s Kinto -g uglifyify --ignore isomorphic-fetch --ignore babel-polyfill -e src/index.js -o dist/kinto.noshim.js -t [ babelify --sourceMapRelative . ]",
     "dist-prod": "browserify --ignore process -s Kinto -g uglifyify -e src/index.js -o dist/kinto.min.js -t [ babelify --sourceMapRelative . ]",
-    "dist-fx": "BABEL_ENV=firefox browserify -s loadKinto --bare --ignore uuid --ignore kinto-client --ignore isomorphic-fetch -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-offline-client.js && echo \"\n/*\n * Version $npm_package_version - $(git rev-parse --short HEAD)\n */\n\" >> dist/moz-kinto-offline-client.js && cat temp.jsm >> dist/moz-kinto-offline-client.js && rm temp.jsm",
+    "dist-fx": "BABEL_ENV=firefox browserify -s loadKinto --bare --ignore uuid --ignore kinto-http --ignore isomorphic-fetch -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-offline-client.js && echo \"\n/*\n * Version $npm_package_version - $(git rev-parse --short HEAD)\n */\n\" >> dist/moz-kinto-offline-client.js && cat temp.jsm >> dist/moz-kinto-offline-client.js && rm temp.jsm",
     "compute-sri": "cd dist; for file in $(ls kinto*.js); do printf \"| %-23s | %-64s |\\n\" ${file} $(echo -n 'sha384-' && cat ${file} | openssl dgst -sha384 -binary | openssl enc -base64); done",
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
@@ -104,7 +104,7 @@
   "dependencies": {
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
-    "kinto-client": "^0.9.2",
+    "kinto-http": "^1.0.0",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
