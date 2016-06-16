@@ -26,7 +26,7 @@ export default function loadKinto() {
   const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
   const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
 
-  // Use standalone kinto-client module landed in FFx.
+  // Use standalone kinto-http module landed in FFx.
   const { KintoHttpClient } = Cu.import("resource://services-common/kinto-http-client.js");
 
   Cu.import("resource://gre/modules/Timer.jsm");

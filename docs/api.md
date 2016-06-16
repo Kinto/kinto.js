@@ -615,7 +615,7 @@ Every CRUD operations are performed locally using the *database adapter* and the
 
 However, in some situations — like setting permissions on objects or checking server capabilities — it may be useful to interact with the remote API manually.
 
-A [kinto-client instance](https://github.com/Kinto/kinto-client) is available on the Kinto object:
+A [kinto-http.js instance](https://github.com/Kinto/kinto-http.js) is available on the Kinto object:
 
 ```js
 const kinto = new Kinto({
