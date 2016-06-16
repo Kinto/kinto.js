@@ -504,18 +504,7 @@ export default class Collection {
       }
       const newRecord = options.patch ? Object.assign({}, oldRecord, record)
                                       : record;
-      // Make sure to never loose the existing timestamp.
-      if (oldRecord && oldRecord.last_modified && !newRecord.last_modified) {
-        newRecord.last_modified = oldRecord.last_modified;
-      }
-      // If only local fields have changed, then keep record as synced.
-      const isIdentical = oldRecord && recordsEqual(oldRecord, newRecord, this.localFields);
-      const keepSynced = isIdentical && oldRecord._status == "synced";
-      let newStatus = (keepSynced || options.synced) ? "synced" : "updated";
-      if (!oldRecord) {
-        newStatus = "created";
-      }
-      const updated = markStatus(newRecord, newStatus);
+      const updated = this._updateRaw(oldRecord, newRecord, options);
       transaction.update(updated);
       return {data: updated, oldRecord: oldRecord, permissions: {}};
     }, {preload: [record]});
@@ -530,24 +519,19 @@ export default class Collection {
    * @return {Promise}
    */
   _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
-    let updated;
+    const updated = Object.assign({}, newRecord);
     // Make sure to never loose the existing timestamp.
-    if (oldRecord && oldRecord.last_modified && !newRecord.last_modified) {
-      newRecord.last_modified = oldRecord.last_modified;
+    if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
+      updated.last_modified = oldRecord.last_modified;
     }
     // If only local fields have changed, then keep record as synced.
-    const isIdentical = oldRecord && recordsEqual(oldRecord, newRecord, this.localFields);
+    const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
     const keepSynced = isIdentical && oldRecord._status == "synced";
     let newStatus = (keepSynced || synced) ? "synced" : "updated";
     if (!oldRecord) {
       newStatus = "created";
     }
-    updated = markStatus(newRecord, newStatus);
-
-    return this.db.execute((transaction) => {
-      transaction.update(updated);
-      return {data: updated, oldRecord: oldRecord, permissions: {}};
-    });
+    return markStatus(updated, newStatus);
   }
 
   /**
@@ -571,17 +555,16 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.getRaw(record.id)
-      .then((res) => {
-        return this._updateRaw(res.data, record);
-      })
-      .then(res => {
-        // Don't return deleted records -- pretend they are gone
-        if(res.oldRecord && res.oldRecord._status == "deleted") {
-          delete res.oldRecord;
-        }
-        return res;
-      });
+    return this.db.execute((transaction) => {
+      let oldRecord = transaction.get(record.id);
+      const updated = this._updateRaw(oldRecord, record);
+      transaction.update(updated);
+      // Don't return deleted records -- pretend they are gone
+      if(oldRecord && oldRecord._status == "deleted") {
+        oldRecord = undefined;
+      }
+      return {data: updated, oldRecord: oldRecord, permissions: {}};
+    }, {preload: [record]});
   }
 
   /**
@@ -670,18 +653,13 @@ export default class Collection {
     if (!this.idSchema.validate(id)) {
       return Promise.reject(new Error(`Invalid Id: ${id}`));
     }
-    return this.getRaw(id)
-      .then(res => {
-        const existing = res.data;
-        if (!existing) {
-          return Promise.resolve({data: {id: id}, deleted: false,
-                                  permissions: {}});
-        }
-        return this.db.execute((transaction) => {
-          transaction.update(markDeleted(existing));
-          return {data: existing, deleted: true, permissions: {}};
-        });
-      });
+    return this.db.execute((transaction) => {
+      const existing = transaction.get(id);
+      if (existing) {
+        transaction.update(markDeleted(existing));
+      }
+      return {data: Object.assign({id}, existing), deleted: !!existing, permissions: {}};
+    }, {preload: [{id}]});
   }
 
   /**
