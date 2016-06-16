@@ -7,7 +7,7 @@ if (!global._babelPolyfill) {
   require("babel-polyfill");
 }
 
-import Api from "kinto-client";
+import Api from "kinto-http";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import KintoBase from "./KintoBase";

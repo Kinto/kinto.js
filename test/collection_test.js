@@ -9,9 +9,9 @@ import { v4 as uuid4 } from "uuid";
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
-import Api from "kinto-client";
-import KintoClient from "kinto-client";
-import KintoClientCollection from "kinto-client/lib/collection.js";
+import Api from "kinto-http";
+import KintoClient from "kinto-http";
+import KintoClientCollection from "kinto-http/lib/collection.js";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 

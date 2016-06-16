@@ -4,7 +4,7 @@
 
 An [Offline-First](http://offlinefirst.org/) JavaScript client for [Kinto](https://kinto.readthedocs.io/).
 
-> Note: If you're looking for a pure HTTP js client for Kinto, check out [kinto-client](https://github.com/Kinto/kinto-client).
+> Note: If you're looking for a pure HTTP js client for Kinto, check out [kinto-http.js](https://github.com/Kinto/kinto-http.js).
 
 The idea is to persist data locally in the browser by default, then synchronizing them with the server explicitly when connectivity is guaranteed:
 
