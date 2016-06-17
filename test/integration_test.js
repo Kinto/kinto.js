@@ -1128,10 +1128,10 @@ describe("Integration tests", function() {
       function createTransformer(char) {
         return {
           encode(record) {
-            return Object.assign({}, record, {title: record.title + char});
+            return {...record, title: record.title + char};
           },
           decode(record) {
-            return Object.assign({}, record, {title: record.title.slice(0, -1)});
+            return {...record, title: record.title.slice(0, -1)};
           }
         };
       }

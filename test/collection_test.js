@@ -32,7 +32,7 @@ describe("Collection", () => {
 
   function testCollection(options={}) {
     events = new EventEmitter();
-    const opts = Object.assign({events}, options);
+    const opts = {events, ...options};
     api = new Api(FAKE_SERVER_URL, events);
     return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, opts);
   }
@@ -476,7 +476,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.update(
-            Object.assign({}, existing, {title: "new title"}));
+            {...existing, title: "new title"});
         })
         .then(res => articles.get(res.data.id))
         .then(res => res.data.title)
@@ -489,7 +489,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.update(
-            Object.assign({}, existing, {title: "new title"}));
+            {...existing, title: "new title"});
         })
         .then(res => res.oldRecord.title)
         .should.become("foo");
@@ -499,7 +499,7 @@ describe("Collection", () => {
     it("should update record status on update", () => {
       return articles.create(article)
         .then(res => res.data)
-        .then(data => articles.update(Object.assign({}, data, {title: "blah"})))
+        .then(data => articles.update({...data, title: "blah"}))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
     });
@@ -552,10 +552,7 @@ describe("Collection", () => {
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => {
-          return articles.update(
-            Object.assign({}, {id: res.data.id}, {
-              title: "new title",
-            }));
+          return articles.update({id: res.data.id, title: "new title"});
         })
         .then(res => res.data)
           .should.eventually.not.have.property("url");
@@ -570,9 +567,9 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => {
           return articles.update(
-            Object.assign({}, {id: res.data.id}, {
-              title: "new title",
-            }));
+            {id: res.data.id,
+            title: "new title",
+            });
         })
         .then(res => res.data)
           .should.eventually.have.property("last_modified").eql(123456789012);
@@ -580,7 +577,7 @@ describe("Collection", () => {
 
     it("should optionally mark a record as synced", () => {
       return articles.create({title: "foo"})
-        .then(res => articles.update(Object.assign({}, res.data, {title: "bar"}),
+        .then(res => articles.update({...res.data, title: "bar"},
                                      {synced: true}))
         .then(res => res.data)
         .should.eventually.have.property("_status").eql("synced");
@@ -599,7 +596,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.put(
-            Object.assign({}, existing, {title: "new title"}));
+            {...existing, title: "new title"});
         })
         .then(res => articles.get(res.data.id))
         .then(res => res.data.title)
@@ -609,7 +606,7 @@ describe("Collection", () => {
     it("should change record status to updated", () => {
       return articles.create(article)
         .then(res => res.data)
-        .then(data => articles.put(Object.assign({}, data, {title: "blah"})))
+        .then(data => articles.put({...data, title: "blah"}))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
     });
@@ -646,7 +643,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => articles.delete(res.data.id))
         .then(res => articles.put(
-          Object.assign({}, res.data, {title: "new title"})))
+          {...res.data, title: "new title"}))
         .then(res => res.data.title)
         .should.eventually.become("new title");
     });
@@ -656,7 +653,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => articles.delete(res.data.id))
         .then(res => articles.put(
-          Object.assign({}, res.data, {title: "new title"})))
+          {...res.data, title: "new title"}))
         .then(res => res.data._status)
         .should.eventually.become("updated");
     });
@@ -675,9 +672,9 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => {
           return articles.put(
-            Object.assign({}, {id: res.data.id}, {
-              title: "new title",
-            }));
+            {id: res.data.id,
+            title: "new title",
+            });
         })
         .then(res => res.data)
           .should.eventually.not.have.property("url");
@@ -692,9 +689,9 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => {
           return articles.put(
-            Object.assign({}, {id: res.data.id}, {
+            {id: res.data.id, 
               title: "new title",
-            }));
+            });
         })
         .then(res => res.data)
           .should.eventually.have.property("last_modified").eql(123456789012);
@@ -706,7 +703,7 @@ describe("Collection", () => {
         .then(res => res.data)
         .then(existing => {
           return articles.put(
-            Object.assign({}, existing, {title: "new title"}));
+            {...existing, title: "new title"});
         })
         .then(res => res.oldRecord.title)
         .should.become("foo");
@@ -761,10 +758,10 @@ describe("Collection", () => {
       return articles.create({title: "local title", last_modified: 41})
         .then(res => {
           local = res.data;
-          remote = Object.assign({}, local, {
+          remote = {...local,
             title: "blah",
             last_modified: 42,
-          });
+          };
           conflict = {
             type: "incoming",
             local: local,
@@ -774,7 +771,7 @@ describe("Collection", () => {
     });
 
     it("should mark a record as updated", () => {
-      const resolution = Object.assign({}, local, {title: "resolved"});
+      const resolution = {...local, title: "resolved"};
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
@@ -786,7 +783,7 @@ describe("Collection", () => {
     });
 
     it("should mark a record as synced if resolved with remote", () => {
-      const resolution = Object.assign({}, local, {title: remote.title});
+      const resolution = {...local, title: remote.title};
       return articles.resolve(conflict, resolution)
         .then(res => res.data)
         .should.eventually.become({
@@ -1239,7 +1236,7 @@ describe("Collection", () => {
       const record = {id: uuid4(), title: "foo", last_modified: 1457896541};
       return articles.loadDump([record])
         .then(() => {
-          const updated = Object.assign({}, record, {last_modified: 1457896543});
+          const updated = {...record, last_modified: 1457896543};
           return articles.loadDump([updated]);
         })
         .should.eventually.have.length(1);
@@ -1653,18 +1650,18 @@ describe("Collection", () => {
       });
 
       it("should ignore resolved conflicts during sync", () => {
-        const remote = Object.assign({}, local, {
+        const remote = {...local,
           title: "blah",
           last_modified: 42,
-        });
+        };
         const conflict = {
           type: "incoming",
           local: local,
           remote: remote,
         };
-        const resolution = Object.assign({}, local, {
+        const resolution = {...local, 
           title: "resolved"
-        });
+        };
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
             data: [
@@ -1738,7 +1735,7 @@ describe("Collection", () => {
       return {
         encode() {},
         decode(record) {
-          return Object.assign({}, record, {title: record.title + char});
+          return {...record, title: record.title + char};
         }
       };
     }
@@ -1877,7 +1874,7 @@ describe("Collection", () => {
         .returns(Promise.resolve([{}]));
 
       articles = testCollection({localFields: ["size"]});
-      return articles.update(Object.assign({}, records[0], {title: "ah", size: 3.14}))
+      return articles.update({...records[0], title: "ah", size: 3.14})
         .then(() => articles.pushChanges(result))
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
@@ -1950,7 +1947,7 @@ describe("Collection", () => {
 
     it("should delete locally the records deleted remotely", () => {
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
-        published: [{data: Object.assign({}, records[1], {deleted: true})}],
+        published: [{data: {...records[1], deleted: true}}],
         errors:    [],
         conflicts: [],
         skipped:   [],

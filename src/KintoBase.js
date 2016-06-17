@@ -55,7 +55,7 @@ export default class KintoBase {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
     };
-    this._options = Object.assign(defaults, options);
+    this._options = {...defaults, ...options};
     if (!this._options.adapter) {
       throw new Error("No adapter provided");
     }
