@@ -1022,6 +1022,17 @@ export default class Collection {
    * @return {Promise}
    */
   resolve(conflict, resolution) {
+    return this.db.execute((transaction) => {
+      const updated = this._resolveRaw(conflict, resolution);
+      transaction.update(updated);
+      return {data: updated, permissions: {}};
+    });
+  }
+
+  /**
+   * @private
+   */
+  _resolveRaw(conflict, resolution) {
     const resolved = {...resolution,
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote.last_modified
@@ -1030,7 +1041,7 @@ export default class Collection {
     // remote record, then we can mark it as synced locally.
     // Otherwise, mark it as updated (so that the resolution is pushed).
     const synced = deepEqual(resolved, conflict.remote);
-    return this.update(resolved, {synced});
+    return markStatus(resolved, synced ? "synced" : "updated");
   }
 
   /**
@@ -1044,14 +1055,19 @@ export default class Collection {
     if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
       return Promise.resolve(result);
     }
-    return Promise.all(result.conflicts.map(conflict => {
-      const resolution = strategy === Collection.strategy.CLIENT_WINS ?
-                         conflict.local : conflict.remote;
-      return this.resolve(conflict, resolution);
-    })).then(imports => {
+    return this.db.execute((transaction) => {
+      return result.conflicts.map((conflict) => {
+        const resolution = strategy === Collection.strategy.CLIENT_WINS ?
+                           conflict.local : conflict.remote;
+        const updated = this._resolveRaw(conflict, resolution);
+        transaction.update(updated);
+        return updated;
+      });
+    })
+    .then(imports => {
       return result
         .reset("conflicts")
-        .add("resolved", imports.map(res => res.data));
+        .add("resolved", imports);
     });
   }
 
