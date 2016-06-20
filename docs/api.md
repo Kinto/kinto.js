@@ -461,6 +461,7 @@ articles.sync()
 ```
 
 > #### Notes
+> - By default, it uses the collection name as the collection id on the remove server. A different name can be specified in `sync()` options.
 > - Detailed API documentation for `Collection#sync()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync).
 
 ### Error handling

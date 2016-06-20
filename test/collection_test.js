@@ -131,21 +131,6 @@ describe("Collection", () => {
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
 
-    it("should select the KintoClient configured bucket and collection", () => {
-      const collection = new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        adapter: BaseAdapter
-      });
-
-      expect(collection._apiCollection)
-        .to.have.property("options")
-        .to.have.property("bucket")
-        .eql(TEST_BUCKET_NAME);
-
-      expect(collection._apiCollection)
-        .to.have.property("name")
-        .eql(TEST_COLLECTION_NAME);
-    });
-
     describe("transformers registration", () => {
       function registerTransformers(transformers) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
@@ -689,7 +674,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => {
           return articles.put(
-            {id: res.data.id, 
+            {id: res.data.id,
               title: "new title",
             });
         })
@@ -1291,7 +1276,7 @@ describe("Collection", () => {
 
   /** @test {Collection#pullChanges} */
   describe("#pullChanges", () => {
-    let listRecords, articles, result;
+    let client, articles, listRecords, result;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1334,6 +1319,7 @@ describe("Collection", () => {
             next: () => {},
             last_modified: "\"42\"",
           }));
+        client = new KintoClient("http://server.com/v1").bucket("bucket").collection("collection");
         return Promise.all(localData.map(fixture => {
           return articles.create(fixture, {synced: true});
         }))
@@ -1356,7 +1342,7 @@ describe("Collection", () => {
             }
           });
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
             .then(_ => expect(hookCalled).to.eql(true));
         });
 
@@ -1371,7 +1357,7 @@ describe("Collection", () => {
             }
           });
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
             .should.eventually.be.rejectedWith(Error, /Invalid collection data/);
         });
 
@@ -1393,7 +1379,7 @@ describe("Collection", () => {
             }
           });
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
             .then((result) => {
               expect(result.created.length).to.eql(2);
               result.created.forEach((r) => {
@@ -1429,7 +1415,7 @@ describe("Collection", () => {
             }
           });
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
             .then((result) => {
               expect(result.created.length).to.eql(2);
               result.created.forEach((r) => {
@@ -1457,7 +1443,7 @@ describe("Collection", () => {
             }
           });
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
             .then(_ => {
               expect(passedCollection).to.eql(articles);
             });
@@ -1470,19 +1456,19 @@ describe("Collection", () => {
             "incoming-changes": [() => 42]
           }
         });
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'changes' property/);
       });
 
 
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(_ => sinon.assert.notCalled(listRecords));
       });
 
       it("should fetch remote changes from the server", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
@@ -1494,7 +1480,7 @@ describe("Collection", () => {
       });
 
       it("should use timestamp to fetch remote changes from the server", () => {
-        return articles.pullChanges(result, {lastModified: 42})
+        return articles.pullChanges(client, result, {lastModified: 42})
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
@@ -1507,7 +1493,7 @@ describe("Collection", () => {
 
       it("should pass provided filters when polling changes from server", () => {
         const exclude = [{id: 1}, {id: 2}, {id: 3}];
-        return articles.pullChanges(result, {lastModified: 42, exclude})
+        return articles.pullChanges(client, result, {lastModified: 42, exclude})
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
@@ -1519,7 +1505,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported creations", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => res.created)
           .should.eventually.become([
             {id: id_3, title: "art3", _status: "synced"},
@@ -1528,7 +1514,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported updates", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => res.updated)
           .should.eventually.become([{
             old: {id: id_7, title: "art7-a", _status: "synced"},
@@ -1537,7 +1523,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with imported deletions", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => res.deleted)
           .should.eventually.become([
             {id: id_4, title: "art4", _status: "synced"}
@@ -1545,13 +1531,13 @@ describe("Collection", () => {
       });
 
       it("should resolve with no conflicts detected", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => res.conflicts)
           .should.eventually.become([]);
       });
 
       it("should actually import changes into the collection", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(_ => articles.list({order: "title"}))
           .then(res => res.data)
           .should.eventually.become([
@@ -1565,7 +1551,7 @@ describe("Collection", () => {
       });
 
       it("should skip deleted data missing locally", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => {
             expect(res.skipped).eql([
               {id: id_6, deleted: true},
@@ -1575,7 +1561,7 @@ describe("Collection", () => {
       });
 
       it("should not list identical records as skipped", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .then(res => res.skipped)
           .should.eventually.not.contain({
             id: id_2,
@@ -1590,7 +1576,7 @@ describe("Collection", () => {
           sandbox.stub(articles.db, "execute")
             .returns(Promise.reject(error));
 
-          return articles.pullChanges(result)
+          return articles.pullChanges(client, result)
           .then(res => res.errors)
           .should.become([{
             type: "incoming",
@@ -1622,7 +1608,7 @@ describe("Collection", () => {
             last_modified: "\"42\"",
           }));
 
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .should.eventually.become({
             ok: false,
             lastModified: 42,
@@ -1659,7 +1645,7 @@ describe("Collection", () => {
           local: local,
           remote: remote,
         };
-        const resolution = {...local, 
+        const resolution = {...local,
           title: "resolved"
         };
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
@@ -1672,7 +1658,7 @@ describe("Collection", () => {
           }));
         const syncResult = new SyncResultObject();
         return articles.resolve(conflict, resolution)
-          .then(() => articles.pullChanges(syncResult))
+          .then(() => articles.pullChanges(client, syncResult))
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -1707,7 +1693,7 @@ describe("Collection", () => {
       });
 
       it("should resolve with solved changes", () => {
-        return articles.pullChanges(result)
+        return articles.pullChanges(client, result)
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -1843,9 +1829,10 @@ describe("Collection", () => {
 
   /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
-    let articles, records, result;
+    let client, articles, records, result;
 
     beforeEach(() => {
+      client = new KintoClient("http://server.com/v1").bucket("bucket").collection("collection");
       articles = testCollection();
       result = new SyncResultObject();
       return Promise.all([
@@ -1859,7 +1846,7 @@ describe("Collection", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([{}]));
 
-      return articles.pushChanges(result)
+      return articles.pushChanges(client, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           const options = batchRequests.firstCall.args[1];
@@ -1875,7 +1862,7 @@ describe("Collection", () => {
 
       articles = testCollection({localFields: ["size"]});
       return articles.update({...records[0], title: "ah", size: 3.14})
-        .then(() => articles.pushChanges(result))
+        .then(() => articles.pushChanges(client, result))
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests[0].body.data.title).eql("ah");
@@ -1894,7 +1881,7 @@ describe("Collection", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([{}]));
 
-      return articles.pushChanges(result)
+      return articles.pushChanges(client, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests[0].body.data.title).eql("foo?!");
@@ -1908,7 +1895,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(result)
+      return articles.pushChanges(client, result)
         .then(res => res.published)
         .should.eventually.become([
           {
@@ -1924,7 +1911,7 @@ describe("Collection", () => {
         .returns(Promise.resolve([]));
 
       return articles.delete(records[0].id)
-        .then(_ => articles.pushChanges(result))
+        .then(_ => articles.pushChanges(client, result))
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests).eql([]);
@@ -1940,7 +1927,7 @@ describe("Collection", () => {
         skipped:   [],
       }));
       return articles.delete(locallyDeletedId)
-        .then(_ => articles.pushChanges(result))
+        .then(_ => articles.pushChanges(client, result))
         .then(_ => articles.get(locallyDeletedId, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
@@ -1952,7 +1939,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(result)
+      return articles.pushChanges(client, result)
         .then(res => res.published)
         .should.eventually.become([
           {
@@ -1969,7 +1956,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [{data: {id: records[0].id}}]
       }));
-      return articles.pushChanges(result)
+      return articles.pushChanges(client, result)
         .then(_ => articles.get(records[0].id, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
@@ -1987,13 +1974,13 @@ describe("Collection", () => {
       });
 
       it("should report encountered publication errors", () => {
-        return articles.pushChanges(result)
+        return articles.pushChanges(client, result)
           .then(res => res.errors)
           .should.eventually.become([error]);
       });
 
       it("should report typed publication errors", () => {
-        return articles.pushChanges(result)
+        return articles.pushChanges(client, result)
           .then(res => res.errors[0])
           .should.eventually.have.property("type").eql("outgoing");
       });
@@ -2218,7 +2205,7 @@ describe("Collection", () => {
       sandbox.stub(articles, "pushChanges").returns(Promise.resolve(syncResult));
       return articles.sync().then(res => {
         expect(res.published).to.have.length(2);
-        expect(articles.pullChanges.lastCall.args[1].exclude).eql([record1, record2]);
+        expect(articles.pullChanges.lastCall.args[2].exclude).eql([record1, record2]);
       });
     });
 
@@ -2233,14 +2220,14 @@ describe("Collection", () => {
       it("should transfer the headers option", () => {
         return articles.sync({headers: {Foo: "Bar"}})
           .then(() => {
-            expect(pullChanges.firstCall.args[1]).eql({headers: {Foo: "Bar"}});
+            expect(pullChanges.firstCall.args[2]).to.have.property("headers").eql({Foo: "Bar"});
           });
       });
 
       it("should transfer the strategy option", () => {
         return articles.sync({strategy: Collection.strategy.SERVER_WINS})
           .then(() => {
-            expect(pullChanges.firstCall.args[1]).eql({strategy: Collection.strategy.SERVER_WINS});
+            expect(pullChanges.firstCall.args[2]).to.have.property("strategy").eql(Collection.strategy.SERVER_WINS);
           });
       });
     });
@@ -2257,7 +2244,8 @@ describe("Collection", () => {
         sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
         sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
         sandbox.stub(articles, "pushChanges").returns(Promise.resolve(result));
-        articles.api = {backoff: 30};
+        articles.api.events.emit("backoff", new Date().getTime() + 30000);
+
         return articles.sync({ignoreBackoff: true})
           .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
       });

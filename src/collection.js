@@ -219,7 +219,6 @@ export default class Collection {
      * @type {KintoClient}
      */
     this.api = api;
-    this._apiCollection = this.api.bucket(this.bucket).collection(this.name);
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -812,11 +811,12 @@ export default class Collection {
    * Options:
    * - {String} strategy: The selected sync strategy.
    *
-   * @param  {SyncResultObject} syncResultObject
-   * @param  {Object}           options
+   * @param  {KintoClient.Collection} client           Kinto client Collection instance.
+   * @param  {SyncResultObject}       syncResultObject The sync result object.
+   * @param  {Object}                 options
    * @return {Promise}
    */
-  pullChanges(syncResultObject, options={}) {
+  pullChanges(client, syncResultObject, options={}) {
     if (!syncResultObject.ok) {
       return Promise.resolve(syncResultObject);
     }
@@ -836,7 +836,7 @@ export default class Collection {
       filters = {exclude_id};
     }
     // First fetch remote changes from the server
-    return this._apiCollection.listRecords({
+    return client.listRecords({
       // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
       since: options.lastModified ? `"${options.lastModified}"`: undefined,
       headers: options.headers,
@@ -887,11 +887,12 @@ export default class Collection {
    * Publish local changes to the remote server and updates the passed
    * {@link SyncResultObject} with publication results.
    *
-   * @param  {SyncResultObject} syncResultObject The sync result object.
-   * @param  {Object}           options          The options object.
+   * @param  {KintoClient.Collection} client           Kinto client Collection instance.
+   * @param  {SyncResultObject}       syncResultObject The sync result object.
+   * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  pushChanges(syncResultObject, options={}) {
+  pushChanges(client, syncResultObject, options={}) {
     if (!syncResultObject.ok) {
       return Promise.resolve(syncResultObject);
     }
@@ -901,7 +902,7 @@ export default class Collection {
     return this.gatherLocalChanges()
       .then(({toDelete, toSync}) => {
         // Send batch update requests
-        return this._apiCollection.batch(batch => {
+        return client.batch(batch => {
           toDelete.forEach((r) => {
             // never published locally deleted records should not be pusblished
             if (r.last_modified) {
@@ -986,7 +987,7 @@ export default class Collection {
           return result;
         } else if (options.strategy === Collection.strategy.CLIENT_WINS && !options.resolved) {
           // We need to push local versions of the records to the server
-          return this.pushChanges(result, {...options, resolved: true});
+          return this.pushChanges(client, result, {...options, resolved: true});
         } else if (options.strategy === Collection.strategy.SERVER_WINS) {
           // If records have been automatically resolved according to strategy and
           // are in non-synced status, mark them as synced.
@@ -1066,6 +1067,8 @@ export default class Collection {
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
+   * - {String} bucket: The remove bucket id to use (default: null)
+   * - {String} collection: The remove collection id to use (default: null)
    * - {String} remote The remote Kinto server endpoint to use (default: null).
    *
    * @param  {Object} options Options.
@@ -1076,6 +1079,8 @@ export default class Collection {
     strategy: Collection.strategy.MANUAL,
     headers: {},
     ignoreBackoff: false,
+    bucket: null,
+    collection: null,
     remote: null,
   }) {
     const previousRemote = this.api.remote;
@@ -1088,11 +1093,13 @@ export default class Collection {
       return Promise.reject(
         new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
+
+    const client = this.api.bucket(options.bucket || this.bucket).collection(options.collection || this.name);
     const result = new SyncResultObject();
     const syncPromise = this.db.getLastModified()
       .then(lastModified => this._lastModified = lastModified)
-      .then(_ => this.pullChanges(result, options))
-      .then(result => this.pushChanges(result, options))
+      .then(_ => this.pullChanges(client, result, options))
+      .then(result => this.pushChanges(client, result, options))
       .then(result => {
         // Avoid performing a last pull if nothing has been published.
         if (result.published.length === 0) {
@@ -1100,7 +1107,7 @@ export default class Collection {
         }
         // Avoid redownloading our own changes during the last pull.
         const pullOpts = {...options, exclude: result.published};
-        return this.pullChanges(result, pullOpts);
+        return this.pullChanges(client, result, pullOpts);
       });
     // Ensure API default remote is reverted if a custom one's been used
     return pFinally(syncPromise, () => this.api.remote = previousRemote);
