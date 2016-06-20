@@ -1747,7 +1747,7 @@ describe("Collection", () => {
 
     it("should return errors when encountered", () => {
       const error = new Error("unknown error");
-      sandbox.stub(articles, "list").returns(Promise.reject(error));
+      sandbox.stub(articles.db, "execute").returns(Promise.reject(error));
 
       return articles.importChanges(result, {changes: [{title: "bar"}]})
         .then(res => res.errors)
@@ -1795,17 +1795,15 @@ describe("Collection", () => {
     it("should only retrieve the changed record", () => {
       const id1 = uuid4();
       const id2 = uuid4();
-      const list = sandbox.stub(articles, "list").returns(Promise.resolve());
+      const execute = sandbox.stub(articles.db, "execute").returns(Promise.resolve([]));
 
       return articles.importChanges(result, {changes: [
         {id: id1, title: "foo"},
         {id: id2, title: "bar"},
       ]})
         .then(() => {
-          sinon.assert.calledWithExactly(list, {
-            filters: {id: [id1, id2]},
-            order: ""
-          }, {includeDeleted: true});
+          const preload = execute.lastCall.args[1].preload.map(r => r.id);
+          expect(preload).eql([id1, id2]);
         });
     });
 

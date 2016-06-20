@@ -253,15 +253,31 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   execute(callback, options={preload: []}) {
-    const preloaded = options.preload.reduce((acc, record) => {
-      acc[record.id] = record;
-      return acc;
-    }, {});
+    // Transactions in IndexedDB are autocommited when a callback does not
+    // perform any additional operation.
+    // The way Promises are implemented in Firefox (see https://bugzilla.mozilla.org/show_bug.cgi?id=1193394)
+    // prevents using within an opened transaction.
+    // To avoid managing asynchronocity in the specified `callback`, we preload
+    // a list of record in order to execute the `callback` synchronously.
+    // See also:
+    // - http://stackoverflow.com/a/28388805/330911
+    // - http://stackoverflow.com/a/10405196
+    // - https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
     return this.open()
-      .then(_ => {
-        return new Promise((resolve, reject) => {
-          const {transaction, store} = this.prepare("readwrite");
+      .then(_ => new Promise((resolve, reject) => {
+        // Start transaction.
+        const {transaction, store} = this.prepare("readwrite");
+        // Preload specified records using index.
+        const ids = options.preload.map(r => r.id);
+        store.index("id").openCursor().onsuccess = cursorHandlers.in(ids, (records) => {
+          // Store obtained records by id.
+          const preloaded = records.reduce((acc, record) => {
+            acc[record.id] = record;
+            return acc;
+          }, {});
+          // Expose a consistent API for every adapter instead of raw store methods.
           const proxy = transactionProxy(store, preloaded);
+          // The callback is executed synchronously within the same transaction.
           let result;
           try {
             result = callback(proxy);
@@ -277,7 +293,7 @@ export default class IDB extends BaseAdapter {
           transaction.onerror = event => reject(new Error(event.target.error));
           transaction.oncomplete = event => resolve(result);
         });
-      });
+      }));
   }
 
   /**
