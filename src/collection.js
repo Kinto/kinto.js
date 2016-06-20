@@ -525,14 +525,13 @@ export default class Collection {
       updated.last_modified = oldRecord.last_modified;
     }
     // If only local fields have changed, then keep record as synced.
+    // If status is created, keep record as created.
+    // If status is deleted, mark as updated.
     const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
-    const neverSynced = oldRecord && oldRecord._status == "created";
     const keepSynced = isIdentical && oldRecord._status == "synced";
+    const neverSynced = !oldRecord || (oldRecord && oldRecord._status == "created");
     const newStatus = (keepSynced || synced) ? "synced"
                                              : neverSynced ? "created" : "updated";
-    if (!oldRecord) {
-      newStatus = "created";
-    }
     return markStatus(updated, newStatus);
   }
 

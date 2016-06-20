@@ -703,7 +703,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => {
           return articles.put(
-            {id: res.data.id, 
+            {id: res.data.id,
               title: "new title",
             });
         })
@@ -1673,7 +1673,7 @@ describe("Collection", () => {
           local: local,
           remote: remote,
         };
-        const resolution = {...local, 
+        const resolution = {...local,
           title: "resolved"
         };
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
