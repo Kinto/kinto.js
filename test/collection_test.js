@@ -1017,7 +1017,7 @@ describe("Collection", () => {
     });
 
     it("should resolve on non-existant record", () => {
-      let id = uuid4();
+      const id = uuid4();
       return articles.deleteAny(id)
         .then(res => res.data.id)
         .should.eventually.eql(id);
@@ -1030,7 +1030,7 @@ describe("Collection", () => {
     });
 
     it("should indicate that it didn't delete when record is gone", () => {
-      let id = uuid4();
+      const id = uuid4();
       return articles.deleteAny(id)
         .then(res => res.deleted)
         .should.eventually.eql(false);

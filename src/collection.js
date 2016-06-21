@@ -369,7 +369,7 @@ export default class Collection {
 
     const validatedHooks = {};
 
-    for (let hook in hooks) {
+    for (const hook in hooks) {
       if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
         throw new Error("The hook should be one of " + AVAILABLE_HOOKS.join(", "));
       }
@@ -723,7 +723,7 @@ export default class Collection {
           return [{type: "errors", data}];
         })
         .then(imports => {
-          for (let imported of imports) {
+          for (const imported of imports) {
             if (imported.type !== "void") {
               syncResultObject.add(imported.type, imported.data);
             }
@@ -1145,7 +1145,7 @@ export default class Collection {
       return reject("Records is not an array.");
     }
 
-    for (let record of records) {
+    for (const record of records) {
       if (!record.id || !this.idSchema.validate(record.id)) {
         return reject("Record has invalid ID: " + JSON.stringify(record));
       }
