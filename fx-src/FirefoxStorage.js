@@ -166,7 +166,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       const parameters = {
         collection_name: collection,
         // XXX: would be easier if a list of strings could be bound instead.
-        record_ids: options.preload.map(r => r.id).join("','")
+        record_ids: options.preload.join("','")
       };
       const rows = yield conn.execute(statements.listRecordsById, parameters);
 
