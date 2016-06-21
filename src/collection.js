@@ -568,7 +568,7 @@ export default class Collection {
   }
 
   /**
-   * Retrieve a record by its id from the local database.
+   * Like {@link CollectionTransaction#get}, but wrapped in its won transaction.
    *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.
@@ -578,17 +578,8 @@ export default class Collection {
    * @return {Promise}
    */
   get(id, options={includeDeleted: false}) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(Error(`Invalid Id: ${id}`));
-    }
-    return this.getRaw(id).then(res => {
-      if (!res.data ||
-         (!options.includeDeleted && res.data._status === "deleted")) {
-        throw new Error(`Record with id=${id} not found.`);
-      } else {
-        return res;
-      }
-    });
+    return this.execute(txn => txn.get(id, options),
+                        {preloadIds: [id]});
   }
 
   /**
@@ -1237,5 +1228,25 @@ export class CollectionTransaction {
   getRaw(id) {
     const record = this.adapterTransaction.get(id);
     return {data: record, permissions: {}};
+  }
+
+  /**
+   * Retrieve a record by its id from the local database.
+   *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   *
+   * @param  {String} id
+   * @param  {Object} options
+   * @return {Promise}
+   */
+  get(id, options={includeDeleted: false}) {
+    const res = this.getRaw(id);
+    if (!res.data ||
+        (!options.includeDeleted && res.data._status === "deleted")) {
+      throw new Error(`Record with id=${id} not found.`);
+    } else {
+      return res;
+    }
   }
 }
