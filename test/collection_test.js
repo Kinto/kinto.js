@@ -833,7 +833,9 @@ describe("Collection", () => {
         idSchema: createIntegerIdSchema()
       });
 
-      return articles.create(article)
+      // First, get rid of the old record with the ID from the other ID schema
+      return articles.clear()
+        .then(() => articles.create(article))
         .then(result => articles.get(result.data.id))
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
