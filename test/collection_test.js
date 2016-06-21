@@ -2324,5 +2324,42 @@ describe("Collection", () => {
         .then(result => articles.getRaw(id))
         .then(result => expect(result.data._status).eql("deleted"));
     });
+
+    it("should roll back operations if there's a failure", () => {
+      const articles = testCollection();
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => {
+            txn.deleteAny(id);
+            txn.delete(uuid4());   // this should fail
+          }, {preloadIds: [id]});
+        })
+        .catch(() => null)
+        .then(result => articles.getRaw(id))
+        .then(result => expect(result.data._status).eql("created"));
+    });
+
+    it("should perform all operations if there's no failure", () => {
+      const articles = testCollection();
+      let id1, id2;
+      return articles.create(article)
+        .then(result => {
+          id1 = result.data.id;
+          return articles.create({title: "foo2", url: "http://foo2"});
+        })
+        .then(result => {
+          id2 = result.data.id;
+          return articles.execute(txn => {
+            txn.deleteAny(id1);
+            txn.deleteAny(id2);
+          }, {preloadIds: [id1, id2]});
+        })
+        .then(result => articles.getRaw(id1))
+        .then(result => expect(result.data._status).eql("deleted"))
+        .then(result => articles.getRaw(id2))
+        .then(result => expect(result.data._status).eql("deleted"));
+    });
   });
 });
