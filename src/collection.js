@@ -592,21 +592,14 @@ export default class Collection {
   }
 
   /**
-   * Retrieve a record by its id from the local database, or
-   * undefined if none exists.
-   *
-   * This will also return virtually deleted records.
+   * Like {@link CollectionTransaction#getRaw}, but wrapped in its own transaction.
    *
    * @param  {String} id
    * @return {Promise}
    */
   getRaw(id) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(Error(`Invalid Id: ${id}`));
-    }
-    return this.db.get(id).then(record => {
-      return {data: record, permissions: {}};
-    });
+    return this.execute(txn => txn.getRaw(id),
+                        {preloadIds: [id]});
   }
 
   /**
@@ -744,6 +737,38 @@ export default class Collection {
             return syncResultObject;
           });
       });
+  }
+
+  /**
+   * Execute a bunch of operations in a transaction.
+   *
+   * This transaction should be atomic -- either all of its operations
+   * will succeed, or none will.
+   *
+   * The argument to this function is itself a function which will be
+   * called with a transaction. Collection methods are available on
+   * this transaction, and they will return promises as normal. The
+   * promises for individual operations will be resolved after the
+   * transaction commits.
+   *
+   * If you also want to perform read operations like {@link
+   * Collection.get}, pass a second argument which specifies the IDs
+   * of the objects you want to preload as part of the operation.
+   *
+   * @return {Promise} Resolves with the result of the given function
+   *    when the transaction commits.
+   */
+  execute(doOperations, {preloadIds = []} = {}) {
+    for(const id of preloadIds) {
+      if (!this.idSchema.validate(id)) {
+        return Promise.reject(Error(`Invalid Id: ${id}`));
+      }
+    }
+
+    return this.db.execute((transaction) => {
+      const txn = new CollectionTransaction(transaction);
+      return doOperations(txn);
+    }, {preload: preloadIds});
   }
 
   /**
@@ -1185,5 +1210,32 @@ export default class Collection {
     })
     .then(newRecords => newRecords.map(markSynced))
     .then(newRecords => this.db.loadDump(newRecords));
+  }
+}
+
+/**
+ * A Collection-oriented wrapper for an adapter's transaction.
+ *
+ * This defines the high-level functions available on a collection.
+ * The collection itself offers functions of the same name. These will
+ * perform just one operation in its own transaction.
+ */
+export class CollectionTransaction {
+  constructor(adapterTransaction) {
+    this.adapterTransaction = adapterTransaction;
+  }
+
+  /**
+   * Retrieve a record by its id from the local database, or
+   * undefined if none exists.
+   *
+   * This will also return virtually deleted records.
+   *
+   * @param  {String} id
+   * @return {Promise}
+   */
+  getRaw(id) {
+    const record = this.adapterTransaction.get(id);
+    return {data: record, permissions: {}};
   }
 }
