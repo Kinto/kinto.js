@@ -2278,4 +2278,27 @@ describe("Collection", () => {
       });
     });
   });
+
+  /** @test {Collection#execute} */
+  describe("#execute", () => {
+    it("should support get", () => {
+      const articles = testCollection();
+      return articles.create(article)
+        .then(result => {
+          const id = result.data.id;
+          return articles.execute(txn => txn.get(id), {preloadIds: [id]});
+        })
+        .then(result => expect(result.data.title).eql("foo"));
+    });
+
+    it("should support getRaw", () => {
+      const articles = testCollection();
+      return articles.create(article)
+        .then(result => {
+          const id = result.data.id;
+          return articles.execute(txn => txn.getRaw(id), {preloadIds: [id]});
+        })
+        .then(result => expect(result.data.title).eql("foo"));
+    });
+  });
 });
