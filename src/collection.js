@@ -627,23 +627,15 @@ export default class Collection {
   }
 
   /**
-   * Deletes a record from the local database, if any exists.
-   * Otherwise, do nothing.
+   * The same as {@link CollectionTransaction#deleteAny}, but wrapped
+   * in its own transaction.
    *
    * @param  {String} id       The record's Id.
    * @return {Promise}
    */
   deleteAny(id) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(new Error(`Invalid Id: ${id}`));
-    }
-    return this.db.execute((transaction) => {
-      const existing = transaction.get(id);
-      if (existing) {
-        transaction.update(markDeleted(existing));
-      }
-      return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
-    }, {preload: [id]});
+    return this.execute(txn => txn.deleteAny(id),
+                        {preloadIds: [id]});
   }
 
   /**
@@ -1248,5 +1240,20 @@ export class CollectionTransaction {
     } else {
       return res;
     }
+  }
+
+  /**
+   * Deletes a record from the local database, if any exists.
+   * Otherwise, do nothing.
+   *
+   * @param  {String} id       The record's Id.
+   * @return {Promise}
+   */
+  deleteAny(id) {
+    const existing = this.adapterTransaction.get(id);
+    if (existing) {
+      this.adapterTransaction.update(markDeleted(existing));
+    }
+    return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
   }
 }
