@@ -506,7 +506,7 @@ export default class Collection {
       const updated = this._updateRaw(oldRecord, newRecord, options);
       transaction.update(updated);
       return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record]});
+    }, {preload: [record.id]});
   }
 
   /**
@@ -564,7 +564,7 @@ export default class Collection {
         oldRecord = undefined;
       }
       return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record]});
+    }, {preload: [record.id]});
   }
 
   /**
@@ -639,7 +639,7 @@ export default class Collection {
         transaction.delete(id);
       }
       return {data: existing, permissions: {}};
-    }, {preload: [{id}]});
+    }, {preload: [id]});
   }
 
   /**
@@ -659,7 +659,7 @@ export default class Collection {
         transaction.update(markDeleted(existing));
       }
       return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
-    }, {preload: [{id}]});
+    }, {preload: [id]});
   }
 
   /**
@@ -712,7 +712,7 @@ export default class Collection {
             // Store remote change into local database.
             return importChange(transaction, remote, this.localFields);
           });
-        }, {preload: decodedChanges})
+        }, {preload: decodedChanges.map(record => record.id)})
         .catch(err => {
           const data = {
             type: "incoming",

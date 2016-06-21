@@ -234,7 +234,7 @@ export default class IDB extends BaseAdapter {
    * promise will therefore be rejected if the callback returns a Promise.
    *
    * Options:
-   * - {Array} preload: The list of records to make available to
+   * - {Array} preload: The list of record IDs to fetch and make available to
    *   the transaction object get() method (default: [])
    *
    * @example
@@ -268,7 +268,7 @@ export default class IDB extends BaseAdapter {
         // Start transaction.
         const {transaction, store} = this.prepare("readwrite");
         // Preload specified records using index.
-        const ids = options.preload.map(r => r.id);
+        const ids = options.preload;
         store.index("id").openCursor().onsuccess = cursorHandlers.in(ids, (records) => {
           // Store obtained records by id.
           const preloaded = records.reduce((acc, record) => {

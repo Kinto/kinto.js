@@ -209,7 +209,7 @@ describe("adapter.IDB", () => {
                 transaction.get(1),
                 transaction.get(2),
               ];
-            }, {preload: articles});
+            }, {preload: articles.map(article => article.id)});
           })
           .should.become(articles);
       });

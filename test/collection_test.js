@@ -1802,7 +1802,7 @@ describe("Collection", () => {
         {id: id2, title: "bar"},
       ]})
         .then(() => {
-          const preload = execute.lastCall.args[1].preload.map(r => r.id);
+          const preload = execute.lastCall.args[1].preload;
           expect(preload).eql([id1, id2]);
         });
     });
