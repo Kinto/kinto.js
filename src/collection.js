@@ -594,7 +594,7 @@ export default class Collection {
   }
 
   /**
-   * Deletes a record from the local database.
+   * Same as {@link Collection#delete}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
@@ -605,25 +605,9 @@ export default class Collection {
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(new Error(`Invalid Id: ${id}`));
-    }
-    // Ensure the record actually exists.
-    return this.db.execute((transaction) => {
-      const existing = transaction.get(id);
-      const alreadyDeleted = existing && existing._status == "deleted";
-      if (!existing || (alreadyDeleted && options.virtual)) {
-        throw new Error(`Record with id=${id} not found.`);
-      }
-      // Virtual updates status.
-      if (options.virtual) {
-        transaction.update(markDeleted(existing));
-      } else {
-        // Delete for real.
-        transaction.delete(id);
-      }
-      return {data: existing, permissions: {}};
-    }, {preload: [id]});
+    return this.execute(transaction => {
+      return transaction.delete(id, options);
+    }, {preloadIds: [id]});
   }
 
   /**
@@ -1240,6 +1224,34 @@ export class CollectionTransaction {
     } else {
       return res;
     }
+  }
+
+  /**
+   * Deletes a record from the local database.
+   *
+   * Options:
+   * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
+   *   update its `_status` attribute to `deleted` instead (default: true)
+   *
+   * @param  {String} id       The record's Id.
+   * @param  {Object} options  The options object.
+   * @return {Promise}
+   */
+  delete(id, options={virtual: true}) {
+    // Ensure the record actually exists.
+    const existing = this.adapterTransaction.get(id);
+    const alreadyDeleted = existing && existing._status == "deleted";
+    if (!existing || (alreadyDeleted && options.virtual)) {
+      throw new Error(`Record with id=${id} not found.`);
+    }
+    // Virtual updates status.
+    if (options.virtual) {
+      this.adapterTransaction.update(markDeleted(existing));
+    } else {
+      // Delete for real.
+      this.adapterTransaction.delete(id);
+    }
+    return {data: existing, permissions: {}};
   }
 
   /**

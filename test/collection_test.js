@@ -2301,6 +2301,18 @@ describe("Collection", () => {
         .then(result => expect(result.data.title).eql("foo"));
     });
 
+    it("should support delete", () => {
+      const articles = testCollection();
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.delete(id), {preloadIds: [id]});
+        })
+        .then(result => articles.getRaw(id))
+        .then(result => expect(result.data._status).eql("deleted"));
+    });
+
     it("should support deleteAny", () => {
       const articles = testCollection();
       let id;
