@@ -518,6 +518,17 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
+    it("should update a record from its id (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: createIntegerIdSchema()
+      });
+
+      return articles.create(article)
+        .then(result => articles.update({id: result.data.id, title: "foo"}))
+        .then(res => res.data.title)
+        .should.eventually.eql("foo");
+    });
+
     it("should patch existing record when patch option is used", () => {
       const id = uuid4();
       return articles.create({id, title: "foo", last_modified: 42},

@@ -490,7 +490,7 @@ export default class Collection {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.id) {
+    if (record.id === undefined) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
