@@ -445,11 +445,11 @@ export default class Collection {
     if (typeof(record) !== "object") {
       return reject("Record is not an object.");
     }
-    if ((options.synced || options.useRecordId) && !record.id) {
+    if ((options.synced || options.useRecordId) && !record.hasOwnProperty("id")) {
       return reject(
         "Missing required Id; synced and useRecordId options require one");
     }
-    if (!options.synced && !options.useRecordId && record.id) {
+    if (!options.synced && !options.useRecordId && record.hasOwnProperty("id")) {
       return reject("Extraneous Id; can't create a record having one set.");
     }
     const newRecord = {...record,
@@ -493,7 +493,7 @@ export default class Collection {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (record.id === undefined) {
+    if (!record.hasOwnProperty("id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
@@ -517,7 +517,7 @@ export default class Collection {
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.id) {
+    if (!record.hasOwnProperty("id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
@@ -1102,7 +1102,7 @@ export default class Collection {
     }
 
     for (let record of records) {
-      if (!record.id || !this.idSchema.validate(record.id)) {
+      if (!record.hasOwnProperty("id") || !this.idSchema.validate(record.id)) {
         return reject("Record has invalid ID: " + JSON.stringify(record));
       }
 
@@ -1250,7 +1250,7 @@ export class CollectionTransaction {
     if (typeof(record) !== "object") {
       throw new Error("Record is not an object.");
     }
-    if (record.id === undefined) {
+    if (!record.hasOwnProperty("id")) {
       throw new Error("Cannot update a record missing id.");
     }
     if (!this.collection.idSchema.validate(record.id)) {
@@ -1308,7 +1308,7 @@ export class CollectionTransaction {
     if (typeof(record) !== "object") {
       throw new Error("Record is not an object.");
     }
-    if (!record.id) {
+    if (!record.hasOwnProperty("id")) {
       throw new Error("Cannot update a record missing id.");
     }
     if (!this.collection.idSchema.validate(record.id)) {
