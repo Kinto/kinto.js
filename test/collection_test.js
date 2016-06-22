@@ -2325,6 +2325,27 @@ describe("Collection", () => {
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
+    it("should support update", () => {
+      const articles = testCollection();
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.update({id, title: "new title"}), {preloadIds: [id]});
+        })
+        .then(result => articles.get(id))
+        .then(result => expect(result.data.title).eql("new title"));
+    });
+
+    it("should support put", () => {
+      const articles = testCollection();
+      const id = uuid4();
+      return articles.put({id, ...article})
+        .then(result => result.data.id)
+        .then(result => articles.get(id))
+        .then(result => expect(result.data.title).eql("foo"));
+    });
+
     it("should roll back operations if there's a failure", () => {
       const articles = testCollection();
       let id;

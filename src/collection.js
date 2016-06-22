@@ -475,7 +475,7 @@ export default class Collection {
   }
 
   /**
-   * Updates a record from the local database.
+   * Like {@link CollectionTransaction#update}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} synced: Sets record status to "synced" (default: false)
@@ -487,6 +487,9 @@ export default class Collection {
    * @return {Promise}
    */
   update(record, options={synced: false, patch: false}) {
+    // Validate the record and its ID, even though this validation is
+    // also done in the CollectionTransaction method, because we need
+    // to pass the ID to preloadIds.
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -496,56 +499,21 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.db.execute((transaction) => {
-      const oldRecord = transaction.get(record.id);
-      if (!oldRecord) {
-        throw new Error(`Record with id=${record.id} not found.`);
-      }
-      const newRecord = options.patch ? {...oldRecord, ...record}
-                                      : record;
-      const updated = this._updateRaw(oldRecord, newRecord, options);
-      transaction.update(updated);
-      return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record.id]});
+
+    return this.execute(txn => txn.update(record, options),
+                        {preloadIds: [record.id]});
   }
 
   /**
-   * Lower-level primitive for updating a record while respecting
-   * _status and last_modified.
-   *
-   * @param  {Object} oldRecord: the record retrieved from the DB
-   * @param  {Object} newRecord: the record to replace it with
-   * @return {Promise}
-   */
-  _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
-    const updated = {...newRecord};
-    // Make sure to never loose the existing timestamp.
-    if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
-      updated.last_modified = oldRecord.last_modified;
-    }
-    // If only local fields have changed, then keep record as synced.
-    // If status is created, keep record as created.
-    // If status is deleted, mark as updated.
-    const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
-    const keepSynced = isIdentical && oldRecord._status == "synced";
-    const neverSynced = !oldRecord || (oldRecord && oldRecord._status == "created");
-    const newStatus = (keepSynced || synced) ? "synced"
-                                             : neverSynced ? "created" : "updated";
-    return markStatus(updated, newStatus);
-  }
-
-  /**
-   * Upsert a record into the local database.
-   *
-   * This record must have an ID.
-   *
-   * If a record with this ID already exists, it will be replaced.
-   * Otherwise, this record will be inserted.
+   * Like {@link CollectionTransaction#put}, but wrapped in its own transaction.
    *
    * @param  {Object} record
    * @return {Promise}
    */
   put(record) {
+    // Validate the record and its ID, even though this validation is
+    // also done in the CollectionTransaction method, because we need
+    // to pass the ID to preloadIds.
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
@@ -555,16 +523,9 @@ export default class Collection {
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.db.execute((transaction) => {
-      let oldRecord = transaction.get(record.id);
-      const updated = this._updateRaw(oldRecord, record);
-      transaction.update(updated);
-      // Don't return deleted records -- pretend they are gone
-      if(oldRecord && oldRecord._status == "deleted") {
-        oldRecord = undefined;
-      }
-      return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record.id]});
+
+    return this.execute(txn => txn.put(record),
+                        {preloadIds: [record.id]});
   }
 
   /**
@@ -1271,5 +1232,96 @@ export class CollectionTransaction {
       this.adapterTransaction.update(markDeleted(existing));
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
+  }
+
+  /**
+   * Updates a record from the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   * - {Boolean} patch:  Extends the existing record instead of overwriting it
+   *   (default: false)
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Object}
+   */
+  update(record, options={synced: false, patch: false}) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (record.id === undefined) {
+      throw new Error("Cannot update a record missing id.");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+
+    const oldRecord = this.adapterTransaction.get(record.id);
+    if (!oldRecord) {
+      throw new Error(`Record with id=${record.id} not found.`);
+    }
+    const newRecord = options.patch ? {...oldRecord, ...record}
+                                    : record;
+    const updated = this._updateRaw(oldRecord, newRecord, options);
+    this.adapterTransaction.update(updated);
+    return {data: updated, oldRecord: oldRecord, permissions: {}};
+  }
+
+  /**
+   * Lower-level primitive for updating a record while respecting
+   * _status and last_modified.
+   *
+   * @param  {Object} oldRecord: the record retrieved from the DB
+   * @param  {Object} newRecord: the record to replace it with
+   * @return {Object}
+   */
+  _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
+    const updated = {...newRecord};
+    // Make sure to never loose the existing timestamp.
+    if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
+      updated.last_modified = oldRecord.last_modified;
+    }
+    // If only local fields have changed, then keep record as synced.
+    // If status is created, keep record as created.
+    // If status is deleted, mark as updated.
+    const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
+    const keepSynced = isIdentical && oldRecord._status == "synced";
+    const neverSynced = !oldRecord || (oldRecord && oldRecord._status == "created");
+    const newStatus = (keepSynced || synced) ? "synced"
+                                             : neverSynced ? "created" : "updated";
+    return markStatus(updated, newStatus);
+  }
+
+  /**
+   * Upsert a record into the local database.
+   *
+   * This record must have an ID.
+   *
+   * If a record with this ID already exists, it will be replaced.
+   * Otherwise, this record will be inserted.
+   *
+   * @param  {Object} record
+   * @return {Object}
+   */
+  put(record) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (!record.id) {
+      throw new Error("Cannot update a record missing id.");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+    let oldRecord = this.adapterTransaction.get(record.id);
+    const updated = this._updateRaw(oldRecord, record);
+    this.adapterTransaction.update(updated);
+    // Don't return deleted records -- pretend they are gone
+    if (oldRecord && oldRecord._status == "deleted") {
+      oldRecord = undefined;
+    }
+
+    return {data: updated, oldRecord: oldRecord, permissions: {}};
   }
 }
