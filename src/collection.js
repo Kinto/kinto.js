@@ -713,14 +713,17 @@ export default class Collection {
    * will succeed, or none will.
    *
    * The argument to this function is itself a function which will be
-   * called with a transaction. Collection methods are available on
-   * this transaction, and they will return promises as normal. The
-   * promises for individual operations will be resolved after the
-   * transaction commits.
+   * called with a {@link CollectionTransaction}. Collection methods
+   * are available on this transaction, but instead of returning
+   * promises, they are synchronous. execute() returns a Promise whose
+   * value will be the return value of the provided function.
    *
-   * If you also want to perform read operations like {@link
-   * Collection.get}, pass a second argument which specifies the IDs
-   * of the objects you want to preload as part of the operation.
+   * Most operations will require access to the record itself, which
+   * must be preloaded by passing its ID in the preloadIds option.
+   *
+   * Options:
+   * - {Array} preloadIds: list of IDs to fetch at the beginning of
+   *   the transaction
    *
    * @return {Promise} Resolves with the result of the given function
    *    when the transaction commits.
@@ -1199,7 +1202,7 @@ export class CollectionTransaction {
    * This will also return virtually deleted records.
    *
    * @param  {String} id
-   * @return {Promise}
+   * @return {Object}
    */
   getRaw(id) {
     const record = this.adapterTransaction.get(id);
@@ -1214,7 +1217,7 @@ export class CollectionTransaction {
    *
    * @param  {String} id
    * @param  {Object} options
-   * @return {Promise}
+   * @return {Object}
    */
   get(id, options={includeDeleted: false}) {
     const res = this.getRaw(id);
@@ -1235,7 +1238,7 @@ export class CollectionTransaction {
    *
    * @param  {String} id       The record's Id.
    * @param  {Object} options  The options object.
-   * @return {Promise}
+   * @return {Object}
    */
   delete(id, options={virtual: true}) {
     // Ensure the record actually exists.
@@ -1259,7 +1262,7 @@ export class CollectionTransaction {
    * Otherwise, do nothing.
    *
    * @param  {String} id       The record's Id.
-   * @return {Promise}
+   * @return {Object}
    */
   deleteAny(id) {
     const existing = this.adapterTransaction.get(id);
