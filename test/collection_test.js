@@ -2281,8 +2281,12 @@ describe("Collection", () => {
 
   /** @test {Collection#execute} */
   describe("#execute", () => {
+    let articles;
+    beforeEach(() => {
+      articles = testCollection();
+    });
+
     it("should support get", () => {
-      const articles = testCollection();
       return articles.create(article)
         .then(result => {
           const id = result.data.id;
@@ -2292,7 +2296,6 @@ describe("Collection", () => {
     });
 
     it("should support getRaw", () => {
-      const articles = testCollection();
       return articles.create(article)
         .then(result => {
           const id = result.data.id;
@@ -2302,7 +2305,6 @@ describe("Collection", () => {
     });
 
     it("should support delete", () => {
-      const articles = testCollection();
       let id;
       return articles.create(article)
         .then(result => {
@@ -2314,7 +2316,6 @@ describe("Collection", () => {
     });
 
     it("should support deleteAny", () => {
-      const articles = testCollection();
       let id;
       return articles.create(article)
         .then(result => {
@@ -2326,14 +2327,12 @@ describe("Collection", () => {
     });
 
     it("should support create", () => {
-      const articles = testCollection();
       const id = uuid4();
       return articles.execute(txn => txn.create({id, ...article}), {preloadIds: [id]})
         .then(result => expect(result.data.title).eql("foo"));
     });
 
     it("should support update", () => {
-      const articles = testCollection();
       let id;
       return articles.create(article)
         .then(result => {
@@ -2345,7 +2344,6 @@ describe("Collection", () => {
     });
 
     it("should support put", () => {
-      const articles = testCollection();
       const id = uuid4();
       return articles.put({id, ...article})
         .then(result => result.data.id)
@@ -2354,7 +2352,6 @@ describe("Collection", () => {
     });
 
     it("should roll back operations if there's a failure", () => {
-      const articles = testCollection();
       let id;
       return articles.create(article)
         .then(result => {
@@ -2370,7 +2367,6 @@ describe("Collection", () => {
     });
 
     it("should perform all operations if there's no failure", () => {
-      const articles = testCollection();
       let id1, id2;
       return articles.create(article)
         .then(result => {
@@ -2391,7 +2387,6 @@ describe("Collection", () => {
     });
 
     it("should resolve to the return value of the transaction", () => {
-      const articles = testCollection();
       return articles.create(article)
         .then(() => {
           return articles.execute(txn => {
@@ -2402,7 +2397,6 @@ describe("Collection", () => {
     });
 
     it("has operations that are synchronous", () => {
-      const articles = testCollection();
       let createdArticle;
       return articles.create(article)
         .then(result => {
