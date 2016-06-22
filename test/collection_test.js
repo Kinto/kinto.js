@@ -2325,6 +2325,13 @@ describe("Collection", () => {
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
+    it("should support create", () => {
+      const articles = testCollection();
+      const id = uuid4();
+      return articles.execute(txn => txn.create({id, ...article}), {preloadIds: [id]})
+        .then(result => expect(result.data.title).eql("foo"));
+    });
+
     it("should support update", () => {
       const articles = testCollection();
       let id;

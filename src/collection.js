@@ -423,7 +423,8 @@ export default class Collection {
   }
 
   /**
-   * Adds a record to the local database.
+   * Adds a record to the local database, asserting that none
+   * already exist with this ID.
    *
    * Note: If either the `useRecordId` or `synced` options are true, then the
    * record object must contain the id field to be validated. If none of these
@@ -441,6 +442,9 @@ export default class Collection {
    * @return {Promise}
    */
   create(record, options={useRecordId: false, synced: false}) {
+    // Validate the record and its ID (if any), even though this
+    // validation is also done in the CollectionTransaction method,
+    // because we need to pass the ID to preloadIds.
     const reject = msg => Promise.reject(new Error(msg));
     if (typeof(record) !== "object") {
       return reject("Record is not an object.");
@@ -461,10 +465,8 @@ export default class Collection {
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
-    return this.db.execute((transaction) => {
-      transaction.create(newRecord);
-      return {data: newRecord, permissions: {}};
-    })
+    return this.execute(txn => txn.create(newRecord),
+                        {preloadIds: [newRecord.id]})
       .catch(err => {
         if (options.useRecordId) {
           throw new Error(
@@ -1232,6 +1234,28 @@ export class CollectionTransaction {
       this.adapterTransaction.update(markDeleted(existing));
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
+  }
+
+  /**
+   * Adds a record to the local database, asserting that none
+   * already exist with this ID.
+   *
+   * @param  {Object} record, which must contain an ID
+   * @return {Object}
+   */
+  create(record) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (!record.hasOwnProperty("id")) {
+      throw new Error("Cannot create a record missing id");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+
+    this.adapterTransaction.create(record);
+    return {data: record, permissions: {}};
   }
 
   /**
