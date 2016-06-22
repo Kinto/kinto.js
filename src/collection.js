@@ -369,7 +369,7 @@ export default class Collection {
 
     const validatedHooks = {};
 
-    for (const hook in hooks) {
+    for (let hook in hooks) {
       if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
         throw new Error("The hook should be one of " + AVAILABLE_HOOKS.join(", "));
       }
@@ -683,7 +683,7 @@ export default class Collection {
           return [{type: "errors", data}];
         })
         .then(imports => {
-          for (const imported of imports) {
+          for (let imported of imports) {
             if (imported.type !== "void") {
               syncResultObject.add(imported.type, imported.data);
             }
@@ -729,7 +729,7 @@ export default class Collection {
    *    when the transaction commits.
    */
   execute(doOperations, {preloadIds = []} = {}) {
-    for(const id of preloadIds) {
+    for(let id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
       }
@@ -1140,7 +1140,7 @@ export default class Collection {
       return reject("Records is not an array.");
     }
 
-    for (const record of records) {
+    for (let record of records) {
       if (!record.id || !this.idSchema.validate(record.id)) {
         return reject("Record has invalid ID: " + JSON.stringify(record));
       }
