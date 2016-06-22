@@ -692,7 +692,7 @@ export default class Collection {
    *    when the transaction commits.
    */
   execute(doOperations, {preloadIds = []} = {}) {
-    for(let id of preloadIds) {
+    for (let id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
       }

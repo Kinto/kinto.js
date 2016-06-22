@@ -2292,7 +2292,8 @@ describe("Collection", () => {
           const id = result.data.id;
           return articles.execute(txn => txn.get(id), {preloadIds: [id]});
         })
-        .then(result => expect(result.data.title).eql("foo"));
+        .then(result => expect(result.data.title)
+              .eql("foo"));
     });
 
     it("should support getRaw", () => {
@@ -2301,7 +2302,8 @@ describe("Collection", () => {
           const id = result.data.id;
           return articles.execute(txn => txn.getRaw(id), {preloadIds: [id]});
         })
-        .then(result => expect(result.data.title).eql("foo"));
+        .then(result => expect(result.data.title)
+              .eql("foo"));
     });
 
     it("should support delete", () => {
@@ -2312,7 +2314,8 @@ describe("Collection", () => {
           return articles.execute(txn => txn.delete(id), {preloadIds: [id]});
         })
         .then(result => articles.getRaw(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
     });
 
     it("should support deleteAny", () => {
@@ -2323,13 +2326,15 @@ describe("Collection", () => {
           return articles.execute(txn => txn.deleteAny(id), {preloadIds: [id]});
         })
         .then(result => articles.getRaw(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
     });
 
     it("should support create", () => {
       const id = uuid4();
       return articles.execute(txn => txn.create({id, ...article}), {preloadIds: [id]})
-        .then(result => expect(result.data.title).eql("foo"));
+        .then(result => expect(result.data.title)
+              .eql("foo"));
     });
 
     it("should support update", () => {
@@ -2340,7 +2345,8 @@ describe("Collection", () => {
           return articles.execute(txn => txn.update({id, title: "new title"}), {preloadIds: [id]});
         })
         .then(result => articles.get(id))
-        .then(result => expect(result.data.title).eql("new title"));
+        .then(result => expect(result.data.title)
+              .eql("new title"));
     });
 
     it("should support put", () => {
@@ -2348,7 +2354,8 @@ describe("Collection", () => {
       return articles.put({id, ...article})
         .then(result => result.data.id)
         .then(result => articles.get(id))
-        .then(result => expect(result.data.title).eql("foo"));
+        .then(result => expect(result.data.title)
+              .eql("foo"));
     });
 
     it("should roll back operations if there's a failure", () => {
@@ -2363,7 +2370,8 @@ describe("Collection", () => {
         })
         .catch(() => null)
         .then(result => articles.getRaw(id))
-        .then(result => expect(result.data._status).eql("created"));
+        .then(result => expect(result.data._status)
+              .eql("created"));
     });
 
     it("should perform all operations if there's no failure", () => {
@@ -2381,9 +2389,11 @@ describe("Collection", () => {
           }, {preloadIds: [id1, id2]});
         })
         .then(result => articles.getRaw(id1))
-        .then(result => expect(result.data._status).eql("deleted"))
+        .then(result => expect(result.data._status)
+              .eql("deleted"))
         .then(result => articles.getRaw(id2))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
     });
 
     it("should resolve to the return value of the transaction", () => {
@@ -2393,7 +2403,8 @@ describe("Collection", () => {
             return "hello";
           });
         })
-        .then(result => expect(result).eql("hello"));
+        .then(result => expect(result)
+              .eql("hello"));
     });
 
     it("has operations that are synchronous", () => {
@@ -2404,7 +2415,8 @@ describe("Collection", () => {
             createdArticle = txn.get(result.data.id).data;
           }, {preloadIds: [result.data.id]});
         })
-        .then(result => expect(createdArticle.title).eql("foo"));
+        .then(result => expect(createdArticle.title)
+              .eql("foo"));
     });
   });
 });
