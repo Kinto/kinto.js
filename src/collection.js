@@ -736,7 +736,7 @@ export default class Collection {
     }
 
     return this.db.execute((transaction) => {
-      const txn = new CollectionTransaction(transaction);
+      const txn = new CollectionTransaction(this, transaction);
       return doOperations(txn);
     }, {preload: preloadIds});
   }
@@ -1191,7 +1191,8 @@ export default class Collection {
  * perform just one operation in its own transaction.
  */
 export class CollectionTransaction {
-  constructor(adapterTransaction) {
+  constructor(collection, adapterTransaction) {
+    this.collection = collection;
     this.adapterTransaction = adapterTransaction;
   }
 
