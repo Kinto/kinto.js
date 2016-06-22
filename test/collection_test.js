@@ -2389,5 +2389,28 @@ describe("Collection", () => {
         .then(result => articles.getRaw(id2))
         .then(result => expect(result.data._status).eql("deleted"));
     });
+
+    it("should resolve to the return value of the transaction", () => {
+      const articles = testCollection();
+      return articles.create(article)
+        .then(() => {
+          return articles.execute(txn => {
+            return "hello";
+          });
+        })
+        .then(result => expect(result).eql("hello"));
+    });
+
+    it("has operations that are synchronous", () => {
+      const articles = testCollection();
+      let createdArticle;
+      return articles.create(article)
+        .then(result => {
+          return articles.execute(txn => {
+            createdArticle = txn.get(result.data.id).data;
+          }, {preloadIds: [result.data.id]});
+        })
+        .then(result => expect(createdArticle.title).eql("foo"));
+    });
   });
 });
