@@ -529,7 +529,7 @@ export default class Collection {
   }
 
   /**
-   * Like {@link CollectionTransaction#get}, but wrapped in its won transaction.
+   * Like {@link CollectionTransaction#get}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.
