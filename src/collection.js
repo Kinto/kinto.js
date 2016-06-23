@@ -1188,9 +1188,9 @@ export class CollectionTransaction {
     if (!res.data ||
         (!options.includeDeleted && res.data._status === "deleted")) {
       throw new Error(`Record with id=${id} not found.`);
-    } else {
-      return res;
     }
+
+    return res;
   }
 
   /**
