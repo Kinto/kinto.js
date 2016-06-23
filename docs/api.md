@@ -379,9 +379,10 @@ Kinto.js exposes a concept of a "local transaction", which guarantees
 that a set of local operations will happen atomically -- that is, all
 or nothing.
 
-Note that as Kinto is still a distributed database, transactions
-aren't consistent. In other words, your "transaction" can still
-conflict with other operations on some other node.
+Note that these transactions are local to the browser, and they don't
+go to the server. Other Kinto clients can make changes to the server
+during your transaction, and those changes may still introduce
+conflicts with the changes you've made as part of a transaction.
 
 To initiate a transaction, call `Collection#execute()` like this:
 
@@ -404,7 +405,7 @@ The second argument to `execute()` should include a set of record IDs
 on which your transaction wants to operate. These IDs will be read at
 the beginning of your transaction, and the corresponding records will
 be made available to the transaction. Most operations, including even
-`put` and `delete`, will require that you provide the relevant IDs.
+`put()` and `delete()`, will require that you provide the relevant IDs.
 
 Result:
 
