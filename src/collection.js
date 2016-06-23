@@ -423,7 +423,8 @@ export default class Collection {
   }
 
   /**
-   * Adds a record to the local database.
+   * Adds a record to the local database, asserting that none
+   * already exist with this ID.
    *
    * Note: If either the `useRecordId` or `synced` options are true, then the
    * record object must contain the id field to be validated. If none of these
@@ -441,15 +442,18 @@ export default class Collection {
    * @return {Promise}
    */
   create(record, options={useRecordId: false, synced: false}) {
+    // Validate the record and its ID (if any), even though this
+    // validation is also done in the CollectionTransaction method,
+    // because we need to pass the ID to preloadIds.
     const reject = msg => Promise.reject(new Error(msg));
     if (typeof(record) !== "object") {
       return reject("Record is not an object.");
     }
-    if ((options.synced || options.useRecordId) && !record.id) {
+    if ((options.synced || options.useRecordId) && !record.hasOwnProperty("id")) {
       return reject(
         "Missing required Id; synced and useRecordId options require one");
     }
-    if (!options.synced && !options.useRecordId && record.id) {
+    if (!options.synced && !options.useRecordId && record.hasOwnProperty("id")) {
       return reject("Extraneous Id; can't create a record having one set.");
     }
     const newRecord = {...record,
@@ -461,10 +465,8 @@ export default class Collection {
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
-    return this.db.execute((transaction) => {
-      transaction.create(newRecord);
-      return {data: newRecord, permissions: {}};
-    })
+    return this.execute(txn => txn.create(newRecord),
+                        {preloadIds: [newRecord.id]})
       .catch(err => {
         if (options.useRecordId) {
           throw new Error(
@@ -475,7 +477,7 @@ export default class Collection {
   }
 
   /**
-   * Updates a record from the local database.
+   * Like {@link CollectionTransaction#update}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} synced: Sets record status to "synced" (default: false)
@@ -487,88 +489,49 @@ export default class Collection {
    * @return {Promise}
    */
   update(record, options={synced: false, patch: false}) {
+    // Validate the record and its ID, even though this validation is
+    // also done in the CollectionTransaction method, because we need
+    // to pass the ID to preloadIds.
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.id) {
+    if (!record.hasOwnProperty("id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.db.execute((transaction) => {
-      const oldRecord = transaction.get(record.id);
-      if (!oldRecord) {
-        throw new Error(`Record with id=${record.id} not found.`);
-      }
-      const newRecord = options.patch ? {...oldRecord, ...record}
-                                      : record;
-      const updated = this._updateRaw(oldRecord, newRecord, options);
-      transaction.update(updated);
-      return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record.id]});
+
+    return this.execute(txn => txn.update(record, options),
+                        {preloadIds: [record.id]});
   }
 
   /**
-   * Lower-level primitive for updating a record while respecting
-   * _status and last_modified.
-   *
-   * @param  {Object} oldRecord: the record retrieved from the DB
-   * @param  {Object} newRecord: the record to replace it with
-   * @return {Promise}
-   */
-  _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
-    const updated = {...newRecord};
-    // Make sure to never loose the existing timestamp.
-    if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
-      updated.last_modified = oldRecord.last_modified;
-    }
-    // If only local fields have changed, then keep record as synced.
-    // If status is created, keep record as created.
-    // If status is deleted, mark as updated.
-    const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
-    const keepSynced = isIdentical && oldRecord._status == "synced";
-    const neverSynced = !oldRecord || (oldRecord && oldRecord._status == "created");
-    const newStatus = (keepSynced || synced) ? "synced"
-                                             : neverSynced ? "created" : "updated";
-    return markStatus(updated, newStatus);
-  }
-
-  /**
-   * Upsert a record into the local database.
-   *
-   * This record must have an ID.
-   *
-   * If a record with this ID already exists, it will be replaced.
-   * Otherwise, this record will be inserted.
+   * Like {@link CollectionTransaction#put}, but wrapped in its own transaction.
    *
    * @param  {Object} record
    * @return {Promise}
    */
   put(record) {
+    // Validate the record and its ID, even though this validation is
+    // also done in the CollectionTransaction method, because we need
+    // to pass the ID to preloadIds.
     if (typeof(record) !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.id) {
+    if (!record.hasOwnProperty("id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
-    return this.db.execute((transaction) => {
-      let oldRecord = transaction.get(record.id);
-      const updated = this._updateRaw(oldRecord, record);
-      transaction.update(updated);
-      // Don't return deleted records -- pretend they are gone
-      if(oldRecord && oldRecord._status == "deleted") {
-        oldRecord = undefined;
-      }
-      return {data: updated, oldRecord: oldRecord, permissions: {}};
-    }, {preload: [record.id]});
+
+    return this.execute(txn => txn.put(record),
+                        {preloadIds: [record.id]});
   }
 
   /**
-   * Retrieve a record by its id from the local database.
+   * Like {@link CollectionTransaction#get}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} includeDeleted: Include virtually deleted records.
@@ -578,39 +541,23 @@ export default class Collection {
    * @return {Promise}
    */
   get(id, options={includeDeleted: false}) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(Error(`Invalid Id: ${id}`));
-    }
-    return this.getRaw(id).then(res => {
-      if (!res.data ||
-         (!options.includeDeleted && res.data._status === "deleted")) {
-        throw new Error(`Record with id=${id} not found.`);
-      } else {
-        return res;
-      }
-    });
+    return this.execute(txn => txn.get(id, options),
+                        {preloadIds: [id]});
   }
 
   /**
-   * Retrieve a record by its id from the local database, or
-   * undefined if none exists.
-   *
-   * This will also return virtually deleted records.
+   * Like {@link CollectionTransaction#getRaw}, but wrapped in its own transaction.
    *
    * @param  {String} id
    * @return {Promise}
    */
   getRaw(id) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(Error(`Invalid Id: ${id}`));
-    }
-    return this.db.get(id).then(record => {
-      return {data: record, permissions: {}};
-    });
+    return this.execute(txn => txn.getRaw(id),
+                        {preloadIds: [id]});
   }
 
   /**
-   * Deletes a record from the local database.
+   * Same as {@link Collection#delete}, but wrapped in its own transaction.
    *
    * Options:
    * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
@@ -621,45 +568,21 @@ export default class Collection {
    * @return {Promise}
    */
   delete(id, options={virtual: true}) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(new Error(`Invalid Id: ${id}`));
-    }
-    // Ensure the record actually exists.
-    return this.db.execute((transaction) => {
-      const existing = transaction.get(id);
-      const alreadyDeleted = existing && existing._status == "deleted";
-      if (!existing || (alreadyDeleted && options.virtual)) {
-        throw new Error(`Record with id=${id} not found.`);
-      }
-      // Virtual updates status.
-      if (options.virtual) {
-        transaction.update(markDeleted(existing));
-      } else {
-        // Delete for real.
-        transaction.delete(id);
-      }
-      return {data: existing, permissions: {}};
-    }, {preload: [id]});
+    return this.execute(transaction => {
+      return transaction.delete(id, options);
+    }, {preloadIds: [id]});
   }
 
   /**
-   * Deletes a record from the local database, if any exists.
-   * Otherwise, do nothing.
+   * The same as {@link CollectionTransaction#deleteAny}, but wrapped
+   * in its own transaction.
    *
    * @param  {String} id       The record's Id.
    * @return {Promise}
    */
   deleteAny(id) {
-    if (!this.idSchema.validate(id)) {
-      return Promise.reject(new Error(`Invalid Id: ${id}`));
-    }
-    return this.db.execute((transaction) => {
-      const existing = transaction.get(id);
-      if (existing) {
-        transaction.update(markDeleted(existing));
-      }
-      return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
-    }, {preload: [id]});
+    return this.execute(txn => txn.deleteAny(id),
+                        {preloadIds: [id]});
   }
 
   /**
@@ -744,6 +667,41 @@ export default class Collection {
             return syncResultObject;
           });
       });
+  }
+
+  /**
+   * Execute a bunch of operations in a transaction.
+   *
+   * This transaction should be atomic -- either all of its operations
+   * will succeed, or none will.
+   *
+   * The argument to this function is itself a function which will be
+   * called with a {@link CollectionTransaction}. Collection methods
+   * are available on this transaction, but instead of returning
+   * promises, they are synchronous. execute() returns a Promise whose
+   * value will be the return value of the provided function.
+   *
+   * Most operations will require access to the record itself, which
+   * must be preloaded by passing its ID in the preloadIds option.
+   *
+   * Options:
+   * - {Array} preloadIds: list of IDs to fetch at the beginning of
+   *   the transaction
+   *
+   * @return {Promise} Resolves with the result of the given function
+   *    when the transaction commits.
+   */
+  execute(doOperations, {preloadIds = []} = {}) {
+    for (let id of preloadIds) {
+      if (!this.idSchema.validate(id)) {
+        return Promise.reject(Error(`Invalid Id: ${id}`));
+      }
+    }
+
+    return this.db.execute((transaction) => {
+      const txn = new CollectionTransaction(this, transaction);
+      return doOperations(txn);
+    }, {preload: preloadIds});
   }
 
   /**
@@ -1146,7 +1104,7 @@ export default class Collection {
     }
 
     for (let record of records) {
-      if (!record.id || !this.idSchema.validate(record.id)) {
+      if (!record.hasOwnProperty("id") || !this.idSchema.validate(record.id)) {
         return reject("Record has invalid ID: " + JSON.stringify(record));
       }
 
@@ -1185,5 +1143,209 @@ export default class Collection {
     })
     .then(newRecords => newRecords.map(markSynced))
     .then(newRecords => this.db.loadDump(newRecords));
+  }
+}
+
+/**
+ * A Collection-oriented wrapper for an adapter's transaction.
+ *
+ * This defines the high-level functions available on a collection.
+ * The collection itself offers functions of the same name. These will
+ * perform just one operation in its own transaction.
+ */
+export class CollectionTransaction {
+  constructor(collection, adapterTransaction) {
+    this.collection = collection;
+    this.adapterTransaction = adapterTransaction;
+  }
+
+  /**
+   * Retrieve a record by its id from the local database, or
+   * undefined if none exists.
+   *
+   * This will also return virtually deleted records.
+   *
+   * @param  {String} id
+   * @return {Object}
+   */
+  getRaw(id) {
+    const record = this.adapterTransaction.get(id);
+    return {data: record, permissions: {}};
+  }
+
+  /**
+   * Retrieve a record by its id from the local database.
+   *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   *
+   * @param  {String} id
+   * @param  {Object} options
+   * @return {Object}
+   */
+  get(id, options={includeDeleted: false}) {
+    const res = this.getRaw(id);
+    if (!res.data ||
+        (!options.includeDeleted && res.data._status === "deleted")) {
+      throw new Error(`Record with id=${id} not found.`);
+    }
+
+    return res;
+  }
+
+  /**
+   * Deletes a record from the local database.
+   *
+   * Options:
+   * - {Boolean} virtual: When set to `true`, doesn't actually delete the record,
+   *   update its `_status` attribute to `deleted` instead (default: true)
+   *
+   * @param  {String} id       The record's Id.
+   * @param  {Object} options  The options object.
+   * @return {Object}
+   */
+  delete(id, options={virtual: true}) {
+    // Ensure the record actually exists.
+    const existing = this.adapterTransaction.get(id);
+    const alreadyDeleted = existing && existing._status == "deleted";
+    if (!existing || (alreadyDeleted && options.virtual)) {
+      throw new Error(`Record with id=${id} not found.`);
+    }
+    // Virtual updates status.
+    if (options.virtual) {
+      this.adapterTransaction.update(markDeleted(existing));
+    } else {
+      // Delete for real.
+      this.adapterTransaction.delete(id);
+    }
+    return {data: existing, permissions: {}};
+  }
+
+  /**
+   * Deletes a record from the local database, if any exists.
+   * Otherwise, do nothing.
+   *
+   * @param  {String} id       The record's Id.
+   * @return {Object}
+   */
+  deleteAny(id) {
+    const existing = this.adapterTransaction.get(id);
+    if (existing) {
+      this.adapterTransaction.update(markDeleted(existing));
+    }
+    return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
+  }
+
+  /**
+   * Adds a record to the local database, asserting that none
+   * already exist with this ID.
+   *
+   * @param  {Object} record, which must contain an ID
+   * @return {Object}
+   */
+  create(record) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (!record.hasOwnProperty("id")) {
+      throw new Error("Cannot create a record missing id");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+
+    this.adapterTransaction.create(record);
+    return {data: record, permissions: {}};
+  }
+
+  /**
+   * Updates a record from the local database.
+   *
+   * Options:
+   * - {Boolean} synced: Sets record status to "synced" (default: false)
+   * - {Boolean} patch:  Extends the existing record instead of overwriting it
+   *   (default: false)
+   *
+   * @param  {Object} record
+   * @param  {Object} options
+   * @return {Object}
+   */
+  update(record, options={synced: false, patch: false}) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (!record.hasOwnProperty("id")) {
+      throw new Error("Cannot update a record missing id.");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+
+    const oldRecord = this.adapterTransaction.get(record.id);
+    if (!oldRecord) {
+      throw new Error(`Record with id=${record.id} not found.`);
+    }
+    const newRecord = options.patch ? {...oldRecord, ...record}
+                                    : record;
+    const updated = this._updateRaw(oldRecord, newRecord, options);
+    this.adapterTransaction.update(updated);
+    return {data: updated, oldRecord: oldRecord, permissions: {}};
+  }
+
+  /**
+   * Lower-level primitive for updating a record while respecting
+   * _status and last_modified.
+   *
+   * @param  {Object} oldRecord: the record retrieved from the DB
+   * @param  {Object} newRecord: the record to replace it with
+   * @return {Object}
+   */
+  _updateRaw(oldRecord, newRecord, {synced = false} = {}) {
+    const updated = {...newRecord};
+    // Make sure to never loose the existing timestamp.
+    if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
+      updated.last_modified = oldRecord.last_modified;
+    }
+    // If only local fields have changed, then keep record as synced.
+    // If status is created, keep record as created.
+    // If status is deleted, mark as updated.
+    const isIdentical = oldRecord && recordsEqual(oldRecord, updated, this.localFields);
+    const keepSynced = isIdentical && oldRecord._status == "synced";
+    const neverSynced = !oldRecord || (oldRecord && oldRecord._status == "created");
+    const newStatus = (keepSynced || synced) ? "synced"
+                                             : neverSynced ? "created" : "updated";
+    return markStatus(updated, newStatus);
+  }
+
+  /**
+   * Upsert a record into the local database.
+   *
+   * This record must have an ID.
+   *
+   * If a record with this ID already exists, it will be replaced.
+   * Otherwise, this record will be inserted.
+   *
+   * @param  {Object} record
+   * @return {Object}
+   */
+  put(record) {
+    if (typeof(record) !== "object") {
+      throw new Error("Record is not an object.");
+    }
+    if (!record.hasOwnProperty("id")) {
+      throw new Error("Cannot update a record missing id.");
+    }
+    if (!this.collection.idSchema.validate(record.id)) {
+      throw new Error(`Invalid Id: ${record.id}`);
+    }
+    let oldRecord = this.adapterTransaction.get(record.id);
+    const updated = this._updateRaw(oldRecord, record);
+    this.adapterTransaction.update(updated);
+    // Don't return deleted records -- pretend they are gone
+    if (oldRecord && oldRecord._status == "deleted") {
+      oldRecord = undefined;
+    }
+
+    return {data: updated, oldRecord: oldRecord, permissions: {}};
   }
 }

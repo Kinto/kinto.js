@@ -518,6 +518,17 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
+    it("should update a record from its id (custom IdSchema)", () => {
+      articles = testCollection({
+        idSchema: createIntegerIdSchema()
+      });
+
+      return articles.create(article)
+        .then(result => articles.update({id: result.data.id, title: "foo"}))
+        .then(res => res.data.title)
+        .should.eventually.eql("foo");
+    });
+
     it("should patch existing record when patch option is used", () => {
       const id = uuid4();
       return articles.create({id, title: "foo", last_modified: 42},
@@ -822,7 +833,9 @@ describe("Collection", () => {
         idSchema: createIntegerIdSchema()
       });
 
-      return articles.create(article)
+      // First, get rid of the old record with the ID from the other ID schema
+      return articles.clear()
+        .then(() => articles.create(article))
         .then(result => articles.get(result.data.id))
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
@@ -1004,7 +1017,7 @@ describe("Collection", () => {
     });
 
     it("should resolve on non-existant record", () => {
-      let id = uuid4();
+      const id = uuid4();
       return articles.deleteAny(id)
         .then(res => res.data.id)
         .should.eventually.eql(id);
@@ -1017,7 +1030,7 @@ describe("Collection", () => {
     });
 
     it("should indicate that it didn't delete when record is gone", () => {
-      let id = uuid4();
+      const id = uuid4();
       return articles.deleteAny(id)
         .then(res => res.deleted)
         .should.eventually.eql(false);
@@ -2263,6 +2276,147 @@ describe("Collection", () => {
         return articles.sync({ignoreBackoff: true})
           .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
       });
+    });
+  });
+
+  /** @test {Collection#execute} */
+  describe("#execute", () => {
+    let articles;
+    beforeEach(() => {
+      articles = testCollection();
+    });
+
+    it("should support get", () => {
+      return articles.create(article)
+        .then(result => {
+          const id = result.data.id;
+          return articles.execute(txn => txn.get(id), {preloadIds: [id]});
+        })
+        .then(result => expect(result.data.title)
+              .eql("foo"));
+    });
+
+    it("should support getRaw", () => {
+      return articles.create(article)
+        .then(result => {
+          const id = result.data.id;
+          return articles.execute(txn => txn.getRaw(id), {preloadIds: [id]});
+        })
+        .then(result => expect(result.data.title)
+              .eql("foo"));
+    });
+
+    it("should support delete", () => {
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.delete(id), {preloadIds: [id]});
+        })
+        .then(result => articles.getRaw(id))
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
+    });
+
+    it("should support deleteAny", () => {
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.deleteAny(id), {preloadIds: [id]});
+        })
+        .then(result => articles.getRaw(id))
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
+    });
+
+    it("should support create", () => {
+      const id = uuid4();
+      return articles.execute(txn => txn.create({id, ...article}), {preloadIds: [id]})
+        .then(result => expect(result.data.title)
+              .eql("foo"));
+    });
+
+    it("should support update", () => {
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.update({id, title: "new title"}), {preloadIds: [id]});
+        })
+        .then(result => articles.get(id))
+        .then(result => expect(result.data.title)
+              .eql("new title"));
+    });
+
+    it("should support put", () => {
+      const id = uuid4();
+      return articles.put({id, ...article})
+        .then(result => result.data.id)
+        .then(result => articles.get(id))
+        .then(result => expect(result.data.title)
+              .eql("foo"));
+    });
+
+    it("should roll back operations if there's a failure", () => {
+      let id;
+      return articles.create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => {
+            txn.deleteAny(id);
+            txn.delete(uuid4());   // this should fail
+          }, {preloadIds: [id]});
+        })
+        .catch(() => null)
+        .then(result => articles.getRaw(id))
+        .then(result => expect(result.data._status)
+              .eql("created"));
+    });
+
+    it("should perform all operations if there's no failure", () => {
+      let id1, id2;
+      return articles.create(article)
+        .then(result => {
+          id1 = result.data.id;
+          return articles.create({title: "foo2", url: "http://foo2"});
+        })
+        .then(result => {
+          id2 = result.data.id;
+          return articles.execute(txn => {
+            txn.deleteAny(id1);
+            txn.deleteAny(id2);
+          }, {preloadIds: [id1, id2]});
+        })
+        .then(result => articles.getRaw(id1))
+        .then(result => expect(result.data._status)
+              .eql("deleted"))
+        .then(result => articles.getRaw(id2))
+        .then(result => expect(result.data._status)
+              .eql("deleted"));
+    });
+
+    it("should resolve to the return value of the transaction", () => {
+      return articles.create(article)
+        .then(() => {
+          return articles.execute(txn => {
+            return "hello";
+          });
+        })
+        .then(result => expect(result)
+              .eql("hello"));
+    });
+
+    it("has operations that are synchronous", () => {
+      let createdArticle;
+      return articles.create(article)
+        .then(result => {
+          return articles.execute(txn => {
+            createdArticle = txn.get(result.data.id).data;
+          }, {preloadIds: [result.data.id]});
+        })
+        .then(result => expect(createdArticle.title)
+              .eql("foo"));
     });
   });
 });

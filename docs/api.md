@@ -373,6 +373,59 @@ Result:
 > - Clearing the local collection will mark the collection as never synchronized;
 > - Detailed API documentation for `Collection#clear()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-clear).
 
+## Transactions
+
+Kinto.js exposes a concept of a "local transaction", which guarantees
+that a set of local operations will happen atomically -- that is, all
+or nothing.
+
+Note that these transactions are local to the browser, and they don't
+go to the server. Other Kinto clients can make changes to the server
+during your transaction, and those changes may still introduce
+conflicts with the changes you've made as part of a transaction.
+
+To initiate a transaction, call `Collection#execute()` like this:
+
+```js
+articles.execute(txn => {
+    let article1 = txn.get(id1);
+    let article2 = txn.get(id2);
+    return [article1, article2];
+  }, {preloadIds: [id1, id2])
+  .then(console.log.bind(console));
+```
+
+The `execute` function takes two arguments. The first is a function
+that will be called with a transaction, and can perform operations on
+it. These operations are synchronous and so don't produce
+promises. The full list of operations is available
+[here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~CollectionTransaction.html).
+
+The second argument to `execute()` should include a set of record IDs
+on which your transaction wants to operate. These IDs will be read at
+the beginning of your transaction, and the corresponding records will
+be made available to the transaction. Most operations, including even
+`put()` and `delete()`, will require that you provide the relevant IDs.
+
+Result:
+
+```js
+[
+    {
+      data: {
+        id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
+        title: "foo",
+      }
+    },
+    {
+      data: {
+        id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
+        title: "bar",
+      }
+    }
+]
+```
+
 ## Authentication
 
 Authenticating against a Kinto server can be achieved by adding an `Authorization` header to the request.
