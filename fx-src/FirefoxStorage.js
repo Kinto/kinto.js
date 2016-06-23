@@ -169,10 +169,7 @@ export default class FirefoxAdapter extends BaseAdapter {
         collection,
         ...options.preload
       ];
-      const placeholders = [];
-      for (let i in options.preload) {
-        placeholders.push('?');
-      }
+      const placeholders = options.preload.map(_ => "?");
       const stmt = statements.listRecordsById + "(" + placeholders.join(",") + ");";
       const rows = yield conn.execute(stmt,
                                       parameters);
