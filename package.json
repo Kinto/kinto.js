@@ -120,6 +120,7 @@
     "browserify": "^13.0.0",
     "chai": "^3.4.1",
     "chai-as-promised": "^5.0.0",
+    "co-task": "^1.0.0",
     "coveralls": "^2.11.6",
     "esdoc": "^0.4.0",
     "esdoc-es7-plugin": "0.0.3",
