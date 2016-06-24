@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import BaseAdapter from "../src/adapters/base";
 import { reduceRecords } from "../src/utils";
 
@@ -75,11 +74,13 @@ const statements = {
       FROM collection_data
         WHERE collection_name = :collection_name;`,
 
+  // N.B. we have to have a dynamic number of placeholders, which you
+  // can't do without building your own statement. See `execute` for details
   "listRecordsById": `
     SELECT record_id, record
       FROM collection_data
-        WHERE collection_name = :collection_name
-          AND record_id IN (:record_ids);`,
+        WHERE collection_name = ?
+          AND record_id IN `,
 
   "importData": `
     REPLACE INTO collection_data (collection_name, record_id, record)
@@ -163,12 +164,14 @@ export default class FirefoxAdapter extends BaseAdapter {
 
     return conn.executeTransaction(function* doExecuteTransaction() {
       // Preload specified records from DB, within transaction.
-      const parameters = {
-        collection_name: collection,
-        // XXX: would be easier if a list of strings could be bound instead.
-        record_ids: options.preload.join("','")
-      };
-      const rows = yield conn.execute(statements.listRecordsById, parameters);
+      const parameters = [
+        collection,
+        ...options.preload
+      ];
+      const placeholders = options.preload.map(_ => "?");
+      const stmt = statements.listRecordsById + "(" + placeholders.join(",") + ");";
+      const rows = yield conn.execute(stmt,
+                                      parameters);
 
       const preloaded = rows.reduce((acc, row) => {
         const record = JSON.parse(row.getResultByName("record"));
