@@ -94,6 +94,7 @@ export default class KintoBase {
     return new Collection(bucket, collName, this.api, {
       events:              this._options.events,
       adapter:             this._options.adapter,
+      adapterOptions:      this._options.adapterOptions,
       dbPrefix:            this._options.dbPrefix,
       idSchema:            options.idSchema,
       remoteTransformers:  options.remoteTransformers,
