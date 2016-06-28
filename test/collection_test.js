@@ -1344,7 +1344,7 @@ describe("Collection", () => {
           Promise.resolve({
             data: serverChanges,
             next: () => {},
-            last_modified: "\"42\"",
+            last_modified: "42",
           }));
         client = new KintoClient("http://server.com/v1").bucket("bucket").collection("collection");
         return Promise.all(localData.map(fixture => {
@@ -1511,7 +1511,7 @@ describe("Collection", () => {
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
-              since: "\"42\"",
+              since: "42",
               filters: undefined,
               headers: {}
             });
@@ -1524,7 +1524,7 @@ describe("Collection", () => {
           .then(_ => {
             sinon.assert.calledOnce(listRecords);
             sinon.assert.calledWithExactly(listRecords, {
-              since: "\"42\"",
+              since: "42",
               filters: {exclude_id: "1,2,3"},
               headers: {}
             });
@@ -1632,7 +1632,7 @@ describe("Collection", () => {
               {id: createdId, title: "art2mod", last_modified: 42}, // will conflict with unsynced local record
             ],
             next: () => {},
-            last_modified: "\"42\"",
+            last_modified: "42",
           }));
 
         return articles.pullChanges(client, result)
@@ -1681,7 +1681,7 @@ describe("Collection", () => {
               remote,
             ],
             next: () => {},
-            last_modified: "\"42\"",
+            last_modified: "42",
           }));
         const syncResult = new SyncResultObject();
         return articles.resolve(conflict, resolution)
@@ -1714,7 +1714,7 @@ describe("Collection", () => {
                   {id: createdId, title: "art2"}, // resolvable conflict
                 ],
                 next: () => {},
-                last_modified: "\"42\"",
+                last_modified: "42",
               }));
           });
       });
@@ -2139,7 +2139,7 @@ describe("Collection", () => {
     it("should fetch latest changes from the server", () => {
       const listRecords = sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          last_modified: "\"42\"",
+          last_modified: "42",
           next: () => {},
           data: []
         }));
@@ -2152,7 +2152,7 @@ describe("Collection", () => {
     it("should store latest lastModified value when no conflicts", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          last_modified: "\"42\"",
+          last_modified: "42",
           next: () => {},
           data: []
         }));
@@ -2164,7 +2164,7 @@ describe("Collection", () => {
     it("shouldn't store latest lastModified on conflicts", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          last_modified: "\"43\"",
+          last_modified: "43",
           next: () => {},
           data: [{
             id: ids[0],
@@ -2180,7 +2180,7 @@ describe("Collection", () => {
     it("shouldn't store latest lastModified on errors", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords")
         .returns(Promise.resolve({
-          last_modified: "\"43\"",
+          last_modified: "43",
           next: () => {},
           data: [{
             id: ids[0],
