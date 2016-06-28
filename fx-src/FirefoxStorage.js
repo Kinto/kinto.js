@@ -95,10 +95,11 @@ const createStatements = ["createCollectionData",
 const currentSchemaVersion = 1;
 
 export default class FirefoxAdapter extends BaseAdapter {
-  constructor(collection) {
+  constructor(collection, options={}) {
     super();
     this.collection = collection;
     this._connection = null;
+    this._options = options;
   }
 
   _init(connection) {
@@ -132,7 +133,8 @@ export default class FirefoxAdapter extends BaseAdapter {
   open() {
     const self = this;
     return Task.spawn(function* (){
-      const opts = { path: SQLITE_PATH, sharedMemoryCache: false }
+      const path = self._options.path || SQLITE_PATH;
+      const opts = { path: path, sharedMemoryCache: false };
       if (!self._connection) {
         self._connection = yield Sqlite.openConnection(opts).then(self._init);
       }

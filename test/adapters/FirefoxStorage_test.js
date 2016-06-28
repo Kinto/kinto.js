@@ -1,6 +1,7 @@
 "use strict";
 
 import { expect } from "chai";
+import sinon from "sinon";
 import Task from "co-task";
 
 // Stub a bunch of globals required by the FirefoxStorage module
@@ -12,18 +13,24 @@ global.Components = {
 global.Task = Task;
 global.Sqlite = {
   openConnection() {
-    return Promise.resolve({
-      executeTransaction() {
-        return Promise.resolve();
-      }
-    });
+    return Promise.resolve(fakeConnection);
   }
 };
 
 const FirefoxAdapter = require("../../fx-src/FirefoxStorage").default;
-
+const fakeConnection = {
+  executeTransaction() {
+    return Promise.resolve();
+  }
+};
 
 describe("FirefoxStorage", () => {
+  let sandbox;
+
+  beforeEach(() => {
+    sandbox = sinon.sandbox.create();
+  });
+
   describe("#constructor()", () => {
     it("should create an object", () => {
       expect(new FirefoxAdapter()).to.be.an("object");
@@ -34,6 +41,17 @@ describe("FirefoxStorage", () => {
     it("should open a connection", () => {
       const adapter = new FirefoxAdapter();
       return adapter.open().should.be.fulfilled;
+    });
+
+    it("should use the filename given by options", () => {
+      const adapter = new FirefoxAdapter("collection", {path: "storage-sync.sqlite"});
+      const openConnection = sandbox.stub(global.Sqlite, "openConnection").returns(
+        Promise.resolve(fakeConnection));
+      return adapter.open().then(_ => {
+        const firstArgs = openConnection.args[0];
+        const options = firstArgs[0];
+        expect(options).property("path").eql("storage-sync.sqlite");
+      });
     });
   });
 
