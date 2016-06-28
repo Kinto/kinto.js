@@ -204,7 +204,8 @@ export default class Collection {
       throw new Error("No adapter provided");
     }
     const dbPrefix = options.dbPrefix || "";
-    const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`);
+    const db = new DBAdapter(`${dbPrefix}${bucket}/${name}`,
+                             options.adapterOptions);
     if (!(db instanceof BaseAdapter)) {
       throw new Error("Unsupported adapter.");
     }
