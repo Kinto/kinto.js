@@ -883,8 +883,8 @@ describe("Collection", () => {
     });
   });
 
-  /** @test {Collection#getRaw} */
-  describe("#getRaw", () => {
+  /** @test {Collection#getAny} */
+  describe("#getAny", () => {
     let articles, id;
 
     beforeEach(() => {
@@ -894,20 +894,20 @@ describe("Collection", () => {
     });
 
     it("should retrieve a record from its id", () => {
-      return articles.getRaw(id)
+      return articles.getAny(id)
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
     });
 
     it("should resolve to undefined if not present", () => {
-      return articles.getRaw(uuid4())
+      return articles.getAny(uuid4())
         .then(res => res.data)
         .should.eventually.eql(undefined);
     });
 
     it("should resolve to virtually deleted record", () => {
       return articles.delete(id)
-        .then(res => articles.getRaw(id))
+        .then(res => articles.getAny(id))
         .then(res => res.data)
         .should.eventually.become({
           _status: "deleted",
@@ -1011,7 +1011,7 @@ describe("Collection", () => {
 
     it("should delete an existing record", () => {
       return articles.deleteAny(id)
-        .then(res => articles.getRaw(res.data.id))
+        .then(res => articles.getAny(res.data.id))
         .then(res => res.data._status)
         .should.eventually.eql("deleted");
     });
@@ -2296,11 +2296,11 @@ describe("Collection", () => {
               .eql("foo"));
     });
 
-    it("should support getRaw", () => {
+    it("should support getAny", () => {
       return articles.create(article)
         .then(result => {
           const id = result.data.id;
-          return articles.execute(txn => txn.getRaw(id), {preloadIds: [id]});
+          return articles.execute(txn => txn.getAny(id), {preloadIds: [id]});
         })
         .then(result => expect(result.data.title)
               .eql("foo"));
@@ -2313,7 +2313,7 @@ describe("Collection", () => {
           id = result.data.id;
           return articles.execute(txn => txn.delete(id), {preloadIds: [id]});
         })
-        .then(result => articles.getRaw(id))
+        .then(result => articles.getAny(id))
         .then(result => expect(result.data._status)
               .eql("deleted"));
     });
@@ -2325,7 +2325,7 @@ describe("Collection", () => {
           id = result.data.id;
           return articles.execute(txn => txn.deleteAny(id), {preloadIds: [id]});
         })
-        .then(result => articles.getRaw(id))
+        .then(result => articles.getAny(id))
         .then(result => expect(result.data._status)
               .eql("deleted"));
     });
@@ -2369,7 +2369,7 @@ describe("Collection", () => {
           }, {preloadIds: [id]});
         })
         .catch(() => null)
-        .then(result => articles.getRaw(id))
+        .then(result => articles.getAny(id))
         .then(result => expect(result.data._status)
               .eql("created"));
     });
@@ -2388,10 +2388,10 @@ describe("Collection", () => {
             txn.deleteAny(id2);
           }, {preloadIds: [id1, id2]});
         })
-        .then(result => articles.getRaw(id1))
+        .then(result => articles.getAny(id1))
         .then(result => expect(result.data._status)
               .eql("deleted"))
-        .then(result => articles.getRaw(id2))
+        .then(result => articles.getAny(id2))
         .then(result => expect(result.data._status)
               .eql("deleted"));
     });

@@ -91,10 +91,10 @@ Result:
 > - The promise will be rejected if no record is found for that ID;
 > - Detailed API documentation for `Collection#get()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-get).
 
-## Retrieving a single record (raw)
+## Retrieving a single record if present
 
 ```js
-articles.getRaw("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
+articles.getAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
   .then(console.log.bind(console))
   .error(console.error.bind(console))
 ```
@@ -109,7 +109,7 @@ undefined
 >
 > - This is a lower-level version of `get()` which does not fail if called on a missing or deleted record;
 > - This might be useful for using Kinto as a plain key-value store, but otherwise you should probably use `get()`;
-> - Detailed API documentation for `Collection#getRaw()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-getRaw).
+> - Detailed API documentation for `Collection#getAny()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-getAny).
 
 ## Updating a record
 

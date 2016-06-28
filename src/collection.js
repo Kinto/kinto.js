@@ -546,13 +546,13 @@ export default class Collection {
   }
 
   /**
-   * Like {@link CollectionTransaction#getRaw}, but wrapped in its own transaction.
+   * Like {@link CollectionTransaction#getAny}, but wrapped in its own transaction.
    *
    * @param  {String} id
    * @return {Promise}
    */
-  getRaw(id) {
-    return this.execute(txn => txn.getRaw(id),
+  getAny(id) {
+    return this.execute(txn => txn.getAny(id),
                         {preloadIds: [id]});
   }
 
@@ -1167,7 +1167,7 @@ export class CollectionTransaction {
    * @param  {String} id
    * @return {Object}
    */
-  getRaw(id) {
+  getAny(id) {
     const record = this.adapterTransaction.get(id);
     return {data: record, permissions: {}};
   }
@@ -1183,7 +1183,7 @@ export class CollectionTransaction {
    * @return {Object}
    */
   get(id, options={includeDeleted: false}) {
-    const res = this.getRaw(id);
+    const res = this.getAny(id);
     if (!res.data ||
         (!options.includeDeleted && res.data._status === "deleted")) {
       throw new Error(`Record with id=${id} not found.`);
