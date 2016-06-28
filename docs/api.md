@@ -146,18 +146,20 @@ Result is:
 
 ## Upserting records
 
+`upsert()` will create a record or replace the one that exists (equivalent to «put»).
+
 ```js
 var existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
   title: "bar"
 };
 
-articles.put(existing)
+articles.upsert(existing)
   .then(console.log.bind(console));
 
 var updated = {...existing, title: "baz"};
 
-articles.put(updated)
+articles.upsert(updated)
   .then(console.log.bind(console));
 ```
 
@@ -186,7 +188,7 @@ Result is:
 > - If the record with this ID does not exist, or is deleted, a new one will be created;
 > - If the record with this ID does exist, it will be updated;
 > - This method may be useful when using Kinto as a key-value store;
-> - Detailed API documentation for `Collection#put()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-put).
+> - Detailed API documentation for `Collection#upsert()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-upsert).
 
 ## Deleting records
 
@@ -405,7 +407,7 @@ The second argument to `execute()` should include a set of record IDs
 on which your transaction wants to operate. These IDs will be read at
 the beginning of your transaction, and the corresponding records will
 be made available to the transaction. Most operations, including even
-`put()` and `delete()`, will require that you provide the relevant IDs.
+`upsert()` and `delete()`, will require that you provide the relevant IDs.
 
 Result:
 

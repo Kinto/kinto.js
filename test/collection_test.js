@@ -598,7 +598,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => res.data)
         .then(existing => {
-          return articles.put(
+          return articles.upsert(
             {...existing, title: "new title"});
         })
         .then(res => articles.get(res.data.id))
@@ -609,42 +609,42 @@ describe("Collection", () => {
     it("should change record status to updated", () => {
       return articles.create({id: uuid4()}, {synced: true})
         .then(res => res.data)
-        .then(data => articles.put({...data, title: "blah"}))
+        .then(data => articles.upsert({...data, title: "blah"}))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
     });
 
     it("should preserve created status if record was never synced", () => {
       return articles.create({title: "foo"})
-        .then(res => articles.put(Object.assign({}, res.data, {title: "bar"})))
+        .then(res => articles.upsert(Object.assign({}, res.data, {title: "bar"})))
         .then(res => res.data)
         .should.eventually.have.property("_status").eql("created");
     });
 
     it("should create a new record if non-existent", () => {
-      return articles.put({id: uuid4(), title: "new title"})
+      return articles.upsert({id: uuid4(), title: "new title"})
         .then(res => res.data.title)
         .should.eventually.become("new title");
     });
 
     it("should set status to created if it created a record", () => {
-      return articles.put({id: uuid4()})
+      return articles.upsert({id: uuid4()})
         .then(res => res.data._status)
         .should.eventually.become("created");
     });
 
     it("should reject updates on a non-object record", () => {
-      return articles.put("invalid")
+      return articles.upsert("invalid")
         .should.be.rejectedWith(Error, /Record is not an object/);
     });
 
     it("should reject updates on a record without an id", () => {
-      return articles.put({title: "foo"})
+      return articles.upsert({title: "foo"})
         .should.be.rejectedWith(Error, /missing id/);
     });
 
     it("should validate record's id when provided", () => {
-      return articles.put({id: 42})
+      return articles.upsert({id: 42})
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -652,7 +652,7 @@ describe("Collection", () => {
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => articles.delete(res.data.id))
-        .then(res => articles.put(
+        .then(res => articles.upsert(
           {...res.data, title: "new title"}))
         .then(res => res.data.title)
         .should.eventually.become("new title");
@@ -662,7 +662,7 @@ describe("Collection", () => {
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => articles.delete(res.data.id))
-        .then(res => articles.put(
+        .then(res => articles.upsert(
           {...res.data, title: "new title"}))
         .then(res => res.data._status)
         .should.eventually.become("updated");
@@ -673,7 +673,7 @@ describe("Collection", () => {
         idSchema: createIntegerIdSchema()
       });
 
-      return articles.put({id: "deadbeef"})
+      return articles.upsert({id: "deadbeef"})
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -681,7 +681,7 @@ describe("Collection", () => {
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => {
-          return articles.put(
+          return articles.upsert(
             {id: res.data.id,
             title: "new title",
             });
@@ -698,7 +698,7 @@ describe("Collection", () => {
       })
         .then(res => articles.get(res.data.id))
         .then(res => {
-          return articles.put(
+          return articles.upsert(
             {id: res.data.id,
               title: "new title",
             });
@@ -712,7 +712,7 @@ describe("Collection", () => {
         .then(res => articles.get(res.data.id))
         .then(res => res.data)
         .then(existing => {
-          return articles.put(
+          return articles.upsert(
             {...existing, title: "new title"});
         })
         .then(res => res.oldRecord.title)
@@ -727,14 +727,14 @@ describe("Collection", () => {
           return articles.delete(articleId);
         })
         .then(res =>
-          articles.put(
+          articles.upsert(
             {id: articleId, title: "new title"}))
         .then(res => res.oldRecord)
         .should.become(undefined);
     });
 
     it("should signal when a record was created by oldRecord=undefined", () => {
-      return articles.put({id: uuid4()})
+      return articles.upsert({id: uuid4()})
         .then(res => res.oldRecord)
         .should.become(undefined);
     });
@@ -2349,9 +2349,9 @@ describe("Collection", () => {
               .eql("new title"));
     });
 
-    it("should support put", () => {
+    it("should support upsert", () => {
       const id = uuid4();
-      return articles.put({id, ...article})
+      return articles.upsert({id, ...article})
         .then(result => result.data.id)
         .then(result => articles.get(id))
         .then(result => expect(result.data.title)

@@ -507,12 +507,12 @@ export default class Collection {
   }
 
   /**
-   * Like {@link CollectionTransaction#put}, but wrapped in its own transaction.
+   * Like {@link CollectionTransaction#upsert}, but wrapped in its own transaction.
    *
    * @param  {Object} record
    * @return {Promise}
    */
-  put(record) {
+  upsert(record) {
     // Validate the record and its ID, even though this validation is
     // also done in the CollectionTransaction method, because we need
     // to pass the ID to preloadIds.
@@ -526,7 +526,7 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
 
-    return this.execute(txn => txn.put(record),
+    return this.execute(txn => txn.upsert(record),
                         {preloadIds: [record.id]});
   }
 
@@ -1327,7 +1327,7 @@ export class CollectionTransaction {
    * @param  {Object} record
    * @return {Object}
    */
-  put(record) {
+  upsert(record) {
     if (typeof(record) !== "object") {
       throw new Error("Record is not an object.");
     }
