@@ -13,22 +13,25 @@ global.Components = {
 global.Task = Task;
 global.Sqlite = {
   openConnection() {
-    return Promise.resolve(fakeConnection);
+    return Promise.resolve({
+      executeTransaction() {
+        return Promise.resolve();
+      }
+    });
   }
 };
 
 const FirefoxAdapter = require("../../fx-src/FirefoxStorage").default;
-const fakeConnection = {
-  executeTransaction() {
-    return Promise.resolve();
-  }
-};
 
 describe("FirefoxStorage", () => {
   let sandbox;
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
+  });
+
+  afterEach(() => {
+    sandbox.restore();
   });
 
   describe("#constructor()", () => {
@@ -45,8 +48,7 @@ describe("FirefoxStorage", () => {
 
     it("should use the filename given by options", () => {
       const adapter = new FirefoxAdapter("collection", {path: "storage-sync.sqlite"});
-      const openConnection = sandbox.stub(global.Sqlite, "openConnection").returns(
-        Promise.resolve(fakeConnection));
+      const openConnection = sandbox.spy(global.Sqlite, "openConnection");
       return adapter.open().then(_ => {
         const firstArgs = openConnection.args[0];
         const options = firstArgs[0];
