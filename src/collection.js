@@ -797,7 +797,7 @@ export default class Collection {
     // First fetch remote changes from the server
     return client.listRecords({
       // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
-      since: options.lastModified ? `"${options.lastModified}"`: undefined,
+      since: options.lastModified ? `${options.lastModified}`: undefined,
       headers: options.headers,
       filters
     })
@@ -805,8 +805,7 @@ export default class Collection {
       // last_modified is the ETag header value (string).
       // For retro-compatibility with first kinto.js versions
       // parse it to integer.
-      const unquoted = last_modified ?
-        parseInt(last_modified.replace(/"/g, ""), 10) : undefined;
+      const unquoted = last_modified ? parseInt(last_modified, 10) : undefined;
 
       // Check if server was flushed.
       // This is relevant for the Kinto demo server
