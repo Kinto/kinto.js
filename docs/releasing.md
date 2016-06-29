@@ -11,6 +11,7 @@ In order to prepare and publish a new release, the following steps are required.
 * Bump the `version`;
 * Update the list of contributors if needed (`git shortlog -sne` gives a list of project contributors from the commit history);
 * Open a pull-request with the changes;
+* Draft release notes in the PR description;
 * Wait for the tests to pass on [TravisCI](http://travis-ci.org/Kinto/kinto.js).
 
 ### Merge the release branch, and push the tag
