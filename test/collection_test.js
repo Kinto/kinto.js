@@ -131,6 +131,21 @@ describe("Collection", () => {
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
 
+    it("should pass adapterOptions to adapter", () => {
+      let myOptions;
+      const MyAdapter = class extends BaseAdapter {
+        constructor(collectionName, options) {
+          super(collectionName);
+          myOptions = options;
+        }
+      };
+      new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
+        adapter: MyAdapter,
+        adapterOptions: "my options",
+      });
+      expect(myOptions).eql("my options");
+    });
+
     describe("transformers registration", () => {
       function registerTransformers(transformers) {
         new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
