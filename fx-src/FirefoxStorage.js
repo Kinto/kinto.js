@@ -134,7 +134,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     const self = this;
     return Task.spawn(function* (){
       const path = self._options.path || SQLITE_PATH;
-      const opts = { path: path, sharedMemoryCache: false };
+      const opts = { path, sharedMemoryCache: false };
       if (!self._connection) {
         self._connection = yield Sqlite.openConnection(opts).then(self._init);
       }
