@@ -11,7 +11,8 @@ In order to prepare and publish a new release, the following steps are required.
 * Bump the `version`;
 * Update the list of contributors if needed (`git shortlog -sne` gives a list of project contributors from the commit history);
 * Open a pull-request with the changes;
-* Wait for the tests to pass on [TravisCI](http://travis-ci.org/Kinto/kinto.js) before merging.
+* Draft release notes in the PR description;
+* Wait for the tests to pass on [TravisCI](http://travis-ci.org/Kinto/kinto.js).
 
 ### Merge the release branch, and push the tag
 
@@ -33,7 +34,7 @@ Ensure NPM package content is ready and valid. The `dist/` folder should contain
 
 Checklist:
 
-* npmcdn should serve the new version of the assets at `https://npmcdn.com/kinto@X.Y.Z/dist/kinto-X.Y.Z.js`;
+* npmcdn should serve the new version of the assets at `https://npmcdn.com/kinto@X.Y.Z/dist/kinto.js`;
 * `npm install kinto` should pull the new version, and `require("kinto")` should work as expected.
 
 ### Edit and publish the release on Github
@@ -48,9 +49,6 @@ Check that the demo has been [published](http://kinto.github.io/kinto.js/) and w
 
 ### Update docs
 
-- Update versions in `docs/contributing.md`
-- Update CDN URL in `docs/tutorial.md`
-- Update CDN URL in `docs/installation.md`.
 - Obtain the new sub-resource integrity hashes with:
 
     $ npm run compute-sri
