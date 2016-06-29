@@ -2,15 +2,16 @@
 
 ## Custom database adapters
 
-By default, Kinto.js performs all local persistence operations using [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API); though if you want to create and use you own, that's definitely possible if you conform to the expected interface.
+By default, Kinto.js performs all local persistence operations using [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API); though if you want to create and use your own, that's definitely possible if you conform to the expected interface.
 
 Simply create a class extending [`Kinto.adapters.BaseAdapter`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/adapters/base.js~BaseAdapter.html), which acts as an abstract class:
 
 ```js
 class MyAdapter extends Kinto.adapters.BaseAdapter {
-  constructor(dbname) {
+  constructor(dbname, options={}) {
     super();
     this.dbname = dbname;
+    this.options = options;
   }
 
   open() {
@@ -47,6 +48,12 @@ const kinto = new Kinto({adapter: MyAdapter});
 ```
 
 Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly. The [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.js) adapter is also worth a read if you need guidance writing your own.
+
+The `options` argument to the adapter constructor is taken from the `adapterOptions` given to the Kinto constructor. For example, if your adapter recognizes a `style` option:
+
+```
+const kinto = new Kinto({adapter: MyAdapter, adapterOptions: {style: "traditional"}});
+```
 
 ## Supporting transactions
 

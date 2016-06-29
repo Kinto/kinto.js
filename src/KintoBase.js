@@ -39,14 +39,15 @@ export default class KintoBase {
    * Constructor.
    *
    * Options:
-   * - `{String}`       `remote`      The server URL to use.
-   * - `{String}`       `bucket`      The collection bucket name.
-   * - `{EventEmitter}` `events`      Events handler.
-   * - `{BaseAdapter}`  `adapter`     The base DB adapter class.
-   * - `{String}`       `dbPrefix`    The DB name prefix.
-   * - `{Object}`       `headers`     The HTTP headers to use.
-   * - `{String}`       `requestMode` The HTTP CORS mode to use.
-   * - `{Number}`       `timeout`     The requests timeout in ms (default: `5000`).
+   * - `{String}`       `remote`         The server URL to use.
+   * - `{String}`       `bucket`         The collection bucket name.
+   * - `{EventEmitter}` `events`         Events handler.
+   * - `{BaseAdapter}`  `adapter`        The base DB adapter class.
+   * - `{Object}`       `adapterOptions` Options given to the adapter.
+   * - `{String}`       `dbPrefix`       The DB name prefix.
+   * - `{Object}`       `headers`        The HTTP headers to use.
+   * - `{String}`       `requestMode`    The HTTP CORS mode to use.
+   * - `{Number}`       `timeout`        The requests timeout in ms (default: `5000`).
    *
    * @param  {Object} options The options object.
    */

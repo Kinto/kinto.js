@@ -103,6 +103,8 @@ function createListRequest(store, indexField, value, done) {
 
 /**
  * IndexedDB adapter.
+ *
+ * This adapter doesn't support any options.
  */
 export default class IDB extends BaseAdapter {
   /**

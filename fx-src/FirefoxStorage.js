@@ -94,6 +94,14 @@ const createStatements = ["createCollectionData",
 
 const currentSchemaVersion = 1;
 
+/**
+ * Firefox adapter.
+ *
+ * Uses Sqlite as a backing store.
+ *
+ * Options:
+ *  - path: the filename/path for the Sqlite database. If absent, use SQLITE_PATH.
+ */
 export default class FirefoxAdapter extends BaseAdapter {
   constructor(collection, options={}) {
     super();
