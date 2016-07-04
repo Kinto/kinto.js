@@ -66,7 +66,7 @@ export default function loadKinto() {
 
     collection(collName, options={}) {
       const idSchema = makeIDSchema();
-      const expandedOptions = {...idSchema, ...options};
+      const expandedOptions = {idSchema, ...options};
       return super.collection(collName, expandedOptions);
     }
   }
