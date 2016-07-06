@@ -1159,6 +1159,8 @@ export class CollectionTransaction {
   constructor(collection, adapterTransaction) {
     this.collection = collection;
     this.adapterTransaction = adapterTransaction;
+
+    this._events = collection.events;
   }
 
   /**
@@ -1220,6 +1222,7 @@ export class CollectionTransaction {
       // Delete for real.
       this.adapterTransaction.delete(id);
     }
+    this._events.emit("delete", {data: existing});
     return {data: existing, permissions: {}};
   }
 
@@ -1234,6 +1237,7 @@ export class CollectionTransaction {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
       this.adapterTransaction.update(markDeleted(existing));
+      this._events.emit("delete", {data: existing});
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
   }
@@ -1257,6 +1261,7 @@ export class CollectionTransaction {
     }
 
     this.adapterTransaction.create(record);
+    this._events.emit("create", {data: record});
     return {data: record, permissions: {}};
   }
 
@@ -1291,7 +1296,8 @@ export class CollectionTransaction {
                                     : record;
     const updated = this._updateRaw(oldRecord, newRecord, options);
     this.adapterTransaction.update(updated);
-    return {data: updated, oldRecord: oldRecord, permissions: {}};
+    this._events.emit("update", {data: updated, oldRecord});
+    return {data: updated, oldRecord, permissions: {}};
   }
 
   /**
@@ -1347,7 +1353,7 @@ export class CollectionTransaction {
     if (oldRecord && oldRecord._status == "deleted") {
       oldRecord = undefined;
     }
-
+    this._events.emit(oldRecord ? "update" : "create", {data: updated, oldRecord});
     return {data: updated, oldRecord: oldRecord, permissions: {}};
   }
 }

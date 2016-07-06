@@ -2447,4 +2447,83 @@ describe("Collection", () => {
               .eql("foo"));
     });
   });
+
+  describe.only("Events", () => {
+    let articles, article;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return articles.create({title: "foo"})
+        .then(({data}) => article = data);
+    });
+
+    it("should emit an event on create", (done) => {
+      articles.events.on("create", () => done());
+      articles.create({"title": "win"});
+    });
+
+    it("should emit an event on update", (done) => {
+      articles.events.on("update", () => done());
+      articles.update({...article, "title": "changed"});
+    });
+
+    it("should emit an event on delete", (done) => {
+      articles.events.on("delete", () => done());
+      articles.delete(article.id);
+    });
+
+    it("should emit an event on deleteAny", (done) => {
+      articles.events.on("delete", () => done());
+      articles.deleteAny(article.id);
+    });
+
+    it("should not emit if deleteAny fails", (done) => {
+      articles.events.on("delete", () => done(new Error("fail")));
+      articles.deleteAny(uuid4());
+      setTimeout(() => done(), 5);
+    });
+
+    it("should emit a create event on upsert", (done) => {
+      articles.events.on("create", () => done());
+      articles.upsert({id: uuid4(), "create": "new"});
+    });
+
+    it("should emit a update event on upsert", (done) => {
+      articles.events.on("update", () => done());
+      articles.upsert({"update": "existing", ...article});
+    });
+
+    it("should provide created record in data", (done) => {
+      articles.events.on("create", (event) => {
+        expect(event).to.have.property("data")
+                     .to.have.property("title")
+                     .eql("win");
+        done();
+      });
+      articles.create({"title": "win"});
+    });
+
+    it("should provide new record in data and old record", (done) => {
+      articles.events.on("update", (event) => {
+        expect(event).to.have.property("data")
+                     .to.have.property("title")
+                     .eql("changed");
+        expect(event).to.have.property("oldRecord")
+                     .to.have.property("title")
+                     .eql("foo");
+        done();
+      });
+      articles.update({...article, "title": "changed"});
+    });
+
+    it("should provide old record", (done) => {
+      articles.events.on("delete", (event) => {
+        expect(event).to.have.property("data")
+                     .to.have.property("title")
+                     .eql("foo");
+        done();
+      });
+      articles.delete(article.id);
+    });
+  });
 });
