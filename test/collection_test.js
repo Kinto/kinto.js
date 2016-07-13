@@ -1502,6 +1502,23 @@ describe("Collection", () => {
           .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'changes' property/);
       });
 
+      it("should resolve if the hook returns a promise", () => {
+        articles = testCollection({
+          hooks: {
+            "incoming-changes": [payload => {
+              const newChanges = payload.changes.map(r => ({...r, foo: "bar"}));
+              return Promise.resolve({...payload, changes: newChanges});
+            }]
+          }
+        });
+        return articles.pullChanges(client, result)
+          .then(result => {
+            expect(result.created.length).to.eql(2);
+            result.created.forEach(r => {
+              expect(r.foo).to.eql("bar");
+            });
+          });
+      });
 
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;
