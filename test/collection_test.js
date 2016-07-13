@@ -1486,34 +1486,34 @@ describe("Collection", () => {
               expect(passedCollection).to.eql(articles);
             });
         });
-      });
 
-      it("should reject if the hook returns something strange", () => {
-        articles = testCollection({
-          hooks: {
-            "incoming-changes": [() => 42]
-          }
-        });
-        return articles.pullChanges(client, result)
-          .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'then' or 'changes' properties/);
-      });
-
-      it("should resolve if the hook returns a promise", () => {
-        articles = testCollection({
-          hooks: {
-            "incoming-changes": [payload => {
-              const newChanges = payload.changes.map(r => ({...r, foo: "bar"}));
-              return Promise.resolve({...payload, changes: newChanges});
-            }]
-          }
-        });
-        return articles.pullChanges(client, result)
-          .then(result => {
-            expect(result.created.length).to.eql(2);
-            result.created.forEach(r => {
-              expect(r.foo).to.eql("bar");
-            });
+        it("should reject if the hook returns something strange", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [() => 42]
+            }
           });
+          return articles.pullChanges(client, result)
+            .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'then' or 'changes' properties/);
+        });
+
+        it("should resolve if the hook returns a promise", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [payload => {
+                const newChanges = payload.changes.map(r => ({...r, foo: "bar"}));
+                return Promise.resolve({...payload, changes: newChanges});
+              }]
+            }
+          });
+          return articles.pullChanges(client, result)
+            .then(result => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach(r => {
+                expect(r.foo).to.eql("bar");
+              });
+            });
+        });
       });
 
       it("should not fetch remote records if result status isn't ok", () => {
