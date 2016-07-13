@@ -1492,7 +1492,7 @@ describe("Collection", () => {
         });
       });
 
-      it("should reject the promise if the hook throws", () => {
+      it("should reject if the hook returns something strange", () => {
         articles = testCollection({
           hooks: {
             "incoming-changes": [() => 42]
