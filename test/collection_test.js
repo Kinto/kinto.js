@@ -1408,14 +1408,10 @@ describe("Collection", () => {
             hooks: {
               "incoming-changes": [
                 function(incoming) {
-                  const returnedChanges = incoming;
-                  const changes = returnedChanges.changes;
-
-                  returnedChanges.changes = changes.map(r => {
-                    r.foo = "bar";
-                    return r;
-                  });
-                  return returnedChanges;
+                  const newChanges = incoming.changes.map(r => ({
+                    ...r, foo: "bar"
+                  }));
+                  return {...incoming, changes: newChanges};
                 }
               ]
             }
@@ -1438,13 +1434,13 @@ describe("Collection", () => {
           function hookFactory(fn) {
             return function(incoming) {
               const returnedChanges = incoming;
-              const changes = returnedChanges.changes;
-              returnedChanges.changes = changes.map(fn);
-              return returnedChanges;
+              const newChanges = returnedChanges.changes.map(fn);
+              return {...incoming, newChanges};
             };
           }
           articles = testCollection({
             hooks: {
+              // N.B. This only works because it's mutating serverChanges
               "incoming-changes": [
                 hookFactory(r => {
                   r.foo = "bar";
