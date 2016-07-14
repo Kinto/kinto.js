@@ -1408,14 +1408,10 @@ describe("Collection", () => {
             hooks: {
               "incoming-changes": [
                 function(incoming) {
-                  const returnedChanges = incoming;
-                  const changes = returnedChanges.changes;
-
-                  returnedChanges.changes = changes.map(r => {
-                    r.foo = "bar";
-                    return r;
-                  });
-                  return returnedChanges;
+                  const newChanges = incoming.changes.map(r => ({
+                    ...r, foo: "bar"
+                  }));
+                  return {...incoming, changes: newChanges};
                 }
               ]
             }
@@ -1438,13 +1434,13 @@ describe("Collection", () => {
           function hookFactory(fn) {
             return function(incoming) {
               const returnedChanges = incoming;
-              const changes = returnedChanges.changes;
-              returnedChanges.changes = changes.map(fn);
-              return returnedChanges;
+              const newChanges = returnedChanges.changes.map(fn);
+              return {...incoming, newChanges};
             };
           }
           articles = testCollection({
             hooks: {
+              // N.B. This only works because it's mutating serverChanges
               "incoming-changes": [
                 hookFactory(r => {
                   r.foo = "bar";
@@ -1490,18 +1486,35 @@ describe("Collection", () => {
               expect(passedCollection).to.eql(articles);
             });
         });
-      });
 
-      it("should reject the promise if the hook throws", () => {
-        articles = testCollection({
-          hooks: {
-            "incoming-changes": [() => 42]
-          }
+        it("should reject if the hook returns something strange", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [() => 42]
+            }
+          });
+          return articles.pullChanges(client, result)
+            .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'then\(\)' or 'changes' properties/);
         });
-        return articles.pullChanges(client, result)
-          .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'changes' property/);
-      });
 
+        it("should resolve if the hook returns a promise", () => {
+          articles = testCollection({
+            hooks: {
+              "incoming-changes": [payload => {
+                const newChanges = payload.changes.map(r => ({...r, foo: "bar"}));
+                return Promise.resolve({...payload, changes: newChanges});
+              }]
+            }
+          });
+          return articles.pullChanges(client, result)
+            .then(result => {
+              expect(result.created.length).to.eql(2);
+              result.created.forEach(r => {
+                expect(r.foo).to.eql("bar");
+              });
+            });
+        });
+      });
 
       it("should not fetch remote records if result status isn't ok", () => {
         result.ok = false;

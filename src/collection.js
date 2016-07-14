@@ -834,8 +834,10 @@ export default class Collection {
     return waterfall(this.hooks[hookName].map(hook => {
       return record => {
         const result = hook(payload, this);
-        if (!result || !result.hasOwnProperty("changes")) {
-          throw new Error(`Invalid return value for hook: ${JSON.stringify(result)} has no 'changes' property`);
+        const resultThenable = result && typeof result.then === "function";
+        const resultChanges = result && result.hasOwnProperty("changes");
+        if (!(resultThenable || resultChanges)) {
+          throw new Error(`Invalid return value for hook: ${JSON.stringify(result)} has no 'then()' or 'changes' properties`);
         }
         return result;
       };
