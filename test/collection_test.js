@@ -1494,7 +1494,7 @@ describe("Collection", () => {
             }
           });
           return articles.pullChanges(client, result)
-            .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'then' or 'changes' properties/);
+            .should.eventually.be.rejectedWith(Error, /Invalid return value for hook: 42 has no 'then\(\)' or 'changes' properties/);
         });
 
         it("should resolve if the hook returns a promise", () => {
