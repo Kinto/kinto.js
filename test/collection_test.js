@@ -2448,7 +2448,7 @@ describe("Collection", () => {
     });
   });
 
-  describe.only("Events", () => {
+  describe("Events", () => {
     let articles, article;
 
     beforeEach(() => {
