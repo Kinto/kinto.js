@@ -701,7 +701,9 @@ export default class Collection {
 
     return this.db.execute((transaction) => {
       const txn = new CollectionTransaction(this, transaction);
-      return doOperations(txn);
+      const result = doOperations(txn);
+      txn.emitEvents();
+      return result;
     }, {preload: preloadIds});
   }
 
@@ -1160,7 +1162,26 @@ export class CollectionTransaction {
     this.collection = collection;
     this.adapterTransaction = adapterTransaction;
 
-    this._events = collection.events;
+    this._events = [];
+  }
+
+  _windEvent(action, payload) {
+    this._events.push({action, payload});
+  }
+
+  /**
+   * Emit wound events, to be called once every transaction operations have
+   * been executed successfully.
+   */
+  emitEvents() {
+    for(let {action, payload} of this._events) {
+      this.collection.events.emit(action, payload);
+    }
+    if (this._events.length > 0) {
+      const targets = this._events.map(({action, payload}) => ({action, ...payload}));
+      this.collection.events.emit("change", {targets});
+    }
+    this._events = [];
   }
 
   /**
@@ -1222,7 +1243,7 @@ export class CollectionTransaction {
       // Delete for real.
       this.adapterTransaction.delete(id);
     }
-    this._events.emit("delete", {data: existing});
+    this._windEvent("delete", {data: existing});
     return {data: existing, permissions: {}};
   }
 
@@ -1237,7 +1258,7 @@ export class CollectionTransaction {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
       this.adapterTransaction.update(markDeleted(existing));
-      this._events.emit("delete", {data: existing});
+      this._windEvent("delete", {data: existing});
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
   }
@@ -1261,7 +1282,7 @@ export class CollectionTransaction {
     }
 
     this.adapterTransaction.create(record);
-    this._events.emit("create", {data: record});
+    this._windEvent("create", {data: record});
     return {data: record, permissions: {}};
   }
 
@@ -1296,7 +1317,7 @@ export class CollectionTransaction {
                                     : record;
     const updated = this._updateRaw(oldRecord, newRecord, options);
     this.adapterTransaction.update(updated);
-    this._events.emit("update", {data: updated, oldRecord});
+    this._windEvent("update", {data: updated, oldRecord});
     return {data: updated, oldRecord, permissions: {}};
   }
 
@@ -1353,7 +1374,11 @@ export class CollectionTransaction {
     if (oldRecord && oldRecord._status == "deleted") {
       oldRecord = undefined;
     }
-    this._events.emit(oldRecord ? "update" : "create", {data: updated, oldRecord});
-    return {data: updated, oldRecord: oldRecord, permissions: {}};
+    if (oldRecord) {
+      this._windEvent("update", {data: updated, oldRecord});
+    } else {
+      this._windEvent("create", {data: updated});
+    }
+    return {data: updated, oldRecord, permissions: {}};
   }
 }

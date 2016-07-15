@@ -2505,15 +2505,22 @@ describe("Collection", () => {
 
     it("should provide new record in data and old record", (done) => {
       articles.events.on("update", (event) => {
-        expect(event).to.have.property("data")
-                     .to.have.property("title")
-                     .eql("changed");
-        expect(event).to.have.property("oldRecord")
-                     .to.have.property("title")
-                     .eql("foo");
+        const {data, oldRecord} = event;
+        expect(data).to.have.property("title")
+                    .eql("changed");
+        expect(oldRecord).to.have.property("title")
+                         .eql("foo");
         done();
       });
       articles.update({...article, "title": "changed"});
+    });
+
+    it("should not provide oldRecord on creation with upsert", (done) => {
+      articles.events.on("create", (event) => {
+        expect(event).not.to.have.property("oldRecord");
+        done();
+      });
+      articles.upsert({id: uuid4(), some: "new"});
     });
 
     it("should provide old record", (done) => {
@@ -2524,6 +2531,76 @@ describe("Collection", () => {
         done();
       });
       articles.delete(article.id);
+    });
+
+
+    describe("Transactions", () => {
+
+      it("should send every events of a transaction", () => {
+        const callback = sinon.spy();
+        articles.events.on("create", callback);
+
+        return articles.execute((txn) => {
+          txn.create({id: uuid4(), title: "foo"});
+          txn.create({id: uuid4(), title: "bar"});
+        })
+        .then(() => expect(callback.callCount, 2));
+      });
+
+      it("should not send any event if the transaction fails", () => {
+        const callback = sinon.spy();
+        articles.events.on("create", callback);
+
+        return articles.execute((txn) => {
+          txn.create({id: uuid4(), title: "foo"});
+          throw new Error("Fail!");
+        })
+        .catch(() => {})
+        .then(() => expect(callback.callCount).eql(0));
+      });
+
+      it("should not send any change event if nothing happens in transaction", () => {
+        const callback = sinon.spy();
+        articles.events.on("change", callback);
+
+        return articles.execute((txn) => {
+          txn.deleteAny({id: uuid4()});
+        })
+        .then(() => expect(callback.callCount).eql(0));
+      });
+
+      it("should send a single changed event for the whole transaction", () => {
+        const callback = sinon.spy();
+        const id = uuid4();
+        const id2 = uuid4();
+
+        return articles.create({id, title: "foo"}, {useRecordId: true})
+          .then(() => {
+            articles.events.on("change", callback);
+            return articles.execute((txn) => {
+              txn.create({id: id2, title: "bar"});
+              txn.update({id, size: 42});
+              txn.delete(id);
+            }, {preloadIds: [id]});
+          })
+          .then(() => {
+            expect(callback.callCount).eql(1);
+            const payload = callback.lastCall.args[0];
+            const {targets} = payload;
+            expect(targets.length).eql(3);
+            expect(targets[0]).eql({
+              action: "create", data: { id: id2, title: "bar" }
+            });
+            expect(targets[1]).eql({
+              action: "update",
+              data: { _status: "created", id, size: 42 },  // never synced.
+              oldRecord: { _status: "created", id, title: "foo" }
+            });
+            expect(targets[2]).eql({
+              action: "delete", data: { _status: "created", id, title: "foo" }
+            });
+          });
+      });
     });
   });
 });
