@@ -732,9 +732,11 @@ articles.sync({ignoreBackoff: true})
 
 ## Events
 
-The `Kinto` instance and its other dependencies expose an `events` property you can subscribe public events from. That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
+### `Kinto` instance
 
-### The `backoff` event
+Using the `events` on a `Kinto` instance property you can subscribe public events from. That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
+
+#### The `backoff` event
 
 Triggered when a `Backoff` HTTP header has been received from the last received response from the server, meaning clients should hold on performing further requests during a given amount of time.
 
@@ -749,7 +751,7 @@ kinto.events.on("backoff", function(releaseTime) {
 });
 ```
 
-### The `deprecated` event
+#### The `deprecated` event
 
 Triggered when an `Alert` HTTP header is received from the server, meaning that a feature has been deprecated; the `event` argument received by the event listener contains the following deprecation information:
 
@@ -764,6 +766,60 @@ kinto.events.on("deprecated", function(event) {
   console.log(event.message);
 });
 ```
+
+### `Collection` instance
+
+#### Change event
+
+Triggered when a successful operation was executed. Only one is sent per transaction.
+
+The `event` argument contains the following information:
+
+- `targets`: a list of mappings with an `action` attribute and the other attributes of the respective event as described below.
+
+```js
+const kinto = new Kinto();
+const articles = kinto.collection("articles");
+
+articles.events.on("change", function(event) {
+  const first = event.targets[0];
+  console.log(first.action);
+  console.log(first.data.id);
+});
+
+articles.delete(recordId);
+```
+
+#### Per action event
+
+Atomic events are sent for ``create``, ``update`` and ``delete``.
+
+Every event contains the following attributes:
+
+- ``data``: the record that was created, updated or deleted
+
+The ``update`` event contains an additional attribute:
+
+- ``oldRecord``: the previous version of the updated record.
+
+
+```js
+const kinto = new Kinto();
+const articles = kinto.collection("articles");
+
+articles.events.on("update", function(event) {
+  console.log(`Title was changed from "${event.oldRecord.title}" to "${event.data.title}"`);
+});
+
+articles.upsert({id, title: "Holà!"});
+```
+
+> #### Notes
+>
+> - The `upsert()` method will fire either a `create` or an `update` event;
+> - The `deleteAny()` does not fire any event if the record does not exist;
+> - A transaction will fire as many atomic events as executed operations.
+
 
 ## Transformers
 

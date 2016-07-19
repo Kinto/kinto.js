@@ -701,7 +701,9 @@ export default class Collection {
 
     return this.db.execute((transaction) => {
       const txn = new CollectionTransaction(this, transaction);
-      return doOperations(txn);
+      const result = doOperations(txn);
+      txn.emitEvents();
+      return result;
     }, {preload: preloadIds});
   }
 
@@ -1159,6 +1161,27 @@ export class CollectionTransaction {
   constructor(collection, adapterTransaction) {
     this.collection = collection;
     this.adapterTransaction = adapterTransaction;
+
+    this._events = [];
+  }
+
+  _queueEvent(action, payload) {
+    this._events.push({action, payload});
+  }
+
+  /**
+   * Emit queued events, to be called once every transaction operations have
+   * been executed successfully.
+   */
+  emitEvents() {
+    for(let {action, payload} of this._events) {
+      this.collection.events.emit(action, payload);
+    }
+    if (this._events.length > 0) {
+      const targets = this._events.map(({action, payload}) => ({action, ...payload}));
+      this.collection.events.emit("change", {targets});
+    }
+    this._events = [];
   }
 
   /**
@@ -1220,6 +1243,7 @@ export class CollectionTransaction {
       // Delete for real.
       this.adapterTransaction.delete(id);
     }
+    this._queueEvent("delete", {data: existing});
     return {data: existing, permissions: {}};
   }
 
@@ -1234,6 +1258,7 @@ export class CollectionTransaction {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
       this.adapterTransaction.update(markDeleted(existing));
+      this._queueEvent("delete", {data: existing});
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
   }
@@ -1257,6 +1282,7 @@ export class CollectionTransaction {
     }
 
     this.adapterTransaction.create(record);
+    this._queueEvent("create", {data: record});
     return {data: record, permissions: {}};
   }
 
@@ -1291,7 +1317,8 @@ export class CollectionTransaction {
                                     : record;
     const updated = this._updateRaw(oldRecord, newRecord, options);
     this.adapterTransaction.update(updated);
-    return {data: updated, oldRecord: oldRecord, permissions: {}};
+    this._queueEvent("update", {data: updated, oldRecord});
+    return {data: updated, oldRecord, permissions: {}};
   }
 
   /**
@@ -1347,7 +1374,11 @@ export class CollectionTransaction {
     if (oldRecord && oldRecord._status == "deleted") {
       oldRecord = undefined;
     }
-
-    return {data: updated, oldRecord: oldRecord, permissions: {}};
+    if (oldRecord) {
+      this._queueEvent("update", {data: updated, oldRecord});
+    } else {
+      this._queueEvent("create", {data: updated});
+    }
+    return {data: updated, oldRecord, permissions: {}};
   }
 }
