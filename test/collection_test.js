@@ -2479,8 +2479,8 @@ describe("Collection", () => {
 
     it("should not emit if deleteAny fails", (done) => {
       articles.events.on("delete", () => done(new Error("fail")));
-      articles.deleteAny(uuid4());
-      setTimeout(() => done(), 5);
+      return articles.deleteAny(uuid4())
+        .then(() => done());
     });
 
     it("should emit a create event on upsert", (done) => {

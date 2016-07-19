@@ -1165,12 +1165,12 @@ export class CollectionTransaction {
     this._events = [];
   }
 
-  _windEvent(action, payload) {
+  _queueEvent(action, payload) {
     this._events.push({action, payload});
   }
 
   /**
-   * Emit wound events, to be called once every transaction operations have
+   * Emit queued events, to be called once every transaction operations have
    * been executed successfully.
    */
   emitEvents() {
@@ -1243,7 +1243,7 @@ export class CollectionTransaction {
       // Delete for real.
       this.adapterTransaction.delete(id);
     }
-    this._windEvent("delete", {data: existing});
+    this._queueEvent("delete", {data: existing});
     return {data: existing, permissions: {}};
   }
 
@@ -1258,7 +1258,7 @@ export class CollectionTransaction {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
       this.adapterTransaction.update(markDeleted(existing));
-      this._windEvent("delete", {data: existing});
+      this._queueEvent("delete", {data: existing});
     }
     return {data: {id, ...existing}, deleted: !!existing, permissions: {}};
   }
@@ -1282,7 +1282,7 @@ export class CollectionTransaction {
     }
 
     this.adapterTransaction.create(record);
-    this._windEvent("create", {data: record});
+    this._queueEvent("create", {data: record});
     return {data: record, permissions: {}};
   }
 
@@ -1317,7 +1317,7 @@ export class CollectionTransaction {
                                     : record;
     const updated = this._updateRaw(oldRecord, newRecord, options);
     this.adapterTransaction.update(updated);
-    this._windEvent("update", {data: updated, oldRecord});
+    this._queueEvent("update", {data: updated, oldRecord});
     return {data: updated, oldRecord, permissions: {}};
   }
 
@@ -1375,9 +1375,9 @@ export class CollectionTransaction {
       oldRecord = undefined;
     }
     if (oldRecord) {
-      this._windEvent("update", {data: updated, oldRecord});
+      this._queueEvent("update", {data: updated, oldRecord});
     } else {
-      this._windEvent("create", {data: updated});
+      this._queueEvent("create", {data: updated});
     }
     return {data: updated, oldRecord, permissions: {}};
   }

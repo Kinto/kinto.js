@@ -782,9 +782,9 @@ const kinto = new Kinto();
 const articles = kinto.collection("articles");
 
 articles.events.on("change", function(event) {
-  const first = events.targets[0];
+  const first = event.targets[0];
   console.log(first.action);
-  console.log(first.data);
+  console.log(first.data.id);
 });
 
 articles.delete(recordId);
@@ -798,7 +798,7 @@ Every event contains the following attributes:
 
 - ``data``: the record that was created, updated or deleted
 
-The ``update`` event contains an additionnal attribute:
+The ``update`` event contains an additional attribute:
 
 - ``oldRecord``: the previous version of the updated record.
 
