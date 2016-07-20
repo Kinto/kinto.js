@@ -6,7 +6,7 @@ node_js:
 python:
 - "3.5"
 env:
-- SERVER=3.3.0 ACTION=test
+- SERVER=3.3.1 ACTION=test
 - SERVER=development ACTION=test
 - ACTION="run lint"
 - ACTION="run dist"       # ensures building dist files doesn't break
