@@ -22,6 +22,10 @@ chai.config.includeStack = true;
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
 const FAKE_SERVER_URL = "http://fake-server/v1";
+const NULL_SCHEMA = {
+  generate() {},
+  validate() { return true; }
+};
 
 /** @test {Collection} */
 describe("Collection", () => {
@@ -1313,6 +1317,29 @@ describe("Collection", () => {
           .then(res => res.toSync.map(r => r.title).sort())
           .should.become(["abcdef?!", "ghijkl?!"]);
       });
+
+      it("should encode even deleted records", () => {
+        const transformer = {
+          called: false,
+          encode(record) {
+            this.called = true;
+            return {...record, id: "remote-" + record.id};
+          },
+          decode() {}
+        };
+        articles = testCollection({
+          idSchema: NULL_SCHEMA,
+          remoteTransformers: [transformer]
+        });
+        let id = uuid4();
+        return articles.create({id: id, title: "some title"}, {synced: true}).then(() => {
+          return articles.delete(id);
+        }).then(() => articles.gatherLocalChanges())
+        .then(changes => {
+          expect(transformer.called).equal(true);
+          expect(changes.toDelete[0]).property("id", "remote-" + id);
+        });
+      });
     });
   });
 
@@ -1831,6 +1858,29 @@ describe("Collection", () => {
       return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
         .then(res => res.created[0].title)
         .should.become("bar?!"); // reversed because we decode in the opposite order
+    });
+
+    it("should decode incoming records even when deleted", () => {
+      let transformer = {
+        called: false,
+        encode() {},
+        decode(record) {
+          this.called = true;
+          return {...record, id: "local-" + record.id};
+        }
+      };
+      articles = testCollection({
+        idSchema: NULL_SCHEMA,
+        remoteTransformers: [transformer]
+      });
+      let id = uuid4();
+      return articles.create({id: "local-" + id, title: "some title"}, {synced: true}).then(() => {
+        return articles.importChanges(result, {changes: [{id: id, deleted: true}]});
+      }).then(res => {
+        expect(transformer.called).equal(true);
+        return res.deleted[0];
+      })
+        .should.eventually.property("id", "local-" + id);
     });
 
     it("should only retrieve the changed record", () => {
