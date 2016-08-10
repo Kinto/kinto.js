@@ -859,7 +859,8 @@ coll = kinto.collection("articles", {
 > #### Notes
 >
 > - The `decode` method should be the strict reverse version of `encode`;
-> - `record.id` should *always* be left unchanged by a transformer;
+> - Your transformer will be called even on deleted records, so be sure to handle those correctly in both encoding and decoding;
+> - Be careful when altering `record.id`, since this can interfere with syncing;
 > - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
 
 Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
