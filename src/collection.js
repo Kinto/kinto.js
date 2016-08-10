@@ -744,7 +744,7 @@ export default class Collection {
    * - `toDelete`: unsynced deleted records we can safely delete;
    * - `toSync`: local updates to send to the server.
    *
-   * @return {Object}
+   * @return {Promise}
    */
   gatherLocalChanges() {
     return Promise.all([
