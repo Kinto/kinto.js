@@ -2479,7 +2479,7 @@ describe("Collection", () => {
 
     it("should not emit if deleteAny fails", (done) => {
       articles.events.on("delete", () => done(new Error("fail")));
-      return articles.deleteAny(uuid4())
+      articles.deleteAny(uuid4())
         .then(() => done());
     });
 

@@ -139,7 +139,7 @@
     "gh-pages": "^0.11.0",
     "http-server": "^0.9.0",
     "kinto-node-test-server": "0.0.1",
-    "mocha": "^2.3.4",
+    "mocha": "^3.0.2",
     "sinon": "^1.17.2",
     "uglifyify": "^3.0.1"
   }
