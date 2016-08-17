@@ -316,15 +316,16 @@ articles.list({filters: {unread: true}})
 
 ### Sorting
 
-Records can be sorted using the `sort` parameter:
+Records can be sorted using the `order` parameter:
 
 ```js
-articles.list({sort: "-title"})
+articles.list({order: "-title"})
   .then(console.log.bind(console));
 ```
 
 > #### Notes
 >
+> - Sorts according to a single field.
 > - Prefix field name with `-` for descending order.
 > - By default, the records are sorted on `last_modified` in descending order.
 > - As mentioned in the [limitations](limitations.md) section, the sort is performed in memory.
