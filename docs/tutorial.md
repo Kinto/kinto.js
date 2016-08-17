@@ -395,18 +395,25 @@ Let's create a conflict by:
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ http -a user:pass PATCH https://kinto.dev.mozaws.net/v1/collections/tasks/records/c8d522b1-11bd-4c0a-ab34-a36c427e0530 title="eat even more cheese"
-Access-Control-Expose-Headers: Backoff, Retry-After, Alert
-Content-Length: 118
+$ echo '{"data": {"title": "eat even more cheese"}}' | http -a user:pass PATCH https://kinto.dev.mozaws.net/v1/buckets/default/collections/tasks/records/81f130ac-334b-4a9b-b53c-ea8c9488bf76
+HTTP/1.1 200 OK
+Access-Control-Expose-Headers: Retry-After, Content-Length, Alert, Backoff
+Connection: keep-alive
+Content-Length: 231
 Content-Type: application/json; charset=UTF-8
-Date: Thu, 18 Jun 2015 09:01:00 GMT
-Server: waitress
+Date: Tue, 16 Aug 2016 08:23:01 GMT
+ETag: "1471335781121"
+Last-Modified: Tue, 16 Aug 2016 08:23:01 GMT
+Server: nginx
 
 {
-    "done": false,
-    "id": "c8d522b1-11bd-4c0a-ab34-a36c427e0530",
-    "title": "eat even more cheese",
-    "last_modified": 1434619745465
+    "data": {
+        "done": false,
+        "id": "81f130ac-334b-4a9b-b53c-ea8c9488bf76",
+        "last_modified": 1471335781121,
+        "title": "eat even more cheese"
+    },
+    "permissions": (snip)
 }
 ```
 
