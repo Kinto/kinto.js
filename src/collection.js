@@ -620,9 +620,6 @@ export default class Collection {
    */
   importChanges(syncResultObject, changeObject) {
     return Promise.all(changeObject.changes.map(change => {
-      if (change.deleted) {
-        return Promise.resolve(change);
-      }
       return this._decodeRecord("remote", change);
     }))
       .then(decodedChanges => {
@@ -747,22 +744,21 @@ export default class Collection {
    * - `toDelete`: unsynced deleted records we can safely delete;
    * - `toSync`: local updates to send to the server.
    *
-   * @return {Object}
+   * @return {Promise}
    */
   gatherLocalChanges() {
-    let _toDelete;
     return Promise.all([
       this.list({filters: {_status: ["created", "updated"]}, order: ""}),
       this.list({filters: {_status: "deleted"}, order: ""},
                 {includeDeleted: true}),
     ])
       .then(([unsynced, deleted]) => {
-        _toDelete = deleted.data;
-        // Encode unsynced records.
-        return Promise.all(
-          unsynced.data.map(this._encodeRecord.bind(this, "remote")));
+        return Promise.all([
+          Promise.all(unsynced.data.map(this._encodeRecord.bind(this, "remote"))),
+          Promise.all(deleted.data.map(this._encodeRecord.bind(this, "remote")))
+        ]);
       })
-      .then(toSync => ({toDelete: _toDelete, toSync}));
+      .then(([toSync, toDelete]) => ({toSync, toDelete}));
   }
 
   /**
