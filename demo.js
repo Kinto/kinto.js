@@ -44,7 +44,7 @@ function main() {
     return tasks.sync(syncOptions).catch(function(err) {
       const message = err.message || err;
       console.log("Got an error", err, message);
-      if (message.contains("flushed")) {
+      if (message.includes("flushed")) {
         console.warn("Flushed server detected, marking local data for reupload.");
         return tasks.resetSyncStatus()
           .then(function() {
