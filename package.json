@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "3.1.2",
+  "version": "4.0.0",
   "description": "An Offline-First JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
@@ -96,6 +96,10 @@
     {
       "name": "Mathieu Agopian",
       "url": "https://github.com/magopian"
+    },
+    {
+      "name": "Eric Le Lay",
+      "url": "https://github.com/elelay"
     }
   ],
   "license": "Apache-2.0",
