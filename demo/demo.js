@@ -42,7 +42,7 @@ function main() {
 
   function doSync() {
     return tasks.sync(syncOptions).catch(function(err) {
-      if (err.message.contains("flushed")) {
+      if (err.message.includes("flushed")) {
         console.warn("Flushed server detected, marking local data for reupload.");
         return tasks.resetSyncStatus()
           .then(function() {
