@@ -40,5 +40,5 @@ integrity with the hash provided below:
 | Filename                | Hash                                                                    |
 |-------------------------|-------------------------------------------------------------------------|
 | kinto.js                | sha384-MUdIR7pARxZVGjSznOFL4DwubWEYfRb//ChmClWFQs5TQpO52dOjRp5sHL7LhMRN |
-| kinto.min.js            | sha384-fx+MFeAALvDpEVVwmlrxiJABNAtkF8FavxdNSloHjevSrBN2Swk4j4qiqMcnnABr |
+| kinto.min.js            | sha384-Ew1h0Ppxehxd4DUjvzJvlwQ1KVZhft1glXSRSvWwjP3dBcC8ghW0y32h2unWzrkM |
 | kinto.noshim.js         | sha384-52EOgtfIvmJD+ADTUIz5qmMeQH9FV3ZtXADKUsG8BQugxRQQ18PSvG3QWhQaTClc |
