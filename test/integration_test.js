@@ -732,15 +732,8 @@ describe("Integration tests", function() {
               return tasks.delete(id);
             })
             .then(() => {
-              return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records/${id}`, {
-                method: "PUT",
-                headers: {
-                  "Accept":        "application/json",
-                  "Content-Type":  "application/json",
-                  "Authorization": "Basic " + btoa("user:pass"),
-                },
-                body: JSON.stringify({data: {title: "server-updated", done: true}})
-              });
+              return tasks.api.bucket("default").collection("tasks")
+                .updateRecord({id, title: "server-updated"});
             })
             .then(() => {
               return tasks.sync();
