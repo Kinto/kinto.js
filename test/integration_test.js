@@ -719,6 +719,50 @@ describe("Integration tests", function() {
 
       });
 
+      describe("Outgoing conflicting deletion", () => {
+        let id, conflicts;
+
+        beforeEach(() => {
+          return tasks.create({title: "initial"})
+            .then(({data}) => {
+              id = data.id;
+              return tasks.sync();
+            })
+            .then(() => {
+              return tasks.delete(id);
+            })
+            .then(() => {
+              return tasks.api.bucket("default").collection("tasks")
+                .updateRecord({id, title: "server-updated"});
+            })
+            .then(() => {
+              return tasks.sync();
+            })
+            .then((res) => {
+              conflicts = res.conflicts;
+            });
+        });
+
+        it("should properly list the encountered conflict", () => {
+          expect(conflicts).to.have.length.of(1);
+        });
+
+        it("should list the proper type of conflict", () => {
+          expect(conflicts[0].type).eql("outgoing");
+        });
+
+        it("should have the expected conflicting local version", () => {
+          expect(conflicts[0].local).eql({});
+        });
+
+        it("should have the expected conflicting remote version", () => {
+          expect(conflicts[0].remote)
+            .to.have.property("id").eql(id);
+          expect(conflicts[0].remote)
+            .to.have.property("title").eql("server-updated");
+        });
+      });
+
       describe("Outgoing conflict", () => {
         let syncResult;
 
