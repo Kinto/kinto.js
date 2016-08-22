@@ -720,7 +720,7 @@ describe("Integration tests", function() {
       });
 
       describe("Outgoing conflicting deletion", () => {
-        let id, syncResult;
+        let id, conflicts;
 
         beforeEach(() => {
           return tasks.create({title: "initial"})
@@ -746,16 +746,23 @@ describe("Integration tests", function() {
               return tasks.sync();
             })
             .then((res) => {
-              syncResult = res;
+              conflicts = res.conflicts;
             });
         });
 
         it("should properly list the encountered conflict", () => {
-          const {conflicts} = syncResult;
+          expect(conflicts).to.have.length.of(1);
+        });
 
-          expect(conflicts).to.have.length.of(1),
+        it("should list the proper type of conflict", () => {
           expect(conflicts[0].type).eql("outgoing");
+        });
+
+        it("should have the expected conflicting local version", () => {
           expect(conflicts[0].local).eql({});
+        });
+
+        it("should have the expected conflicting remote version", () => {
           expect(conflicts[0].remote)
             .to.have.property("id").eql(id);
           expect(conflicts[0].remote)
