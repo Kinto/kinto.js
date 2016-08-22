@@ -719,6 +719,50 @@ describe("Integration tests", function() {
 
       });
 
+      describe("Outgoing conflicting deletion", () => {
+        let id, syncResult;
+
+        beforeEach(() => {
+          return tasks.create({title: "initial"})
+            .then(({data}) => {
+              id = data.id;
+              return tasks.sync();
+            })
+            .then(() => {
+              return tasks.delete(id);
+            })
+            .then(() => {
+              return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records/${id}`, {
+                method: "PUT",
+                headers: {
+                  "Accept":        "application/json",
+                  "Content-Type":  "application/json",
+                  "Authorization": "Basic " + btoa("user:pass"),
+                },
+                body: JSON.stringify({data: {title: "server-updated", done: true}})
+              });
+            })
+            .then(() => {
+              return tasks.sync();
+            })
+            .then((res) => {
+              syncResult = res;
+            });
+        });
+
+        it("should properly list the encountered conflict", () => {
+          const {conflicts} = syncResult;
+
+          expect(conflicts).to.have.length.of(1),
+          expect(conflicts[0].type).eql("outgoing");
+          expect(conflicts[0].local).eql({});
+          expect(conflicts[0].remote)
+            .to.have.property("id").eql(id);
+          expect(conflicts[0].remote)
+            .to.have.property("title").eql("server-updated");
+        });
+      });
+
       describe("Outgoing conflict", () => {
         let syncResult;
 
