@@ -889,11 +889,15 @@ export default class Collection {
 
         // The result of a batch returns data and permissions.
         // XXX: permissions are ignored currently.
-        const conflicts = synced.conflicts.map(({type, local, remote}) => {
+        const conflicts = Promise.all(synced.conflicts.map(({type, local, remote}) => {
           // Note: we ensure that local data are actually available, as they may
           // be missing in the case of a published deletion.
-          return {type, local: local && local.data || {}, remote};
-        });
+          return this._decodeRecord("remote", local || {}).then(realLocal => {
+            return this._decodeRecord("remote", remote).then(realRemote => {
+              return {type: type, local: realLocal, remote: realRemote};
+            });
+          });
+        }));
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
 
