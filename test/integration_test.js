@@ -81,23 +81,27 @@ describe("Integration tests", function() {
 
     describe("Synchronization", () => {
       function testSync(data, options={}) {
+        return collectionTestSync(tasks, data, options);
+      }
+
+      function collectionTestSync(collection, data, options) {
         return Promise.all([].concat(
           // Create local unsynced records
-          data.localUnsynced.map(record => tasks.create(record, {useRecordId: true})),
+          data.localUnsynced.map(record => collection.create(record, {useRecordId: true})),
           // Create local synced records
-          data.localSynced.map(record => tasks.create(record, {synced: true})),
+          data.localSynced.map(record => collection.create(record, {synced: true})),
           // Create remote records
-          tasks.api.bucket("default").collection("tasks").batch((batch) => {
+          collection.api.bucket("default").collection(collection._name).batch((batch) => {
             data.server.forEach((r) => batch.createRecord(r));
             data.localSynced.forEach((r) => batch.createRecord(r));
           }, {safe: true})
         )).then(_ => {
-          return tasks.sync(options);
+          return collection.sync(options);
         });
       }
 
-      function getRemoteList() {
-        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records?_sort=title`, {
+      function getRemoteList(collection="tasks") {
+        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/${collection}/records?_sort=title`, {
           headers: {"Authorization": "Basic " + btoa("user:pass")}
         })
           .then(res => res.json())
@@ -539,6 +543,62 @@ describe("Integration tests", function() {
             it("should not update anything", () => {
               expect(nextSyncResult.updated).to.have.length.of(0);
             });
+          });
+        });
+
+        describe("CLIENT_WINS strategy with transformers", () => {
+          beforeEach(() => {
+            return collectionTestSync(tasksTransformed, testData, {
+              strategy: Kinto.syncStrategy.CLIENT_WINS
+            }).then(res => syncResult = res);
+          });
+
+          it("should publish resolved conflict using local version", () => {
+            expect(syncResult.published).to.have.length.of(1);
+            expect(recordsEqual(syncResult.published[0], {
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            })).eql(true);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(recordsEqual(syncResult.resolved[0], {
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            })).eql(true);
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasksTransformed.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              })))
+              .should.become([
+                {title: "task1", _status: "synced", done: true},
+                {title: "task2", _status: "synced", done: false},
+                {title: "task3", _status: "synced", done: true},
+                // For CLIENT_WINS strategy, local record is marked as synced
+                {title: "task4-local", _status: "synced", done: false},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList(tasksTransformed._name).should.become([
+              // local task4 should have been published to the server.
+              {title: "task1", done: true},
+              {title: "task2", done: false},
+              {title: "task3", done: true},
+              {title: "task4-local!", done: false},
+            ]);
           });
         });
 
