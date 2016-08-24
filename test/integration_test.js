@@ -874,7 +874,8 @@ describe("Integration tests", function() {
         }
 
         beforeEach(() => {
-          return setupConflict(tasks).then(() => setupConflict(tasksTransformed));
+          return setupConflict(tasks)
+            .then(() => setupConflict(tasksTransformed));
         });
 
         describe("MANUAL strategy (default)", () => {
@@ -1097,9 +1098,9 @@ describe("Integration tests", function() {
         describe("CLIENT_WINS strategy with transformers", () => {
           beforeEach(() => {
             return tasksTransformed.sync({strategy: Kinto.syncStrategy.CLIENT_WINS})
-            .then(res => {
-              syncResult = res;
-            });
+              .then(res => {
+                syncResult = res;
+              });
           });
 
           it("should put local database in the expected state", () => {
@@ -1224,9 +1225,9 @@ describe("Integration tests", function() {
         describe("SERVER_WINS strategy with transformers", () => {
           beforeEach(() => {
             return tasksTransformed.sync({strategy: Kinto.syncStrategy.SERVER_WINS})
-            .then(res => {
-              syncResult = res;
-            });
+              .then(res => {
+                syncResult = res;
+              });
           });
 
           it("should not publish anything", () => {
