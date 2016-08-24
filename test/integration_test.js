@@ -852,15 +852,8 @@ describe("Integration tests", function() {
           // Ensure that the remote record looks like something that's
           // been transformed
           return collection._encodeRecord("remote", record).then(record => {
-            return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/${collection._name}/records`, {
-              method: "POST",
-              headers: {
-                "Accept":        "application/json",
-                "Content-Type":  "application/json",
-                "Authorization": "Basic " + btoa("user:pass"),
-              },
-              body: JSON.stringify({data: record})
-            });
+            return collection.api.bucket("default").collection(collection._name)
+              .createRecord(record);
           })
             .then(_ => collection.sync())
             .then(res => {
