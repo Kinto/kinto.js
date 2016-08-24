@@ -848,14 +848,19 @@ describe("Integration tests", function() {
 
         function setupConflict(collection) {
           let recordId;
-          return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/${collection._name}/records`, {
-            method: "POST",
-            headers: {
-              "Accept":        "application/json",
-              "Content-Type":  "application/json",
-              "Authorization": "Basic " + btoa("user:pass"),
-            },
-            body: JSON.stringify({data: {title: "task1-remote", done: true}})
+          const record = {title: "task1-remote", done: true};
+          // Ensure that the remote record looks like something that's
+          // been transformed
+          return collection._encodeRecord("remote", record).then(record => {
+            return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/${collection._name}/records`, {
+              method: "POST",
+              headers: {
+                "Accept":        "application/json",
+                "Content-Type":  "application/json",
+                "Authorization": "Basic " + btoa("user:pass"),
+              },
+              body: JSON.stringify({data: record})
+            });
           })
             .then(_ => collection.sync())
             .then(res => {
@@ -1213,6 +1218,40 @@ describe("Integration tests", function() {
             it("should not update anything", () => {
               expect(nextSyncResult.updated).to.have.length.of(0);
             });
+          });
+        });
+
+        describe("SERVER_WINS strategy with transformers", () => {
+          beforeEach(() => {
+            return tasksTransformed.sync({strategy: Kinto.syncStrategy.SERVER_WINS})
+            .then(res => {
+              syncResult = res;
+            });
+          });
+
+          it("should not publish anything", () => {
+            expect(syncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved[0].title).eql("task1-remote");
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasksTransformed.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For SERVER_WINS strategy, local version is marked as synced
+                {title: "task1-remote", _status: "synced"},
+              ]);
           });
         });
       });
