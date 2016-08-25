@@ -856,6 +856,7 @@ export default class Collection {
       return Promise.resolve(syncResultObject);
     }
     const safe = !options.strategy || options.strategy !== Collection.CLIENT_WINS;
+    let synced;
 
     // Fetch local changes
     return this.gatherLocalChanges()
@@ -880,7 +881,8 @@ export default class Collection {
         }, {headers: options.headers, safe, aggregate: true});
       })
       // Update published local records
-      .then((synced) => {
+      .then(batchResult => {
+        synced = batchResult;
         // Merge outgoing errors into sync result object
         syncResultObject.add("errors", synced.errors.map(error => {
           error.type = "outgoing";
@@ -889,11 +891,17 @@ export default class Collection {
 
         // The result of a batch returns data and permissions.
         // XXX: permissions are ignored currently.
-        const conflicts = synced.conflicts.map(({type, local, remote}) => {
+        return Promise.all(synced.conflicts.map(({type, local, remote}) => {
           // Note: we ensure that local data are actually available, as they may
           // be missing in the case of a published deletion.
-          return {type, local: local && local.data || {}, remote};
-        });
+          const safeLocal = local && local.data || {};
+          return this._decodeRecord("remote", safeLocal).then(realLocal => {
+            return this._decodeRecord("remote", remote).then(realRemote => {
+              return {type, local: realLocal, remote: realRemote};
+            });
+          });
+        }));
+      }).then(conflicts => {
         // Merge outgoing conflicts into sync result object
         syncResultObject.add("conflicts", conflicts);
 

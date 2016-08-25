@@ -16,9 +16,26 @@ chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
+const appendTransformer = function(s) {
+  return {
+    encode(record) {
+      return Promise.resolve({...record, title: (record.title || "") + s});
+    },
+    decode(record) {
+      if (record.title) {
+        let newTitle = record.title;
+        if (record.title.slice(-s.length) === s) {
+          newTitle = record.title.slice(0, -1);
+        }
+        return Promise.resolve({...record, title: newTitle});
+      }
+      return Promise.resolve(record);
+    }
+  };
+};
 
 describe("Integration tests", function() {
-  let sandbox, server, kinto, tasks;
+  let sandbox, server, kinto, tasks, tasksTransformed;
 
   // Disabling test timeouts until pserve gets decent startup time.
   this.timeout(0);
@@ -46,6 +63,9 @@ describe("Integration tests", function() {
       headers: {Authorization: "Basic " + btoa("user:pass")}
     });
     tasks = kinto.collection("tasks");
+    tasksTransformed = kinto.collection("tasks-transformer", {
+      remoteTransformers: [appendTransformer("!")],
+    });
   });
 
   afterEach(() => sandbox.restore());
@@ -56,28 +76,32 @@ describe("Integration tests", function() {
     after(() => server.stop());
 
     beforeEach(() => {
-      return tasks.clear().then(_ => server.flush());
+      return tasks.clear().then(_ => tasksTransformed.clear()).then(_ => server.flush());
     });
 
     describe("Synchronization", () => {
       function testSync(data, options={}) {
+        return collectionTestSync(tasks, data, options);
+      }
+
+      function collectionTestSync(collection, data, options) {
         return Promise.all([].concat(
           // Create local unsynced records
-          data.localUnsynced.map(record => tasks.create(record, {useRecordId: true})),
+          data.localUnsynced.map(record => collection.create(record, {useRecordId: true})),
           // Create local synced records
-          data.localSynced.map(record => tasks.create(record, {synced: true})),
+          data.localSynced.map(record => collection.create(record, {synced: true})),
           // Create remote records
-          tasks.api.bucket("default").collection("tasks").batch((batch) => {
+          collection.api.bucket("default").collection(collection._name).batch((batch) => {
             data.server.forEach((r) => batch.createRecord(r));
             data.localSynced.forEach((r) => batch.createRecord(r));
           }, {safe: true})
         )).then(_ => {
-          return tasks.sync(options);
+          return collection.sync(options);
         });
       }
 
-      function getRemoteList() {
-        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records?_sort=title`, {
+      function getRemoteList(collection="tasks") {
+        return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/${collection}/records?_sort=title`, {
           headers: {"Authorization": "Basic " + btoa("user:pass")}
         })
           .then(res => res.json())
@@ -522,6 +546,62 @@ describe("Integration tests", function() {
           });
         });
 
+        describe("CLIENT_WINS strategy with transformers", () => {
+          beforeEach(() => {
+            return collectionTestSync(tasksTransformed, testData, {
+              strategy: Kinto.syncStrategy.CLIENT_WINS
+            }).then(res => syncResult = res);
+          });
+
+          it("should publish resolved conflict using local version", () => {
+            expect(syncResult.published).to.have.length.of(1);
+            expect(recordsEqual(syncResult.published[0], {
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            })).eql(true);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(recordsEqual(syncResult.resolved[0], {
+              id: conflictingId,
+              title: "task4-local",
+              done: false,
+            })).eql(true);
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasksTransformed.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              })))
+              .should.become([
+                {title: "task1", _status: "synced", done: true},
+                {title: "task2", _status: "synced", done: false},
+                {title: "task3", _status: "synced", done: true},
+                // For CLIENT_WINS strategy, local record is marked as synced
+                {title: "task4-local", _status: "synced", done: false},
+              ]);
+          });
+
+          it("should put remote test server data in the expected state", () => {
+            return getRemoteList(tasksTransformed._name).should.become([
+              // local task4 should have been published to the server.
+              {title: "task1", done: true},
+              {title: "task2", done: false},
+              {title: "task3", done: true},
+              {title: "task4-local!", done: false},
+            ]);
+          });
+        });
+
         describe("SERVER_WINS strategy", () => {
           beforeEach(() => {
             return testSync(testData, {
@@ -766,26 +846,29 @@ describe("Integration tests", function() {
       describe("Outgoing conflict", () => {
         let syncResult;
 
-        beforeEach(() => {
+        function setupConflict(collection) {
           let recordId;
-          return fetch(`${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`, {
-            method: "POST",
-            headers: {
-              "Accept":        "application/json",
-              "Content-Type":  "application/json",
-              "Authorization": "Basic " + btoa("user:pass"),
-            },
-            body: JSON.stringify({data: {title: "task1-remote", done: true}})
+          const record = {title: "task1-remote", done: true};
+          // Ensure that the remote record looks like something that's
+          // been transformed
+          return collection._encodeRecord("remote", record).then(record => {
+            return collection.api.bucket("default").collection(collection._name)
+              .createRecord(record);
           })
-            .then(_ => tasks.sync())
+            .then(_ => collection.sync())
             .then(res => {
               recordId = res.created[0].id;
-              return tasks.delete(recordId, { virtual: false });
-            }).then(_ => tasks.create({
+              return collection.delete(recordId, { virtual: false });
+            }).then(_ => collection.create({
               id: recordId,
               title: "task1-local",
               done: false
             }, { useRecordId: true }));
+        }
+
+        beforeEach(() => {
+          return setupConflict(tasks)
+            .then(() => setupConflict(tasksTransformed));
         });
 
         describe("MANUAL strategy (default)", () => {
@@ -1005,6 +1088,27 @@ describe("Integration tests", function() {
           });
         });
 
+        describe("CLIENT_WINS strategy with transformers", () => {
+          beforeEach(() => {
+            return tasksTransformed.sync({strategy: Kinto.syncStrategy.CLIENT_WINS})
+              .then(res => {
+                syncResult = res;
+              });
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasksTransformed.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For CLIENT_WINS strategy, local version is marked as synced
+                {title: "task1-local", _status: "synced"},
+              ]);
+          });
+        });
+
         describe("SERVER_WINS strategy", () => {
           beforeEach(() => {
             return tasks.sync({strategy: Kinto.syncStrategy.SERVER_WINS})
@@ -1108,6 +1212,40 @@ describe("Integration tests", function() {
             it("should not update anything", () => {
               expect(nextSyncResult.updated).to.have.length.of(0);
             });
+          });
+        });
+
+        describe("SERVER_WINS strategy with transformers", () => {
+          beforeEach(() => {
+            return tasksTransformed.sync({strategy: Kinto.syncStrategy.SERVER_WINS})
+              .then(res => {
+                syncResult = res;
+              });
+          });
+
+          it("should not publish anything", () => {
+            expect(syncResult.published).to.have.length.of(0);
+          });
+
+          it("should not update anything", () => {
+            expect(syncResult.updated).to.have.length.of(0);
+          });
+
+          it("should list resolved records", () => {
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved[0].title).eql("task1-remote");
+          });
+
+          it("should put local database in the expected state", () => {
+            return tasksTransformed.list({order: "title"})
+              .then(res => res.data.map(record => ({
+                title: record.title,
+                _status: record._status,
+              })))
+              .should.become([
+                // For SERVER_WINS strategy, local version is marked as synced
+                {title: "task1-remote", _status: "synced"},
+              ]);
           });
         });
       });
