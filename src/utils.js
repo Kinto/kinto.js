@@ -125,7 +125,7 @@ export function deepEqual(a, b) {
   if (typeof(a) !== typeof(b)) {
     return false;
   }
-  if (!(a instanceof Object) || !(b instanceof Object)) {
+  if (!(a && typeof a == "object") || !(b && typeof b == "object")) {
     return false;
   }
   if (Object.keys(a).length !== Object.keys(b).length) {
