@@ -443,6 +443,10 @@ describe("Integration tests", function() {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
+          it("should have updated lastModified", () => {
+            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+          });
+
           it("should have no incoming conflict listed", () => {
             expect(syncResult.conflicts).to.have.length.of(0);
           });
@@ -619,6 +623,10 @@ describe("Integration tests", function() {
 
           it("should have a valid lastModified value", () => {
             expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have updated lastModified", () => {
+            expect(syncResult.lastModified).to.equal(tasks.lastModified);
           });
 
           it("should have no incoming conflict listed", () => {
@@ -891,6 +899,10 @@ describe("Integration tests", function() {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
+          it("should have updated lastModified", () => {
+            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+          });
+
           it("should have the outgoing conflict listed", () => {
             expect(syncResult.conflicts).to.have.length.of(1);
             expect(syncResult.conflicts[0].type).eql("outgoing");
@@ -1127,6 +1139,10 @@ describe("Integration tests", function() {
 
           it("should have a valid lastModified value", () => {
             expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have updated lastModified", () => {
+            expect(syncResult.lastModified).to.equal(tasks.lastModified);
           });
 
           it("should have the outgoing conflict listed", () => {
