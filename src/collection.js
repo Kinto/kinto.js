@@ -654,16 +654,7 @@ export default class Collection {
       })
       .then(syncResultObject => {
         syncResultObject.lastModified = changeObject.lastModified;
-        // Don't persist lastModified value if any conflict or error occured
-        if (!syncResultObject.ok) {
-          return syncResultObject;
-        }
-        // No conflict occured, persist collection's lastModified value
-        return this.db.saveLastModified(syncResultObject.lastModified)
-          .then(lastModified => {
-            this._lastModified = lastModified;
-            return syncResultObject;
-          });
+        return syncResultObject;
       });
   }
 
@@ -1093,7 +1084,20 @@ export default class Collection {
         // Avoid redownloading our own changes during the last pull.
         const pullOpts = {...options, exclude: result.published};
         return this.pullChanges(client, result, pullOpts);
+      })
+      .then(syncResultObject => {
+        // Don't persist lastModified value if any conflict or error occured
+        if (!syncResultObject.ok) {
+          return syncResultObject;
+        }
+        // No conflict occured, persist collection's lastModified value
+        return this.db.saveLastModified(syncResultObject.lastModified)
+          .then(lastModified => {
+            this._lastModified = lastModified;
+            return syncResultObject;
+          });
       });
+
     // Ensure API default remote is reverted if a custom one's been used
     return pFinally(syncPromise, () => this.api.remote = previousRemote);
   }
