@@ -984,7 +984,7 @@ const nopSchema = {
         throw new Error("can't generate keys");
     },
     validate: function(id) {
-        return true
+        return true;
     }
 };
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
