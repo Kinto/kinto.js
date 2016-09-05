@@ -977,6 +977,24 @@ coll = kinto.collection("articles", {
 > - The `validate` method should return a boolean, where `true` means valid.
 > - In a real application, you want to make sure you do not generate twice the same record ID on a collection. This dummy example doesn't take care of ID unicity. In case of ID conflict you may loose data.
 
+For ids chosen by your application (like "config", "last-save", etc.), you'll want a NOP id generator:
+```js
+const nopSchema = {
+    generate: function() {
+        throw new Error("can't generate keys");
+    },
+    validate: function(id) {
+        return true;
+    }
+};
+const kinto = new Kinto({remote: "https://my.server.tld/v1"});
+coll = kinto.collection("articles", {
+  idSchema: nopSchema
+});
+```
+
+Kinto.js will then refuse to create documents without an `id` field, and accept any provided id.
+
 ### Limitations
 
 There's currently no way to deal with changing the ID schema of an already filled local database; that would mean existing records would fail the new validation check, and can no longer be updated.
