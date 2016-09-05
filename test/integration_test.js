@@ -445,6 +445,7 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
           it("should have no incoming conflict listed", () => {
@@ -627,6 +628,7 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
           it("should have no incoming conflict listed", () => {
@@ -901,6 +903,7 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1143,6 +1146,7 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
           it("should have the outgoing conflict listed", () => {
