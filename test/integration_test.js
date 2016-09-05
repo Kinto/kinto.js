@@ -444,7 +444,7 @@ describe("Integration tests", function() {
           });
 
           it("should have updated lastModified", () => {
-            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
@@ -627,7 +627,7 @@ describe("Integration tests", function() {
           });
 
           it("should have updated lastModified", () => {
-            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
@@ -902,7 +902,7 @@ describe("Integration tests", function() {
           });
 
           it("should have updated lastModified", () => {
-            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
@@ -1145,7 +1145,7 @@ describe("Integration tests", function() {
           });
 
           it("should have updated lastModified", () => {
-            expect(syncResult.lastModified).to.equal(tasks.lastModified);
+            expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
           });
 
