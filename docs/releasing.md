@@ -34,7 +34,7 @@ Ensure NPM package content is ready and valid. The `dist/` folder should contain
 
 Checklist:
 
-* npmcdn should serve the new version of the assets at `https://npmcdn.com/kinto@X.Y.Z/dist/kinto.js`;
+* unpkg should serve the new version of the assets at `https://unpkg.com/kinto@X.Y.Z/dist/kinto.js`;
 * `npm install kinto` should pull the new version, and `require("kinto")` should work as expected.
 
 ### Edit and publish the release on Github
