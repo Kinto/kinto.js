@@ -37,21 +37,32 @@ export function sortObjects(order, list) {
 }
 
 /**
+ * Test if a single object matches all given filters.
+ *
+ * @param  {Object} filters  The filters object.
+ * @param  {Object} entry    The object to filter.
+ * @return {Function}
+ */
+export function filterObject(filters, entry) {
+  return Object.keys(filters).every(filter => {
+    const value = filters[filter];
+    if (Array.isArray(value)) {
+      return value.some(candidate => candidate === entry[filter]);
+    }
+    return entry[filter] === value;
+  });
+}
+
+/**
  * Filters records in a list matching all given filters.
  *
- * @param  {String} filters  The filters object.
+ * @param  {Object} filters  The filters object.
  * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
 export function filterObjects(filters, list) {
-  return list.filter(entry => {
-    return Object.keys(filters).every(filter => {
-      const value = filters[filter];
-      if (Array.isArray(value)) {
-        return value.some(candidate => candidate === entry[filter]);
-      }
-      return entry[filter] === value;
-    });
+  return list.filter((entry) => {
+    return filterObject(filters, entry);
   });
 }
 
