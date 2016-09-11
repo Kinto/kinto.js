@@ -73,11 +73,11 @@ This should have created the following assets, with the current version in the f
 -  `dist/kinto.noshim.js`: Production version, minified, no polyfills;
 -  `dist/moz-kinto-offline-client.js`: Firefox internal component bundle (for Mozilla specific use).
 
-Once a new version is packaged and [published to npm](#publishing-to-npm), the [npmcdn](https://npmcdn.com/ service) makes ready-to-use kinto.js assets available from the following urls:
+Once a new version is packaged and [published to npm](#publishing-to-npm), the [unpkg](https://unpkg.com/ service) makes ready-to-use kinto.js assets available from the following urls:
 
-- [http://npmcdn.com/kinto/dist/kinto.js](http://npmcdn.com/kinto/dist/kinto.js) for the development version;
-- [http://npmcdn.com/kinto/dist/kinto.min.js](http://npmcdn.com/kinto/dist/kinto.min.js) for the production version.
-- [http://npmcdn.com/kinto/dist/kinto.noshim.js](http://npmcdn.com/kinto/dist/kinto.noshim.js) for the production version without polyfills.
+- [http://unpkg.com/kinto/dist/kinto.js](http://unpkg.com/kinto/dist/kinto.js) for the development version;
+- [http://unpkg.com/kinto/dist/kinto.min.js](http://unpkg.com/kinto/dist/kinto.min.js) for the production version.
+- [http://unpkg.com/kinto/dist/kinto.noshim.js](http://unpkg.com/kinto/dist/kinto.noshim.js) for the production version without polyfills.
 
 ## Updating docs
 
