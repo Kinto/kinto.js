@@ -67,19 +67,6 @@ export function filterObjects(filters, list) {
 }
 
 /**
- * Filter and sort list against provided filters and order.
- *
- * @param  {Object} filters  The filters to apply.
- * @param  {String} order    The order to apply.
- * @param  {Array}  list     The list to reduce.
- * @return {Array}
- */
-export function reduceRecords(filters, order, list) {
-  const filtered = filters ? filterObjects(filters, list) : list;
-  return order ? sortObjects(order, filtered) : filtered;
-}
-
-/**
  * Checks if a string is an UUID.
  *
  * @param  {String} uuid The uuid to validate.

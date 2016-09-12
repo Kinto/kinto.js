@@ -7,7 +7,6 @@ import {
   sortObjects,
   filterObjects,
   omitKeys,
-  reduceRecords,
   isUUID,
   waterfall,
   pFinally
@@ -121,30 +120,6 @@ describe("Utils", () => {
         {title: "a"},
         {title: "c"},
       ]);
-    });
-  });
-
-  /** @test {reduceRecords} */
-  describe("#reduceRecords", () => {
-    it("should filter and order list", () => {
-      expect(reduceRecords({unread: false, complete: true}, "-title", [
-        {title: "a", unread: true, complete: true},
-        {title: "b", unread: false, complete: true},
-        {title: "c", unread: false, complete: true},
-      ])).eql([
-        {title: "c", unread: false, complete: true},
-        {title: "b", unread: false, complete: true},
-      ]);
-    });
-
-    it("should support empty filter", () => {
-      const records = [{a: 1}, {a: 2}];
-      expect(reduceRecords({}, "-a", records)).eql(records.reverse());
-    });
-
-    it("should support empty sort order", () => {
-      const records = [{a: 1}, {b: 2}];
-      expect(reduceRecords({}, "", records)).eql(records);
     });
   });
 
