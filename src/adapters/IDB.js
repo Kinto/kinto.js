@@ -1,7 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { filterObject, sortObjects } from "../utils";
+import { filterObject, omitKeys, sortObjects } from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -332,10 +332,8 @@ export default class IDB extends BaseAdapter {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         let results = [];
-        // Prepare filters
-        const remainingFilters = {...filters};
         // If `indexField` was used already, don't filter again.
-        delete remainingFilters[indexField];
+        const remainingFilters = omitKeys(filters, indexField);
 
         const {transaction, store} = this.prepare();
         createListRequest(store, indexField, value, remainingFilters, (_results) => {
