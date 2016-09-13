@@ -612,10 +612,20 @@ export default class Collection {
   }
 
   /**
-   * Import changes into the local database.
+   * Imports remote changes into the local database. The change object contains
+   * two properties:
    *
-   * @param  {SyncResultObject} syncResultObject The sync result object.
-   * @param  {Object}           changeObject     The change object.
+   * - `changes`: an array exposing the list of changes that occurred on the
+   *   server since the last successful synchronization (basically the list of
+   *   updated and/or deleted records);
+   * - `lastModified`: the last modified timestamp of the remote collection.
+   *
+   * @param  {SyncResultObject} syncResultObject   The sync result object.
+   * @param  {Object}       changeObject           The change object.
+   * @param  {Number}       changeObject.lastModified The last modified
+   * timestamp of the remote collection.
+   * @param  {Array}        changeObject.changes The list of changes that
+   * occurred on the server since the last successful synchronization.
    * @return {Promise}
    */
   importChanges(syncResultObject, changeObject) {
