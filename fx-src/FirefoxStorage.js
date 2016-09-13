@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 import BaseAdapter from "../src/adapters/base";
-import { reduceRecords } from "../src/utils";
+import { filterObjects, sortObjects } from "../src/utils";
 
 Components.utils.import("resource://gre/modules/Sqlite.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");
@@ -347,4 +347,17 @@ function transactionProxy(collection, preloaded) {
       return id in preloaded ? preloaded[id] : undefined;
     }
   };
+}
+
+/**
+ * Filter and sort list against provided filters and order.
+ *
+ * @param  {Object} filters  The filters to apply.
+ * @param  {String} order    The order to apply.
+ * @param  {Array}  list     The list to reduce.
+ * @return {Array}
+ */
+export function reduceRecords(filters, order, list) {
+  const filtered = filters ? filterObjects(filters, list) : list;
+  return order ? sortObjects(order, filtered) : filtered;
 }

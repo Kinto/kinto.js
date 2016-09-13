@@ -37,35 +37,33 @@ export function sortObjects(order, list) {
 }
 
 /**
- * Filters records in a list matching all given filters.
+ * Test if a single object matches all given filters.
  *
- * @param  {String} filters  The filters object.
- * @param  {Array}  list     The collection to filter.
- * @return {Array}
+ * @param  {Object} filters  The filters object.
+ * @param  {Object} entry    The object to filter.
+ * @return {Function}
  */
-export function filterObjects(filters, list) {
-  return list.filter(entry => {
-    return Object.keys(filters).every(filter => {
-      const value = filters[filter];
-      if (Array.isArray(value)) {
-        return value.some(candidate => candidate === entry[filter]);
-      }
-      return entry[filter] === value;
-    });
+export function filterObject(filters, entry) {
+  return Object.keys(filters).every(filter => {
+    const value = filters[filter];
+    if (Array.isArray(value)) {
+      return value.some(candidate => candidate === entry[filter]);
+    }
+    return entry[filter] === value;
   });
 }
 
 /**
- * Filter and sort list against provided filters and order.
+ * Filters records in a list matching all given filters.
  *
- * @param  {Object} filters  The filters to apply.
- * @param  {String} order    The order to apply.
- * @param  {Array}  list     The list to reduce.
+ * @param  {Object} filters  The filters object.
+ * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
-export function reduceRecords(filters, order, list) {
-  const filtered = filters ? filterObjects(filters, list) : list;
-  return order ? sortObjects(order, filtered) : filtered;
+export function filterObjects(filters, list) {
+  return list.filter((entry) => {
+    return filterObject(filters, entry);
+  });
 }
 
 /**
