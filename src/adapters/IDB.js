@@ -365,7 +365,8 @@ export default class IDB extends BaseAdapter {
     return this.open().then(() => {
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite", "__meta__");
-        store.put({name: "lastModified", value: value});
+        // We need to put undefined there so that Safari and IE are happy.
+        store.put({name: "lastModified", value: value}, undefined);
         transaction.onerror = event => reject(event.target.error);
         transaction.oncomplete = event => resolve(value);
       });
@@ -429,7 +430,8 @@ function transactionProxy(store, preloaded = []) {
     },
 
     update(record) {
-      store.put(record);
+      // We need to put undefined there so that Safari and IE are happy.
+      store.put(record, undefined);
     },
 
     delete(id) {
