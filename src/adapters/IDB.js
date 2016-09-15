@@ -218,7 +218,7 @@ export default class IDB extends BaseAdapter {
    */
   async clear() {
     try {
-      await this.open()
+      await this.open();
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
