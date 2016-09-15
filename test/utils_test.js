@@ -8,8 +8,7 @@ import {
   filterObjects,
   omitKeys,
   isUUID,
-  waterfall,
-  pFinally
+  waterfall
 } from "../src/utils";
 
 chai.should();
@@ -171,28 +170,6 @@ describe("Utils", () => {
         x => Promise.resolve(x + 1),
         x => Promise.resolve(x * 2),
       ], 42).should.become(86);
-    });
-  });
-
-  describe("pFinally", () => {
-    it("should execute a callback when the promise succeeds", () => {
-      let flag = false;
-
-      return pFinally(Promise.resolve("plop"), () => flag = true)
-        .then(res => {
-          expect(flag).eql(true);
-          expect(res).eql("plop");
-        });
-    });
-
-    it("should execute a callback when the promise is rejected", () => {
-      let flag = false;
-
-      return pFinally(Promise.reject("err"), () => flag = true)
-        .catch(err => {
-          expect(flag).eql(true);
-          expect(err).eql("err");
-        });
     });
   });
 

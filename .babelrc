@@ -1,5 +1,5 @@
 {
-  "plugins": ["transform-object-rest-spread"],
+  "plugins": ["transform-object-rest-spread", "transform-async-to-generator"],
   "env": {
     "development": {
       "presets": ["es2015"]

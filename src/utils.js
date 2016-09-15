@@ -94,21 +94,6 @@ export function waterfall(fns, init) {
 }
 
 /**
- * Ensure a callback is always executed at the end of the passed promise flow.
- *
- * @link   https://github.com/domenic/promises-unwrapping/issues/18
- * @param  {Promise}  promise  The promise.
- * @param  {Function} fn       The callback.
- * @return {Promise}
- */
-export function pFinally(promise, fn) {
-  return promise.then(
-    value => Promise.resolve(fn()).then(() => value),
-    reason => Promise.resolve(fn()).then(() => { throw reason; })
-  );
-}
-
-/**
  * Simple deep object comparison function. This only supports comparison of
  * serializable JavaScript objects.
  *
