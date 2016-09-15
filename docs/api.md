@@ -590,7 +590,7 @@ The synchronization result object exposes the following properties:
 - `created`:   The list of remote records which have been successfully imported into the local database.
 - `updated`:   The list of updates with old and new record which have been successfully reflected into the local database.
 - `deleted`:   The list of remotely deleted records which have been successfully deleted as well locally.
-- `skipped`:   The list of remotely deleted records missing locally.
+- `skipped`:   The list of remotely deleted records that were missing or also deleted locally.
 - `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
 - `resolved`:  The list of conflicting records which have been successfully resolved according to the selected [strategy](#synchronization-strategies) (note that when using the default `MANUAL` strategy, this list is always empty).
 
