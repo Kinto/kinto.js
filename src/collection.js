@@ -895,7 +895,7 @@ export default class Collection {
         return Promise.all(synced.conflicts.map(({type, local, remote}) => {
           // Note: we ensure that local data are actually available, as they may
           // be missing in the case of a published deletion.
-          const safeLocal = local && local.data || {};
+          const safeLocal = local && local.data || {id: remote.id};
           return this._decodeRecord("remote", safeLocal).then(realLocal => {
             return this._decodeRecord("remote", remote).then(realRemote => {
               return {type, local: realLocal, remote: realRemote};
@@ -911,13 +911,10 @@ export default class Collection {
         // For created and updated records, the last_modified coming from server
         // will be stored locally.
         const published = synced.published.map((c) => c.data);
-        const skipped = synced.skipped.map((c) => c.data);
 
         // Records that must be deleted are either deletions that were pushed
         // to server (published) or deleted records that were never pushed (skipped).
-        const missingRemotely = skipped.map(r => {
-          return {...r, deleted: true};
-        });
+        const missingRemotely = synced.skipped.map(r => ({...r, deleted: true}));
         const toApplyLocally = published.concat(missingRemotely);
 
         const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);

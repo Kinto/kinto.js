@@ -116,7 +116,7 @@
   "dependencies": {
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
-    "kinto-http": "^2.0.0",
+    "kinto-http": "^2.5.1",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
