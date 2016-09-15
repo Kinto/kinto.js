@@ -2061,7 +2061,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [{
           id: records[0].id,
-          error: {errno: 110, code: 404, error: "Not found"}
+          error: {errno: 110, code: 404, error: "Not found"},
         }]
       }));
       return articles.pushChanges(client, result)

@@ -895,7 +895,7 @@ export default class Collection {
         return Promise.all(synced.conflicts.map(({type, local, remote}) => {
           // Note: we ensure that local data are actually available, as they may
           // be missing in the case of a published deletion.
-          const safeLocal = local && local.data || {};
+          const safeLocal = local && local.data || {id: remote.id};
           return this._decodeRecord("remote", safeLocal).then(realLocal => {
             return this._decodeRecord("remote", remote).then(realRemote => {
               return {type, local: realLocal, remote: realRemote};

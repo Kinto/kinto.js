@@ -809,7 +809,6 @@ describe("Integration tests", function() {
 
       });
 
-
       describe("Outgoing conflicting deletion", () => {
 
         describe("With remote update", () => {
@@ -845,7 +844,7 @@ describe("Integration tests", function() {
           });
 
           it("should have the expected conflicting local version", () => {
-            expect(conflicts[0].local).eql({});
+            expect(conflicts[0].local).eql({id});
           });
 
           it("should have the expected conflicting remote version", () => {
@@ -888,7 +887,6 @@ describe("Integration tests", function() {
           });
         });
       });
-
 
       describe("Outgoing conflict", () => {
         let syncResult;
