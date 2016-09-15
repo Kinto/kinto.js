@@ -886,12 +886,12 @@ export default class Collection {
 
     // Reflect publication results locally using the response from
     // the batch request.
+    const published = synced.published.map((c) => c.data);
     // For created and updated records, the last_modified coming from server
     // will be stored locally.
     // Records that must be deleted are either deletions that were pushed
     // to server (published) or deleted records that were never pushed (skipped).
     const missingRemotely = synced.skipped.map(r => ({...r, deleted: true}));
-    const published = synced.published.map((c) => c.data);
     const toApplyLocally = published.concat(missingRemotely);
     const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
     const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
