@@ -2059,7 +2059,10 @@ describe("Collection", () => {
         published: [],
         errors:    [],
         conflicts: [],
-        skipped:   [{data: {id: records[0].id}}]
+        skipped:   [{
+          id: records[0].id,
+          error: {errno: 110, code: 404, error: "Not found"}
+        }]
       }));
       return articles.pushChanges(client, result)
         .then(_ => articles.get(records[0].id, {includeDeleted: true}))

@@ -809,49 +809,86 @@ describe("Integration tests", function() {
 
       });
 
+
       describe("Outgoing conflicting deletion", () => {
-        let id, conflicts;
 
-        beforeEach(() => {
-          return tasks.create({title: "initial"})
-            .then(({data}) => {
-              id = data.id;
-              return tasks.sync();
-            })
-            .then(() => {
-              return tasks.delete(id);
-            })
-            .then(() => {
-              return tasks.api.bucket("default").collection("tasks")
-                .updateRecord({id, title: "server-updated"});
-            })
-            .then(() => {
-              return tasks.sync();
-            })
-            .then((res) => {
-              conflicts = res.conflicts;
-            });
+        describe("With remote update", () => {
+          let id, conflicts;
+
+          beforeEach(() => {
+            return tasks.create({title: "initial"})
+              .then(({data}) => {
+                id = data.id;
+                return tasks.sync();
+              })
+              .then(() => {
+                return tasks.delete(id);
+              })
+              .then(() => {
+                return tasks.api.bucket("default").collection("tasks")
+                  .updateRecord({id, title: "server-updated"});
+              })
+              .then(() => {
+                return tasks.sync();
+              })
+              .then((res) => {
+                conflicts = res.conflicts;
+              });
+          });
+
+          it("should properly list the encountered conflict", () => {
+            expect(conflicts).to.have.length.of(1);
+          });
+
+          it("should list the proper type of conflict", () => {
+            expect(conflicts[0].type).eql("outgoing");
+          });
+
+          it("should have the expected conflicting local version", () => {
+            expect(conflicts[0].local).eql({});
+          });
+
+          it("should have the expected conflicting remote version", () => {
+            expect(conflicts[0].remote)
+              .to.have.property("id").eql(id);
+            expect(conflicts[0].remote)
+              .to.have.property("title").eql("server-updated");
+          });
         });
 
-        it("should properly list the encountered conflict", () => {
-          expect(conflicts).to.have.length.of(1);
-        });
+        describe("With remote deletion", () => {
+          let id, result;
 
-        it("should list the proper type of conflict", () => {
-          expect(conflicts[0].type).eql("outgoing");
-        });
+          beforeEach(() => {
+            return tasks.create({title: "initial"})
+              .then(({data}) => {
+                id = data.id;
+                return tasks.sync();
+              })
+              .then(() => {
+                return tasks.delete(id);
+              })
+              .then(() => {
+                return tasks.api.bucket("default").collection("tasks")
+                  .deleteRecord(id);
+              })
+              .then(() => {
+                return tasks.sync();
+              })
+              .then((res) => result = res);
+          });
 
-        it("should have the expected conflicting local version", () => {
-          expect(conflicts[0].local).eql({});
-        });
+          it("should properly list the encountered conflict", () => {
+            expect(result.skipped).to.have.length.of(1);
+          });
 
-        it("should have the expected conflicting remote version", () => {
-          expect(conflicts[0].remote)
-            .to.have.property("id").eql(id);
-          expect(conflicts[0].remote)
-            .to.have.property("title").eql("server-updated");
+          it("should provide the record", () => {
+            expect(result.skipped[0])
+              .to.have.property("id").eql(id);
+          });
         });
       });
+
 
       describe("Outgoing conflict", () => {
         let syncResult;
