@@ -126,12 +126,10 @@ export default class IDB extends BaseAdapter {
     this.dbname = dbname;
   }
 
-  _handleError(method) {
-    return err => {
-      const error = new Error(method + "() " + err.message);
-      error.stack = err.stack;
-      throw error;
-    };
+  _handleError(method, err) {
+    const error = new Error(method + "() " + err.message);
+    error.stack = err.stack;
+    throw error;
   }
 
   /**
@@ -226,7 +224,7 @@ export default class IDB extends BaseAdapter {
         transaction.oncomplete = () => resolve();
       });
     } catch (e) {
-      this._handleError("clear");
+      this._handleError("clear", e);
     }
   }
 
@@ -321,7 +319,7 @@ export default class IDB extends BaseAdapter {
         transaction.oncomplete = () => resolve(request.result);
       });
     } catch(e) {
-      this._handleError("get");
+      this._handleError("get", e);
     }
   }
 
@@ -356,7 +354,7 @@ export default class IDB extends BaseAdapter {
       // XXX: with some efforts, this could be fully implemented using IDB API.
       return params.order ? sortObjects(params.order, results) : results;
     } catch(e) {
-      this._handleError("list");
+      this._handleError("list", e);
     }
   }
 
@@ -414,7 +412,7 @@ export default class IDB extends BaseAdapter {
       }
       return records;
     } catch (e) {
-      this._handleError("loadDump");
+      this._handleError("loadDump", e);
     }
   }
 }

@@ -2175,8 +2175,8 @@ describe("Collection", () => {
     });
 
     it("should validate the remote option", () => {
-      expect(() => articles.sync({remote: "http://fake.invalid"}))
-        .to.Throw(Error, /contain the version/);
+      return articles.sync({remote: "http://fake.invalid"})
+        .should.be.rejectedWith(Error, /contain the version/);
     });
 
     it("should use a custom remote option", () => {
