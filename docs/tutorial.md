@@ -381,7 +381,7 @@ Let's review the different result object properties:
 - `deleted`: the list of records deleted locally;
 - `published`: the list of records published; here we see we successfully pushed our two local tasks;
 - `conflicts`: the list of conflicts encountered, if any (we'll see this in a minute);
-- `skipped`: the list of skipped operations; for example, if we're trying to remotely delete a record which doesn't exist on the server, that information will be listed here.
+- `skipped`: the list of skipped records; for example, if we're trying to remotely delete a record which doesn't exist on the server, that information will be listed here.
 
 ## Handling conflicts
 
