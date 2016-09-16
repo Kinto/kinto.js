@@ -116,11 +116,22 @@ export default class IDB extends BaseAdapter {
   /**
    * Constructor.
    *
-   * @param  {String} dbname The database nale.
+   * Options:
+   * - `{String}` `storage` The storage to use: "persistent" or "temporary".
+   *
+   * If storage is specified, kinto will try to open the IDB with the Firefox
+   * experimental storage option. If it fails, it will retry without the option
+   * so your storage choice will basically be ignored in other browsers.
+   * For more information on the storage option, see
+   * https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Browser_storage_limits_and_eviction_criteria#Firefox_specifics
+   *
+   * @param  {String} dbname The database name.
+   * @param  {Object} options The database options.
    */
-  constructor(dbname) {
+  constructor(dbname, options = {}) {
     super();
     this._db = null;
+    this._options = { ... options };
     // public properties
     /**
      * The database name.
@@ -146,7 +157,20 @@ export default class IDB extends BaseAdapter {
       return Promise.resolve(this);
     }
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbname, 1);
+      const version = 1;
+      let request;
+      if(this._options.storage) {
+        try {
+          request = indexedDB.open(this.dbname, {
+            storage: this._options.storage,
+            version: version
+          });
+        } catch(e) {
+          request = indexedDB.open(this.dbname, version);
+        }
+      } else {
+        request = indexedDB.open(this.dbname, version);
+      }
       request.onupgradeneeded = event => {
         // DB object
         const db = event.target.result;

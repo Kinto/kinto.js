@@ -35,6 +35,36 @@ describe("adapter.IDB", () => {
 
       return prom.should.be.rejectedWith("fail");
     });
+
+    it("should use storage option", () => {
+      const fakeOpenRequest = {};
+      const open = sandbox.stub(indexedDB, "open").returns(fakeOpenRequest);
+      const db = new IDB("another/db", {storage: "permanent"});
+      const prom = db.open(indexedDB).then(() => {
+        sinon.assert.calledWithExactly(open, "another/db", {
+          storage: "permanent", version: 1
+        });
+      });
+      
+      fakeOpenRequest.onsuccess({target: {result: {}}});
+      
+      return prom.should.be.fulfilled;
+    });
+
+    it("should fallback to no storage option", () => {
+      const fakeOpenRequest = {};
+      const open = sandbox.stub(indexedDB, "open");
+      open.withArgs(sinon.match.any, {
+        storage: "permanent", version: 1
+      }).throws();
+      open.withArgs(sinon.match.any, 1).returns(fakeOpenRequest);
+      const db = new IDB("another/db", {storage: "permanent"});
+      const prom = db.open(indexedDB);
+      
+      fakeOpenRequest.onsuccess({target: {result: {}}});
+      
+      return prom.should.be.fulfilled;
+    });
   });
 
   /** @test {IDB#close} */
