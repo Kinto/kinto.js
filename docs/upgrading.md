@@ -2,6 +2,15 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 4.x to 5.x
+
+* The helper `utils/reduceRecords` was removed (#543)
+* `collection.sync()` now rejects asynchronously when the specified remote is invalid (#540)
+
+## 3.x to 4.x
+
+* Deleted records are now decoded/encoded (#510)
+
 ## 2.x to 3.x
 
 ### cleanRecord()

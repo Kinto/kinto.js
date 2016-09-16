@@ -126,12 +126,10 @@ export default class IDB extends BaseAdapter {
     this.dbname = dbname;
   }
 
-  _handleError(method) {
-    return err => {
-      const error = new Error(method + "() " + err.message);
-      error.stack = err.stack;
-      throw error;
-    };
+  _handleError(method, err) {
+    const error = new Error(method + "() " + err.message);
+    error.stack = err.stack;
+    throw error;
   }
 
   /**
@@ -216,15 +214,18 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  clear() {
-    return this.open().then(() => {
+  async clear() {
+    try {
+      await this.open();
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare("readwrite");
         store.clear();
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve();
       });
-    }).catch(this._handleError("clear"));
+    } catch (e) {
+      this._handleError("clear", e);
+    }
   }
 
   /**
@@ -257,7 +258,7 @@ export default class IDB extends BaseAdapter {
    * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  execute(callback, options={preload: []}) {
+  async execute(callback, options={preload: []}) {
     // Transactions in IndexedDB are autocommited when a callback does not
     // perform any additional operation.
     // The way Promises are implemented in Firefox (see https://bugzilla.mozilla.org/show_bug.cgi?id=1193394)
@@ -268,37 +269,37 @@ export default class IDB extends BaseAdapter {
     // - http://stackoverflow.com/a/28388805/330911
     // - http://stackoverflow.com/a/10405196
     // - https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
-    return this.open()
-      .then(_ => new Promise((resolve, reject) => {
-        // Start transaction.
-        const {transaction, store} = this.prepare("readwrite");
-        // Preload specified records using index.
-        const ids = options.preload;
-        store.index("id").openCursor().onsuccess = cursorHandlers.in(ids, (records) => {
-          // Store obtained records by id.
-          const preloaded = records.reduce((acc, record) => {
-            acc[record.id] = record;
-            return acc;
-          }, {});
-          // Expose a consistent API for every adapter instead of raw store methods.
-          const proxy = transactionProxy(store, preloaded);
-          // The callback is executed synchronously within the same transaction.
-          let result;
-          try {
-            result = callback(proxy);
-          } catch (e) {
-            transaction.abort();
-            reject(e);
-          }
-          if (result instanceof Promise) {
-            // XXX: investigate how to provide documentation details in error.
-            reject(new Error("execute() callback should not return a Promise."));
-          }
-          // XXX unsure if we should manually abort the transaction on error
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => resolve(result);
-        });
-      }));
+    await this.open();
+    return new Promise((resolve, reject) => {
+      // Start transaction.
+      const {transaction, store} = this.prepare("readwrite");
+      // Preload specified records using index.
+      const ids = options.preload;
+      store.index("id").openCursor().onsuccess = cursorHandlers.in(ids, (records) => {
+        // Store obtained records by id.
+        const preloaded = records.reduce((acc, record) => {
+          acc[record.id] = record;
+          return acc;
+        }, {});
+        // Expose a consistent API for every adapter instead of raw store methods.
+        const proxy = transactionProxy(store, preloaded);
+        // The callback is executed synchronously within the same transaction.
+        let result;
+        try {
+          result = callback(proxy);
+        } catch (e) {
+          transaction.abort();
+          reject(e);
+        }
+        if (result instanceof Promise) {
+          // XXX: investigate how to provide documentation details in error.
+          reject(new Error("execute() callback should not return a Promise."));
+        }
+        // XXX unsure if we should manually abort the transaction on error
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => resolve(result);
+      });
+    });
   }
 
   /**
@@ -308,15 +309,18 @@ export default class IDB extends BaseAdapter {
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  get(id) {
-    return this.open().then(() => {
+  async get(id) {
+    try {
+      await this.open();
       return new Promise((resolve, reject) => {
         const {transaction, store} = this.prepare();
         const request = store.get(id);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve(request.result);
       });
-    }).catch(this._handleError("get"));
+    } catch(e) {
+      this._handleError("get", e);
+    }
   }
 
   /**
@@ -325,12 +329,13 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  list(params={filters: {}}) {
+  async list(params={filters: {}}) {
     const {filters} = params;
     const indexField = findIndexedField(filters);
     const value = filters[indexField];
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
+    try {
+      await this.open();
+      const results = await new Promise((resolve, reject) => {
         let results = [];
         // If `indexField` was used already, don't filter again.
         const remainingFilters = omitKeys(filters, indexField);
@@ -344,13 +349,13 @@ export default class IDB extends BaseAdapter {
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = event => resolve(results);
       });
-    })
-    .then((results) => {
+
       // The resulting list of records is sorted.
       // XXX: with some efforts, this could be fully implemented using IDB API.
-      return params.order? sortObjects(params.order, results) : results;
-    })
-    .catch(this._handleError("list"));
+      return params.order ? sortObjects(params.order, results) : results;
+    } catch(e) {
+      this._handleError("list", e);
+    }
   }
 
   /**
@@ -360,15 +365,14 @@ export default class IDB extends BaseAdapter {
    * @param  {Number}  lastModified
    * @return {Promise}
    */
-  saveLastModified(lastModified) {
+  async saveLastModified(lastModified) {
     const value = parseInt(lastModified, 10) || null;
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare("readwrite", "__meta__");
-        store.put({name: "lastModified", value: value});
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => resolve(value);
-      });
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const {transaction, store} = this.prepare("readwrite", "__meta__");
+      store.put({name: "lastModified", value: value});
+      transaction.onerror = event => reject(event.target.error);
+      transaction.oncomplete = event => resolve(value);
     });
   }
 
@@ -378,16 +382,15 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  getLastModified() {
-    return this.open().then(() => {
-      return new Promise((resolve, reject) => {
-        const {transaction, store} = this.prepare(undefined, "__meta__");
-        const request = store.get("lastModified");
-        transaction.onerror = event => reject(event.target.error);
-        transaction.oncomplete = event => {
-          resolve(request.result && request.result.value || null);
-        };
-      });
+  async getLastModified() {
+    await this.open();
+    return new Promise((resolve, reject) => {
+      const {transaction, store} = this.prepare(undefined, "__meta__");
+      const request = store.get("lastModified");
+      transaction.onerror = event => reject(event.target.error);
+      transaction.oncomplete = event => {
+        resolve(request.result && request.result.value || null);
+      };
     });
   }
 
@@ -397,19 +400,20 @@ export default class IDB extends BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  loadDump(records) {
-    return this.execute((transaction) => {
-      records.forEach(record => transaction.update(record));
-    })
-      .then(() => this.getLastModified())
-      .then((previousLastModified) => {
-        const lastModified = Math.max(...records.map(record => record.last_modified));
-        if (lastModified > previousLastModified) {
-          return this.saveLastModified(lastModified);
-        }
-      })
-      .then(() => records)
-      .catch(this._handleError("loadDump"));
+  async loadDump(records) {
+    try {
+      await this.execute((transaction) => {
+        records.forEach(record => transaction.update(record));
+      });
+      const previousLastModified = await this.getLastModified();
+      const lastModified = Math.max(...records.map(record => record.last_modified));
+      if (lastModified > previousLastModified) {
+        await this.saveLastModified(lastModified);
+      }
+      return records;
+    } catch (e) {
+      this._handleError("loadDump", e);
+    }
   }
 }
 

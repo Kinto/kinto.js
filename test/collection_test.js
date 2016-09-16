@@ -2070,7 +2070,11 @@ describe("Collection", () => {
     });
 
     describe("Error handling", () => {
-      const error = new Error("publish error");
+      const error = {
+        path: "/buckets/default/collections/test/records/123",
+        sent: {data: {id: "123"}},
+        error: {errno: 999, message: "Internal error"},
+      };
 
       beforeEach(() => {
         sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
@@ -2084,7 +2088,7 @@ describe("Collection", () => {
       it("should report encountered publication errors", () => {
         return articles.pushChanges(client, result)
           .then(res => res.errors)
-          .should.eventually.become([error]);
+          .should.eventually.become([{...error, type: "outgoing"}]);
       });
 
       it("should report typed publication errors", () => {
@@ -2171,8 +2175,8 @@ describe("Collection", () => {
     });
 
     it("should validate the remote option", () => {
-      expect(() => articles.sync({remote: "http://fake.invalid"}))
-        .to.Throw(Error, /contain the version/);
+      return articles.sync({remote: "http://fake.invalid"})
+        .should.be.rejectedWith(Error, /contain the version/);
     });
 
     it("should use a custom remote option", () => {
