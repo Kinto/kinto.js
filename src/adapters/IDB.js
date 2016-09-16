@@ -27,6 +27,9 @@ const cursorHandlers = {
   },
 
   in(values, done) {
+    if (values.length === 0) {
+      return done([]);
+    }
     const sortedValues = [].slice.call(values).sort();
     const results = [];
     return function(event) {
