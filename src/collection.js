@@ -630,17 +630,25 @@ export default class Collection {
   async importChanges(syncResultObject, decodedChanges, strategy) {
     // Retrieve records matching change ids.
     try {
-      const imports = await this.db.execute(transaction => {
-        return decodedChanges.map(remote => {
+      const {imports, resolved} = await this.db.execute(transaction => {
+        const imports = decodedChanges.map(remote => {
           // Store remote change into local database.
           return importChange(transaction, remote, this.localFields);
         });
+        const conflicts = imports.filter((i) => i.type === "conflicts")
+                                 .map((i) => i.data);
+        const resolved = this._handleConflicts(transaction, conflicts, strategy);
+        return {imports, resolved};
       }, {preload: decodedChanges.map(record => record.id)});
 
-      for (let imported of imports) {
-        if (imported.type !== "void") {
-          syncResultObject.add(imported.type, imported.data);
-        }
+      // Lists of created/updated/deleted records
+      imports.forEach(({type, data}) => syncResultObject.add(type, data));
+
+      // Automatically resolved conflicts (if not manual)
+      if (resolved.length > 0) {
+        syncResultObject
+          .reset("conflicts")
+          .add("resolved", resolved);
       }
     } catch(err) {
       const data = {
@@ -652,33 +660,65 @@ export default class Collection {
       syncResultObject.add("errors", data);
     }
 
-    // Handle conflicts, if any
-    await this._handleConflicts(syncResultObject, strategy);
-
     return syncResultObject;
   }
 
-  async importPublications(toApplyLocally) {
-    if (toApplyLocally.length === 0) {
-      return [];
-    }
+  async importPublications(syncResultObject, toApplyLocally, strategy) {
     const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
     const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
 
-    const saved = await this.db.execute((transaction) => {
+    const conflicts = syncResultObject.conflicts;
+
+    const {published, resolved} = await this.db.execute((transaction) => {
       const updated = toUpdateLocally.map((record) => {
         const synced = markSynced(record);
         transaction.update(synced);
-        return {data: synced};
+        return synced;
       });
       const deleted = toDeleteLocally.map((record) => {
         transaction.delete(record.id);
         // Amend result data with the deleted attribute set
-        return {data: {id: record.id, deleted: true}};
+        return {id: record.id, deleted: true};
       });
-      return updated.concat(deleted);
+      const published = updated.concat(deleted);
+      // Handle conflicts, if any
+      const resolved = this._handleConflicts(transaction, conflicts, strategy);
+      return {published, resolved};
     });
-    return saved;
+
+    syncResultObject.add("published", published);
+
+    if (resolved.length > 0) {
+      // Resolved conflicts are merged with previous ones.
+      const resolvedIds = resolved.map((r) => r.id);
+      const mergedResolved = syncResultObject.resolved.filter((r) => resolvedIds.indexOf(r.id) < 0)
+                                                      .concat(resolved);
+      syncResultObject
+        .reset("conflicts")
+        .reset("resolved")
+        .add("resolved", mergedResolved);
+    }
+    return syncResultObject;
+  }
+
+  /**
+   * Handles synchronization conflicts according to specified strategy.
+   *
+   * @param  {SyncResultObject} result    The sync result object.
+   * @param  {String}           strategy  The {@link Collection.strategy}.
+   * @return {Promise}
+   */
+  _handleConflicts(transaction, conflicts, strategy=Collection.strategy.MANUAL) {
+    if (strategy === Collection.strategy.MANUAL) {
+      return [];
+    }
+    return conflicts.map((conflict) => {
+      const resolution = strategy === Collection.strategy.CLIENT_WINS ?
+                         conflict.local : conflict.remote;
+      const updated = this._resolveRaw(conflict, resolution);
+      transaction.update(updated);
+      return updated;
+    });
   }
 
   /**
@@ -926,11 +966,7 @@ export default class Collection {
       return this._decodeRecord("remote", record);
     }));
 
-    const saved = await this.importPublications(decoded);
-    syncResultObject.add("published", saved.map(res => res.data));
-
-    // Handle conflicts, if any
-    await this._handleConflicts(syncResultObject, options.strategy);
+    await this.importPublications(syncResultObject, decoded, options.strategy);
 
     return syncResultObject;
   }
@@ -976,35 +1012,6 @@ export default class Collection {
     // Otherwise, mark it as updated (so that the resolution is pushed).
     const synced = deepEqual(resolved, conflict.remote);
     return markStatus(resolved, synced ? "synced" : "updated");
-  }
-
-  /**
-   * Handles synchronization conflicts according to specified strategy.
-   *
-   * @param  {SyncResultObject} result    The sync result object.
-   * @param  {String}           strategy  The {@link Collection.strategy}.
-   * @return {Promise}
-   */
-  async _handleConflicts(syncResultObject, strategy=Collection.strategy.MANUAL) {
-    if (strategy === Collection.strategy.MANUAL || syncResultObject.conflicts.length === 0) {
-      return syncResultObject;
-    }
-    const imports = await this.db.execute((transaction) => {
-      return syncResultObject.conflicts.map((conflict) => {
-        const resolution = strategy === Collection.strategy.CLIENT_WINS ?
-                           conflict.local : conflict.remote;
-        const updated = this._resolveRaw(conflict, resolution);
-        transaction.update(updated);
-        return updated;
-      });
-    });
-    const importedIds = imports.map((r) => r.id);
-    const resolved = syncResultObject.resolved.filter((r) => importedIds.indexOf(r.id) < 0)
-                                              .concat(imports);
-    return syncResultObject
-      .reset("conflicts")
-      .reset("resolved")
-      .add("resolved", resolved);
   }
 
   /**
