@@ -868,14 +868,11 @@ export default class Collection {
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  async pushChanges(client, syncResultObject, options={}) {
+  async pushChanges(client, {toDelete=[], toSync}, syncResultObject, options={}) {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
     const safe = !options.strategy || options.strategy !== Collection.CLIENT_WINS;
-
-    // Fetch local changes
-    const {toDelete, toSync} = await this.gatherLocalChanges();
 
     // Perform a batch request with every changes.
     const synced = await client.batch(batch => {
@@ -1000,10 +997,13 @@ export default class Collection {
         return updated;
       });
     });
-
+    const importedIds = imports.map((r) => r.id);
+    const resolved = syncResultObject.resolved.filter((r) => importedIds.indexOf(r.id) < 0)
+                                              .concat(imports);
     return syncResultObject
       .reset("conflicts")
-      .add("resolved", imports);
+      .reset("resolved")
+      .add("resolved", resolved);
   }
 
   /**
@@ -1053,13 +1053,16 @@ export default class Collection {
       await this.pullChanges(client, result, options);
       const {lastModified} = result;
 
+      // Fetch local changes
+      const {toDelete, toSync} = await this.gatherLocalChanges();
+
       // Publish local changes and pull local resolutions
-      await this.pushChanges(client, result, options);
+      await this.pushChanges(client, {toDelete, toSync}, result, options);
 
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
       const resolvedUnsynced = result.resolved.filter(r => r._status !== "synced");
       if (resolvedUnsynced.length > 0) {
-        await this.pushChanges(client, result, options);
+        await this.pushChanges(client, {toSync: resolvedUnsynced}, result, options);
       }
       // Perform a last pull to catch changes that occured after the last pull,
       // while local changes were pushed. Do not do it nothing was pushed.
