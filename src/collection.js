@@ -627,7 +627,7 @@ export default class Collection {
    * occurred on the server since the last successful synchronization.
    * @return {Promise}
    */
-  async importChanges(syncResultObject, decodedChanges) {
+  async importChanges(syncResultObject, decodedChanges, strategy) {
     // Retrieve records matching change ids.
     try {
       const imports = await this.db.execute(transaction => {
@@ -651,6 +651,9 @@ export default class Collection {
       // XXX one error of the whole transaction instead of per atomic op
       syncResultObject.add("errors", data);
     }
+
+    // Handle conflicts, if any
+    await this._handleConflicts(syncResultObject, strategy);
 
     return syncResultObject;
   }
@@ -835,9 +838,7 @@ export default class Collection {
     // No change, nothing to import.
     if (afterHooks.changes.length > 0) {
       // Reflect these changes locally
-      await this.importChanges(syncResultObject, afterHooks.changes);
-      // Handle conflicts, if any
-      await this._handleConflicts(syncResultObject, options.strategy);
+      await this.importChanges(syncResultObject, afterHooks.changes, options.strategy);
     }
     return syncResultObject;
   }
