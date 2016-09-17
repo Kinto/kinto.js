@@ -627,18 +627,7 @@ export default class Collection {
    * occurred on the server since the last successful synchronization.
    * @return {Promise}
    */
-  async importChanges(syncResultObject, changeObject) {
-    const decodedChanges = await Promise.all(changeObject.changes.map(change => {
-      return this._decodeRecord("remote", change);
-    }));
-
-    syncResultObject.lastModified = changeObject.lastModified;
-
-    // No change, nothing to import.
-    if (decodedChanges.length === 0) {
-      return syncResultObject;
-    }
-
+  async importChanges(syncResultObject, decodedChanges) {
     // Retrieve records matching change ids.
     try {
       const imports = await this.db.execute(transaction => {
@@ -664,6 +653,29 @@ export default class Collection {
     }
 
     return syncResultObject;
+  }
+
+  async importPublications(toApplyLocally) {
+    if (toApplyLocally.length === 0) {
+      return [];
+    }
+    const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
+    const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
+
+    const saved = await this.db.execute((transaction) => {
+      const updated = toUpdateLocally.map((record) => {
+        const synced = markSynced(record);
+        transaction.update(synced);
+        return {data: synced};
+      });
+      const deleted = toDeleteLocally.map((record) => {
+        transaction.delete(record.id);
+        // Amend result data with the deleted attribute set
+        return {data: {id: record.id, deleted: true}};
+      });
+      return updated.concat(deleted);
+    });
+    return saved;
   }
 
   /**
@@ -729,6 +741,7 @@ export default class Collection {
         }
       });
     });
+    this._lastModified = null;
     await this.db.saveLastModified(null);
     return unsynced.data.length;
   }
@@ -768,8 +781,12 @@ export default class Collection {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
+
+    const since = this.lastModified ? this.lastModified
+                                    : await this.db.getLastModified();
+
     options = {strategy: Collection.strategy.MANUAL,
-      lastModified: this.lastModified,
+      lastModified: since,
       headers: {},
       ...options};
 
@@ -805,13 +822,24 @@ export default class Collection {
       throw Error("Server has been flushed.");
     }
 
-    const payload = {lastModified: unquoted, changes: data};
-    const changes = await this.applyHook("incoming-changes", payload);
+    syncResultObject.lastModified = unquoted;
 
-    // Reflect these changes locally
-    const result = await this.importChanges(syncResultObject, changes);
-    // Handle conflicts, if any
-    return await this._handleConflicts(result, options.strategy);
+    // Decode incoming changes.
+    const decodedChanges = await Promise.all(data.map(change => {
+      return this._decodeRecord("remote", change);
+    }));
+    // Hook receives decoded records.
+    const payload = {lastModified: unquoted, changes: decodedChanges};
+    const afterHooks = await this.applyHook("incoming-changes", payload);
+
+    // No change, nothing to import.
+    if (afterHooks.changes.length > 0) {
+      // Reflect these changes locally
+      await this.importChanges(syncResultObject, afterHooks.changes);
+      // Handle conflicts, if any
+      await this._handleConflicts(syncResultObject, options.strategy);
+    }
+    return syncResultObject;
   }
 
   applyHook(hookName, payload) {
@@ -884,59 +912,28 @@ export default class Collection {
     }
     syncResultObject.add("conflicts", conflicts);
 
-    // Reflect publication results locally using the response from
-    // the batch request.
-    const published = synced.published.map((c) => c.data);
-    // For created and updated records, the last_modified coming from server
-    // will be stored locally.
     // Records that must be deleted are either deletions that were pushed
     // to server (published) or deleted records that were never pushed (skipped).
     const missingRemotely = synced.skipped.map(r => ({...r, deleted: true}));
-    const toApplyLocally = published.concat(missingRemotely);
-    const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
-    const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
 
-    // First, apply the decode transformers, if any
-    const decoded = await Promise.all(toUpdateLocally.map(record => {
+    // For created and updated records, the last_modified coming from server
+    // will be stored locally.
+    // Reflect publication results locally using the response from
+    // the batch request.
+    const published = synced.published.map((c) => c.data);
+    const toApplyLocally = published.concat(missingRemotely);
+
+    // Apply the decode transformers, if any
+    const decoded = await Promise.all(toApplyLocally.map(record => {
       return this._decodeRecord("remote", record);
     }));
 
-    const saved = await this.db.execute((transaction) => {
-      const updated = decoded.map((record) => {
-        const synced = markSynced(record);
-        transaction.update(synced);
-        return {data: synced};
-      });
-      const deleted = toDeleteLocally.map((record) => {
-        transaction.delete(record.id);
-        // Amend result data with the deleted attribute set
-        return {data: {id: record.id, deleted: true}};
-      });
-      return updated.concat(deleted);
-    });
-
+    const saved = await this.importPublications(decoded);
     syncResultObject.add("published", saved.map(res => res.data));
 
     // Handle conflicts, if any
-    syncResultObject = await this._handleConflicts(syncResultObject, options.strategy);
+    await this._handleConflicts(syncResultObject, options.strategy);
 
-    // Publish local resolution of conflicts to server
-    const resolvedUnsynced = syncResultObject.resolved.filter(r => r._status !== "synced");
-    // No resolved conflict to reflect anywhere
-    if (resolvedUnsynced.length > 0 && !options.resolved) {
-      if (options.strategy === Collection.strategy.CLIENT_WINS) {
-        // We need to push local versions of the records to the server
-        await this.pushChanges(client, syncResultObject, {...options, resolved: true});
-      } else if (options.strategy === Collection.strategy.SERVER_WINS) {
-        // If records have been automatically resolved according to strategy and
-        // are in non-synced status, mark them as synced.
-        await this.db.execute((transaction) => {
-          resolvedUnsynced.forEach((record) => {
-            transaction.update(markSynced(record));
-          });
-        });
-      }
-    }
     return syncResultObject;
   }
 
@@ -990,12 +987,12 @@ export default class Collection {
    * @param  {String}           strategy  The {@link Collection.strategy}.
    * @return {Promise}
    */
-  async _handleConflicts(result, strategy=Collection.strategy.MANUAL) {
-    if (strategy === Collection.strategy.MANUAL || result.conflicts.length === 0) {
-      return result;
+  async _handleConflicts(syncResultObject, strategy=Collection.strategy.MANUAL) {
+    if (strategy === Collection.strategy.MANUAL || syncResultObject.conflicts.length === 0) {
+      return syncResultObject;
     }
     const imports = await this.db.execute((transaction) => {
-      return result.conflicts.map((conflict) => {
+      return syncResultObject.conflicts.map((conflict) => {
         const resolution = strategy === Collection.strategy.CLIENT_WINS ?
                            conflict.local : conflict.remote;
         const updated = this._resolveRaw(conflict, resolution);
@@ -1003,7 +1000,8 @@ export default class Collection {
         return updated;
       });
     });
-    return result
+
+    return syncResultObject
       .reset("conflicts")
       .add("resolved", imports);
   }
@@ -1047,33 +1045,40 @@ export default class Collection {
         new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
 
-    this._lastModified = await this.db.getLastModified();
-
     const client = this.api.bucket(options.bucket || this.bucket).collection(options.collection || this.name);
-    let syncResult;
+
+    const result = new SyncResultObject();
     try {
-      const result = new SyncResultObject();
-      const pullResult = await this.pullChanges(client, result, options);
-      const pushResult = await this.pushChanges(client, pullResult, options);
-      // Avoid performing a last pull if nothing has been published.
-      if (pushResult.published.length === 0) {
-        syncResult = pushResult;
-      } else {
+      // Fetch last changes from the server.
+      await this.pullChanges(client, result, options);
+      const {lastModified} = result;
+
+      // Publish local changes and pull local resolutions
+      await this.pushChanges(client, result, options);
+
+      // Publish local resolution of push conflicts to server (on CLIENT_WINS)
+      const resolvedUnsynced = result.resolved.filter(r => r._status !== "synced");
+      if (resolvedUnsynced.length > 0) {
+        await this.pushChanges(client, result, options);
+      }
+      // Perform a last pull to catch changes that occured after the last pull,
+      // while local changes were pushed. Do not do it nothing was pushed.
+      if (result.published.length > 0) {
         // Avoid redownloading our own changes during the last pull.
-        const pullOpts = {...options, exclude: pushResult.published};
-        syncResult = await this.pullChanges(client, pushResult, pullOpts);
+        const pullOpts = {...options, lastModified, exclude: result.published};
+        await this.pullChanges(client, result, pullOpts);
       }
 
       // Don't persist lastModified value if any conflict or error occured
-      if (syncResult.ok) {
+      if (result.ok) {
         // No conflict occured, persist collection's lastModified value
-        this._lastModified = await this.db.saveLastModified(syncResult.lastModified);
+        this._lastModified = await this.db.saveLastModified(result.lastModified);
       }
     } finally {
       // Ensure API default remote is reverted if a custom one's been used
       this.api.remote = previousRemote;
     }
-    return syncResult;
+    return result;
   }
 
   /**
