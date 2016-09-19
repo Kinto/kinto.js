@@ -1543,9 +1543,82 @@ describe("Collection", () => {
         });
       });
 
+      describe("With transformers", () => {
+        function createDecodeTransformer(char) {
+          return {
+            encode() {},
+            decode(record) {
+              return {...record, title: record.title + char};
+            }
+          };
+        }
+
+        beforeEach(() => {
+          return listRecords.returns(Promise.resolve({
+            data: [{id: uuid4(), title: "bar"}],
+            next: () => {},
+            last_modified: "42",
+          }));
+        });
+
+        it("should decode incoming encoded records using a single transformer", () => {
+          articles = testCollection({
+            remoteTransformers: [
+              createDecodeTransformer("#")
+            ]
+          });
+
+          return articles.pullChanges(client, result)
+            .then(res => res.created[0].title)
+            .should.become("bar#");
+        });
+
+        it("should decode incoming encoded records using multiple transformers", () => {
+          articles = testCollection({
+            remoteTransformers: [
+              createDecodeTransformer("!"),
+              createDecodeTransformer("?"),
+            ]
+          });
+
+          return articles.pullChanges(client, result)
+            .then(res => res.created[0].title)
+            .should.become("bar?!"); // reversed because we decode in the opposite order
+        });
+
+        it("should decode incoming records even when deleted", () => {
+          let transformer = {
+            called: false,
+            encode() {},
+            decode(record) {
+              this.called = true;
+              return {...record, id: "local-" + record.id};
+            }
+          };
+          articles = testCollection({
+            idSchema: NULL_SCHEMA,
+            remoteTransformers: [transformer]
+          });
+          let id = uuid4();
+          listRecords.returns(Promise.resolve({
+            data: [{id: id, deleted: true}],
+            next: () => {},
+            last_modified: "42",
+          }));
+          return articles.create({id: "local-" + id, title: "some title"}, {synced: true})
+            .then(() => articles.pullChanges(client, result))
+            .then(res => {
+              expect(transformer.called).equal(true);
+              return res.deleted[0];
+            })
+            .should.eventually.property("id", "local-" + id);
+        });
+      });
+
       it("should not fetch remote records if result status isn't ok", () => {
-        result.ok = false;
-        return articles.pullChanges(client, result)
+        const withConflicts = new SyncResultObject();
+        withConflicts.add("conflicts", [1]);
+        return articles.pullChanges(client, withConflicts)
           .then(_ => sinon.assert.notCalled(listRecords));
       });
 
@@ -1799,15 +1872,6 @@ describe("Collection", () => {
   describe("#importChanges", () => {
     let articles, result;
 
-    function createDecodeTransformer(char) {
-      return {
-        encode() {},
-        decode(record) {
-          return {...record, title: record.title + char};
-        }
-      };
-    }
-
     beforeEach(() => {
       articles = testCollection();
       result = new SyncResultObject();
@@ -1817,7 +1881,7 @@ describe("Collection", () => {
       const error = new Error("unknown error");
       sandbox.stub(articles.db, "execute").returns(Promise.reject(error));
 
-      return articles.importChanges(result, {changes: [{title: "bar"}]})
+      return articles.importChanges(result, [{title: "bar"}])
         .then(res => res.errors)
         .should.eventually.become([{
           type: "incoming",
@@ -1835,63 +1899,15 @@ describe("Collection", () => {
         .should.eventually.have.property("type").eql("incoming");
     });
 
-    it("should decode incoming encoded records using a single transformer", () => {
-      articles = testCollection({
-        remoteTransformers: [
-          createDecodeTransformer("#")
-        ]
-      });
-
-      return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
-        .then(res => res.created[0].title)
-        .should.become("bar#");
-    });
-
-    it("should decode incoming encoded records using multiple transformers", () => {
-      articles = testCollection({
-        remoteTransformers: [
-          createDecodeTransformer("!"),
-          createDecodeTransformer("?"),
-        ]
-      });
-
-      return articles.importChanges(result, {changes: [{id: uuid4(), title: "bar"}]})
-        .then(res => res.created[0].title)
-        .should.become("bar?!"); // reversed because we decode in the opposite order
-    });
-
-    it("should decode incoming records even when deleted", () => {
-      let transformer = {
-        called: false,
-        encode() {},
-        decode(record) {
-          this.called = true;
-          return {...record, id: "local-" + record.id};
-        }
-      };
-      articles = testCollection({
-        idSchema: NULL_SCHEMA,
-        remoteTransformers: [transformer]
-      });
-      let id = uuid4();
-      return articles.create({id: "local-" + id, title: "some title"}, {synced: true}).then(() => {
-        return articles.importChanges(result, {changes: [{id: id, deleted: true}]});
-      }).then(res => {
-        expect(transformer.called).equal(true);
-        return res.deleted[0];
-      })
-        .should.eventually.property("id", "local-" + id);
-    });
-
     it("should only retrieve the changed record", () => {
       const id1 = uuid4();
       const id2 = uuid4();
       const execute = sandbox.stub(articles.db, "execute").returns(Promise.resolve([]));
 
-      return articles.importChanges(result, {changes: [
+      return articles.importChanges(result, [
         {id: id1, title: "foo"},
         {id: id2, title: "bar"},
-      ]})
+      ])
         .then(() => {
           const preload = execute.lastCall.args[1].preload;
           expect(preload).eql([id1, id2]);
@@ -1902,9 +1918,9 @@ describe("Collection", () => {
       const id1 = uuid4();
       return articles.create({id: id1, title: "bar", size: 12},
                              {synced: true})
-        .then(() => articles.importChanges(result, {changes: [
+        .then(() => articles.importChanges(result, [
           {id: id1, title: "foo"},
-        ]}))
+        ]))
         .then((res) => {
           expect(res.updated[0].new.title).eql("foo");
           expect(res.updated[0].new.size).eql(12);
@@ -1917,9 +1933,9 @@ describe("Collection", () => {
       // Create record with status not synced.
       return articles.create({id: id1, title: "bar", size: 12, last_modified: 42},
                              {useRecordId: true})
-        .then(() => articles.importChanges(result, {changes: [
+        .then(() => articles.importChanges(result, [
           {id: id1, title: "bar", last_modified: 43},
-        ]}))
+        ]))
         .then((res) => {
           // No conflict, local.title == remote.title.
           expect(res.ok).eql(true);
@@ -1934,24 +1950,22 @@ describe("Collection", () => {
 
   /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
-    let client, articles, records, result;
+    let client, articles, result;
+    const records = [
+      {id: uuid4(), title: "foo", _status: "created"}
+    ];
 
     beforeEach(() => {
       client = new KintoClient("http://server.com/v1").bucket("bucket").collection("collection");
       articles = testCollection();
       result = new SyncResultObject();
-      return Promise.all([
-        articles.create({title: "foo"}),
-        articles.create({id: uuid4(), title: "bar"}, {synced: true}),
-      ])
-        .then(results => records = results.map(res => res.data));
     });
 
     it("should publish local changes to the server", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([{}]));
 
-      return articles.pushChanges(client, result)
+      return articles.pushChanges(client, {toSync: records}, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           const options = batchRequests.firstCall.args[1];
@@ -1966,30 +1980,12 @@ describe("Collection", () => {
         .returns(Promise.resolve([{}]));
 
       articles = testCollection({localFields: ["size"]});
-      return articles.update({...records[0], title: "ah", size: 3.14})
-        .then(() => articles.pushChanges(client, result))
+      const toSync = [{...records[0], title: "ah", size: 3.14}];
+      return articles.pushChanges(client, {toSync}, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests[0].body.data.title).eql("ah");
           expect(requests[0].body.data.size).to.not.exist;
-        });
-    });
-
-    it("should batch send encoded records", () => {
-      articles = testCollection({
-        remoteTransformers: [
-          createEncodeTransformer("?", 10),
-          createEncodeTransformer("!", 5),
-        ]
-      });
-
-      const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
-        .returns(Promise.resolve([{}]));
-
-      return articles.pushChanges(client, result)
-        .then(_ => {
-          const requests = batchRequests.firstCall.args[0];
-          expect(requests[0].body.data.title).eql("foo?!");
         });
     });
 
@@ -2000,7 +1996,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(client, result)
+      return articles.pushChanges(client, {toSync: records}, result)
         .then(res => res.published)
         .should.eventually.become([
           {
@@ -2015,8 +2011,8 @@ describe("Collection", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([]));
 
-      return articles.delete(records[0].id)
-        .then(_ => articles.pushChanges(client, result))
+      const toDelete = [{id: records[0].id}]; // no timestamp.
+      return articles.pushChanges(client, {toDelete, toSync: []}, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests).eql([]);
@@ -2032,40 +2028,42 @@ describe("Collection", () => {
         skipped:   [],
       }));
       return articles.delete(locallyDeletedId)
-        .then(_ => articles.pushChanges(client, result))
+        .then(_ => articles.pushChanges(client, {toSync: records}, result))
         .then(_ => articles.get(locallyDeletedId, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
 
     it("should delete locally the records deleted remotely", () => {
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
-        published: [{data: {...records[1], deleted: true}}],
+        published: [{data: {id: records[0].id, deleted: true}}],
         errors:    [],
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(client, result)
+      return articles.pushChanges(client, {toSync: []}, result)
         .then(res => res.published)
         .should.eventually.become([
           {
-            id: records[1].id,
+            id: records[0].id,
             deleted: true
           }
         ]);
     });
 
     it("should delete locally the records already deleted remotely", () => {
+      const id = records[0].id;
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(Promise.resolve({
         published: [],
         errors:    [],
         conflicts: [],
         skipped:   [{
-          id: records[0].id,
+          id,
           error: {errno: 110, code: 404, error: "Not found"},
         }]
       }));
-      return articles.pushChanges(client, result)
-        .then(_ => articles.get(records[0].id, {includeDeleted: true}))
+      return articles.create({id, title: "bar"}, {useRecordId: true, synced: true})
+        .then(() => articles.pushChanges(client, {toSync: records}, result))
+        .then(_ => articles.get(id, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
 
@@ -2086,13 +2084,13 @@ describe("Collection", () => {
       });
 
       it("should report encountered publication errors", () => {
-        return articles.pushChanges(client, result)
+        return articles.pushChanges(client, {toSync: records}, result)
           .then(res => res.errors)
           .should.eventually.become([{...error, type: "outgoing"}]);
       });
 
       it("should report typed publication errors", () => {
-        return articles.pushChanges(client, result)
+        return articles.pushChanges(client, {toSync: records}, result)
           .then(res => res.errors[0])
           .should.eventually.have.property("type").eql("outgoing");
       });
@@ -2279,22 +2277,13 @@ describe("Collection", () => {
       });
     });
 
-    it("should resolve early on pull failure", () => {
-      const result = new SyncResultObject();
-      result.add("conflicts", [1]);
-      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
-      return articles.sync()
-        .should.eventually.become(result);
-    });
-
     it("should not execute a last pull on push failure", () => {
-      const pullResult = new SyncResultObject();
-      const pushResult = new SyncResultObject();
-      pushResult.add("conflicts", [1]);
-      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(pullResult));
-      sandbox.stub(articles, "pushChanges").returns(Promise.resolve(pushResult));
+      const pullChanges = sandbox.stub(articles, "pullChanges");
+      sandbox.stub(articles, "pushChanges", (client, changes, result) => {
+        result.add("conflicts", [1]);
+      });
       return articles.sync()
-        .should.eventually.become(pushResult);
+        .then(() => sinon.assert.calledOnce(pullChanges));
     });
 
     it("should not execute a last pull if nothing to push", () => {
@@ -2310,11 +2299,11 @@ describe("Collection", () => {
     it("should not redownload pushed changes", () => {
       const record1 = {id: uuid4(), title: "blog"};
       const record2 = {id: uuid4(), title: "post"};
-      const syncResult = new SyncResultObject();
-      syncResult.add("published", record1);
-      syncResult.add("published", record2);
-      sandbox.stub(articles, "pullChanges").returns(Promise.resolve(syncResult));
-      sandbox.stub(articles, "pushChanges").returns(Promise.resolve(syncResult));
+      sandbox.stub(articles, "pullChanges");
+      sandbox.stub(articles, "pushChanges", (client, changes, result) => {
+        result.add("published", record1);
+        result.add("published", record2);
+      });
       return articles.sync().then(res => {
         expect(res.published).to.have.length(2);
         expect(articles.pullChanges.lastCall.args[2].exclude).eql([record1, record2]);
@@ -2352,14 +2341,13 @@ describe("Collection", () => {
       });
 
       it("should perform sync on server backoff when ignoreBackoff is true", () => {
-        const result = new SyncResultObject();
         sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
-        sandbox.stub(articles, "pullChanges").returns(Promise.resolve(result));
-        sandbox.stub(articles, "pushChanges").returns(Promise.resolve(result));
+        const pullChanges = sandbox.stub(articles, "pullChanges");
+        sandbox.stub(articles, "pushChanges");
         articles.api.events.emit("backoff", new Date().getTime() + 30000);
 
         return articles.sync({ignoreBackoff: true})
-          .then(_ => sinon.assert.calledOnce(articles.db.getLastModified));
+          .then(_ => sinon.assert.calledOnce(pullChanges));
       });
     });
   });

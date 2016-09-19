@@ -34,7 +34,7 @@ const appendTransformer = function(s) {
   };
 };
 
-describe.only("Integration tests", function() {
+describe("Integration tests", function() {
   let sandbox, server, kinto, tasks, tasksTransformed;
 
   // Disabling test timeouts until pserve gets decent startup time.
