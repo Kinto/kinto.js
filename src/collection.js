@@ -611,20 +611,12 @@ export default class Collection {
   }
 
   /**
-   * Imports remote changes into the local database. The change object contains
-   * two properties:
-   *
-   * - `changes`: an array exposing the list of changes that occurred on the
-   *   server since the last successful synchronization (basically the list of
-   *   updated and/or deleted records);
-   * - `lastModified`: the last modified timestamp of the remote collection.
-   *
-   * @param  {SyncResultObject} syncResultObject   The sync result object.
-   * @param  {Object}       changeObject           The change object.
-   * @param  {Number}       changeObject.lastModified The last modified
-   * timestamp of the remote collection.
-   * @param  {Array}        changeObject.changes The list of changes that
-   * occurred on the server since the last successful synchronization.
+   * Imports remote changes into the local database.
+   * This method is in charge of detecting the conflicts, and resolve them
+   * according to the specified strategy.
+   * @param  {SyncResultObject} syncResultObject The sync result object.
+   * @param  {Array}            decodedChanges   The list of changes to import in the local database.
+   * @param  {String}           strategy         The {@link Collection.strategy}.
    * @return {Promise}
    */
   async importChanges(syncResultObject, decodedChanges, strategy) {
@@ -663,6 +655,15 @@ export default class Collection {
     return syncResultObject;
   }
 
+  /**
+   * Imports the responses of pushed changes into the local database.
+   * Basically it stores the timestamp assigned by the server into the local
+   * database.
+   * @param  {SyncResultObject} syncResultObject The sync result object.
+   * @param  {Array}            toApplyLocally   The list of changes to import in the local database.
+   * @param  {String}           strategy         The {@link Collection.strategy}.
+   * @return {Promise}
+   */
   async importPublications(syncResultObject, toApplyLocally, strategy) {
     const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
     const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
@@ -906,6 +907,9 @@ export default class Collection {
    *
    * @param  {KintoClient.Collection} client           Kinto client Collection instance.
    * @param  {SyncResultObject}       syncResultObject The sync result object.
+   * @param  {Object}                 changes          The change object.
+   * @param  {Array}                  changes.toDelete The list of records to delete.
+   * @param  {Array}                  changes.toSync   The list of records to create/update.
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
