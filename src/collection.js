@@ -70,7 +70,13 @@ export class SyncResultObject {
     if (!Array.isArray(this[type])) {
       return;
     }
-    this[type] = this[type].concat(entries);
+    // Deduplicate entries by id. If the values don't have `id` attribute, just
+    // keep all.
+    const deduplicated = this[type].concat(entries).reduce((acc, cur) => {
+      const existing = acc.filter((r) => cur.id && r.id ? cur.id != r.id : true);
+      return existing.concat(cur);
+    }, []);
+    this[type] = deduplicated;
     this.ok = this.errors.length + this.conflicts.length === 0;
     return this;
   }
@@ -689,14 +695,10 @@ export default class Collection {
     syncResultObject.add("published", published);
 
     if (resolved.length > 0) {
-      // Resolved conflicts are merged with previous ones.
-      const resolvedIds = resolved.map((r) => r.id);
-      const mergedResolved = syncResultObject.resolved.filter((r) => resolvedIds.indexOf(r.id) < 0)
-                                                      .concat(resolved);
       syncResultObject
         .reset("conflicts")
         .reset("resolved")
-        .add("resolved", mergedResolved);
+        .add("resolved", resolved);
     }
     return syncResultObject;
   }
