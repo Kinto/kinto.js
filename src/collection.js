@@ -622,10 +622,10 @@ export default class Collection {
    * according to the specified strategy.
    * @param  {SyncResultObject} syncResultObject The sync result object.
    * @param  {Array}            decodedChanges   The list of changes to import in the local database.
-   * @param  {String}           strategy         The {@link Collection.strategy}.
+   * @param  {String}           strategy         The {@link Collection.strategy} (default: MANUAL)
    * @return {Promise}
    */
-  async importChanges(syncResultObject, decodedChanges, strategy) {
+  async importChanges(syncResultObject, decodedChanges, strategy=Collection.strategy.MANUAL) {
     // Retrieve records matching change ids.
     try {
       const {imports, resolved} = await this.db.execute(transaction => {
@@ -671,7 +671,7 @@ export default class Collection {
    * @param  {String}           strategy         The {@link Collection.strategy}.
    * @return {Promise}
    */
-  async _applyPushedResults(syncResultObject, toApplyLocally, conflicts, strategy) {
+  async _applyPushedResults(syncResultObject, toApplyLocally, conflicts, strategy=Collection.strategy.MANUAL) {
     const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
     const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
 
@@ -710,7 +710,7 @@ export default class Collection {
    * @param  {String}           strategy  The {@link Collection.strategy}.
    * @return {Promise}
    */
-  _handleConflicts(transaction, conflicts, strategy=Collection.strategy.MANUAL) {
+  _handleConflicts(transaction, conflicts, strategy) {
     if (strategy === Collection.strategy.MANUAL) {
       return [];
     }
