@@ -661,14 +661,13 @@ export default class Collection {
    * database.
    * @param  {SyncResultObject} syncResultObject The sync result object.
    * @param  {Array}            toApplyLocally   The list of changes to import in the local database.
+   * @param  {Array}            conflicts        The list of conflicts that have to be resolved.
    * @param  {String}           strategy         The {@link Collection.strategy}.
    * @return {Promise}
    */
-  async importPublications(syncResultObject, toApplyLocally, strategy) {
+  async _applyPushedResults(syncResultObject, toApplyLocally, conflicts, strategy) {
     const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
     const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
-
-    const conflicts = syncResultObject.conflicts;
 
     const {published, resolved} = await this.db.execute((transaction) => {
       const updated = toUpdateLocally.map((record) => {
@@ -970,7 +969,11 @@ export default class Collection {
       return this._decodeRecord("remote", record);
     }));
 
-    await this.importPublications(syncResultObject, decoded, options.strategy);
+    // We have to update the local records with the responses of the server
+    // (eg. last_modified values etc.).
+    if (decoded.length > 0 || conflicts.length > 0) {
+      await this._applyPushedResults(syncResultObject, decoded, conflicts, options.strategy);
+    }
 
     return syncResultObject;
   }
