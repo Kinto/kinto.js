@@ -830,10 +830,12 @@ export default class Collection {
     const since = this.lastModified ? this.lastModified
                                     : await this.db.getLastModified();
 
-    options = {strategy: Collection.strategy.MANUAL,
+    options = {
+      strategy: Collection.strategy.MANUAL,
       lastModified: since,
       headers: {},
-      ...options};
+      ...options
+    };
 
     // Optionally ignore some records when pulling for changes.
     // (avoid redownloading our own changes on last step of #sync())
