@@ -266,7 +266,7 @@ describe("adapter.IDB", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(db, "open").returns(Promise.reject("error"));
-      return db.list().should.be.rejectedWith(Error, /^Error: list/);
+      return db.list().should.be.rejectedWith(Error, /^list()/);
     });
 
     it("should reject on transaction error", () => {
@@ -355,7 +355,7 @@ describe("adapter.IDB", () => {
         }
       });
       return db.loadDump([{foo: "bar"}])
-        .should.be.rejectedWith(Error, /^Error: loadDump/);
+        .should.be.rejectedWith(Error, /^loadDump()/);
     });
   });
 

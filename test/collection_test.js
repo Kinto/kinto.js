@@ -1226,22 +1226,22 @@ describe("Collection", () => {
 
     it("should fail if records is not an array", () => {
       return articles.loadDump({id: 1, title: "foo"})
-      .should.be.rejectedWith(Error, /^Error: Records is not an array./);
+      .should.be.rejectedWith(Error, /^Records is not an array./);
     });
 
     it("should fail if id is invalid", () => {
       return articles.loadDump([{id: 1, title: "foo"}])
-      .should.be.rejectedWith(Error, /^Error: Record has invalid ID./);
+      .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if id is missing", () => {
       return articles.loadDump([{title: "foo"}])
-      .should.be.rejectedWith(Error, /^Error: Record has invalid ID./);
+      .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if last_modified is missing", () => {
       return articles.loadDump([{id: uuid4(), title: "foo"}])
-      .should.be.rejectedWith(Error, /^Error: Record has no last_modified value./);
+      .should.be.rejectedWith(Error, /^Record has no last_modified value./);
     });
 
     it("should mark imported records as synced.", () => {
