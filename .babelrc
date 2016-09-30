@@ -8,6 +8,14 @@
         "transform-runtime"
       ],
     },
+    "default": {
+      "presets": ["es2015"],
+      "plugins": [
+        "transform-object-rest-spread",
+        "transform-async-to-generator",
+        "transform-runtime"
+      ],
+    },
     "firefox": {
       "plugins": [
         "transform-es2015-modules-commonjs",
