@@ -16,6 +16,13 @@
         "transform-runtime"
       ],
     },
+    "noshim": {
+      "plugins": [
+        "transform-es2015-modules-commonjs",
+        "transform-object-rest-spread",
+        "transform-async-to-generator"
+      ]
+    },
     "firefox": {
       "plugins": [
         "transform-es2015-modules-commonjs",
