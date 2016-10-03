@@ -1081,7 +1081,8 @@ export default class Collection {
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
       const resolvedUnsynced = result.resolved.filter(r => r._status !== "synced");
       if (resolvedUnsynced.length > 0) {
-        await this.pushChanges(client, {toSync: resolvedUnsynced}, result, options);
+        const resolvedEncoded = await Promise.all(resolvedUnsynced.map(this._encodeRecord.bind(this, "remote")));
+        await this.pushChanges(client, {toSync: resolvedEncoded}, result, options);
       }
       // Perform a last pull to catch changes that occured after the last pull,
       // while local changes were pushed. Do not do it nothing was pushed.
