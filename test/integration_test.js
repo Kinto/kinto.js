@@ -1157,6 +1157,13 @@ describe("Integration tests", function() {
                 {title: "task1-local", _status: "synced"},
               ]);
           });
+
+          it("should put the remote database in the expected state", () => {
+            return getRemoteList(tasksTransformed._name).should.become([
+              // local task4 should have been published to the server.
+              {title: "task1-local!", done: false},
+            ]);
+          });
         });
 
         describe("SERVER_WINS strategy", () => {
