@@ -84,8 +84,11 @@ const statements = {
 
   "importData": `
     REPLACE INTO collection_data (collection_name, record_id, record)
-      VALUES (:collection_name, :record_id, :record);`
+      VALUES (:collection_name, :record_id, :record);`,
 
+  "scanAllRecords": `SELECT * FROM collection_data;`,
+
+  "clearCollectionMetadata": `DELETE FROM collection_metadata;`,
 };
 
 const createStatements = ["createCollectionData",
@@ -298,6 +301,40 @@ export default class FirefoxAdapter extends BaseAdapter {
         }
         return result[0].getResultByName("last_modified");
       });
+  }
+
+  /**
+   * Reset the sync status of every record and collection we have
+   * access to.
+   */
+  resetSyncStatus() {
+    // We're going to use execute instead of executeCached, so build
+    // in our own sanity check
+    if (!this._connection) {
+      throw new Error("The storage adapter is not open");
+    }
+
+    return this._connection.executeTransaction(function* (conn) {
+      const promises = [];
+      yield conn.execute(statements.scanAllRecords, null, function(row) {
+        const record = JSON.parse(row.getResultByName("record"));
+        const record_id = row.getResultByName("record_id");
+        const collection_name = row.getResultByName("collection_name");
+        if (record._status === "deleted") {
+          // Garbage collect deleted records.
+          promises.push(conn.execute(statements.deleteData, {collection_name, record_id}));
+        }
+        else {
+          const newRecord = {...record,
+            _status: "created",
+            last_modified: undefined,
+          };
+          promises.push(conn.execute(statements.updateData, {record: JSON.stringify(newRecord), record_id, collection_name}));
+        }
+      });
+      yield Promise.all(promises);
+      yield conn.execute(statements.clearCollectionMetadata);
+    });
   }
 }
 
