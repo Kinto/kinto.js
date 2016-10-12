@@ -581,6 +581,17 @@ export default class Collection {
   }
 
   /**
+   * Deletes all record from the local database.
+   * 
+   * @return {Object}
+   */
+  deleteAll(options={virtual: true}) {
+    return this.execute(transaction => {
+      return transaction.deleteAll(options);
+    });
+  }
+
+  /**
    * The same as {@link CollectionTransaction#deleteAny}, but wrapped
    * in its own transaction.
    *
@@ -1253,6 +1264,15 @@ export class CollectionTransaction {
     }
     this._queueEvent("delete", {data: existing});
     return {data: existing, permissions: {}};
+  }
+
+  /**
+   * Deletes all record from the local database.
+   * 
+   * @return {Object}
+   */
+  deleteAll(options={virtual: true}) {
+    // todo implement list().map(delete);
   }
 
   /**

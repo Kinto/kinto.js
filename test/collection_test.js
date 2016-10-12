@@ -1018,6 +1018,25 @@ describe("Collection", () => {
     });
   });
 
+  /** @test #Collection#deleteAll */
+  describe("#deleteAll", () => {
+    let articles;
+
+    beforeEach(() => {
+      articles = testCollection();
+      return articles.create(article);
+    });
+
+    describe("Virtual", () => {
+      it("should virtually delete all records", () => {
+        return articles.deleteAll({virtual: true})
+          .then(res => articles.list())
+          .then(res => res.data)
+          .map(data => data._status.should.eventually.eql("deleted"));
+      });
+    });
+  });
+
   /** @test {Collection#deleteAny} */
   describe("#deleteAny", () => {
     let articles, id;
