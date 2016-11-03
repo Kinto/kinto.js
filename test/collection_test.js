@@ -581,10 +581,10 @@ describe("Collection", () => {
       })
         .then(res => articles.get(res.data.id))
         .then(res => {
-          return articles.update(
-            {id: res.data.id,
+          return articles.update({
+            id: res.data.id,
             title: "new title",
-            });
+          });
         })
         .then(res => res.data)
           .should.eventually.have.property("last_modified").eql(123456789012);
@@ -700,10 +700,10 @@ describe("Collection", () => {
       return articles.create(article)
         .then(res => articles.get(res.data.id))
         .then(res => {
-          return articles.upsert(
-            {id: res.data.id,
+          return articles.upsert({
+            id: res.data.id,
             title: "new title",
-            });
+          });
         })
         .then(res => res.data)
           .should.eventually.not.have.property("url");
