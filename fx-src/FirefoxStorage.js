@@ -114,6 +114,9 @@ export default class FirefoxAdapter extends BaseAdapter {
     this._options = options;
   }
 
+  // We need to be capable of calling this from "outside" the adapter
+  // so that someone can initialize a connection and pass it to us in
+  // adapterOptions.
   static _init(connection) {
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doSetup() {
