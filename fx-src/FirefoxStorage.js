@@ -114,7 +114,7 @@ export default class FirefoxAdapter extends BaseAdapter {
     this._options = options;
   }
 
-  _init(connection) {
+  static _init(connection) {
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doSetup() {
         const schema = yield connection.getSchemaVersion();
@@ -148,7 +148,7 @@ export default class FirefoxAdapter extends BaseAdapter {
       if (!self._connection) {
         const path = self._options.path || SQLITE_PATH;
         const opts = { path, sharedMemoryCache: false };
-        self._connection = yield Sqlite.openConnection(opts).then(self._init);
+        self._connection = yield Sqlite.openConnection(opts).then(FirefoxAdapter._init);
       }
     });
   }
