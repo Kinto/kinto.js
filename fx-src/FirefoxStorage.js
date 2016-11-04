@@ -108,12 +108,16 @@ const currentSchemaVersion = 1;
 export default class FirefoxAdapter extends BaseAdapter {
   constructor(collection, options={}) {
     super();
+    const {sqliteHandle=null} = options;
     this.collection = collection;
-    this._connection = null;
+    this._connection = sqliteHandle;
     this._options = options;
   }
 
-  _init(connection) {
+  // We need to be capable of calling this from "outside" the adapter
+  // so that someone can initialize a connection and pass it to us in
+  // adapterOptions.
+  static _init(connection) {
     return Task.spawn(function* () {
       yield connection.executeTransaction(function* doSetup() {
         const schema = yield connection.getSchemaVersion();
@@ -144,10 +148,10 @@ export default class FirefoxAdapter extends BaseAdapter {
   open() {
     const self = this;
     return Task.spawn(function* (){
-      const path = self._options.path || SQLITE_PATH;
-      const opts = { path, sharedMemoryCache: false };
       if (!self._connection) {
-        self._connection = yield Sqlite.openConnection(opts).then(self._init);
+        const path = self._options.path || SQLITE_PATH;
+        const opts = { path, sharedMemoryCache: false };
+        self._connection = yield Sqlite.openConnection(opts).then(FirefoxAdapter._init);
       }
     });
   }
