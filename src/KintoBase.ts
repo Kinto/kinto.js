@@ -6,10 +6,28 @@ import BaseAdapter from "./adapters/base";
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
 
+
+interface KintoOptions {
+  events?;
+  adapter?;
+  adapterOptions?;
+  dbPrefix?;
+  remote?;
+  headers?;
+  requestMode?
+  timeout?;
+  ApiClass?;
+  bucket?;
+}
+
 /**
  * KintoBase class.
  */
 export default class KintoBase {
+
+  private _options: KintoOptions;
+  api;
+  events;
   /**
    * Provides a public access to the base adapter class. Users can create a
    * custom DB adapter by extending {@link BaseAdapter}.
@@ -86,7 +104,7 @@ export default class KintoBase {
    *                           remoteTransformers: Array<RemoteTransformer>
    * @return {Collection}
    */
-  collection(collName, options = {}) {
+  collection(collName, options = ({} as any)) {
     if (!collName) {
       throw new Error("missing collection name");
     }

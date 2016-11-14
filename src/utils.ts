@@ -1,13 +1,13 @@
 "use strict";
 
-export const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const RE_UUID: RegExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Checks if a value is undefined.
  * @param  {Any}  value
  * @return {Boolean}
  */
-function _isUndefined(value) {
+function _isUndefined(value: any): boolean {
   return typeof value === "undefined";
 }
 
@@ -18,7 +18,7 @@ function _isUndefined(value) {
  * @param  {Array}  list  The collection to order.
  * @return {Array}
  */
-export function sortObjects(order, list) {
+export function sortObjects(order: string, list: any[]): any[] {
   const hasDash = order[0] === "-";
   const field = hasDash ? order.slice(1) : order;
   const direction = hasDash ? -1 : 1;
@@ -41,9 +41,9 @@ export function sortObjects(order, list) {
  *
  * @param  {Object} filters  The filters object.
  * @param  {Object} entry    The object to filter.
- * @return {Function}
+ * @return {Boolen}
  */
-export function filterObject(filters, entry) {
+export function filterObject(filters: Object, entry: Object): boolean {
   return Object.keys(filters).every(filter => {
     const value = filters[filter];
     if (Array.isArray(value)) {
@@ -60,7 +60,7 @@ export function filterObject(filters, entry) {
  * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
-export function filterObjects(filters, list) {
+export function filterObjects(filters: Object, list: any[]): any[] {
   return list.filter((entry) => {
     return filterObject(filters, entry);
   });
@@ -72,7 +72,7 @@ export function filterObjects(filters, list) {
  * @param  {String} uuid The uuid to validate.
  * @return {Boolean}
  */
-export function isUUID(uuid) {
+export function isUUID(uuid: string): boolean {
   return RE_UUID.test(uuid);
 }
 
@@ -84,11 +84,11 @@ export function isUUID(uuid) {
  * @param  {Any}   init The initial value.
  * @return {Promise}
  */
-export function waterfall(fns, init) {
-  if (!fns.length) {
+export function waterfall(fns: any[], init: any): Promise<any> {
+  if (!fns.length) {                // Cannot happen with type checking of Function[]
     return Promise.resolve(init);
   }
-  return fns.reduce((promise, nextFn) => {
+  return fns.reduce((promise, nextFn: any) => {
     return promise.then(nextFn);
   }, Promise.resolve(init));
 }
@@ -101,7 +101,7 @@ export function waterfall(fns, init) {
  * @param  {Object} b The compared object.
  * @return {Boolean}
  */
-export function deepEqual(a, b) {
+export function deepEqual(a: Object, b: Object): boolean {
   if (a === b) {
     return true;
   }
@@ -129,7 +129,7 @@ export function deepEqual(a, b) {
  * @param  {Array}  keys       The list of keys to exclude.
  * @return {Object}            A copy without the specified keys.
  */
-export function omitKeys(obj, keys=[]) {
+export function omitKeys(obj: Object, keys: any[] = []): Object{
   return Object.keys(obj).reduce((acc, key) => {
     if (keys.indexOf(key) === -1) {
       acc[key] = obj[key];

@@ -1,18 +1,36 @@
 "use strict";
 
 /**
+ * Interface to provide filtering and ordering parameters to the list function
+ */
+export interface ListParameters {
+  filters?: Object;
+  order?: string;
+}
+
+/**
  * Base db adapter.
  *
  * @abstract
  */
 export default class BaseAdapter {
+
+  protected _db:  IDBDatabase;
+
+  // public properties
+  /**
+   * The database name.
+   * @type {String}
+   */
+  public dbname: string;
+
   /**
    * Opens a connection to the database.
    *
    * @abstract
    * @return {Promise}
    */
-  open() {
+  open(): Promise<any> {
     return Promise.resolve();
   }
 
@@ -22,7 +40,7 @@ export default class BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  close() {
+  close(): Promise<any> {
     return Promise.resolve();
   }
 
@@ -32,7 +50,7 @@ export default class BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  clear() {
+  clear(): Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -44,7 +62,7 @@ export default class BaseAdapter {
    * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  execute(callback, options={preload: []}) {
+  execute(callback: Function, options: Object = {preload: []}): Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -55,7 +73,7 @@ export default class BaseAdapter {
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  get(id) {
+  get(id: string): Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -66,7 +84,7 @@ export default class BaseAdapter {
    * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
-  list(params={filters: {}, order: ""}) {
+  list(params: ListParameters = {filters: {}, order: ""}):Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -77,7 +95,7 @@ export default class BaseAdapter {
    * @param  {Number}  lastModified
    * @return {Promise}
    */
-  saveLastModified(lastModified) {
+  saveLastModified(lastModified): Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -87,7 +105,7 @@ export default class BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  getLastModified() {
+  getLastModified(): Promise<number> {
     throw new Error("Not Implemented.");
   }
 
@@ -97,7 +115,7 @@ export default class BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  loadDump(records) {
+  loadDump(records): Promise<any> {
     throw new Error("Not Implemented.");
   }
 }
