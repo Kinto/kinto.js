@@ -17,4 +17,4 @@
  * This file is generated from kinto.js - do not modify directly.
  */
 
-this.EXPORTED_SYMBOLS = ["loadKinto"];
+this.EXPORTED_SYMBOLS = ["Kinto"];
