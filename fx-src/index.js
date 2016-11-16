@@ -15,67 +15,45 @@
 
 "use strict";
 
-const { classes: Cc, interfaces: Ci, utils: Cu }  = Components;
+const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
 
-import BaseAdapter from "../built/adapters/base";
+Cu.import("resource://gre/modules/Timer.jsm");
+Cu.importGlobalProperties(["fetch"]);
+const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
+const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
+
+// Use standalone kinto-http module landed in FFx.
+const { KintoHttpClient } = Cu.import("resource://services-common/kinto-http-client.js");
+
 import KintoBase from "../built/KintoBase";
-import FirefoxAdapter from "./FirefoxStorage";
 import { RE_UUID } from "../built/utils";
 
-export default function loadKinto() {
-  const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});
-  const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
 
-  // Use standalone kinto-http module landed in FFx.
-  const { KintoHttpClient } = Cu.import("resource://services-common/kinto-http-client.js");
+export default class Kinto extends KintoBase {
+  constructor(options={}) {
+    const events = {};
+    EventEmitter.decorate(events);
 
-  Cu.import("resource://gre/modules/Timer.jsm");
-  Cu.importGlobalProperties(['fetch']);
+    const defaults = {
+      events,
+      ApiClass: KintoHttpClient,
+    };
+    super({...defaults, ...options});
+  }
 
-  // Leverage Gecko service to generate UUIDs.
-  function makeIDSchema() {
-    return {
+  collection(collName, options={}) {
+    const idSchema = {
       validate: RE_UUID.test.bind(RE_UUID),
       generate: function() {
         return generateUUID().toString().replace(/[{}]/g, "");
       }
     };
+    return super.collection(collName, {idSchema, ...options});
   }
-
-  class KintoFX extends KintoBase {
-    static get adapters() {
-      return {
-        BaseAdapter: BaseAdapter,
-        FirefoxAdapter: FirefoxAdapter
-      };
-    }
-
-    constructor(options={}) {
-      const emitter = {};
-      EventEmitter.decorate(emitter);
-
-      const defaults = {
-        events: emitter,
-        ApiClass: KintoHttpClient,
-        adapter: FirefoxAdapter
-      };
-
-      const expandedOptions = {...defaults, ...options};
-      super(expandedOptions);
-    }
-
-    collection(collName, options={}) {
-      const idSchema = makeIDSchema();
-      const expandedOptions = {idSchema, ...options};
-      return super.collection(collName, expandedOptions);
-    }
-  }
-
-  return KintoFX;
 }
 
 // This fixes compatibility with CommonJS required by browserify.
 // See http://stackoverflow.com/questions/33505992/babel-6-changes-how-it-exports-default/33683495#33683495
 if (typeof module === "object") {
-  module.exports = loadKinto;
+  module.exports = Kinto;
 }
