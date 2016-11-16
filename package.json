@@ -120,6 +120,7 @@
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
     "kinto-http": "^2.5.1",
+    "typescript": "^2.2.0-dev.20161116",
     "uuid": "^2.0.1"
   },
   "devDependencies": {
