@@ -2,7 +2,7 @@
 
 import { expect } from "chai";
 
-import BaseAdapter from "../../src/adapters/base";
+import BaseAdapter from "../../built/adapters/base";
 
 describe("adapters.BaseAdapter", () => {
   let adapter;

@@ -6,13 +6,13 @@ import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
 
-import IDB from "../src/adapters/IDB";
-import BaseAdapter from "../src/adapters/base";
-import Collection, { SyncResultObject } from "../src/collection";
+import IDB from "../built/adapters/IDB";
+import BaseAdapter from "../built/adapters/base";
+import Collection, { SyncResultObject } from "../built/collection";
 import Api from "kinto-http";
 import KintoClient from "kinto-http";
 import KintoClientCollection from "kinto-http/lib/collection.js";
-import { recordsEqual } from "../src/collection";
+import { recordsEqual } from "../built/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 
 chai.use(chaiAsPromised);

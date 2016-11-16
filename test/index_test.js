@@ -6,10 +6,10 @@ import sinon from "sinon";
 import { EventEmitter } from "events";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http/lib/base";
 
-import Collection from "../src/collection";
-import BaseAdapter from "../src/adapters/base";
-import IDB from "../src/adapters/IDB";
-import Kinto from "../src";
+import Collection from "../built/collection";
+import BaseAdapter from "../built/adapters/base";
+import IDB from "../built/adapters/IDB";
+import Kinto from "../built";
 
 chai.use(chaiAsPromised);
 chai.should();

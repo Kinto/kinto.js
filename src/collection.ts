@@ -16,7 +16,7 @@ export interface Record {
   [propName: string]: any;
 }
 
-interface SyncOptions {
+export interface SyncOptions {
   strategy?,
   lastModified?,
   headers?,
@@ -207,7 +207,7 @@ function importChange(transaction, remote, localFields): any {
   return {type, data: {old: local, new: synced}};
 }
 
-interface CollectionOptions {
+export interface CollectionOptions {
   adapter?:             any;      // The base DB adapter class.
   adapterOptions?:      Object;   // Options given to the adapter.
   dbPrefix?:            String;   // The DB name prefix.

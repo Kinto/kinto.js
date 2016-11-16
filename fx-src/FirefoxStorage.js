@@ -11,8 +11,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import BaseAdapter from "../src/adapters/base";
-import { filterObjects, sortObjects } from "../src/utils";
+import BaseAdapter from "../built/adapters/base";
+import { filterObjects, sortObjects } from "../built/utils";
 
 Components.utils.import("resource://gre/modules/Sqlite.jsm");
 Components.utils.import("resource://gre/modules/Task.jsm");

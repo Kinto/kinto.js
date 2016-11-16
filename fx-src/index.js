@@ -17,10 +17,10 @@
 
 const { classes: Cc, interfaces: Ci, utils: Cu }  = Components;
 
-import BaseAdapter from "../src/adapters/base";
-import KintoBase from "../src/KintoBase";
+import BaseAdapter from "../built/adapters/base";
+import KintoBase from "../built/KintoBase";
 import FirefoxAdapter from "./FirefoxStorage";
-import { RE_UUID } from "../src/utils";
+import { RE_UUID } from "../built/utils";
 
 export default function loadKinto() {
   const { EventEmitter } = Cu.import("resource://devtools/shared/event-emitter.js", {});

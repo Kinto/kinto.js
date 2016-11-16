@@ -7,8 +7,8 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
-import Kinto from "../src";
-import { recordsEqual } from "../src/collection";
+import Kinto from "../built";
+import { recordsEqual } from "../built/collection";
 
 chai.use(chaiAsPromised);
 chai.should();

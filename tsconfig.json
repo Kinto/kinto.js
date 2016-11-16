@@ -1,10 +1,11 @@
 {
     "compilerOptions": {
+        "outDir": "./built",
         "allowJs": true,
         "allowUnreachableCode": false,
         "lib":["dom","es6","dom","es7","scripthost"],
         "module": "commonjs",
-        "target": "ES6",
+        "target": "ES5",
         "noFallthroughCasesInSwitch": true,
         "noImplicitAny": false,
         "noImplicitReturns": false,
