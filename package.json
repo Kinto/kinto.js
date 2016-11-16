@@ -17,12 +17,12 @@
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
-    "tdd": "babel-node node_modules/.bin/_mocha --watch --require ./test/_setup.js 'test/**/*_test.js'",
+    "tdd": "tsc && babel-node node_modules/.bin/_mocha --watch --require ./test/_setup.js 'test/**/*_test.js'",
     "test": "npm run lint && npm run test-nocover",
     "test-cover": "babel-node node_modules/.bin/babel-istanbul cover --report text $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
     "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && echo 'Coverage report generated in coverage/index.html'",
     "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'",
-    "lint": "eslint src test"
+    "lint": "tsc && eslint src built test"
   },
   "repository": {
     "type": "git",
