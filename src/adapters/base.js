@@ -7,26 +7,6 @@
  */
 export default class BaseAdapter {
   /**
-   * Opens a connection to the database.
-   *
-   * @abstract
-   * @return {Promise}
-   */
-  open() {
-    return Promise.resolve();
-  }
-
-  /**
-   * Closes current connection to the database.
-   *
-   * @abstract
-   * @return {Promise}
-   */
-  close() {
-    return Promise.resolve();
-  }
-
-  /**
    * Deletes every records present in the database.
    *
    * @abstract

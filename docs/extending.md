@@ -14,16 +14,6 @@ class MyAdapter extends Kinto.adapters.BaseAdapter {
     this.options = options;
   }
 
-  open() {
-    // open a database connection
-    return super.open();
-  }
-
-  close() {
-    // close a database connection
-    return super.close();
-  }
-
   execute(callback, options={preload: []}) {
     // performs a transaction
   }
@@ -39,8 +29,6 @@ class MyAdapter extends Kinto.adapters.BaseAdapter {
 }
 ```
 
-Note that `#open()` and `#close()` are implemented and are simply resolving by default.
-
 Then create the Kinto object passing a reference to your adapter class:
 
 ```
@@ -54,6 +42,14 @@ The `options` argument to the adapter constructor is taken from the `adapterOpti
 ```
 const kinto = new Kinto({adapter: MyAdapter, adapterOptions: {style: "traditional"}});
 ```
+
+## Opening and closing
+
+It's very common for adapters to want to maintain a "handle" to some other resource (where actual storage happens). This "handle" may have its own lifetime which needs to be explicitly managed, i.e. you may want to open or close the handle. It's therefore common for adapters to define their own `open()` and `close()` methods.
+
+These methods are not part of the Adapter contract and do not have kinto.js-specific semantics. It seems that the lifetime of that "handle" can vary according to the application, so kinto.js doesn't make any assumptions about any `open()` or `close()` methods. Non-adapter code will never call these methods.
+
+In short, you can define `open()` and `close()` methods if you like, and call them yourself however you like. The `IDB` adapter provided with kinto.js does exactly this -- it opens and closes its adapter every time it uses it. You can also define an adapter that has to be explicitly `open()`ed from "outside" before it can be used.
 
 ## Supporting transactions
 
