@@ -186,7 +186,7 @@ export default class IDB extends BaseAdapter {
       this._db.close(); // indexedDB.close is synchronous
       this._db = null;
     }
-    return super.close();
+    return Promise.resolve();
   }
 
   /**
