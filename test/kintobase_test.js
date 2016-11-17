@@ -2,8 +2,8 @@
 
 import { expect } from "chai";
 
-import KintoBase from "../src/KintoBase.js";
-import BaseAdapter from "../src/adapters/base.js";
+import KintoBase from "../built/KintoBase.js";
+import BaseAdapter from "../built/adapters/base.js";
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {

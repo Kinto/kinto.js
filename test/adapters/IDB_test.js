@@ -3,7 +3,7 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import IDB from "../../src/adapters/IDB.js";
+import IDB from "../../built/adapters/IDB.js";
 import { v4 as uuid4 } from "uuid";
 
 

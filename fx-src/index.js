@@ -25,8 +25,8 @@ const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUU
 // Use standalone kinto-http module landed in FFx.
 const { KintoHttpClient } = Cu.import("resource://services-common/kinto-http-client.js");
 
-import KintoBase from "../src/KintoBase";
-import { RE_UUID } from "../src/utils";
+import KintoBase from "../built/KintoBase";
+import { RE_UUID } from "../built/utils";
 
 
 export default class Kinto extends KintoBase {

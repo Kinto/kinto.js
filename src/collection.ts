@@ -10,6 +10,19 @@ const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
 
 
+export interface Record {
+  id?: string;
+  last_modified?: number;
+  [propName: string]: any;
+}
+
+export interface SyncOptions {
+  strategy?,
+  lastModified?,
+  headers?,
+  exclude?
+}
+
 /**
  * Compare two records omitting local fields and synchronization
  * attributes (like _status and last_modified)
@@ -27,6 +40,18 @@ export function recordsEqual(a, b, localFields=[]) {
  * Synchronization result object.
  */
 export class SyncResultObject {
+  ok: boolean               = true;
+  lastModified: number|null = null;
+  errors                    = [];
+  created                   = [];
+  updated                   = [];
+  deleted                   = [];
+  published                 = [];
+  conflicts                 = [];
+  skipped                   = [];
+  resolved                  = [];
+
+
   /**
    * Object default values.
    * @type {Object}
@@ -126,7 +151,7 @@ function markSynced(record) {
  * @param  {Array<String>}       localFields The list of fields that remain local.
  * @return {Object}
  */
-function importChange(transaction, remote, localFields) {
+function importChange(transaction, remote, localFields): any {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -182,12 +207,35 @@ function importChange(transaction, remote, localFields) {
   return {type, data: {old: local, new: synced}};
 }
 
+export interface CollectionOptions {
+  adapter?:             any;      // The base DB adapter class.
+  adapterOptions?:      Object;   // Options given to the adapter.
+  dbPrefix?:            String;   // The DB name prefix.
+  events?:              any;
+  idSchema?:            any;
+  localFields?:         any;
+  remoteTransformers?:  any;
+  hooks?:               any; 
+}
 
 /**
  * Abstracts a collection of records stored in the local database, providing
  * CRUD operations and synchronization helpers.
  */
 export default class Collection {
+
+  private _bucket;
+  private _name;
+  private _lastModified;
+  public  db:                 BaseAdapter;
+  public  api;
+  public  events;
+  public  idSchema;
+  public  remoteTransformers;
+  public  hooks;
+  public  localFields;
+
+
   /**
    * Constructor.
    *
@@ -200,7 +248,7 @@ export default class Collection {
    * @param  {Api}    api     The Api instance.
    * @param  {Object} options The options object.
    */
-  constructor(bucket, name, api, options={}) {
+  constructor(bucket, name, api, options: CollectionOptions={}) {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
@@ -745,7 +793,7 @@ export default class Collection {
    * @return {Promise} Resolves with the result of the given function
    *    when the transaction commits.
    */
-  execute(doOperations, {preloadIds = []} = {}) {
+  execute(doOperations, {preloadIds = ([] as any[])} = {}) {
     for (let id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
@@ -822,7 +870,7 @@ export default class Collection {
    * @param  {Object}                 options
    * @return {Promise}
    */
-  async pullChanges(client, syncResultObject, options={}) {
+  async pullChanges(client, syncResultObject, options: SyncOptions={}) {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
@@ -916,11 +964,11 @@ export default class Collection {
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  async pushChanges(client, {toDelete=[], toSync}, syncResultObject, options={}) {
+  async pushChanges(client, {toDelete=([] as any[]), toSync}, syncResultObject, options:SyncOptions={}) {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
-    const safe = !options.strategy || options.strategy !== Collection.CLIENT_WINS;
+    const safe = !options.strategy || options.strategy !== Collection.strategy.CLIENT_WINS;
 
     // Perform a batch request with every changes.
     const synced = await client.batch(batch => {
@@ -1079,7 +1127,7 @@ export default class Collection {
       await this.pushChanges(client, {toDelete, toSync}, result, options);
 
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
-      const resolvedUnsynced = result.resolved.filter(r => r._status !== "synced");
+      const resolvedUnsynced = (result.resolved as any[]).filter(r => r._status !== "synced");
       if (resolvedUnsynced.length > 0) {
         const resolvedEncoded = await Promise.all(resolvedUnsynced.map(this._encodeRecord.bind(this, "remote")));
         await this.pushChanges(client, {toSync: resolvedEncoded}, result, options);
@@ -1166,6 +1214,11 @@ export default class Collection {
  * perform just one operation in its own transaction.
  */
 export class CollectionTransaction {
+  private _events;
+  collection;
+  adapterTransaction;
+  localFields;
+
   constructor(collection, adapterTransaction) {
     this.collection = collection;
     this.adapterTransaction = adapterTransaction;

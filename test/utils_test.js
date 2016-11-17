@@ -9,7 +9,7 @@ import {
   omitKeys,
   isUUID,
   waterfall
-} from "../src/utils";
+} from "../built/utils";
 
 chai.should();
 chai.config.includeStack = true;
