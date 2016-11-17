@@ -35,6 +35,8 @@ Then create the Kinto object passing a reference to your adapter class:
 const kinto = new Kinto({adapter: MyAdapter});
 ```
 
+Each call to `kinto.collection(...)` will then instantiate a new `MyAdapter`.
+
 Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly. The [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.js) adapter is also worth a read if you need guidance writing your own.
 
 The `options` argument to the adapter constructor is taken from the `adapterOptions` given to the Kinto constructor. For example, if your adapter recognizes a `style` option:
@@ -42,6 +44,8 @@ The `options` argument to the adapter constructor is taken from the `adapterOpti
 ```
 const kinto = new Kinto({adapter: MyAdapter, adapterOptions: {style: "traditional"}});
 ```
+
+The given `adapterOptions` will be the second argument to the `MyAdapter` constructor. If you need to share state across the per-collection `MyAdapter`s, you can track it using `adapterOptions`.
 
 ## Opening and closing
 
