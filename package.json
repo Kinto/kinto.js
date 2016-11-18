@@ -118,7 +118,7 @@
     "babel-polyfill": "^6.7.4",
     "btoa": "^1.1.2",
     "kinto-http": "^2.5.1",
-    "uuid": "^2.0.1"
+    "uuid": "^3.0.0"
   },
   "devDependencies": {
     "babel-cli": "^6.18.0",
