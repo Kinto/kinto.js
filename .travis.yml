@@ -13,7 +13,7 @@ env:
 - ACTION="run build-demo" # ensures building the demo doesn't break
 before_install:
 - export PATH=$HOME/.local/bin:$PATH
-- pip install --user `whoami` virtualenv
+- pip install --user virtualenv
 - virtualenv .env
 - curl https://raw.githubusercontent.com/Kinto/kinto/$SERVER/requirements.txt -O
 - if [[ $SERVER && $SERVER != master ]]; then .env/bin/pip install kinto==$SERVER --constraint requirements.txt ; fi
