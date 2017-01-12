@@ -1097,10 +1097,14 @@ export default class Collection {
         // No conflict occured, persist collection's lastModified value
         this._lastModified = await this.db.saveLastModified(result.lastModified);
       }
+    } catch (e) {
+      this.events.emit("sync:error", e);
+      throw e;
     } finally {
       // Ensure API default remote is reverted if a custom one's been used
       this.api.remote = previousRemote;
     }
+    this.events.emit("sync:success", result);
     return result;
   }
 

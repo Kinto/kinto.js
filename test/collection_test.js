@@ -2350,6 +2350,29 @@ describe("Collection", () => {
           .then(_ => sinon.assert.calledOnce(pullChanges));
       });
     });
+
+    describe("Events", () => {
+      beforeEach(() => {
+        sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
+        sandbox.stub(articles, "pullChanges");
+        sandbox.stub(articles, "pushChanges");
+      });
+
+      it("should send a success event", () => {
+        const callback = sinon.spy();
+        articles.events.on("sync:success", callback);
+        return articles.sync()
+          .then(() => expect(callback.called).eql(true));
+      });
+
+      it("should send an error event", () => {
+        const callback = sinon.spy();
+        articles.events.on("sync:error", callback);
+        articles.pushChanges.throws(new Error("boom"));
+        return articles.sync()
+          .catch(() => expect(callback.called).eql(true));
+      });
+    });
   });
 
   /** @test {Collection#execute} */
