@@ -5,6 +5,7 @@ import BaseAdapter from "./adapters/base";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
+const DEFAULT_RETRY = 1;
 
 /**
  * KintoBase class.
@@ -46,6 +47,7 @@ export default class KintoBase {
    * - `{Object}`       `adapterOptions` Options given to the adapter.
    * - `{String}`       `dbPrefix`       The DB name prefix.
    * - `{Object}`       `headers`        The HTTP headers to use.
+   * - `{Object}`       `retry`          Number of retries when the server fails to process the request (default: `1`)
    * - `{String}`       `requestMode`    The HTTP CORS mode to use.
    * - `{Number}`       `timeout`        The requests timeout in ms (default: `5000`).
    *
@@ -55,13 +57,14 @@ export default class KintoBase {
     const defaults = {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
+      retry: DEFAULT_RETRY,
     };
     this._options = {...defaults, ...options};
     if (!this._options.adapter) {
       throw new Error("No adapter provided");
     }
 
-    const {remote, events, headers, requestMode, timeout, ApiClass} = this._options;
+    const {remote, events, headers, retry, requestMode, timeout, ApiClass} = this._options;
 
     // public properties
 
@@ -69,7 +72,7 @@ export default class KintoBase {
      * The kinto HTTP client instance.
      * @type {KintoClient}
      */
-    this.api = new ApiClass(remote, {events, headers, requestMode, timeout});
+    this.api = new ApiClass(remote, {events, headers, retry, requestMode, timeout});
     /**
      * The event emitter instance.
      * @type {EventEmitter}

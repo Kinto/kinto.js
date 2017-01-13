@@ -1629,6 +1629,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: undefined,
               filters: undefined,
+              retry: undefined,
               headers: {}
             });
           });
@@ -1641,6 +1642,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: "42",
               filters: undefined,
+              retry: undefined,
               headers: {}
             });
           });
@@ -1654,6 +1656,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: "42",
               filters: {exclude_id: "1,2,3"},
+              retry: undefined,
               headers: {}
             });
           });
@@ -2329,6 +2332,13 @@ describe("Collection", () => {
         return articles.sync({strategy: Collection.strategy.SERVER_WINS})
           .then(() => {
             expect(pullChanges.firstCall.args[2]).to.have.property("strategy").eql(Collection.strategy.SERVER_WINS);
+          });
+      });
+
+      it("should transfer the retry option", () => {
+        return articles.sync({retry: 3})
+          .then(() => {
+            expect(pullChanges.firstCall.args[2]).to.have.property("retry").eql(3);
           });
       });
     });
