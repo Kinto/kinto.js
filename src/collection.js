@@ -1053,6 +1053,12 @@ export default class Collection {
     collection: null,
     remote: null,
   }) {
+    options = {
+      ...options,
+      bucket: options.bucket || this.bucket,
+      collection: options.collection || this.name,
+    };
+
     const previousRemote = this.api.remote;
     if (options.remote) {
       // Note: setting the remote ensures it's valid, throws when invalid.
@@ -1064,7 +1070,7 @@ export default class Collection {
         new Error(`Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`));
     }
 
-    const client = this.api.bucket(options.bucket || this.bucket).collection(options.collection || this.name);
+    const client = this.api.bucket(options.bucket).collection(options.collection);
 
     const result = new SyncResultObject();
     try {
@@ -1097,10 +1103,14 @@ export default class Collection {
         // No conflict occured, persist collection's lastModified value
         this._lastModified = await this.db.saveLastModified(result.lastModified);
       }
+    } catch (e) {
+      this.events.emit("sync:error", {...options, error: e});
+      throw e;
     } finally {
       // Ensure API default remote is reverted if a custom one's been used
       this.api.remote = previousRemote;
     }
+    this.events.emit("sync:success", {...options, result});
     return result;
   }
 
