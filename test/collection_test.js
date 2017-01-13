@@ -2352,25 +2352,35 @@ describe("Collection", () => {
     });
 
     describe("Events", () => {
+      let onsuccess;
+      let onerror;
+
       beforeEach(() => {
+        onsuccess = sinon.spy();
+        onerror = sinon.spy();
+        articles.events.on("sync:success", onsuccess);
+        articles.events.on("sync:error", onerror);
+
         sandbox.stub(articles.db, "getLastModified").returns(Promise.resolve({}));
         sandbox.stub(articles, "pullChanges");
         sandbox.stub(articles, "pushChanges");
       });
 
       it("should send a success event", () => {
-        const callback = sinon.spy();
-        articles.events.on("sync:success", callback);
         return articles.sync()
-          .then(() => expect(callback.called).eql(true));
+          .then(() => {
+            expect(onsuccess.called).eql(true);
+            expect(onerror.called).eql(false);
+          });
       });
 
       it("should send an error event", () => {
-        const callback = sinon.spy();
-        articles.events.on("sync:error", callback);
         articles.pushChanges.throws(new Error("boom"));
         return articles.sync()
-          .catch(() => expect(callback.called).eql(true));
+          .catch(() => {
+            expect(onsuccess.called).eql(false);
+            expect(onerror.called).eql(true);
+          });
       });
     });
   });
