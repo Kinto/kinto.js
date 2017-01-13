@@ -2382,6 +2382,40 @@ describe("Collection", () => {
             expect(onerror.called).eql(true);
           });
       });
+
+      it("should send an error event", () => {
+        articles.pushChanges.throws(new Error("boom"));
+        return articles.sync()
+          .catch(() => {
+            expect(onsuccess.called).eql(false);
+            expect(onerror.called).eql(true);
+          });
+      });
+
+      it("should provide success details about sync", () => {
+        return articles.sync()
+          .then(() => {
+            const data = onsuccess.firstCall.args[0];
+            expect(data).to.have.property("result");
+            expect(data).to.have.property("remote");
+            expect(data).to.have.property("bucket");
+            expect(data).to.have.property("collection");
+            expect(data).to.have.property("headers");
+          });
+      });
+
+      it("should provide error details about sync", () => {
+        articles.pushChanges.throws(new Error("boom"));
+        return articles.sync()
+          .catch(() => {
+            const data = onerror.firstCall.args[0];
+            expect(data).to.have.property("error");
+            expect(data).to.have.property("remote");
+            expect(data).to.have.property("bucket");
+            expect(data).to.have.property("collection");
+            expect(data).to.have.property("headers");
+          });
+      });
     });
   });
 
