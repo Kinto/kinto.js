@@ -117,7 +117,7 @@
     "babel-plugin-transform-async-to-generator": "^6.8.0",
     "babel-polyfill": "^6.20.0",
     "btoa": "^1.1.2",
-    "kinto-http": "^2.5.1",
+    "kinto-http": "^2.7.0",
     "uuid": "^3.0.0"
   },
   "devDependencies": {
