@@ -739,6 +739,19 @@ articles.sync({ignoreBackoff: true})
 
 Using the `events` on a `Kinto` instance property you can subscribe public events from. That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
 
+
+#### The `sync:success` and `sync:error` events
+
+Triggered on [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) call, whether it succeeds or not.
+
+
+#### The `retry-after` event
+
+Triggered when a `Retry-After` HTTP header has been received from the last received response from the server, meaning clients should retry the same request after the specified amount of time.
+
+> Note: With *kinto-http.js* 2.7 and above, the requests are transparently retried. This event is thus only useful for tracking such situations.
+
+
 #### The `backoff` event
 
 Triggered when a `Backoff` HTTP header has been received from the last received response from the server, meaning clients should hold on performing further requests during a given amount of time.
