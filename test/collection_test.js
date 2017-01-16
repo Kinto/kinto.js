@@ -2365,10 +2365,10 @@ describe("Collection", () => {
       let fetch;
 
       beforeEach(() => {
-        // Disable stubbing of kinto-http, stub low-level fetch instead.
+        // Disable stubbing of kinto-http of upper tests.
         sandbox.restore();
+        // Stub low-level fetch instead.
         fetch = sandbox.stub(global, "fetch");
-        sandbox.stub(global, "setTimeout", (fn) => setImmediate(fn));
         // Settings
         fetch.onCall(0).returns(fakeServerResponse(200, {settings:{}}, {}));
         // Pull
@@ -2382,6 +2382,8 @@ describe("Collection", () => {
         ]}, {"ETag": "\"123\""}));
         // Last pull
         fetch.onCall(4).returns(fakeServerResponse(200, {data: []}, {}));
+        // Avoid actually waiting real time between retries in test suites.
+        sandbox.stub(global, "setTimeout", (fn) => setImmediate(fn));
       });
 
       it("should retry if specified", () => {
