@@ -2379,7 +2379,7 @@ describe("Collection", () => {
           {status: 201, body: {data: {id: 1, last_modified: 41}}},
           {status: 201, body: {data: {id: 2, last_modified: 42}}},
           {status: 201, body: {data: {id: 3, last_modified: 43}}}
-        ]}, {"ETag": '"123"'}));
+        ]}, {"ETag": "\"123\""}));
         // Last pull
         fetch.onCall(4).returns(fakeServerResponse(200, {data: []}, {}));
       });
