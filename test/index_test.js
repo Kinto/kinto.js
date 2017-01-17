@@ -150,6 +150,14 @@ describe("Kinto", () => {
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
     });
 
+    it("should override adapter for collection if specified", () => {
+      const MyAdapter = class extends BaseAdapter {};
+      const MyOtherAdapter = class extends BaseAdapter {};
+      const db = new Kinto({adapter: MyAdapter});
+      const coll = db.collection("plop", {adapter: MyOtherAdapter});
+      expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
+    });
+
     it("should make the collection's remoteTransformers default to []", () => {
       const db = new Kinto();
       const coll = db.collection("plop");

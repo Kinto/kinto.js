@@ -85,24 +85,37 @@ export default class KintoBase {
    * will set collection-level options like e.g. `remoteTransformers`.
    *
    * @param  {String} collName The collection name.
-   * @param  {Object} options  May contain the following fields:
-   *                           remoteTransformers: Array<RemoteTransformer>
+   * @param  {Object} [options={}]                 Extra options or override client's options.
+   * @param  {Object} [options.idSchema]           IdSchema instance (default: UUID)
+   * @param  {Object} [options.remoteTransformers] Array<RemoteTransformer> (default: `[]`])
+   * @param  {Object} [options.hooks]              Array<Hook> (default: `[]`])
    * @return {Collection}
    */
-  collection(collName, options = {}) {
+  collection(collName, options={}) {
     if (!collName) {
       throw new Error("missing collection name");
     }
+    const {
+      bucket,
+      events,
+      adapter,
+      adapterOptions,
+      dbPrefix,
+    } = {...this._options, ...options};
+    const {
+      idSchema,
+      remoteTransformers,
+      hooks,
+    } = options;
 
-    const bucket = this._options.bucket;
     return new Collection(bucket, collName, this.api, {
-      events:              this._options.events,
-      adapter:             this._options.adapter,
-      adapterOptions:      this._options.adapterOptions,
-      dbPrefix:            this._options.dbPrefix,
-      idSchema:            options.idSchema,
-      remoteTransformers:  options.remoteTransformers,
-      hooks:               options.hooks,
+      events,
+      adapter,
+      adapterOptions,
+      dbPrefix,
+      idSchema,
+      remoteTransformers,
+      hooks,
     });
   }
 }
