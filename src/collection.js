@@ -852,6 +852,7 @@ export default class Collection {
       // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
       since: options.lastModified ? `${options.lastModified}`: undefined,
       headers: options.headers,
+      retry: options.retry,
       filters
     });
     // last_modified is the ETag header value (string).
@@ -939,7 +940,12 @@ export default class Collection {
           batch.updateRecord(published);
         }
       });
-    }, {headers: options.headers, safe, aggregate: true});
+    }, {
+      headers: options.headers,
+      retry: options.retry,
+      safe,
+      aggregate: true
+    });
 
     // Store outgoing errors into sync result object
     syncResultObject.add("errors", synced.errors.map(e => ({...e, type: "outgoing"})));
@@ -1034,6 +1040,7 @@ export default class Collection {
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
+   * - {Number} retry: Number of retries when server fails to process the request (default: 1).
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
    *   backed off.
@@ -1048,6 +1055,7 @@ export default class Collection {
   async sync(options={
     strategy: Collection.strategy.MANUAL,
     headers: {},
+    retry: 1,
     ignoreBackoff: false,
     bucket: null,
     collection: null,

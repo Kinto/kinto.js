@@ -1629,6 +1629,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: undefined,
               filters: undefined,
+              retry: undefined,
               headers: {}
             });
           });
@@ -1641,6 +1642,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: "42",
               filters: undefined,
+              retry: undefined,
               headers: {}
             });
           });
@@ -1654,6 +1656,7 @@ describe("Collection", () => {
             sinon.assert.calledWithExactly(listRecords, {
               since: "42",
               filters: {exclude_id: "1,2,3"},
+              retry: undefined,
               headers: {}
             });
           });
@@ -2180,7 +2183,7 @@ describe("Collection", () => {
     it("should use a custom remote option", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
-      const fetch = sandbox.stub(root, "fetch")
+      const fetch = sandbox.stub(global, "fetch")
         .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
@@ -2192,7 +2195,7 @@ describe("Collection", () => {
     it("should revert the custom remote option on success", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
-      sandbox.stub(root, "fetch")
+      sandbox.stub(global, "fetch")
         .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
@@ -2204,7 +2207,7 @@ describe("Collection", () => {
     it("should revert the custom remote option on failure", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
-      sandbox.stub(root, "fetch")
+      sandbox.stub(global, "fetch")
         .returns(fakeServerResponse(200, {data: []}, {}));
 
       return articles.sync({remote: "http://test/v1"}).
@@ -2331,6 +2334,13 @@ describe("Collection", () => {
             expect(pullChanges.firstCall.args[2]).to.have.property("strategy").eql(Collection.strategy.SERVER_WINS);
           });
       });
+
+      it("should transfer the retry option", () => {
+        return articles.sync({retry: 3})
+          .then(() => {
+            expect(pullChanges.firstCall.args[2]).to.have.property("retry").eql(3);
+          });
+      });
     });
 
     describe("Server backoff", () => {
@@ -2348,6 +2358,40 @@ describe("Collection", () => {
 
         return articles.sync({ignoreBackoff: true})
           .then(_ => sinon.assert.calledOnce(pullChanges));
+      });
+    });
+
+    describe("Retry", () => {
+      let fetch;
+
+      beforeEach(() => {
+        // Disable stubbing of kinto-http of upper tests.
+        sandbox.restore();
+        // Stub low-level fetch instead.
+        fetch = sandbox.stub(global, "fetch");
+        // Settings
+        fetch.onCall(0).returns(fakeServerResponse(200, {settings:{}}, {}));
+        // Pull
+        fetch.onCall(1).returns(fakeServerResponse(200, {data: []}, {}));
+        // Push
+        fetch.onCall(2).returns(fakeServerResponse(503, {}, {"Retry-After": "1"}));
+        fetch.onCall(3).returns(fakeServerResponse(200, {responses: [
+          {status: 201, body: {data: {id: 1, last_modified: 41}}},
+          {status: 201, body: {data: {id: 2, last_modified: 42}}},
+          {status: 201, body: {data: {id: 3, last_modified: 43}}}
+        ]}, {"ETag": "\"123\""}));
+        // Last pull
+        fetch.onCall(4).returns(fakeServerResponse(200, {data: []}, {}));
+        // Avoid actually waiting real time between retries in test suites.
+        sandbox.stub(global, "setTimeout", (fn) => setImmediate(fn));
+      });
+
+      it("should retry if specified", () => {
+        return articles.sync({retry: 3})
+          .then((result) => {
+            //console.log(fetch.getCalls());
+            expect(result.ok).eql(true);
+          });
       });
     });
 
