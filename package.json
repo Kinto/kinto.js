@@ -114,7 +114,7 @@
     "node": ">=6"
   },
   "dependencies": {
-    "babel-plugin-transform-async-to-generator": "^6.8.0",
+    "babel-plugin-transform-async-to-generator": "^6.22.0",
     "babel-polyfill": "^6.20.0",
     "btoa": "^1.1.2",
     "kinto-http": "^2.7.0",
