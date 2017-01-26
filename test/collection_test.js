@@ -1314,7 +1314,7 @@ describe("Collection", () => {
         });
 
         return articles.gatherLocalChanges()
-          .then(res => res.toSync.map(r => r.title).sort())
+          .then(res => res.map(r => r.title).sort())
           .should.become(["abcdef?!", "ghijkl?!"]);
       });
 
@@ -1337,7 +1337,7 @@ describe("Collection", () => {
         }).then(() => articles.gatherLocalChanges())
         .then(changes => {
           expect(transformer.called).equal(true);
-          expect(changes.toDelete[0]).property("id", "remote-" + id);
+          expect(changes.filter(change => change._status == "deleted")[0]).property("id", "remote-" + id);
         });
       });
     });
