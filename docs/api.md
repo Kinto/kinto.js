@@ -894,6 +894,48 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 >
 > This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.
 
+Normally, a record that is deleted locally will be deleted remotely, and a record that is not deleted locally will not be deleted remotely. However, with a remote transformer, it's possible to change this. The records given to `encode()` have a `_status` field which represents their local status (`synced`, `created`, `updated`, or `deleted`); by turning a `deleted` into a `created` or `updated`, or by turning a `created` or `updated` into a `deleted`, you can control what happens to the remote record. Similarly, the records given to `decode()` have a `deleted` field, which is true if the record was deleted on the remote end; by turning `true` to `false` or `false` to `true`, you can control what happens to the local version of this record.
+
+Here's an example (taken from `integration_test.js`):
+
+```javascript
+const transformer = {
+  encode(record) {
+    if (record._status == "deleted") {
+      if (record.title.includes("preserve-on-send")) {
+        if (record.last_modified) {
+          return {...record, _status: "updated", wasDeleted: true};
+        }
+        return {...record, _status: "created", wasDeleted: true};
+      }
+    }
+    return record;
+  },
+  decode(record) {
+    // Records that were deleted locally get pushed to the
+    // server with `wasDeleted` so that we know they're
+    // supposed to be deleted on the client.
+    if (record.wasDeleted) {
+      return {...record, deleted: true};
+    }
+    return record;
+  }
+};
+```
+
+This transformer will turn locally-deleted records with a title that contains the phrase "preserve-on-send" into remotely-kept records, and vice versa.
+
+In order for this to work:
+
+- Records with `_status` of `"deleted"` must turn into `"updated"` or `"created"`. You should turn records with `last_modified` fields into `updated` records, and those without into `created` records, so that concurrency control with `If-Match` and `If-None-Match` works correctly.
+- If `record._status == "deleted"`, then `decode(encode(record)).deleted` must be `true`. In other words, if the record was locally deleted, it should be marked as "to be deleted" when it gets decoded from the remote end. In this example, this is accomplished by using another field, `wasDeleted`, to store whether the record was originally deleted.
+
+There are two possible transformations like this: local deletes become remote keeps, or local keeps become remote deletes. Remote deletes cause Kinto to delete the record, and subsequently Kinto will only serve a tombstone which doesn't have any information besides an ID and a "deleted" flag. Because decoding anything useful out of a tombstone is impossible, we don't support transforming local keeps into remote deletes.
+
+> #### Notes
+> - Once a local delete is "sent", the locally-deleted record will be deleted for real, so you can't really keep information in a locally deleted record.
+> - This feature might be useful to avoid "leaking" the fact that a record was deleted in an encryption scheme.
+
 ### Local transformers
 
 In a near future, Kinto.js will provide transfomers aimed at providing facilities to encode and decode records when persisted locally.
