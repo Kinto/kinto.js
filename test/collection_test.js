@@ -1314,7 +1314,7 @@ describe("Collection", () => {
         });
 
         return articles.gatherLocalChanges()
-          .then(res => res.toSync.map(r => r.title).sort())
+          .then(res => res.map(r => r.title).sort())
           .should.become(["abcdef?!", "ghijkl?!"]);
       });
 
@@ -1337,7 +1337,7 @@ describe("Collection", () => {
         }).then(() => articles.gatherLocalChanges())
         .then(changes => {
           expect(transformer.called).equal(true);
-          expect(changes.toDelete[0]).property("id", "remote-" + id);
+          expect(changes.filter(change => change._status == "deleted")[0]).property("id", "remote-" + id);
         });
       });
     });
@@ -1968,7 +1968,7 @@ describe("Collection", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([{}]));
 
-      return articles.pushChanges(client, {toSync: records}, result)
+      return articles.pushChanges(client, records, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           const options = batchRequests.firstCall.args[1];
@@ -1984,7 +1984,7 @@ describe("Collection", () => {
 
       articles = testCollection({localFields: ["size"]});
       const toSync = [{...records[0], title: "ah", size: 3.14}];
-      return articles.pushChanges(client, {toSync}, result)
+      return articles.pushChanges(client, toSync, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests[0].body.data.title).eql("ah");
@@ -1999,7 +1999,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(client, {toSync: records}, result)
+      return articles.pushChanges(client, records, result)
         .then(res => res.published)
         .should.eventually.become([
           {
@@ -2014,8 +2014,8 @@ describe("Collection", () => {
       const batchRequests = sandbox.stub(KintoClient.prototype, "_batchRequests")
         .returns(Promise.resolve([]));
 
-      const toDelete = [{id: records[0].id}]; // no timestamp.
-      return articles.pushChanges(client, {toDelete, toSync: []}, result)
+      const toDelete = [{id: records[0].id, _status: "deleted"}]; // no timestamp.
+      return articles.pushChanges(client, toDelete, result)
         .then(_ => {
           const requests = batchRequests.firstCall.args[0];
           expect(requests).eql([]);
@@ -2031,7 +2031,7 @@ describe("Collection", () => {
         skipped:   [],
       }));
       return articles.delete(locallyDeletedId)
-        .then(_ => articles.pushChanges(client, {toSync: records}, result))
+        .then(_ => articles.pushChanges(client, records, result))
         .then(_ => articles.get(locallyDeletedId, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
     });
@@ -2043,7 +2043,7 @@ describe("Collection", () => {
         conflicts: [],
         skipped:   [],
       }));
-      return articles.pushChanges(client, {toSync: []}, result)
+      return articles.pushChanges(client, [], result)
         .then(res => res.published)
         .should.eventually.become([
           {
@@ -2065,9 +2065,66 @@ describe("Collection", () => {
         }]
       }));
       return articles.create({id, title: "bar"}, {useRecordId: true, synced: true})
-        .then(() => articles.pushChanges(client, {toSync: records}, result))
+        .then(() => articles.pushChanges(client, records, result))
         .then(_ => articles.get(id, {includeDeleted: true}))
         .should.be.eventually.rejectedWith(Error, /not found/);
+    });
+
+    describe("Batch requests made", () => {
+      let batch, batchSpy, deleteRecord, createRecord, updateRecord;
+      beforeEach(() => {
+        batch = {
+          deleteRecord: function() {},
+          createRecord: function() {},
+          updateRecord: function() {},
+        };
+        batchSpy = sandbox.mock(batch);
+        deleteRecord = batchSpy.expects("deleteRecord");
+        createRecord = batchSpy.expects("createRecord");
+        updateRecord = batchSpy.expects("updateRecord");
+        sandbox.stub(KintoClientCollection.prototype, "batch", f => {
+          f(batch);
+          return Promise.resolve({
+            published: [],
+            errors:    [],
+            conflicts: [],
+            skipped:   []
+          });
+        });
+      });
+
+      it("should call delete() for deleted records", () => {
+        const myDeletedRecord = {id: "deleted-record-id", _status: "deleted", last_modified: 1234};
+        deleteRecord.once();
+        createRecord.never();
+        updateRecord.never();
+        return articles.pushChanges(client, [myDeletedRecord], result)
+          .then(() => batchSpy.verify())
+          .then(() => deleteRecord.firstCall.args)
+          .should.eventually.eql([myDeletedRecord]);
+      });
+
+      it("should call create() for created records", () => {
+        const myCreatedRecord = {id: "created-record-id", _status: "created"};
+        deleteRecord.never();
+        createRecord.once();
+        updateRecord.never();
+        return articles.pushChanges(client, [myCreatedRecord], result)
+          .then(() => batchSpy.verify())
+          .then(() => createRecord.firstCall.args)
+          .should.eventually.eql([{id: "created-record-id"}]);
+      });
+
+      it("should call update() for updated records", () => {
+        const myUpdatedRecord = {id: "updated-record-id", _status: "updated", last_modified: 1234};
+        deleteRecord.never();
+        createRecord.never();
+        updateRecord.once();
+        return articles.pushChanges(client, [myUpdatedRecord], result)
+          .then(() => batchSpy.verify())
+          .then(() => updateRecord.firstCall.args)
+          .should.eventually.eql([{id: "updated-record-id", last_modified: 1234}]);
+      });
     });
 
     describe("Error handling", () => {
@@ -2087,13 +2144,13 @@ describe("Collection", () => {
       });
 
       it("should report encountered publication errors", () => {
-        return articles.pushChanges(client, {toSync: records}, result)
+        return articles.pushChanges(client, records, result)
           .then(res => res.errors)
           .should.eventually.become([{...error, type: "outgoing"}]);
       });
 
       it("should report typed publication errors", () => {
-        return articles.pushChanges(client, {toSync: records}, result)
+        return articles.pushChanges(client, records, result)
           .then(res => res.errors[0])
           .should.eventually.have.property("type").eql("outgoing");
       });
@@ -2291,7 +2348,7 @@ describe("Collection", () => {
 
     it("should not execute a last pull if nothing to push", () => {
       sandbox.stub(articles, "gatherLocalChanges")
-        .returns(Promise.resolve({toDelete: [], toSync: []}));
+        .returns(Promise.resolve([]));
       const pullChanges = sandbox.stub(articles, "pullChanges")
         .returns(Promise.resolve(new SyncResultObject()));
       return articles.sync().then(res => {

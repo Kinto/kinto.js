@@ -803,10 +803,7 @@ export default class Collection {
     const unsynced = await this.list({filters: {_status: ["created", "updated"]}, order: ""});
     const deleted = await this.list({filters: {_status: "deleted"}, order: ""}, {includeDeleted: true});
 
-    const toSync = await Promise.all(unsynced.data.map(this._encodeRecord.bind(this, "remote")));
-    const toDelete = await Promise.all(deleted.data.map(this._encodeRecord.bind(this, "remote")));
-
-    return {toSync, toDelete};
+    return await Promise.all(unsynced.data.concat(deleted.data).map(this._encodeRecord.bind(this, "remote")));
   }
 
   /**
@@ -917,11 +914,13 @@ export default class Collection {
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  async pushChanges(client, {toDelete=[], toSync}, syncResultObject, options={}) {
+  async pushChanges(client, changes, syncResultObject, options={}) {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
     const safe = !options.strategy || options.strategy !== Collection.CLIENT_WINS;
+    const toDelete = changes.filter(r => r._status == "deleted");
+    const toSync = changes.filter(r => r._status != "deleted");
 
     // Perform a batch request with every changes.
     const synced = await client.batch(batch => {
@@ -1087,16 +1086,16 @@ export default class Collection {
       const {lastModified} = result;
 
       // Fetch local changes
-      const {toDelete, toSync} = await this.gatherLocalChanges();
+      const toSync = await this.gatherLocalChanges();
 
       // Publish local changes and pull local resolutions
-      await this.pushChanges(client, {toDelete, toSync}, result, options);
+      await this.pushChanges(client, toSync, result, options);
 
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
       const resolvedUnsynced = result.resolved.filter(r => r._status !== "synced");
       if (resolvedUnsynced.length > 0) {
         const resolvedEncoded = await Promise.all(resolvedUnsynced.map(this._encodeRecord.bind(this, "remote")));
-        await this.pushChanges(client, {toSync: resolvedEncoded}, result, options);
+        await this.pushChanges(client, resolvedEncoded, result, options);
       }
       // Perform a last pull to catch changes that occured after the last pull,
       // while local changes were pushed. Do not do it nothing was pushed.

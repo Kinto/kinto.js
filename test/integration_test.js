@@ -1419,6 +1419,104 @@ describe("Integration tests", function() {
           .should.become(["abc", "def"]);
       });
     });
+
+    describe("Transforming local deletes", () => {
+      function localDeleteTransformer() {
+        // Turns local records that were deleted, but had
+        // "preserve-on-send", into remote "updates".
+        // Local records with "preserve-on-send" but weren't deleted
+        // don't need to be "preserved", so ignore them.
+        return {
+          encode(record) {
+            if (record._status == "deleted") {
+              if (record.title.includes("preserve-on-send")) {
+                if (record.last_modified) {
+                  return {...record, _status: "updated", wasDeleted: true};
+                }
+                return {...record, _status: "created", wasDeleted: true};
+              }
+            }
+            return record;
+          },
+          decode(record) {
+            // Records that were deleted locally get pushed to the
+            // server with `wasDeleted` so that we know they're
+            // supposed to be deleted on the client.
+            if (record.wasDeleted) {
+              return {...record, deleted: true};
+            }
+            return record;
+          }
+        };
+      }
+
+      let tasksRemote;
+      const preserveOnSendNew = {id: uuid4(), title: "preserve-on-send new"};
+      const preserveOnSendOld = {id: uuid4(), title: "preserve-on-send old", last_modified: 1234};
+      const deleteOnReceiveRemote = {id: uuid4(), title: "delete-on-receive", wasDeleted: true};
+      const deletedByOtherClientRemote = {id: uuid4(), title: "deleted-by-other-client"};
+      beforeEach(() => {
+        tasks = kinto.collection("tasks", {
+          remoteTransformers: [
+            localDeleteTransformer(),
+          ]
+        });
+        tasksRemote = tasks.api.bucket("default").collection("tasks");
+        return Promise.all([
+          tasks.create(preserveOnSendNew, {useRecordId: true}),
+          tasks.create(preserveOnSendOld, {useRecordId: true}),
+          tasksRemote.createRecord(deletedByOtherClientRemote),
+        ]).then(() => tasks.sync())
+          .then(() => tasks.delete(preserveOnSendNew.id))
+          .then(() => tasks.delete(preserveOnSendOld.id))
+          .then(() => tasksRemote.createRecord(deleteOnReceiveRemote));
+      });
+
+      it("should have sent preserve-on-send new remotely", () => {
+        return tasks.sync()
+          .then(() => tasksRemote.getRecord(preserveOnSendNew.id))
+          .then(res => res.data)
+          .should.eventually.property("title", "preserve-on-send new");
+      });
+
+      it("should have sent preserve-on-send old remotely", () => {
+        return tasks.sync()
+          .then(() => tasksRemote.getRecord(preserveOnSendOld.id))
+          .then(res => res.data)
+          .should.eventually.property("title", "preserve-on-send old");
+      });
+
+      it("should have locally deleted preserve-on-send new", () => {
+        return tasks.sync()
+          .then(() => tasks.getAny(preserveOnSendNew.id))
+          .then(res => res.data)
+          .should.eventually.eql(undefined);
+      });
+
+      it("should have locally deleted preserve-on-send old", () => {
+        return tasks.sync()
+          .then(() => tasks.getAny(preserveOnSendOld.id))
+          .then(res => res.data)
+          .should.eventually.eql(undefined);
+      });
+
+      it("should have deleted delete-on-receive", () => {
+        return tasks.sync()
+          .then(() => tasks.getAny(deleteOnReceiveRemote.id))
+          .then(res => res.data)
+          .should.eventually.eql(undefined);
+      });
+
+      it("should have deleted deleted-by-other-client", () => {
+        return tasks.getAny(deletedByOtherClientRemote.id)
+          .then(res => expect(res.data.title).to.eql("deleted-by-other-client"))
+          .then(() => tasksRemote.createRecord({...deletedByOtherClientRemote, wasDeleted: true}))
+          .then(() => tasks.sync())
+          .then(() => tasks.getAny(deletedByOtherClientRemote.id))
+          .then(res => res.data)
+          .should.eventually.eql(undefined);
+      });
+    });
   });
 
   describe("Flushed server", function() {
