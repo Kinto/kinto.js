@@ -487,7 +487,7 @@ export default class Collection {
       ...record,
       id: options.synced || options.useRecordId
         ? record.id
-        : this.idSchema.generate(),
+        : this.idSchema.generate(record),
       _status: options.synced ? "synced" : "created",
     };
     if (!this.idSchema.validate(newRecord.id)) {
