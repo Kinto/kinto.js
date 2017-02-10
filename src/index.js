@@ -1,17 +1,8 @@
-"use strict";
-
-import { EventEmitter } from "events";
-
-// babel-polyfill can only be imported once
-if (!global._babelPolyfill) {
-  require("babel-polyfill");
-}
-
 import Api from "kinto-http";
 import BaseAdapter from "./adapters/base";
+import { EventEmitter } from "events";
 import IDB from "./adapters/IDB";
 import KintoBase from "./KintoBase";
-
 
 export default class Kinto extends KintoBase {
   /**

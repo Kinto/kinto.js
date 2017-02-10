@@ -1,20 +1,20 @@
 {
   "env": {
     "development": {
-      "presets": ["es2015"],
+      "presets": ["latest"],
       "plugins": [
         "transform-object-rest-spread",
         "transform-async-to-generator",
         "transform-runtime"
-      ],
+      ]
     },
     "default": {
-      "presets": ["es2015"],
+      "presets": ["latest"],
       "plugins": [
         "transform-object-rest-spread",
         "transform-async-to-generator",
         "transform-runtime"
-      ],
+      ]
     },
     "noshim": {
       "plugins": [
