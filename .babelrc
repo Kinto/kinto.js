@@ -1,6 +1,28 @@
 {
-  "presets": ["latest", "stage-3", "babili"],
-  "plugins": [
-    "transform-runtime"
-  ]
+  "env": {
+    "development": {
+      "presets": [
+        ["env", {"modules": false}],
+        "stage-3"
+      ],
+      "plugins": ["transform-runtime"]
+    },
+    "production": {
+      "presets": [
+        ["env", {"modules": false}],
+        "stage-3",
+        "babili"
+      ],
+      "plugins": ["transform-runtime"]
+    },
+    "no-shim": {
+      "presets": [
+        ["env", {
+          "modules": false,
+          "exclude": ["transform-regenerator"]
+        }],
+        "stage-3"
+      ]
+    }
+  }
 }
