@@ -1,10 +1,9 @@
-"use strict";
+import { deepEqual, waterfall } from "./utils";
+import { isUUID, omitKeys } from "./utils";
 
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
-import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import { isUUID, omitKeys } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];

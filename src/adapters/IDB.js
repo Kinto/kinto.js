@@ -1,7 +1,6 @@
-"use strict";
+import { filterObject, omitKeys, sortObjects } from "../utils";
 
 import BaseAdapter from "./base.js";
-import { filterObject, omitKeys, sortObjects } from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 

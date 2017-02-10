@@ -1,7 +1,5 @@
-"use strict";
-
-import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
+import Collection from "./collection";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
