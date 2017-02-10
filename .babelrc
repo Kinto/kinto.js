@@ -1,34 +1,6 @@
 {
-  "env": {
-    "development": {
-      "presets": ["latest"],
-      "plugins": [
-        "transform-object-rest-spread",
-        "transform-async-to-generator",
-        "transform-runtime"
-      ]
-    },
-    "default": {
-      "presets": ["latest"],
-      "plugins": [
-        "transform-object-rest-spread",
-        "transform-async-to-generator",
-        "transform-runtime"
-      ]
-    },
-    "noshim": {
-      "plugins": [
-        "transform-es2015-modules-commonjs",
-        "transform-object-rest-spread",
-        "transform-async-to-generator"
-      ]
-    },
-    "firefox": {
-      "plugins": [
-        "transform-es2015-modules-commonjs",
-        "transform-object-rest-spread",
-        "transform-async-to-generator"
-      ]
-    }
-  }
+  "presets": ["latest", "stage-3", "babili"],
+  "plugins": [
+    "transform-runtime"
+  ]
 }
