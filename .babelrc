@@ -2,14 +2,18 @@
   "env": {
     "development": {
       "presets": [
-        ["env", {"modules": false}],
+        ["env", {
+          "modules": false
+        }],
         "stage-3"
       ],
       "plugins": ["transform-runtime"]
     },
     "production": {
       "presets": [
-        ["env", {"modules": false}],
+        ["env", {
+          "modules": false
+        }],
         "stage-3",
         "babili"
       ],
@@ -23,6 +27,10 @@
         }],
         "stage-3"
       ]
+    },
+    "test": {
+      "presets": ["env", "stage-3"],
+      "plugins": ["transform-runtime"]
     }
   }
 }
