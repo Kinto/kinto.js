@@ -1,5 +1,6 @@
 const path = require("path");
 const merge = require("webpack-merge");
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const common = {
   entry: "./src/index",
@@ -33,6 +34,16 @@ case "dist-noshim":
       filename: "kinto.noshim.js"
     }
   });
+  break;
+case "analyze-bundle":
+  module.exports = merge(common, {
+    plugins: [
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'server',
+        analyzerPort: 8080
+      })
+    ]
+  })
   break;
 default:
   module.exports = common;
