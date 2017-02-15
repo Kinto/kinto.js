@@ -35,15 +35,28 @@ case "dist-noshim":
     }
   });
   break;
+case "dist-fx":
+  module.exports = merge(common, {
+    entry: "./fx-src/index",
+    output: {
+      filename: "temp.jsm",
+      path: __dirname
+    },
+    externals: {
+      uuid: "uuid",
+      "kinto-http": "kinto-http"
+    }
+  });
+  break;
 case "analyze-bundle":
   module.exports = merge(common, {
     plugins: [
       new BundleAnalyzerPlugin({
-        analyzerMode: 'server',
+        analyzerMode: "server",
         analyzerPort: 8080
       })
     ]
-  })
+  });
   break;
 default:
   module.exports = common;

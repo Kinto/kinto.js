@@ -8,3 +8,4 @@
 /demo/kinto*
 /.vscode
 .DS_Store
+venv

@@ -28,6 +28,15 @@
         "stage-3"
       ]
     },
+    "firefox": {
+      "presets": [
+        ["env", {
+          "modules": false,
+          "exclude": ["transform-regenerator"]
+        }],
+        "stage-3"
+      ]
+    },
     "test": {
       "presets": ["env", "stage-3"],
       "plugins": ["transform-runtime"]
