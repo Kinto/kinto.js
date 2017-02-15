@@ -29,12 +29,9 @@
       ]
     },
     "firefox": {
-      "presets": [
-        ["env", {
-          "modules": false,
-          "exclude": ["transform-regenerator"]
-        }],
-        "stage-3"
+      "plugins": [
+        "transform-es2015-modules-commonjs",
+        "transform-object-rest-spread"
       ]
     },
     "test": {
