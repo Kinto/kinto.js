@@ -6,6 +6,3 @@
 /esdoc
 /node_modules
 /demo/kinto*
-/.vscode
-.DS_Store
-venv

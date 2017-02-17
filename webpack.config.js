@@ -21,43 +21,43 @@ const common = {
 };
 
 switch (process.env.npm_lifecycle_event) {
-case "dist-prod":
-  module.exports = merge(common, {
-    output: {
-      filename: "kinto.min.js"
-    }
-  });
+  case "dist-prod":
+    module.exports = merge(common, {
+      output: {
+        filename: "kinto.min.js"
+      }
+    });
   break;
-case "dist-noshim":
-  module.exports = merge(common, {
-    output: {
-      filename: "kinto.noshim.js"
-    }
-  });
+  case "dist-noshim":
+    module.exports = merge(common, {
+      output: {
+        filename: "kinto.noshim.js"
+      }
+    });
+    break;
+  case "dist-fx":
+    module.exports = merge(common, {
+      entry: "./fx-src/index",
+      output: {
+        filename: "temp.jsm",
+        path: __dirname
+      },
+      externals: {
+        uuid: "uuid",
+        "kinto-http": "kinto-http"
+      }
+    });
   break;
-case "dist-fx":
-  module.exports = merge(common, {
-    entry: "./fx-src/index",
-    output: {
-      filename: "temp.jsm",
-      path: __dirname
-    },
-    externals: {
-      uuid: "uuid",
-      "kinto-http": "kinto-http"
-    }
-  });
-  break;
-case "analyze-bundle":
-  module.exports = merge(common, {
-    plugins: [
-      new BundleAnalyzerPlugin({
-        analyzerMode: "server",
-        analyzerPort: 8080
-      })
-    ]
-  });
-  break;
-default:
-  module.exports = common;
+  case "analyze-bundle":
+    module.exports = merge(common, {
+      plugins: [
+        new BundleAnalyzerPlugin({
+          analyzerMode: "server",
+          analyzerPort: 8080
+        })
+      ]
+    });
+    break;
+  default:
+    module.exports = common;
 }
