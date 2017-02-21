@@ -12,6 +12,7 @@ before_install:
   - source ~/.nvm/nvm.sh
   - nvm install 6 # for Node v6
   - node --version
+  - npm install
   - curl https://raw.githubusercontent.com/Kinto/kinto/$SERVER/requirements.txt -O
   - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint requirements.txt ; fi
   - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint requirements.txt; fi
