@@ -16,6 +16,7 @@ before_install:
   - curl https://raw.githubusercontent.com/Kinto/kinto/master/requirements.txt -O
   - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint requirements.txt ; fi
   - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint requirements.txt; fi
+  - pip install -U requests==2.12.5
   - export KINTO_PSERVE_EXECUTABLE=pserve
 script:
   - npm $ACTION
