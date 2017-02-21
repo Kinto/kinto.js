@@ -13,7 +13,7 @@ before_install:
   - nvm install 6 # for Node v6
   - node --version
   - npm install
-  - curl https://raw.githubusercontent.com/Kinto/kinto/$SERVER/requirements.txt -O
+  - curl https://raw.githubusercontent.com/Kinto/kinto/master/requirements.txt -O
   - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint requirements.txt ; fi
   - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint requirements.txt; fi
   - export KINTO_PSERVE_EXECUTABLE=pserve
