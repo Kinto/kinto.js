@@ -13,9 +13,9 @@ before_install:
   - nvm install 6 # for Node v6
   - node --version
   - npm install
-  - curl https://raw.githubusercontent.com/Kinto/kinto/master/requirements.txt -O
-  - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint requirements.txt ; fi
-  - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint requirements.txt; fi
+  - curl https://raw.githubusercontent.com/Kinto/kinto/master/requirements.txt > versions.txt
+  - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint versions.txt ; fi
+  - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint versions.txt; fi
   - pip install -U requests==2.12.5
   - export KINTO_PSERVE_EXECUTABLE=pserve
 script:
