@@ -93,6 +93,20 @@ To serve them over http locally so you can see your modifications in real time:
 
     $ mkdocs serve
 
+### Coding style
+
+All the JavaScript code in this project conforms to the [prettier](https://github.com/prettier/prettier) coding style. A command is provided to ensure your code is always formatted accordingly:
+
+```
+$ npm run cs-format
+```
+
+The `cs-check` command ensures all files conform to that style:
+
+```
+$ npm run cs-check
+```
+
 ### Generating browsable API docs
 
 API docs are available [online](https://doc.esdoc.org/github.com/Kinto/kinto.js/).

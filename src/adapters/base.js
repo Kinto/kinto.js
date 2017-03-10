@@ -24,7 +24,7 @@ export default class BaseAdapter {
    * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  execute(callback, options={preload: []}) {
+  execute(callback, options = { preload: [] }) {
     throw new Error("Not Implemented.");
   }
 
@@ -46,7 +46,7 @@ export default class BaseAdapter {
    * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
-  list(params={filters: {}, order: ""}) {
+  list(params = { filters: {}, order: "" }) {
     throw new Error("Not Implemented.");
   }
 

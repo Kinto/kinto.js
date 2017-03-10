@@ -53,18 +53,26 @@ export default class KintoBase {
    *
    * @param  {Object} options The options object.
    */
-  constructor(options={}) {
+  constructor(options = {}) {
     const defaults = {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
       retry: DEFAULT_RETRY,
     };
-    this._options = {...defaults, ...options};
+    this._options = { ...defaults, ...options };
     if (!this._options.adapter) {
       throw new Error("No adapter provided");
     }
 
-    const {remote, events, headers, retry, requestMode, timeout, ApiClass} = this._options;
+    const {
+      remote,
+      events,
+      headers,
+      retry,
+      requestMode,
+      timeout,
+      ApiClass,
+    } = this._options;
 
     // public properties
 
@@ -72,7 +80,13 @@ export default class KintoBase {
      * The kinto HTTP client instance.
      * @type {KintoClient}
      */
-    this.api = new ApiClass(remote, {events, headers, retry, requestMode, timeout});
+    this.api = new ApiClass(remote, {
+      events,
+      headers,
+      retry,
+      requestMode,
+      timeout,
+    });
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -91,7 +105,7 @@ export default class KintoBase {
    * @param  {Object} [options.hooks]              Array<Hook> (default: `[]`])
    * @return {Collection}
    */
-  collection(collName, options={}) {
+  collection(collName, options = {}) {
     if (!collName) {
       throw new Error("missing collection name");
     }
@@ -101,7 +115,7 @@ export default class KintoBase {
       adapter,
       adapterOptions,
       dbPrefix,
-    } = {...this._options, ...options};
+    } = { ...this._options, ...options };
     const {
       idSchema,
       remoteTransformers,

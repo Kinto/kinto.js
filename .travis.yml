@@ -7,6 +7,7 @@ env:
   - ACTION="run lint"
   - ACTION="run dist"       # ensures building dist files doesn't break
   - ACTION="run build-demo" # ensures building the demo doesn't break
+  - ACTION="run cs-check"
 before_install:
   - wget https://raw.githubusercontent.com/creationix/nvm/v0.33.0/nvm.sh -O ~/.nvm/nvm.sh
   - source ~/.nvm/nvm.sh

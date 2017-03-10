@@ -23,7 +23,7 @@ describe("Kinto", () => {
   let sandbox;
 
   function testCollection() {
-    const db = new Kinto({bucket: TEST_BUCKET_NAME});
+    const db = new Kinto({ bucket: TEST_BUCKET_NAME });
     return db.collection(TEST_COLLECTION_NAME);
   }
 
@@ -62,7 +62,7 @@ describe("Kinto", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      expect(new Kinto({events}).events).to.eql(events);
+      expect(new Kinto({ events }).events).to.eql(events);
     });
 
     it("should create an events property if none passed", () => {
@@ -78,19 +78,22 @@ describe("Kinto", () => {
 
     it("should propagate the requestMode option to child dependencies", () => {
       const requestMode = "no-cors";
-      expect(new Kinto({requestMode}).collection("x").api.http.requestMode)
-        .eql(requestMode);
+      expect(
+        new Kinto({ requestMode }).collection("x").api.http.requestMode
+      ).eql(requestMode);
     });
 
     it("should propagate the timeout option to child dependencies", () => {
       const timeout = 1000;
-      expect(new Kinto({timeout}).collection("x").api.http.timeout)
-        .eql(timeout);
+      expect(new Kinto({ timeout }).collection("x").api.http.timeout).eql(
+        timeout
+      );
     });
 
     it("should propagate the dbPrefix option to child dependencies", () => {
-      expect(new Kinto({dbPrefix: "app--"}).collection("x").db.dbname)
-        .eql("app--default/x");
+      expect(new Kinto({ dbPrefix: "app--" }).collection("x").db.dbname).eql(
+        "app--default/x"
+      );
     });
   });
 
@@ -114,8 +117,10 @@ describe("Kinto", () => {
     });
 
     it("should reject on missing collection name", () => {
-      expect(() => new Kinto().collection())
-        .to.Throw(Error, /missing collection name/);
+      expect(() => new Kinto().collection()).to.Throw(
+        Error,
+        /missing collection name/
+      );
     });
 
     it("should setup the Api cient using default server URL", () => {
@@ -126,7 +131,7 @@ describe("Kinto", () => {
     });
 
     it("should setup the Api cient using provided server URL", () => {
-      const db = new Kinto({remote: `http://1.2.3.4:1234/${SPV}`});
+      const db = new Kinto({ remote: `http://1.2.3.4:1234/${SPV}` });
       const coll = db.collection("plop");
 
       expect(coll.api.remote).eql(`http://1.2.3.4:1234/${SPV}`);
@@ -135,16 +140,18 @@ describe("Kinto", () => {
     it("should pass option headers to the api", () => {
       const db = new Kinto({
         remote: `http://1.2.3.4:1234/${SPV}`,
-        headers: {Authorization: "Basic plop"},
+        headers: { Authorization: "Basic plop" },
       });
       const coll = db.collection("plop");
 
-      expect(coll.api.defaultReqOptions.headers).eql({Authorization: "Basic plop"});
+      expect(coll.api.defaultReqOptions.headers).eql({
+        Authorization: "Basic plop",
+      });
     });
 
     it("should create collection using an optional adapter", () => {
       const MyAdapter = class extends BaseAdapter {};
-      const db = new Kinto({adapter: MyAdapter});
+      const db = new Kinto({ adapter: MyAdapter });
       const coll = db.collection("plop");
 
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
@@ -153,8 +160,8 @@ describe("Kinto", () => {
     it("should override adapter for collection if specified", () => {
       const MyAdapter = class extends BaseAdapter {};
       const MyOtherAdapter = class extends BaseAdapter {};
-      const db = new Kinto({adapter: MyAdapter});
-      const coll = db.collection("plop", {adapter: MyOtherAdapter});
+      const db = new Kinto({ adapter: MyAdapter });
+      const coll = db.collection("plop", { adapter: MyOtherAdapter });
       expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
     });
 
@@ -166,10 +173,10 @@ describe("Kinto", () => {
     });
 
     it("should set collection's remoteTransformers", () => {
-      const transformer = {encode(){}, decode(){}};
+      const transformer = { encode() {}, decode() {} };
       const db = new Kinto();
       const options = {
-        remoteTransformers: [ transformer ]
+        remoteTransformers: [transformer],
       };
       const coll = db.collection("plop", options);
 
