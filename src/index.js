@@ -12,7 +12,6 @@ import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import KintoBase from "./KintoBase";
 
-
 export default class Kinto extends KintoBase {
   /**
    * Provides a public access to the base adapter classes. Users can create
@@ -27,14 +26,14 @@ export default class Kinto extends KintoBase {
     };
   }
 
-  constructor(options={}) {
+  constructor(options = {}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
       events: new EventEmitter(),
       ApiClass: Api,
     };
 
-    super({...defaults, ...options});
+    super({ ...defaults, ...options });
   }
 }
 
