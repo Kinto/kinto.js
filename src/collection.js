@@ -383,7 +383,7 @@ export default class Collection {
 
     const validatedHooks = {};
 
-    for (let hook in hooks) {
+    for (const hook in hooks) {
       if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
         throw new Error(
           "The hook should be one of " + AVAILABLE_HOOKS.join(", ")
@@ -784,7 +784,7 @@ export default class Collection {
    *    when the transaction commits.
    */
   execute(doOperations, { preloadIds = [] } = {}) {
-    for (let id of preloadIds) {
+    for (const id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
       }
@@ -1024,7 +1024,7 @@ export default class Collection {
 
     // Store outgoing conflicts into sync result object
     const conflicts = [];
-    for (let { type, local, remote } of synced.conflicts) {
+    for (const { type, local, remote } of synced.conflicts) {
       // Note: we ensure that local data are actually available, as they may
       // be missing in the case of a published deletion.
       const safeLocal = (local && local.data) || { id: remote.id };
@@ -1233,7 +1233,7 @@ export default class Collection {
       throw new Error("Records is not an array.");
     }
 
-    for (let record of records) {
+    for (const record of records) {
       if (!record.hasOwnProperty("id") || !this.idSchema.validate(record.id)) {
         throw new Error("Record has invalid ID: " + JSON.stringify(record));
       }
@@ -1301,7 +1301,7 @@ export class CollectionTransaction {
    * been executed successfully.
    */
   emitEvents() {
-    for (let { action, payload } of this._events) {
+    for (const { action, payload } of this._events) {
       this.collection.events.emit(action, payload);
     }
     if (this._events.length > 0) {
