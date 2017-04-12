@@ -117,7 +117,7 @@
   "devDependencies": {
     "babel-cli": "^6.22.2",
     "babel-core": "^6.22.1",
-    "babel-eslint": "^7.0.0",
+    "babel-eslint": "^7.2.2",
     "babel-istanbul": "^0.12.2",
     "babel-loader": "^6.2.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.22.0",
