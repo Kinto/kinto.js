@@ -144,7 +144,7 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api.defaultReqOptions.headers).eql({
+      expect(coll.api._headers).eql({
         Authorization: "Basic plop",
       });
     });
