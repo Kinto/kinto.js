@@ -141,7 +141,7 @@
     "kinto-node-test-server": "1.0.0",
     "lint-staged": "^3.3.1",
     "mocha": "^3.2.0",
-    "prettier": "^0.22.0",
+    "prettier": "^1.0.0",
     "prettier-check": "^1.0.0",
     "sinon": "^2.0.0",
     "uglifyify": "^3.0.3"
