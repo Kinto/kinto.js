@@ -26,7 +26,7 @@
     "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && echo 'Coverage report generated in coverage/index.html'",
     "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'"
   },
-  "prettierOptions": "--trailing-comma es5",
+  "prettierOptions": "--trailing-comma es5 --semi",
   "lint-staged": {
     "{src,test}/**/*.js": [
       "npm run lint",
@@ -141,7 +141,7 @@
     "kinto-node-test-server": "1.0.0",
     "lint-staged": "^3.3.1",
     "mocha": "^3.2.0",
-    "prettier": "^0.22.0",
+    "prettier": "^1.0.0",
     "prettier-check": "^1.0.0",
     "sinon": "^2.0.0",
     "uglifyify": "^3.0.3"
