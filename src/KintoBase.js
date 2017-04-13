@@ -109,18 +109,11 @@ export default class KintoBase {
     if (!collName) {
       throw new Error("missing collection name");
     }
-    const {
-      bucket,
-      events,
-      adapter,
-      adapterOptions,
-      dbPrefix,
-    } = { ...this._options, ...options };
-    const {
-      idSchema,
-      remoteTransformers,
-      hooks,
-    } = options;
+    const { bucket, events, adapter, adapterOptions, dbPrefix } = {
+      ...this._options,
+      ...options,
+    };
+    const { idSchema, remoteTransformers, hooks } = options;
 
     return new Collection(bucket, collName, this.api, {
       events,

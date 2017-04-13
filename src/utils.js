@@ -88,12 +88,9 @@ export function waterfall(fns, init) {
   if (!fns.length) {
     return Promise.resolve(init);
   }
-  return fns.reduce(
-    (promise, nextFn) => {
-      return promise.then(nextFn);
-    },
-    Promise.resolve(init)
-  );
+  return fns.reduce((promise, nextFn) => {
+    return promise.then(nextFn);
+  }, Promise.resolve(init));
 }
 
 /**
@@ -133,13 +130,10 @@ export function deepEqual(a, b) {
  * @return {Object}            A copy without the specified keys.
  */
 export function omitKeys(obj, keys = []) {
-  return Object.keys(obj).reduce(
-    (acc, key) => {
-      if (keys.indexOf(key) === -1) {
-        acc[key] = obj[key];
-      }
-      return acc;
-    },
-    {}
-  );
+  return Object.keys(obj).reduce((acc, key) => {
+    if (keys.indexOf(key) === -1) {
+      acc[key] = obj[key];
+    }
+    return acc;
+  }, {});
 }
