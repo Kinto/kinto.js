@@ -469,7 +469,8 @@ describe("adapter.IDB", () => {
           db.loadDump([
             { id: uuid4(), title: "foo", last_modified: 1457896541 },
             { id: uuid4(), title: "bar", last_modified: 1458796542 },
-          ]))
+          ])
+        )
         .then(() => db.getLastModified())
         .should.eventually.become(1458796543);
     });

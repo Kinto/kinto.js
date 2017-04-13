@@ -96,10 +96,12 @@ describe("Integration tests", function() {
           [].concat(
             // Create local unsynced records
             data.localUnsynced.map(record =>
-              collection.create(record, { useRecordId: true })),
+              collection.create(record, { useRecordId: true })
+            ),
             // Create local synced records
             data.localSynced.map(record =>
-              collection.create(record, { synced: true })),
+              collection.create(record, { synced: true })
+            ),
             // Create remote records
             collection.api
               .bucket("default")
@@ -129,7 +131,8 @@ describe("Integration tests", function() {
             json.data.map(record => ({
               title: record.title,
               done: record.done,
-            })));
+            }))
+          );
       }
 
       describe("No change", () => {
@@ -242,7 +245,8 @@ describe("Integration tests", function() {
                 title: record.title,
                 done: record.done,
                 _status: record._status,
-              })))
+              }))
+            )
             .should.become([
               { title: "task1", _status: "synced", done: true },
               { title: "task2", _status: "synced", done: false },
@@ -383,7 +387,8 @@ describe("Integration tests", function() {
                   title: record.title,
                   done: record.done,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
@@ -519,7 +524,8 @@ describe("Integration tests", function() {
                   title: record.title,
                   done: record.done,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
@@ -623,7 +629,8 @@ describe("Integration tests", function() {
                   title: record.title,
                   done: record.done,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
@@ -709,7 +716,8 @@ describe("Integration tests", function() {
                   title: record.title,
                   done: record.done,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
@@ -839,22 +847,26 @@ describe("Integration tests", function() {
                 rawCollection.updateRecord(
                   { id: conflictingId, title: "remotely changed title" },
                   { patch: true }
-                ))
+                )
+              )
               .then(() =>
                 rawCollection.updateRecord(
                   { id: conflictingId2, title: "remotely changed title2" },
                   { patch: true }
-                ))
+                )
+              )
               .then(() =>
                 tasks.update(
                   { id: conflictingId, title: "locally changed title" },
                   { patch: true }
-                ))
+                )
+              )
               .then(() =>
                 tasks.update(
                   { id: conflictingId2, title: "local title2" },
                   { patch: true }
-                ))
+                )
+              )
               .then(() => tasks.sync())
               .then(syncResult => {
                 expect(syncResult.ok).eql(false);
@@ -989,12 +1001,14 @@ describe("Integration tests", function() {
                   done: false,
                 },
                 { useRecordId: true }
-              ));
+              )
+            );
         }
 
         beforeEach(() => {
           return setupConflict(tasks).then(() =>
-            setupConflict(tasksTransformed));
+            setupConflict(tasksTransformed)
+          );
         });
 
         describe("MANUAL strategy (default)", () => {
@@ -1057,7 +1071,8 @@ describe("Integration tests", function() {
                 res.data.map(record => ({
                   title: record.title,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 // For MANUAL strategy, local conficting record is left intact
                 { title: "task1-local", _status: "created" },
@@ -1169,7 +1184,8 @@ describe("Integration tests", function() {
                 res.data.map(record => ({
                   title: record.title,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
@@ -1241,7 +1257,8 @@ describe("Integration tests", function() {
                 res.data.map(record => ({
                   title: record.title,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
@@ -1316,7 +1333,8 @@ describe("Integration tests", function() {
                 res.data.map(record => ({
                   title: record.title,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 // For SERVER_WINS strategy, local version is marked as synced
                 { title: "task1-remote", _status: "synced" },
@@ -1401,7 +1419,8 @@ describe("Integration tests", function() {
                 res.data.map(record => ({
                   title: record.title,
                   _status: record._status,
-                })))
+                }))
+              )
               .should.become([
                 // For SERVER_WINS strategy, local version is marked as synced
                 { title: "task1-remote", _status: "synced" },
@@ -1633,7 +1652,8 @@ describe("Integration tests", function() {
             tasksRemote.createRecord({
               ...deletedByOtherClientRemote,
               wasDeleted: true,
-            }))
+            })
+          )
           .then(() => tasks.sync())
           .then(() => tasks.getAny(deletedByOtherClientRemote.id))
           .then(res => res.data)

@@ -74,7 +74,9 @@ export class SyncResultObject {
     // Deduplicate entries by id. If the values don't have `id` attribute, just
     // keep all.
     const deduplicated = this[type].concat(entries).reduce((acc, cur) => {
-      const existing = acc.filter(r => cur.id && r.id ? cur.id != r.id : true);
+      const existing = acc.filter(
+        r => (cur.id && r.id ? cur.id != r.id : true)
+      );
       return existing.concat(cur);
     }, []);
     this[type] = deduplicated;
@@ -984,8 +986,8 @@ export default class Collection {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
-    const safe = !options.strategy ||
-      options.strategy !== Collection.CLIENT_WINS;
+    const safe =
+      !options.strategy || options.strategy !== Collection.CLIENT_WINS;
     const toDelete = changes.filter(r => r._status == "deleted");
     const toSync = changes.filter(r => r._status != "deleted");
 
@@ -1251,13 +1253,10 @@ export default class Collection {
     // XXX filter by status / ids in records
 
     const { data } = await this.list({}, { includeDeleted: true });
-    const existingById = data.reduce(
-      (acc, record) => {
-        acc[record.id] = record;
-        return acc;
-      },
-      {}
-    );
+    const existingById = data.reduce((acc, record) => {
+      acc[record.id] = record;
+      return acc;
+    }, {});
 
     const newRecords = records.filter(record => {
       const localRecord = existingById[record.id];
@@ -1468,11 +1467,11 @@ export class CollectionTransaction {
     // If only local fields have changed, then keep record as synced.
     // If status is created, keep record as created.
     // If status is deleted, mark as updated.
-    const isIdentical = oldRecord &&
-      recordsEqual(oldRecord, updated, this.localFields);
+    const isIdentical =
+      oldRecord && recordsEqual(oldRecord, updated, this.localFields);
     const keepSynced = isIdentical && oldRecord._status == "synced";
-    const neverSynced = !oldRecord ||
-      (oldRecord && oldRecord._status == "created");
+    const neverSynced =
+      !oldRecord || (oldRecord && oldRecord._status == "created");
     const newStatus = keepSynced || synced
       ? "synced"
       : neverSynced ? "created" : "updated";

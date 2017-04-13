@@ -539,7 +539,8 @@ describe("Collection", () => {
         .create({ id: uuid4() }, { useRecordId: true })
         .then(res => articles.delete(res.data.id))
         .then(res =>
-          articles.create({ id: res.data.id }, { useRecordId: true }))
+          articles.create({ id: res.data.id }, { useRecordId: true })
+        )
         .should.be.rejectedWith(Error, /virtually deleted/);
     });
   });
@@ -682,7 +683,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.update({ ...res.data, title: "bar" }, { synced: true }))
+          articles.update({ ...res.data, title: "bar" }, { synced: true })
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("synced");
@@ -692,7 +694,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.update(Object.assign({}, res.data, { title: "bar" })))
+          articles.update(Object.assign({}, res.data, { title: "bar" }))
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("created");
@@ -731,7 +734,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.upsert(Object.assign({}, res.data, { title: "bar" })))
+          articles.upsert(Object.assign({}, res.data, { title: "bar" }))
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("created");
@@ -1364,7 +1368,8 @@ describe("Collection", () => {
           .then(res =>
             res.data.map(r => {
               return { title: r.title, unread: r.unread, complete: r.complete };
-            }))
+            })
+          )
           .should.eventually.become([
             { title: "art3", unread: true, complete: true },
             { title: "art1", unread: true, complete: true },
@@ -2174,7 +2179,8 @@ describe("Collection", () => {
         .then(() =>
           articles.importChanges(result, [
             { id: id1, title: "bar", last_modified: 43 },
-          ]))
+          ])
+        )
         .then(res => {
           // No conflict, local.title == remote.title.
           expect(res.ok).eql(true);
