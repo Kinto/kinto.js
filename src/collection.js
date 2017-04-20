@@ -474,14 +474,17 @@ export default class Collection {
       return reject("Record is not an object.");
     }
     if (
-      (options.synced || options.useRecordId) && !record.hasOwnProperty("id")
+      (options.synced || options.useRecordId) &&
+      !record.hasOwnProperty("id")
     ) {
       return reject(
         "Missing required Id; synced and useRecordId options require one"
       );
     }
     if (
-      !options.synced && !options.useRecordId && record.hasOwnProperty("id")
+      !options.synced &&
+      !options.useRecordId &&
+      record.hasOwnProperty("id")
     ) {
       return reject("Extraneous Id; can't create a record having one set.");
     }
@@ -1340,7 +1343,8 @@ export class CollectionTransaction {
   get(id, options = { includeDeleted: false }) {
     const res = this.getAny(id);
     if (
-      !res.data || (!options.includeDeleted && res.data._status === "deleted")
+      !res.data ||
+      (!options.includeDeleted && res.data._status === "deleted")
     ) {
       throw new Error(`Record with id=${id} not found.`);
     }

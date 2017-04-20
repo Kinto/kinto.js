@@ -426,7 +426,7 @@ describe("Collection", () => {
   describe("#create", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should create a record and return created record data", () => {
       return articles.create(article).should.eventually.have.property("data");
@@ -549,7 +549,7 @@ describe("Collection", () => {
   describe("#update", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should update a record", () => {
       return articles
@@ -706,7 +706,7 @@ describe("Collection", () => {
   describe("#put", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should update a record", () => {
       return articles
@@ -952,7 +952,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should isolate records by bucket", () => {
@@ -1036,7 +1036,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should retrieve a record from its id", () => {
@@ -1073,7 +1073,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should validate passed id", () => {
@@ -1166,7 +1166,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should delete an existing record", () => {
@@ -1382,7 +1382,7 @@ describe("Collection", () => {
   describe("#loadDump", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should import records in the collection", () => {
       return articles
@@ -2509,7 +2509,7 @@ describe("Collection", () => {
       });
       return Promise.all(
         fixtures.map(fixture => articles.create(fixture))
-      ).then(res => ids = res.map(r => r.data.id));
+      ).then(res => (ids = res.map(r => r.data.id)));
     });
 
     it("should validate the remote option", () => {
@@ -2992,7 +2992,7 @@ describe("Collection", () => {
       articles = testCollection();
       return articles
         .create({ title: "foo" })
-        .then(({ data }) => article = data);
+        .then(({ data }) => (article = data));
     });
 
     it("should emit an event on create", done => {
