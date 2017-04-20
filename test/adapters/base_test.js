@@ -6,7 +6,7 @@ import BaseAdapter from "../../src/adapters/base";
 
 describe("adapters.BaseAdapter", () => {
   let adapter;
-  beforeEach(() => adapter = new BaseAdapter());
+  beforeEach(() => (adapter = new BaseAdapter()));
 
   it("should throw for non-implemented methods", () => {
     expect(() => adapter.clear()).to.Throw(Error, "Not Implemented.");

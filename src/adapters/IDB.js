@@ -278,8 +278,9 @@ export default class IDB extends BaseAdapter {
       const { transaction, store } = this.prepare("readwrite");
       // Preload specified records using index.
       const ids = options.preload;
-      store.index("id").openCursor()
-        .onsuccess = cursorHandlers.in(ids, records => {
+      store
+        .index("id")
+        .openCursor().onsuccess = cursorHandlers.in(ids, records => {
         // Store obtained records by id.
         const preloaded = records.reduce((acc, record) => {
           acc[record.id] = record;

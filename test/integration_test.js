@@ -151,7 +151,7 @@ describe("Integration tests", function() {
               syncResult1 = res;
               return tasks.sync();
             })
-            .then(res => syncResult2 = res);
+            .then(res => (syncResult2 = res));
         });
 
         it("should have an ok status", () => {
@@ -179,7 +179,7 @@ describe("Integration tests", function() {
         let syncResult;
 
         beforeEach(() => {
-          return testSync(testData).then(res => syncResult = res);
+          return testSync(testData).then(res => (syncResult = res));
         });
 
         it("should have an ok status", () => {
@@ -325,7 +325,7 @@ describe("Integration tests", function() {
 
         describe("MANUAL strategy (default)", () => {
           beforeEach(() => {
-            return testSync(testData).then(res => syncResult = res);
+            return testSync(testData).then(res => (syncResult = res));
           });
 
           it("should not have an ok status", () => {
@@ -456,7 +456,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return testSync(testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then(res => syncResult = res);
+            }).then(res => (syncResult = res));
           });
 
           it("should have an ok status", () => {
@@ -592,7 +592,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return collectionTestSync(tasksTransformed, testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then(res => syncResult = res);
+            }).then(res => (syncResult = res));
           });
 
           it("should publish resolved conflict using local version", () => {
@@ -655,7 +655,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return testSync(testData, {
               strategy: Kinto.syncStrategy.SERVER_WINS,
-            }).then(res => syncResult = res);
+            }).then(res => (syncResult = res));
           });
 
           it("should have an ok status", () => {
@@ -959,7 +959,7 @@ describe("Integration tests", function() {
               .then(() => {
                 return tasks.sync();
               })
-              .then(res => result = res);
+              .then(res => (result = res));
           });
 
           it("should properly list the encountered conflict", () => {
