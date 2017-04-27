@@ -2731,11 +2731,10 @@ describe("Collection", () => {
         sandbox.restore();
         // Stub low-level fetch instead.
         fetch = sandbox.stub(global, "fetch");
-        // Settings
-        fetch.onCall(0).returns(fakeServerResponse(200, { settings: {} }, {}));
         // Pull
-        fetch.onCall(1).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch.onCall(0).returns(fakeServerResponse(200, { data: [] }, {}));
         // Push
+        fetch.onCall(1).returns(fakeServerResponse(200, { settings: {} }, {}));
         fetch
           .onCall(2)
           .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }));
