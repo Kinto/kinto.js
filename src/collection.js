@@ -1034,7 +1034,10 @@ export default class Collection {
       // be missing in the case of a published deletion.
       const safeLocal = (local && local.data) || { id: remote.id };
       const realLocal = await this._decodeRecord("remote", safeLocal);
-      const realRemote = await this._decodeRecord("remote", remote);
+      // We can get "null" from the remote side if we got a conflict
+      // and there is no remote version available; see kinto-http.js
+      // batch.js:aggregate.
+      const realRemote = remote && (await this._decodeRecord("remote", remote));
       const conflict = { type, local: realLocal, remote: realRemote };
       conflicts.push(conflict);
     }
