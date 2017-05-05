@@ -760,9 +760,15 @@ export default class Collection {
       const resolution = strategy === Collection.strategy.CLIENT_WINS
         ? conflict.local
         : conflict.remote;
-      const updated = this._resolveRaw(conflict, resolution);
-      transaction.update(updated);
-      return updated;
+      if (resolution === null) {
+        // We "resolved" with the server-side deletion. Delete locally.
+        transaction.delete(conflict.local.id);
+        return { id: conflict.local.id, _status: "deleted" };
+      } else {
+        const updated = this._resolveRaw(conflict, resolution);
+        transaction.update(updated);
+        return updated;
+      }
     });
   }
 
