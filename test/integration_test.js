@@ -816,7 +816,7 @@ describe("Integration tests", function() {
         });
       });
 
-      describe("Outgoing conflicting deletion", () => {
+      describe("Outgoing conflicting local deletion", () => {
         describe("With remote update", () => {
           let id, conflicts;
 
@@ -939,7 +939,9 @@ describe("Integration tests", function() {
         });
 
         describe("MANUAL strategy (default)", () => {
+          let oldLastModified;
           beforeEach(() => {
+            oldLastModified = tasks.lastModified;
             return tasks.sync().then(res => {
               syncResult = res;
             });
@@ -957,7 +959,10 @@ describe("Integration tests", function() {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should have updated lastModified", () => {
+          it("should not have updated lastModified", () => {
+            // lastModified hasn't changed because we haven't synced
+            // anything since lastModified
+            expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(
               syncResult.lastModified
@@ -1057,7 +1062,9 @@ describe("Integration tests", function() {
         });
 
         describe("CLIENT_WINS strategy", () => {
+          let oldLastModified;
           beforeEach(() => {
+            oldLastModified = tasks.lastModified;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
               .then(res => {
@@ -1075,6 +1082,18 @@ describe("Integration tests", function() {
 
           it("should have a valid lastModified value", () => {
             expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have updated lastModified", () => {
+            // At the end of the sync, we will have pushed our record
+            // remotely, which won't have caused a conflict, which
+            // will update the remote lastModified, and this is the
+            // lastModified our collection will have.
+            expect(tasks.lastModified).above(oldLastModified);
+            expect(tasks.lastModified).to.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1161,7 +1180,9 @@ describe("Integration tests", function() {
         });
 
         describe("SERVER_WINS strategy", () => {
+          let oldLastModified;
           beforeEach(() => {
+            oldLastModified = tasks.lastModified;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
               .then(res => {
@@ -1181,14 +1202,20 @@ describe("Integration tests", function() {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should have updated lastModified", () => {
+          it("should not have updated lastModified", () => {
+            // Although we updated the last modified from the server,
+            // the server's lastModified is the same as the one we
+            // used to have, since the last modification that took
+            // place was when we synced the record (before we forgot
+            // about it).
+            expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
             expect(tasks.db.getLastModified()).eventually.equal(
               syncResult.lastModified
             );
           });
 
-          it("should have the outgoing conflict listed", () => {
+          it("should not have the outgoing conflict listed", () => {
             expect(syncResult.conflicts).to.have.length.of(0);
           });
 
