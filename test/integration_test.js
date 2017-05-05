@@ -34,6 +34,53 @@ const appendTransformer = function(s) {
   };
 };
 
+/**
+ * Verify that syncing again is a no-op.
+ */
+function futureSyncsOK(getCollection, getLastSyncResult) {
+  describe("On next MANUAL sync", () => {
+    let nextSyncResult;
+
+    beforeEach(() => {
+      return getCollection().sync().then(result => {
+        nextSyncResult = result;
+      });
+    });
+
+    it("should have an ok status", () => {
+      expect(nextSyncResult.ok).eql(true);
+    });
+
+    it("should contain no errors", () => {
+      expect(nextSyncResult.errors).to.have.length.of(0);
+    });
+
+    it("should have the same lastModified value", () => {
+      expect(nextSyncResult.lastModified).eql(getLastSyncResult().lastModified);
+    });
+
+    it("should not contain conflicts anymore", () => {
+      expect(nextSyncResult.conflicts).to.have.length.of(0);
+    });
+
+    it("should not skip anything", () => {
+      expect(nextSyncResult.skipped).to.have.length.of(0);
+    });
+
+    it("should not import anything", () => {
+      expect(nextSyncResult.created).to.have.length.of(0);
+    });
+
+    it("should not publish anything", () => {
+      expect(nextSyncResult.published).to.have.length.of(0);
+    });
+
+    it("should not update anything", () => {
+      expect(nextSyncResult.updated).to.have.length.of(0);
+    });
+  });
+}
+
 describe("Integration tests", function() {
   let sandbox, server, kinto, tasks, tasksTransformed;
 
@@ -265,47 +312,7 @@ describe("Integration tests", function() {
           ]);
         });
 
-        describe("On next MANUAL sync", () => {
-          let nextSyncResult;
-
-          beforeEach(() => {
-            return tasks.sync().then(result => {
-              nextSyncResult = result;
-            });
-          });
-
-          it("should have an ok status", () => {
-            expect(nextSyncResult.ok).eql(true);
-          });
-
-          it("should contain no errors", () => {
-            expect(nextSyncResult.errors).to.have.length.of(0);
-          });
-
-          it("should have the same lastModified value", () => {
-            expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
-          });
-
-          it("should not contain conflicts", () => {
-            expect(nextSyncResult.conflicts).to.have.length.of(0);
-          });
-
-          it("should not skip anything", () => {
-            expect(nextSyncResult.skipped).to.have.length.of(0);
-          });
-
-          it("should not import anything", () => {
-            expect(nextSyncResult.created).to.have.length.of(0);
-          });
-
-          it("should not publish anything", () => {
-            expect(nextSyncResult.published).to.have.length.of(0);
-          });
-
-          it("should not update anything", () => {
-            expect(nextSyncResult.updated).to.have.length.of(0);
-          });
-        });
+        futureSyncsOK(() => tasks, () => syncResult);
       });
 
       describe("Incoming conflict", () => {
@@ -545,47 +552,7 @@ describe("Integration tests", function() {
             ]);
           });
 
-          describe("On next MANUAL sync", () => {
-            let nextSyncResult;
-
-            beforeEach(() => {
-              return tasks.sync().then(result => {
-                nextSyncResult = result;
-              });
-            });
-
-            it("should have an ok status", () => {
-              expect(nextSyncResult.ok).eql(true);
-            });
-
-            it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
-            });
-
-            it("should have the same lastModified value", () => {
-              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
-            });
-
-            it("should not contain conflicts anymore", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(0);
-            });
-
-            it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
-            });
-
-            it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
-            });
-
-            it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
-            });
-
-            it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
-            });
-          });
+          futureSyncsOK(() => tasks, () => syncResult);
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
@@ -737,47 +704,7 @@ describe("Integration tests", function() {
             ]);
           });
 
-          describe("On next MANUAL sync", () => {
-            let nextSyncResult;
-
-            beforeEach(() => {
-              return tasks.sync().then(result => {
-                nextSyncResult = result;
-              });
-            });
-
-            it("should have an ok status", () => {
-              expect(nextSyncResult.ok).eql(true);
-            });
-
-            it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
-            });
-
-            it("should have the same lastModified value", () => {
-              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
-            });
-
-            it("should not contain conflicts anymore", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(0);
-            });
-
-            it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
-            });
-
-            it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
-            });
-
-            it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
-            });
-
-            it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
-            });
-          });
+          futureSyncsOK(() => tasks, () => syncResult);
         });
 
         describe("Resolving conflicts doesn't interfere with sync", () => {
@@ -1198,47 +1125,7 @@ describe("Integration tests", function() {
             ]);
           });
 
-          describe("On next MANUAL sync", () => {
-            let nextSyncResult;
-
-            beforeEach(() => {
-              return tasks.sync().then(result => {
-                nextSyncResult = result;
-              });
-            });
-
-            it("should have an ok status", () => {
-              expect(nextSyncResult.ok).eql(true);
-            });
-
-            it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
-            });
-
-            it("should have the same lastModified value", () => {
-              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
-            });
-
-            it("should not contain conflicts anymore", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(0);
-            });
-
-            it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
-            });
-
-            it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
-            });
-
-            it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
-            });
-
-            it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
-            });
-          });
+          futureSyncsOK(() => tasks, () => syncResult);
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
@@ -1347,47 +1234,7 @@ describe("Integration tests", function() {
             ]);
           });
 
-          describe("On next MANUAL sync", () => {
-            let nextSyncResult;
-
-            beforeEach(() => {
-              return tasks.sync().then(result => {
-                nextSyncResult = result;
-              });
-            });
-
-            it("should have an ok status", () => {
-              expect(nextSyncResult.ok).eql(true);
-            });
-
-            it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
-            });
-
-            it("should have the same lastModified value", () => {
-              expect(nextSyncResult.lastModified).eql(syncResult.lastModified);
-            });
-
-            it("should not contain conflicts anymore", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(0);
-            });
-
-            it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
-            });
-
-            it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
-            });
-
-            it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
-            });
-
-            it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
-            });
-          });
+          futureSyncsOK(() => tasks, () => syncResult);
         });
 
         describe("SERVER_WINS strategy with transformers", () => {
