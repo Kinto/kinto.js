@@ -1110,7 +1110,7 @@ export default class Collection {
     const resolved = {
       ...resolution,
       // Ensure local record has the latest authoritative timestamp
-      last_modified: conflict.remote.last_modified,
+      last_modified: conflict.remote && conflict.remote.last_modified,
     };
     // If the resolution object is strictly equal to the
     // remote record, then we can mark it as synced locally.
