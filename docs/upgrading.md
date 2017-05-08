@@ -2,6 +2,22 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 8.x to 9.x
+
+* When fixing #691, the types of values in SyncResultObject.resolved were changed. Previously, they were just the resolution for a given record; now, they are {accepted, rejected}, with accepted being the new value. Any code using elements of this list (e.g. SyncResultObject.resolved[i]) should now use the accepted property of that element (e.g. SyncResultObject.resolved[i].accepted).
+
+## 7.x to 8.x
+
+* As part of #640, some of the expectations of remote transformers were changed. Previously, a remote transformer could return anything for a deleted record, and that record would still be deleted. Now, if a transformer changes a record's _status, it will be respected.
+
+## 6.x to 7.x
+
+* The open() and close() methods were removed from BaseAdapter (#599). These were never called by Kinto code. You can continue to define these methods and invoke them as you like.
+
+## 5.x to 6.x
+
+* The Firefox storage adapter was removed (#562). Development on this module has been moved to the Firefox Mercurial repository.
+
 ## 4.x to 5.x
 
 * The helper `utils/reduceRecords` was removed (#543)
