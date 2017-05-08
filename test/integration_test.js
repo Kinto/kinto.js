@@ -515,7 +515,7 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(
-              recordsEqual(syncResult.resolved[0], {
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
@@ -580,7 +580,7 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(
-              recordsEqual(syncResult.resolved[0], {
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
@@ -667,7 +667,7 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(
-              recordsEqual(syncResult.resolved[0], {
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-remote",
                 done: true,
@@ -1120,7 +1120,7 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(syncResult.resolved[0].title).eql("task1-local");
+            expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
           it("should put local database in the expected state", () => {
@@ -1237,7 +1237,7 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(syncResult.resolved[0].title).eql("task1-remote");
+            expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
           it("should put local database in the expected state", () => {
@@ -1283,7 +1283,7 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(syncResult.resolved[0].title).eql("task1-remote");
+            expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
           it("should put local database in the expected state", () => {
@@ -1522,7 +1522,6 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            //// N.B. This will require a major version to fix!
             expect(syncResult.resolved[0].rejected).eql(null);
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
@@ -1626,8 +1625,11 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            //// N.B. This will require a major version to fix!
-            expect(syncResult.resolved[0].accepted).eql(null);
+            // FIXME: This should maybe resolve as `null` rather than
+            // `{id, status}`??
+            const accepted = syncResult.resolved[0].accepted;
+            expect(accepted).property("_status", "deleted");
+            expect(accepted).property("id");
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 

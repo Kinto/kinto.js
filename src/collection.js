@@ -750,7 +750,8 @@ export default class Collection {
    *
    * @param  {SyncResultObject} result    The sync result object.
    * @param  {String}           strategy  The {@link Collection.strategy}.
-   * @return {Promise}
+   * @return {Promise<Array<Object>>} The resolved conflicts, as an
+   *    array of {accepted, rejected} objects
    */
   _handleConflicts(transaction, conflicts, strategy) {
     if (strategy === Collection.strategy.MANUAL) {
@@ -760,15 +761,20 @@ export default class Collection {
       const resolution = strategy === Collection.strategy.CLIENT_WINS
         ? conflict.local
         : conflict.remote;
+      const rejected = strategy === Collection.strategy.CLIENT_WINS
+        ? conflict.remote
+        : conflict.local;
+      let accepted;
       if (resolution === null) {
         // We "resolved" with the server-side deletion. Delete locally.
         transaction.delete(conflict.local.id);
-        return { id: conflict.local.id, _status: "deleted" };
+        accepted = { id: conflict.local.id, _status: "deleted" };
       } else {
         const updated = this._resolveRaw(conflict, resolution);
         transaction.update(updated);
-        return updated;
+        accepted = updated;
       }
+      return { rejected, accepted };
     });
   }
 
@@ -1194,9 +1200,9 @@ export default class Collection {
       await this.pushChanges(client, toSync, result, options);
 
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
-      const resolvedUnsynced = result.resolved.filter(
-        r => r._status !== "synced"
-      );
+      const resolvedUnsynced = result.resolved
+        .map(r => r.accepted)
+        .filter(r => r._status !== "synced");
       if (resolvedUnsynced.length > 0) {
         const resolvedEncoded = await Promise.all(
           resolvedUnsynced.map(this._encodeRecord.bind(this, "remote"))
