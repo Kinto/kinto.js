@@ -750,7 +750,8 @@ export default class Collection {
    *
    * @param  {SyncResultObject} result    The sync result object.
    * @param  {String}           strategy  The {@link Collection.strategy}.
-   * @return {Promise}
+   * @return {Promise<Array<Object>>} The resolved conflicts, as an
+   *    array of {accepted, rejected} objects
    */
   _handleConflicts(transaction, conflicts, strategy) {
     if (strategy === Collection.strategy.MANUAL) {
@@ -760,9 +761,29 @@ export default class Collection {
       const resolution = strategy === Collection.strategy.CLIENT_WINS
         ? conflict.local
         : conflict.remote;
-      const updated = this._resolveRaw(conflict, resolution);
-      transaction.update(updated);
-      return updated;
+      const rejected = strategy === Collection.strategy.CLIENT_WINS
+        ? conflict.remote
+        : conflict.local;
+      let accepted, status, id;
+      if (resolution === null) {
+        // We "resolved" with the server-side deletion. Delete locally.
+        // This only happens during SERVER_WINS because the local
+        // version of a record can never be null.
+        // We can get "null" from the remote side if we got a conflict
+        // and there is no remote version available; see kinto-http.js
+        // batch.js:aggregate.
+        transaction.delete(conflict.local.id);
+        accepted = null;
+        status = "deleted";
+        id = conflict.local.id;
+      } else {
+        const updated = this._resolveRaw(conflict, resolution);
+        transaction.update(updated);
+        accepted = updated;
+        status = updated._status;
+        id = updated.id;
+      }
+      return { rejected, accepted, id, _status: status };
     });
   }
 
@@ -1034,7 +1055,10 @@ export default class Collection {
       // be missing in the case of a published deletion.
       const safeLocal = (local && local.data) || { id: remote.id };
       const realLocal = await this._decodeRecord("remote", safeLocal);
-      const realRemote = await this._decodeRecord("remote", remote);
+      // We can get "null" from the remote side if we got a conflict
+      // and there is no remote version available; see kinto-http.js
+      // batch.js:aggregate.
+      const realRemote = remote && (await this._decodeRecord("remote", remote));
       const conflict = { type, local: realLocal, remote: realRemote };
       conflicts.push(conflict);
     }
@@ -1107,7 +1131,7 @@ export default class Collection {
     const resolved = {
       ...resolution,
       // Ensure local record has the latest authoritative timestamp
-      last_modified: conflict.remote.last_modified,
+      last_modified: conflict.remote && conflict.remote.last_modified,
     };
     // If the resolution object is strictly equal to the
     // remote record, then we can mark it as synced locally.
@@ -1190,7 +1214,13 @@ export default class Collection {
       );
       if (resolvedUnsynced.length > 0) {
         const resolvedEncoded = await Promise.all(
-          resolvedUnsynced.map(this._encodeRecord.bind(this, "remote"))
+          resolvedUnsynced.map(resolution => {
+            let record = resolution.accepted;
+            if (record === null) {
+              record = { id: resolution.id, _status: resolution._status };
+            }
+            return this._encodeRecord("remote", record);
+          })
         );
         await this.pushChanges(client, resolvedEncoded, result, options);
       }
