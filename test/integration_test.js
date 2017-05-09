@@ -1523,6 +1523,9 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(syncResult.resolved[0].rejected).eql(null);
+            expect(syncResult.resolved[0].id).eql(
+              syncResult.resolved[0].accepted.id
+            );
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
@@ -1625,11 +1628,8 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            // FIXME: This should maybe resolve as `null` rather than
-            // `{id, status}`??
-            const accepted = syncResult.resolved[0].accepted;
-            expect(accepted).property("_status", "deleted");
-            expect(accepted).property("id");
+            expect(syncResult.resolved[0].accepted).eql(null);
+            expect(syncResult.resolved[0]).property("_status", "deleted");
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 
@@ -1669,7 +1669,9 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            //// N.B. This will require a major version to fix!
+            expect(syncResult.resolved[0].id).eql(
+              syncResult.resolved[0].rejected.id
+            );
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 

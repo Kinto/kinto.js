@@ -764,7 +764,7 @@ export default class Collection {
       const rejected = strategy === Collection.strategy.CLIENT_WINS
         ? conflict.remote
         : conflict.local;
-      let accepted;
+      let accepted, status, id;
       if (resolution === null) {
         // We "resolved" with the server-side deletion. Delete locally.
         // This only happens during SERVER_WINS because the local
@@ -773,13 +773,17 @@ export default class Collection {
         // and there is no remote version available; see kinto-http.js
         // batch.js:aggregate.
         transaction.delete(conflict.local.id);
-        accepted = { id: conflict.local.id, _status: "deleted" };
+        accepted = null;
+        status = "deleted";
+        id = conflict.local.id;
       } else {
         const updated = this._resolveRaw(conflict, resolution);
         transaction.update(updated);
         accepted = updated;
+        status = updated._status;
+        id = updated.id;
       }
-      return { rejected, accepted };
+      return { rejected, accepted, id, _status: status };
     });
   }
 
@@ -1205,12 +1209,18 @@ export default class Collection {
       await this.pushChanges(client, toSync, result, options);
 
       // Publish local resolution of push conflicts to server (on CLIENT_WINS)
-      const resolvedUnsynced = result.resolved
-        .map(r => r.accepted)
-        .filter(r => r._status !== "synced");
+      const resolvedUnsynced = result.resolved.filter(
+        r => r._status !== "synced"
+      );
       if (resolvedUnsynced.length > 0) {
         const resolvedEncoded = await Promise.all(
-          resolvedUnsynced.map(this._encodeRecord.bind(this, "remote"))
+          resolvedUnsynced.map(resolution => {
+            let record = resolution.accepted;
+            if (record === null) {
+              record = { id: resolution.id, _status: resolution._status };
+            }
+            return this._encodeRecord("remote", record);
+          })
         );
         await this.pushChanges(client, resolvedEncoded, result, options);
       }
