@@ -4,11 +4,11 @@ This page lists the breaking API changes between major versions of Kinto.js, as 
 
 ## 8.x to 9.x
 
-* When fixing #691, the types of values in SyncResultObject.resolved were changed. Previously, they were just the resolution for a given record; now, they are {accepted, rejected}, with accepted being the new value. Any code using elements of this list (e.g. SyncResultObject.resolved[i]) should now use the accepted property of that element (e.g. SyncResultObject.resolved[i].accepted).
+* When fixing #691, the types of values in SyncResultObject.resolved were changed. Previously, they were just the resolution for a given record; now, they are {accepted, rejected}, with accepted being the new value. Any code using elements of this list (e.g. `SyncResultObject.resolved[i]`) should now use the accepted property of that element (e.g. `SyncResultObject.resolved[i].accepted`).
 
 ## 7.x to 8.x
 
-* As part of #640, some of the expectations of remote transformers were changed. Previously, a remote transformer could return anything for a deleted record, and that record would still be deleted. Now, if a transformer changes a record's _status, it will be respected.
+* As part of #640, some of the expectations of remote transformers were changed. Previously, a remote transformer could return anything for a deleted record, and that record would still be deleted. Now, if a transformer changes a record's `_status`, it will be respected.
 
 ## 6.x to 7.x
 

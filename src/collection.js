@@ -767,6 +767,11 @@ export default class Collection {
       let accepted;
       if (resolution === null) {
         // We "resolved" with the server-side deletion. Delete locally.
+        // This only happens during SERVER_WINS because the local
+        // version of a record can never be null.
+        // We can get "null" from the remote side if we got a conflict
+        // and there is no remote version available; see kinto-http.js
+        // batch.js:aggregate.
         transaction.delete(conflict.local.id);
         accepted = { id: conflict.local.id, _status: "deleted" };
       } else {
