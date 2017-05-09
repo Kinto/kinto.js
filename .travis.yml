@@ -2,7 +2,7 @@ language: python
 python:
  - "3.5"
 env:
-  - SERVER=5.3.6 ACTION=test
+  - SERVER=6.0.4 ACTION=test
   - SERVER=master ACTION=test
   - ACTION="run lint"
   - ACTION="run dist"       # ensures building dist files doesn't break
@@ -16,7 +16,7 @@ before_install:
   - npm install
   - curl https://raw.githubusercontent.com/Kinto/kinto/master/requirements.txt > versions.txt
   - if [[ $SERVER && $SERVER != master ]]; then pip install kinto==$SERVER --constraint versions.txt ; fi
-  - if [[ $SERVER && $SERVER != master ]]; then pip install requests==2.12.5 pyramid==1.7.4 ; fi
+  - if [[ $SERVER && $SERVER != master ]]; then pip install requests==2.12.5 pyramid==1.8.2 ; fi
   - if [[ $SERVER && $SERVER == master ]]; then pip install https://github.com/Kinto/kinto/zipball/master --constraint versions.txt; fi
   - export KINTO_PSERVE_EXECUTABLE=pserve
 script:
