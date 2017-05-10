@@ -774,7 +774,9 @@ export default class Collection {
         // batch.js:aggregate.
         transaction.delete(conflict.local.id);
         accepted = null;
-        status = "deleted";
+        // The record was deleted, but that status is "synced" with
+        // the server, so we don't need to push the change.
+        status = "synced";
         id = conflict.local.id;
       } else {
         const updated = this._resolveRaw(conflict, resolution);
