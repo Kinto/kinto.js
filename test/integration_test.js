@@ -1629,7 +1629,7 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(syncResult.resolved[0].accepted).eql(null);
-            expect(syncResult.resolved[0]).property("_status", "deleted");
+            expect(syncResult.resolved[0]).property("_status", "synced");
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 
