@@ -131,7 +131,7 @@
     "co-task": "^1.0.0",
     "coveralls": "^2.11.15",
     "esdoc": "^0.5.2",
-    "esdoc-importpath-plugin": "0.1.2",
+    "esdoc-importpath-plugin": "0.1.3",
     "eslint": "3.19.0",
     "estraverse-fb": "^1.3.1",
     "fake-indexeddb": "2.0.3",
