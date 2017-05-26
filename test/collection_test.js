@@ -2501,12 +2501,12 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      sandbox.stub(api, "batch").returns({
+      sandbox.stub(api, "batch").get(() => () => ({
         errors: [],
         published: [],
         conflicts: [],
         skipped: [],
-      });
+      }));
       return Promise.all(
         fixtures.map(fixture => articles.create(fixture))
       ).then(res => (ids = res.map(r => r.data.id)));
