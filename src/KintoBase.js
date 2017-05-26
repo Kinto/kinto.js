@@ -65,13 +65,13 @@ export default class KintoBase {
     }
 
     const {
-      remote,
+      ApiClass,
       events,
       headers,
-      retry,
+      remote,
       requestMode,
+      retry,
       timeout,
-      ApiClass,
     } = this._options;
 
     // public properties
@@ -83,8 +83,8 @@ export default class KintoBase {
     this.api = new ApiClass(remote, {
       events,
       headers,
-      retry,
       requestMode,
+      retry,
       timeout,
     });
     /**
@@ -116,13 +116,13 @@ export default class KintoBase {
     const { idSchema, remoteTransformers, hooks } = options;
 
     return new Collection(bucket, collName, this.api, {
-      events,
       adapter,
       adapterOptions,
       dbPrefix,
+      events,
+      hooks,
       idSchema,
       remoteTransformers,
-      hooks,
     });
   }
 }

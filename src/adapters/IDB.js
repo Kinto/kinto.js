@@ -208,7 +208,7 @@ export default class IDB extends BaseAdapter {
       ? this._db.transaction([storeName], mode)
       : this._db.transaction([storeName]);
     const store = transaction.objectStore(storeName);
-    return { transaction, store };
+    return { store, transaction };
   }
 
   /**
@@ -221,7 +221,7 @@ export default class IDB extends BaseAdapter {
     try {
       await this.open();
       return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare("readwrite");
+        const { store, transaction } = this.prepare("readwrite");
         store.clear();
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve();
@@ -275,7 +275,7 @@ export default class IDB extends BaseAdapter {
     await this.open();
     return new Promise((resolve, reject) => {
       // Start transaction.
-      const { transaction, store } = this.prepare("readwrite");
+      const { store, transaction } = this.prepare("readwrite");
       // Preload specified records using index.
       const ids = options.preload;
       store
@@ -318,7 +318,7 @@ export default class IDB extends BaseAdapter {
     try {
       await this.open();
       return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare();
+        const { store, transaction } = this.prepare();
         const request = store.get(id);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve(request.result);
@@ -345,7 +345,7 @@ export default class IDB extends BaseAdapter {
         // If `indexField` was used already, don't filter again.
         const remainingFilters = omitKeys(filters, indexField);
 
-        const { transaction, store } = this.prepare();
+        const { store, transaction } = this.prepare();
         createListRequest(
           store,
           indexField,
@@ -380,7 +380,7 @@ export default class IDB extends BaseAdapter {
     const value = parseInt(lastModified, 10) || null;
     await this.open();
     return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare("readwrite", "__meta__");
+      const { store, transaction } = this.prepare("readwrite", "__meta__");
       store.put({ name: "lastModified", value: value });
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => resolve(value);
@@ -396,7 +396,7 @@ export default class IDB extends BaseAdapter {
   async getLastModified() {
     await this.open();
     return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare(undefined, "__meta__");
+      const { store, transaction } = this.prepare(undefined, "__meta__");
       const request = store.get("lastModified");
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => {
@@ -444,16 +444,16 @@ function transactionProxy(store, preloaded = []) {
       store.add(record);
     },
 
-    update(record) {
-      store.put(record);
-    },
-
     delete(id) {
       store.delete(id);
     },
 
     get(id) {
       return preloaded[id];
+    },
+
+    update(record) {
+      store.put(record);
     },
   };
 }

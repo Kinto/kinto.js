@@ -34,16 +34,16 @@ export class SyncResultObject {
    */
   static get defaults() {
     return {
+      conflicts: [],
+      created: [],
+      deleted: [],
+      errors: [],
       ok: true,
       lastModified: null,
-      errors: [],
-      created: [],
-      updated: [],
-      deleted: [],
       published: [],
-      conflicts: [],
-      skipped: [],
       resolved: [],
+      skipped: [],
+      updated: [],
     };
   }
 
@@ -135,11 +135,11 @@ function importChange(transaction, remote, localFields) {
     // Not found locally but remote change is marked as deleted; skip to
     // avoid recreation.
     if (remote.deleted) {
-      return { type: "skipped", data: remote };
+      return { data: remote, type: "skipped" };
     }
     const synced = markSynced(remote);
     transaction.create(synced);
-    return { type: "created", data: synced };
+    return { data: synced, type: "created" };
   }
   // Compare local and remote, ignoring local fields.
   const isIdentical = recordsEqual(local, remote, localFields);
@@ -149,14 +149,14 @@ function importChange(transaction, remote, localFields) {
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
-      return { type: "skipped", data: local };
+      return { data: local, type: "skipped" };
     }
     if (isIdentical) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
       transaction.update(synced);
-      return { type: "updated", data: { old: local, new: synced } };
+      return { data: { old: local, new: synced }, type: "updated" };
     }
     if (
       local.last_modified !== undefined &&
@@ -179,13 +179,13 @@ function importChange(transaction, remote, localFields) {
   // Local record was synced.
   if (remote.deleted) {
     transaction.delete(remote.id);
-    return { type: "deleted", data: local };
+    return { data: local, type: "deleted" };
   }
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
   const type = isIdentical ? "void" : "updated";
-  return { type, data: { old: local, new: synced } };
+  return { data: { new: synced, old: local }, type };
 }
 
 /**
@@ -298,8 +298,8 @@ export default class Collection {
   static get strategy() {
     return {
       CLIENT_WINS: "client_wins",
-      SERVER_WINS: "server_wins",
       MANUAL: "manual",
+      SERVER_WINS: "server_wins",
     };
   }
 
@@ -465,7 +465,7 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options = { useRecordId: false, synced: false }) {
+  create(record, options = { synced: false, useRecordId: false }) {
     // Validate the record and its ID (if any), even though this
     // validation is also done in the CollectionTransaction method,
     // because we need to pass the ID to preloadIds.
@@ -490,10 +490,10 @@ export default class Collection {
     }
     const newRecord = {
       ...record,
+      _status: options.synced ? "synced" : "created",
       id: options.synced || options.useRecordId
         ? record.id
         : this.idSchema.generate(),
-      _status: options.synced ? "synced" : "created",
     };
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
@@ -522,7 +522,7 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options = { synced: false, patch: false }) {
+  update(record, options = { patch: false, synced: false }) {
     // Validate the record and its ID, even though this validation is
     // also done in the CollectionTransaction method, because we need
     // to pass the ID to preloadIds.
@@ -634,7 +634,7 @@ export default class Collection {
    * @return {Promise}
    */
   async list(params = {}, options = { includeDeleted: false }) {
-    params = { order: "-last_modified", filters: {}, ...params };
+    params = { filters: {}, order: "-last_modified", ...params };
     const results = await this.db.list(params);
     let data = results;
     if (!options.includeDeleted) {
@@ -687,9 +687,9 @@ export default class Collection {
       }
     } catch (err) {
       const data = {
-        type: "incoming",
         message: err.message,
         stack: err.stack,
+        type: "incoming",
       };
       // XXX one error of the whole transaction instead of per atomic op
       syncResultObject.add("errors", data);
@@ -726,7 +726,7 @@ export default class Collection {
       const deleted = toDeleteLocally.map(record => {
         transaction.delete(record.id);
         // Amend result data with the deleted attribute set
-        return { id: record.id, deleted: true };
+        return { deleted: true, id: record.id };
       });
       const published = updated.concat(deleted);
       // Handle conflicts, if any
@@ -785,7 +785,7 @@ export default class Collection {
         status = updated._status;
         id = updated.id;
       }
-      return { rejected, accepted, id, _status: status };
+      return { _status: status, accepted, id, rejected };
     });
   }
 
@@ -852,8 +852,8 @@ export default class Collection {
           // Records that were synced become «created».
           transaction.update({
             ...record,
-            last_modified: undefined,
             _status: "created",
+            last_modified: undefined,
           });
         }
       });
@@ -911,9 +911,9 @@ export default class Collection {
       : await this.db.getLastModified();
 
     options = {
-      strategy: Collection.strategy.MANUAL,
-      lastModified: since,
       headers: {},
+      lastModified: since,
+      strategy: Collection.strategy.MANUAL,
       ...options,
     };
 
@@ -929,11 +929,11 @@ export default class Collection {
     }
     // First fetch remote changes from the server
     const { data, last_modified } = await client.listRecords({
-      // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
-      since: options.lastModified ? `${options.lastModified}` : undefined,
+      filters,
       headers: options.headers,
       retry: options.retry,
-      filters,
+      // Since should be ETag (see https://github.com/Kinto/kinto.js/issues/356)
+      since: options.lastModified ? `${options.lastModified}` : undefined,
     });
     // last_modified is the ETag header value (string).
     // For retro-compatibility with first kinto.js versions
@@ -959,7 +959,7 @@ export default class Collection {
       })
     );
     // Hook receives decoded records.
-    const payload = { lastModified: unquoted, changes: decodedChanges };
+    const payload = { changes: decodedChanges, lastModified: unquoted };
     const afterHooks = await this.applyHook("incoming-changes", payload);
 
     // No change, nothing to import.
@@ -1037,10 +1037,10 @@ export default class Collection {
         });
       },
       {
+        aggregate: true,
         headers: options.headers,
         retry: options.retry,
         safe,
-        aggregate: true,
       }
     );
 
@@ -1061,7 +1061,7 @@ export default class Collection {
       // and there is no remote version available; see kinto-http.js
       // batch.js:aggregate.
       const realRemote = remote && (await this._decodeRecord("remote", remote));
-      const conflict = { type, local: realLocal, remote: realRemote };
+      const conflict = { local: realLocal, remote: realRemote, type };
       conflicts.push(conflict);
     }
     syncResultObject.add("conflicts", conflicts);
@@ -1165,13 +1165,13 @@ export default class Collection {
    */
   async sync(
     options = {
-      strategy: Collection.strategy.MANUAL,
-      headers: {},
-      retry: 1,
-      ignoreBackoff: false,
       bucket: null,
       collection: null,
+      headers: {},
+      ignoreBackoff: false,
       remote: null,
+      retry: 1,
+      strategy: Collection.strategy.MANUAL,
     }
   ) {
     options = {
@@ -1219,7 +1219,7 @@ export default class Collection {
           resolvedUnsynced.map(resolution => {
             let record = resolution.accepted;
             if (record === null) {
-              record = { id: resolution.id, _status: resolution._status };
+              record = { _status: resolution._status, id: resolution.id };
             }
             return this._encodeRecord("remote", record);
           })
@@ -1232,8 +1232,8 @@ export default class Collection {
         // Avoid redownloading our own changes during the last pull.
         const pullOpts = {
           ...options,
-          lastModified,
           exclude: result.published,
+          lastModified,
         };
         await this.pullChanges(client, result, pullOpts);
       }
@@ -1464,7 +1464,7 @@ export class CollectionTransaction {
    * @param  {Object} options
    * @return {Object}
    */
-  update(record, options = { synced: false, patch: false }) {
+  update(record, options = { patch: false, synced: false }) {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
