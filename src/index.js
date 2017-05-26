@@ -29,8 +29,8 @@ export default class Kinto extends KintoBase {
   constructor(options = {}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
-      events: new EventEmitter(),
       ApiClass: Api,
+      events: new EventEmitter(),
     };
 
     super({ ...defaults, ...options });
