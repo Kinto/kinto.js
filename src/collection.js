@@ -986,7 +986,9 @@ export default class Collection {
           const resultChanges = result && result.hasOwnProperty("changes");
           if (!(resultThenable || resultChanges)) {
             throw new Error(
-              `Invalid return value for hook: ${JSON.stringify(result)} has no 'then()' or 'changes' properties`
+              `Invalid return value for hook: ${JSON.stringify(
+                result
+              )} has no 'then()' or 'changes' properties`
             );
           }
           return result;
