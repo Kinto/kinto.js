@@ -127,7 +127,7 @@
     "babelify": "^7.2.0",
     "browserify": "^14.0.0",
     "chai": "^3.4.1",
-    "chai-as-promised": "^6.0.0",
+    "chai-as-promised": "^7.0.0",
     "co-task": "^1.0.0",
     "coveralls": "^2.11.15",
     "esdoc": "^0.5.2",
