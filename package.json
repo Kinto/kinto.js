@@ -7,7 +7,7 @@
     "build": "babel -d lib/ src/",
     "build-demo": "mkdir -p dist && npm run dist-prod && cp dist/kinto.min.js demo/kinto.js",
     "compute-sri": "version=$(npm view kinto version); printf \"| Filename %-14s | Hash %-66s |\\n\" \"\" \"(for version $version)\"; printf \"|-------------------------|-------------------------------------------------------------------------|\\n\"; cd dist; for file in kinto*.js; do printf \"| %-23s | %-71s |\\n\" ${file} $(echo -n 'sha384-' && curl --silent https://unpkg.com/kinto@$version/dist/${file} | openssl dgst -sha384 -binary | openssl enc -base64); done",
-    "cs-check": "prettier-check $npm_package_prettierOptions '{src,test}/**/*.js'",
+    "cs-check": "prettier -l $npm_package_prettierOptions '{src,test}/**/*.js'",
     "cs-format": "prettier $npm_package_prettierOptions '{src,test}/**/*.js' --write",
     "demo": "npm run build-demo && http-server demo",
     "dist": "mkdir -p dist && rm -f dist/*.* && npm run dist-dev && npm run dist-prod && npm run dist-noshim && npm run dist-fx",
@@ -141,8 +141,7 @@
     "kinto-node-test-server": "1.0.0",
     "lint-staged": "^3.3.1",
     "mocha": "^3.2.0",
-    "prettier": "^1.2.2",
-    "prettier-check": "^1.0.0",
+    "prettier": "^1.4.2",
     "sinon": "^2.3.2",
     "uglifyify": "^3.0.3"
   }
