@@ -137,7 +137,7 @@
     "fake-indexeddb": "2.0.3",
     "gh-pages": "^1.0.0",
     "http-server": "^0.10.0",
-    "husky": "^0.13.2",
+    "husky": "^0.14.0",
     "kinto-node-test-server": "1.0.0",
     "lint-staged": "^4.0.0",
     "mocha": "^3.2.0",
