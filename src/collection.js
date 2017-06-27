@@ -490,9 +490,10 @@ export default class Collection {
     }
     const newRecord = {
       ...record,
-      id: options.synced || options.useRecordId
-        ? record.id
-        : this.idSchema.generate(),
+      id:
+        options.synced || options.useRecordId
+          ? record.id
+          : this.idSchema.generate(),
       _status: options.synced ? "synced" : "created",
     };
     if (!this.idSchema.validate(newRecord.id)) {
@@ -758,12 +759,14 @@ export default class Collection {
       return [];
     }
     return conflicts.map(conflict => {
-      const resolution = strategy === Collection.strategy.CLIENT_WINS
-        ? conflict.local
-        : conflict.remote;
-      const rejected = strategy === Collection.strategy.CLIENT_WINS
-        ? conflict.remote
-        : conflict.local;
+      const resolution =
+        strategy === Collection.strategy.CLIENT_WINS
+          ? conflict.local
+          : conflict.remote;
+      const rejected =
+        strategy === Collection.strategy.CLIENT_WINS
+          ? conflict.remote
+          : conflict.local;
       let accepted, status, id;
       if (resolution === null) {
         // We "resolved" with the server-side deletion. Delete locally.
@@ -1510,9 +1513,8 @@ export class CollectionTransaction {
     const keepSynced = isIdentical && oldRecord._status == "synced";
     const neverSynced =
       !oldRecord || (oldRecord && oldRecord._status == "created");
-    const newStatus = keepSynced || synced
-      ? "synced"
-      : neverSynced ? "created" : "updated";
+    const newStatus =
+      keepSynced || synced ? "synced" : neverSynced ? "created" : "updated";
     return markStatus(updated, newStatus);
   }
 
