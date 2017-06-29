@@ -1694,22 +1694,25 @@ describe("Integration tests", function() {
           const tasksRemote = tasks.api.bucket("default").collection("tasks");
           const dump = [
             { id: uuid4(), last_modified: 123456, title: "task1", done: false },
-            { id: id1,     last_modified: 123457, title: "task2", done: false },
-            { id: id2,     last_modified: 123458, title: "task3", done: false },
+            { id: id1, last_modified: 123457, title: "task2", done: false },
+            { id: id2, last_modified: 123458, title: "task3", done: false },
             { id: uuid4(), last_modified: 123459, title: "task4", done: false },
           ];
           return Promise.all(dump.map(r => tasksRemote.createRecord(r)))
             .then(() => tasks.loadDump(dump))
-            .then(() => tasksRemote.updateRecord({ id: id1, title: "task22", done: true }))
-            .then(() => tasksRemote.updateRecord({ id: id2, title: "task33", done: true }));
+            .then(() =>
+              tasksRemote.updateRecord({ id: id1, title: "task22", done: true })
+            )
+            .then(() =>
+              tasksRemote.updateRecord({ id: id2, title: "task33", done: true })
+            );
         });
 
         it("should sync changes on loaded data", () => {
-          return tasks.sync()
-            .then(res => {
-              expect(res.ok).eql(true);
-              expect(res.updated.length).eql(2);
-            });
+          return tasks.sync().then(res => {
+            expect(res.ok).eql(true);
+            expect(res.updated.length).eql(2);
+          });
         });
       });
 
