@@ -495,44 +495,6 @@ Your take really. Let's take the former approach:
 
 We're using [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resolve) to mark a conflict as resolved: it accepts a conflict object, and a resolution one; the latter is what will be updated locally and sent for resynchronization on a next call to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) — which is exactly what we're doing after we've resolved all our conflicts.
 
-## Receiving changes via Websocket
-
-`collection.sync()` only sync the data after user triggerred the sync. Very often we want to live sync user data among different clients. In that case, you'll need to listen to the changes via a websocket server.
-
-Currently, the simplest way to pushlish the changes via websocket from Kinto API is to integrate with Pusher.com ([tutorial here](https://kinto.readthedocs.io/en/stable/tutorials/notifications-websockets.html)).
-Later, [kinto-webpush](https://github.com/Kinto/kinto-webpush/) will help you to use your own websocket server.
-
-When there are changes comming, we can import the changes to local store using [`collection.importChanges()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-importChanges):
-
-```javascript
-var pusher = new Pusher('pusherKey', {
-  encrypted: true
-});
-
-var collectionName = 'tasks';
-var channelName = 'mybucket-tasks-record'; // Should match the setting `kinto.event_listeners.pusher.channel`
-var channel = pusher.subscribe(channelName);
-
-channel.bind_all(function(evtName, data) {
-  if (evtName === 'pusher:subscription_succeeded') {
-    return;
-  }
-  applyChanges(collectionName, evtName, data);
-});
-
-function applyChanges(collectionName, evtName, data) {
-  var changes = data.map(function(record) { return record.new; });
-  var timestamps = changes.map(function(record) { return record.last_modified; })
-  var changeObj = {
-    changes: changes,
-    lastModified: Math.max.apply(null, timestamps)
-  };
-
-  var syncResultObject = new SyncResultObject();
-  tasks.importChanges(syncResultObject, changeObj);
-}
-```
-
 ## Now what?
 
 That's all folks. Now feel free to browse the [API documentation](api.md), report [an issue](https://github.com/Kinto/kinto.js/issues/new), learn how to [contribute](contributing.md), but most of all: have fun.
