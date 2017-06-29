@@ -2,7 +2,7 @@
 
 ## NodeJS
 
-If you're using [NodeJS](https://nodejs.org) and [npm](https://www.npmjs.com/) as a frontend package manager, you'll need [NodeJS v0.12.x](https://nodejs.org/download/) installed on your system. Then:
+If you're using [NodeJS](https://nodejs.org) and [npm](https://www.npmjs.com/) as a frontend package manager, you'll need [NodeJS v6.x.x or higher](https://nodejs.org/download/) installed on your system. Then:
 
 ```js
 $ npm install kinto --save
@@ -37,8 +37,8 @@ integrity with the hash provided below:
     </script>
 ```
 
-| Filename                | Hash (for version 4.0.3)                                                |
+| Filename                | Hash (for version 9.0.2)                                                |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto.js                | sha384-SsHILufiBmKVFtsuyZpCaZt9Ip6xypM8fje3s0x3MXLMgl/yQjT8YtNInVAsmZjc |
-| kinto.min.js            | sha384-Bn0PGfjlRgPVGwz3fwu0t4pzLIrLfIxIHtwN+Z0nguknFcGyJyyyuT9pIB9w6D5g |
-| kinto.noshim.js         | sha384-0bZdaSQcTR9AsdA/x7QDlG9QraRCrcBUfSDlZz28voMIyKRVBPJHVFVM+SZp8pEq |
+| kinto.js                | sha384-R8F1mw7RxDb9fTKkcvEcLqPsyqYMGAKA+HPH/FS0nY6DkPO0GBTBWRgOzzHx5y8m |
+| kinto.min.js            | sha384-O/kGd63NiGAHuE/q0lXeOSsBA6eVFayL3ph2ulGiGgA0TTkVq1+zsseObnfEyoQ0 |
+| kinto.noshim.js         | sha384-AgNndDrfNZWod0SDfULOS6mCIQimfTQrLaegw4kr/HlyTjZI+d3HP97yH1/+/MyT |

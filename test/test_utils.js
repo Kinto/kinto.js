@@ -1,26 +1,29 @@
 "use strict";
 
-export function fakeServerResponse(status, json, headers={}) {
+export function fakeServerResponse(status, json, headers = {}) {
   return Promise.resolve({
     status: status,
     headers: {
       get(name) {
-        if (!headers.hasOwnProperty("Content-Length") && name === "Content-Length") {
+        if (
+          !headers.hasOwnProperty("Content-Length") &&
+          name === "Content-Length"
+        ) {
           return JSON.stringify(json).length;
         }
         return headers[name];
-      }
+      },
     },
     text() {
       return JSON.stringify(json);
-    }
+    },
   });
 }
 
 export function updateTitleWithDelay(record, str, delay) {
   return new Promise(resolve => {
     setTimeout(() => {
-      resolve({...record, title: record.title + str});
+      resolve({ ...record, title: record.title + str });
     }, delay);
   });
 }

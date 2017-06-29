@@ -61,7 +61,7 @@ export function filterObject(filters, entry) {
  * @return {Array}
  */
 export function filterObjects(filters, list) {
-  return list.filter((entry) => {
+  return list.filter(entry => {
     return filterObject(filters, entry);
   });
 }
@@ -105,7 +105,7 @@ export function deepEqual(a, b) {
   if (a === b) {
     return true;
   }
-  if (typeof(a) !== typeof(b)) {
+  if (typeof a !== typeof b) {
     return false;
   }
   if (!(a && typeof a == "object") || !(b && typeof b == "object")) {
@@ -129,7 +129,7 @@ export function deepEqual(a, b) {
  * @param  {Array}  keys       The list of keys to exclude.
  * @return {Object}            A copy without the specified keys.
  */
-export function omitKeys(obj, keys=[]) {
+export function omitKeys(obj, keys = []) {
   return Object.keys(obj).reduce((acc, key) => {
     if (keys.indexOf(key) === -1) {
       acc[key] = obj[key];

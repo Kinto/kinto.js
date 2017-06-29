@@ -1,18 +1,22 @@
 {
   "name": "kinto",
-  "version": "4.0.4",
+  "version": "9.0.2",
   "description": "An Offline-First JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
     "build": "babel -d lib/ src/",
     "build-demo": "mkdir -p dist && npm run dist-prod && cp dist/kinto.min.js demo/kinto.js",
+    "compute-sri": "version=$(npm view kinto version); printf \"| Filename %-14s | Hash %-66s |\\n\" \"\" \"(for version $version)\"; printf \"|-------------------------|-------------------------------------------------------------------------|\\n\"; cd dist; for file in kinto*.js; do printf \"| %-23s | %-71s |\\n\" ${file} $(echo -n 'sha384-' && curl --silent https://unpkg.com/kinto@$version/dist/${file} | openssl dgst -sha384 -binary | openssl enc -base64); done",
+    "cs-check": "prettier -l $npm_package_prettierOptions '{src,test}/**/*.js'",
+    "cs-format": "prettier $npm_package_prettierOptions '{src,test}/**/*.js' --write",
     "demo": "npm run build-demo && http-server demo",
     "dist": "mkdir -p dist && rm -f dist/*.* && npm run dist-dev && npm run dist-prod && npm run dist-noshim && npm run dist-fx",
-    "dist-dev": "browserify --ignore process -s Kinto -d -e src/index.js -o dist/kinto.js -t [ babelify --sourceMapRelative . ]",
-    "dist-noshim": "browserify --ignore process -s Kinto -g uglifyify --ignore isomorphic-fetch --ignore babel-polyfill -e src/index.js -o dist/kinto.noshim.js -t [ babelify --sourceMapRelative . ]",
-    "dist-prod": "browserify --ignore process -s Kinto -g uglifyify -e src/index.js -o dist/kinto.min.js -t [ babelify --sourceMapRelative . ]",
-    "dist-fx": "BABEL_ENV=firefox browserify -s loadKinto --bare --ignore uuid --ignore kinto-http --ignore isomorphic-fetch -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-offline-client.js && echo \"\n/*\n * Version $npm_package_version - $(git rev-parse --short HEAD)\n */\n\" >> dist/moz-kinto-offline-client.js && cat temp.jsm >> dist/moz-kinto-offline-client.js && rm temp.jsm",
-    "compute-sri": "version=$(npm view kinto version); printf \"| Filename %-14s | Hash %-66s |\\n\" \"\" \"(for version $version)\"; printf \"|-------------------------|-------------------------------------------------------------------------|\\n\"; cd dist; for file in kinto*.js; do printf \"| %-23s | %-71s |\\n\" ${file} $(echo -n 'sha384-' && curl --silent https://unpkg.com/kinto@$version/dist/${file} | openssl dgst -sha384 -binary | openssl enc -base64); done",
+    "dist-dev": "BABEL_ENV=default browserify --ignore process -s Kinto -d -e src/index.js -o dist/kinto.js -t [ babelify --sourceMapRelative . ]",
+    "dist-noshim": "BABEL_ENV=noshim browserify --ignore process -s Kinto --ignore isomorphic-fetch --ignore babel-polyfill -e src/index.js -o dist/kinto.noshim.js -t [ babelify --sourceMapRelative . ]",
+    "dist-prod": "BABEL_ENV=default browserify --ignore process -s Kinto -g uglifyify -e src/index.js -o dist/kinto.min.js -t [ babelify --sourceMapRelative . ]",
+    "dist-fx": "BABEL_ENV=firefox browserify -s Kinto --bare --ignore uuid --ignore kinto-http --ignore isomorphic-fetch -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-offline-client.js && echo \"\n/*\n * Version $npm_package_version - $(git rev-parse --short HEAD)\n */\n\" >> dist/moz-kinto-offline-client.js && cat temp.jsm >> dist/moz-kinto-offline-client.js && rm temp.jsm",
+    "lint": "eslint src test",
+    "precommit": "lint-staged",
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
@@ -20,8 +24,15 @@
     "test": "npm run lint && npm run test-nocover",
     "test-cover": "babel-node node_modules/.bin/babel-istanbul cover --report text $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js'",
     "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && echo 'Coverage report generated in coverage/index.html'",
-    "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'",
-    "lint": "eslint src test"
+    "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'"
+  },
+  "prettierOptions": "--trailing-comma es5 --semi",
+  "lint-staged": {
+    "{src,test}/**/*.js": [
+      "npm run lint",
+      "npm run cs-format",
+      "git add"
+    ]
   },
   "repository": {
     "type": "git",
@@ -36,72 +47,55 @@
     "indexeddb"
   ],
   "author": "Mozilla <contact@mozilla.com>",
-  "contributors": [
-    {
-      "name": "Michiel B. de Jong",
-      "url": "https://michielbdejong.com/"
-    },
-    {
-      "name": "Nicolas Perriault",
-      "url": "https://nicolas.perriault.net/"
-    },
-    {
-      "name": "Mathieu Leplatre",
-      "url": "http://mathieu-leplatre.info/"
-    },
-    {
-      "name": "Mark Goodwin",
-      "url": "https://www.computerist.org/"
-    },
-    {
-      "name": "Ethan Glasser-Camp",
-      "url": "http://betacantrips.com/"
-    },
-    {
-      "name": "Alexis Metaireau",
-      "url": "https://blog.notmyidea.org"
-    },
-    {
-      "name": "Remy Hubscher",
-      "url": "http://natim.ionyse.com"
-    },
-    {
-      "name": "Masataka Takeuchi",
-      "url": "https://github.com/happy-tanuki"
-    },
-    {
-      "name": "Peter deHaan",
-      "url": "https://about.me/peterdehaan"
-    },
-    {
-      "name": "Quentin Roy",
-      "url": "http://quentinroy.fr"
-    },
-    {
-      "name": "Fernando Jiménez Moreno",
-      "url": "http://ferjm.github.io"
-    },
-    {
-      "name": "Lavish Aggarwal",
-      "url": "http://lavishaggarwal.com/"
-    },
-    {
-      "name": "Mark Striemer ",
-      "url": "https://github.com/mstriemer"
-    },
-    {
-      "name": "Ipsha Bhidonia",
-      "url": "https://ipsha218.wordpress.com/"
-    },
-    {
-      "name": "Mathieu Agopian",
-      "url": "https://github.com/magopian"
-    },
-    {
-      "name": "Eric Le Lay",
-      "url": "https://github.com/elelay"
-    }
-  ],
+  "contributors": [{
+    "name": "Michiel B. de Jong",
+    "url": "https://michielbdejong.com/"
+  }, {
+    "name": "Nicolas Perriault",
+    "url": "https://nicolas.perriault.net/"
+  }, {
+    "name": "Mathieu Leplatre",
+    "url": "http://mathieu-leplatre.info/"
+  }, {
+    "name": "Mark Goodwin",
+    "url": "https://www.computerist.org/"
+  }, {
+    "name": "Ethan Glasser-Camp",
+    "url": "http://betacantrips.com/"
+  }, {
+    "name": "Alexis Metaireau",
+    "url": "https://blog.notmyidea.org"
+  }, {
+    "name": "Remy Hubscher",
+    "url": "http://natim.ionyse.com"
+  }, {
+    "name": "Masataka Takeuchi",
+    "url": "https://github.com/happy-tanuki"
+  }, {
+    "name": "Peter deHaan",
+    "url": "https://about.me/peterdehaan"
+  }, {
+    "name": "Quentin Roy",
+    "url": "http://quentinroy.fr"
+  }, {
+    "name": "Fernando Jiménez Moreno",
+    "url": "http://ferjm.github.io"
+  }, {
+    "name": "Lavish Aggarwal",
+    "url": "http://lavishaggarwal.com/"
+  }, {
+    "name": "Mark Striemer ",
+    "url": "https://github.com/mstriemer"
+  }, {
+    "name": "Ipsha Bhidonia",
+    "url": "https://ipsha218.wordpress.com/"
+  }, {
+    "name": "Mathieu Agopian",
+    "url": "https://github.com/magopian"
+  }, {
+    "name": "Eric Le Lay",
+    "url": "https://github.com/elelay"
+  }],
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/Kinto/kinto.js/issues"
@@ -114,39 +108,41 @@
     "node": ">=6"
   },
   "dependencies": {
-    "babel-plugin-transform-async-to-generator": "^6.8.0",
-    "babel-polyfill": "^6.7.4",
+    "babel-plugin-transform-async-to-generator": "^6.22.0",
+    "babel-polyfill": "^6.22.0",
     "btoa": "^1.1.2",
-    "kinto-http": "^2.5.1",
-    "uuid": "^2.0.1"
+    "kinto-http": ">=4.3.3",
+    "uuid": "^3.0.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.9.0",
-    "babel-core": "^6.5.1",
-    "babel-eslint": "^6.0.0",
-    "babel-istanbul": "^0.11.0",
-    "babel-loader": "^6.2.1",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.4.3",
-    "babel-plugin-transform-object-rest-spread": "^6.3.13",
-    "babel-plugin-transform-runtime": "^6.15.0",
-    "babel-preset-es2015": "^6.3.13",
+    "babel-cli": "^6.22.2",
+    "babel-core": "^6.22.1",
+    "babel-eslint": "^7.2.2",
+    "babel-istanbul": "^0.12.2",
+    "babel-loader": "^7.0.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.22.0",
+    "babel-plugin-transform-object-rest-spread": "^6.22.0",
+    "babel-plugin-transform-runtime": "^6.22.0",
+    "babel-preset-es2015": "^6.22.0",
     "babelify": "^7.2.0",
-    "browserify": "^13.0.0",
-    "chai": "^3.4.1",
-    "chai-as-promised": "^5.0.0",
+    "browserify": "^14.0.0",
+    "chai": "^4.0.1",
+    "chai-as-promised": "^7.0.0",
     "co-task": "^1.0.0",
-    "coveralls": "^2.11.6",
-    "esdoc": "^0.4.0",
-    "esdoc-es7-plugin": "0.0.3",
-    "esdoc-importpath-plugin": "0.0.1",
-    "eslint": "3.5.0",
+    "coveralls": "^2.11.15",
+    "esdoc": "^0.5.2",
+    "esdoc-importpath-plugin": "0.1.4",
+    "eslint": "4.1.0",
     "estraverse-fb": "^1.3.1",
-    "fake-indexeddb": "1.0.8",
-    "gh-pages": "^0.11.0",
-    "http-server": "^0.9.0",
-    "kinto-node-test-server": "0.0.1",
-    "mocha": "^3.0.2",
-    "sinon": "^1.17.2",
-    "uglifyify": "^3.0.3"
+    "fake-indexeddb": "2.0.3",
+    "gh-pages": "^1.0.0",
+    "http-server": "^0.10.0",
+    "husky": "^0.14.0",
+    "kinto-node-test-server": "1.0.0",
+    "lint-staged": "^4.0.0",
+    "mocha": "^3.2.0",
+    "prettier": "^1.5.1",
+    "sinon": "^2.3.2",
+    "uglifyify": "^4.0.1"
   }
 }

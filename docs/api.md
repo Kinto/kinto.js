@@ -12,6 +12,7 @@ const db = new Kinto(options);
 
 - `remote`: The remote Kinto server endpoint root URL (eg. `"https://server/v1"`). Not that you *must* define a URL matching the version of the protocol the client supports, otherwise you'll get an error;
 - `headers`: The default headers to pass for every HTTP request performed to the Kinto server (eg. `{"Authorization": "Basic bWF0Og=="}`);
+- `retry`: Number of retries when the server fails to process the request (default: `1`)
 - `adapter`: The persistence layer adapter to use for saving data locally (default: `Kinto.adapters.IDB`); if you plan on writing your own adapter, you can read more about how to do so in the [Extending Kinto.js](extending.md) section.
 - `adapterOptions`: Any options that you would like to pass to your adapter. See the documentation for each adapter to see what options it supports.
 - `requestMode`: The HTTP [CORS](https://fetch.spec.whatwg.org/#concept-request-mode) mode. Default: `cors`.
@@ -550,7 +551,8 @@ import Collection from "kinto/lib/collection";
 articles.sync({
   strategy: Kinto.syncStrategy.CLIENT_WINS,
   remote: "https://alt.server.tld/v1",
-  headers: {Authorization: "Basic bWF0Og=="}
+  headers: {Authorization: "Basic bWF0Og=="},
+  retry: 3
 })
   .then(result => {
     console.log(result);
@@ -592,7 +594,7 @@ The synchronization result object exposes the following properties:
 - `deleted`:   The list of remotely deleted records which have been successfully deleted as well locally.
 - `skipped`:   The list of remotely deleted records that were missing or also deleted locally.
 - `published`: The list of locally modified records (created, updated, or deleted) which have been successfully pushed to the remote server.
-- `resolved`:  The list of conflicting records which have been successfully resolved according to the selected [strategy](#synchronization-strategies) (note that when using the default `MANUAL` strategy, this list is always empty).
+- `resolved`:  The list of resolutions produced by applying the selected [strategy](#synchronization-strategies) as {accepted, rejected} objects (note that when using the default `MANUAL` strategy, this list is always empty).
 
 > #### Notes
 > - Detailed API documentation for `SyncResultObject` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~SyncResultObject.html).
@@ -737,6 +739,19 @@ articles.sync({ignoreBackoff: true})
 
 Using the `events` on a `Kinto` instance property you can subscribe public events from. That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
 
+
+#### The `sync:success` and `sync:error` events
+
+Triggered on [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) call, whether it succeeds or not.
+
+
+#### The `retry-after` event
+
+Triggered when a `Retry-After` HTTP header has been received from the last received response from the server, meaning clients should retry the same request after the specified amount of time.
+
+> Note: With *kinto-http.js* 2.7 and above, the requests are transparently retried. This event is thus only useful for tracking such situations.
+
+
 #### The `backoff` event
 
 Triggered when a `Backoff` HTTP header has been received from the last received response from the server, meaning clients should hold on performing further requests during a given amount of time.
@@ -878,6 +893,48 @@ coll.create({title: "foo"}).then(_ => coll.sync())
 > #### Notes
 >
 > This mechanism is especially useful for implementing a cryptographic layer, to ensure remote data are stored in a secure fashion. Kinto.js will provide one in a near future.
+
+Normally, a record that is deleted locally will be deleted remotely, and a record that is not deleted locally will not be deleted remotely. However, with a remote transformer, it's possible to change this. The records given to `encode()` have a `_status` field which represents their local status (`synced`, `created`, `updated`, or `deleted`); by turning a `deleted` into a `created` or `updated`, or by turning a `created` or `updated` into a `deleted`, you can control what happens to the remote record. Similarly, the records given to `decode()` have a `deleted` field, which is true if the record was deleted on the remote end; by turning `true` to `false` or `false` to `true`, you can control what happens to the local version of this record.
+
+Here's an example (taken from `integration_test.js`):
+
+```javascript
+const transformer = {
+  encode(record) {
+    if (record._status == "deleted") {
+      if (record.title.includes("preserve-on-send")) {
+        if (record.last_modified) {
+          return {...record, _status: "updated", wasDeleted: true};
+        }
+        return {...record, _status: "created", wasDeleted: true};
+      }
+    }
+    return record;
+  },
+  decode(record) {
+    // Records that were deleted locally get pushed to the
+    // server with `wasDeleted` so that we know they're
+    // supposed to be deleted on the client.
+    if (record.wasDeleted) {
+      return {...record, deleted: true};
+    }
+    return record;
+  }
+};
+```
+
+This transformer will turn locally-deleted records with a title that contains the phrase "preserve-on-send" into remotely-kept records, and vice versa.
+
+In order for this to work:
+
+- Records with `_status` of `"deleted"` must turn into `"updated"` or `"created"`. You should turn records with `last_modified` fields into `updated` records, and those without into `created` records, so that concurrency control with `If-Match` and `If-None-Match` works correctly.
+- If `record._status == "deleted"`, then `decode(encode(record)).deleted` must be `true`. In other words, if the record was locally deleted, it should be marked as "to be deleted" when it gets decoded from the remote end. In this example, this is accomplished by using another field, `wasDeleted`, to store whether the record was originally deleted.
+
+There are two possible transformations like this: local deletes become remote keeps, or local keeps become remote deletes. Remote deletes cause Kinto to delete the record, and subsequently Kinto will only serve a tombstone which doesn't have any information besides an ID and a "deleted" flag. Because decoding anything useful out of a tombstone is impossible, we don't support transforming local keeps into remote deletes.
+
+> #### Notes
+> - Once a local delete is "sent", the locally-deleted record will be deleted for real, so you can't really keep information in a locally deleted record.
+> - This feature might be useful to avoid "leaking" the fact that a record was deleted in an encryption scheme.
 
 ### Local transformers
 

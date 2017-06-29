@@ -5,6 +5,7 @@ import BaseAdapter from "./adapters/base";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
+const DEFAULT_RETRY = 1;
 
 /**
  * KintoBase class.
@@ -46,22 +47,32 @@ export default class KintoBase {
    * - `{Object}`       `adapterOptions` Options given to the adapter.
    * - `{String}`       `dbPrefix`       The DB name prefix.
    * - `{Object}`       `headers`        The HTTP headers to use.
+   * - `{Object}`       `retry`          Number of retries when the server fails to process the request (default: `1`)
    * - `{String}`       `requestMode`    The HTTP CORS mode to use.
    * - `{Number}`       `timeout`        The requests timeout in ms (default: `5000`).
    *
    * @param  {Object} options The options object.
    */
-  constructor(options={}) {
+  constructor(options = {}) {
     const defaults = {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
+      retry: DEFAULT_RETRY,
     };
-    this._options = {...defaults, ...options};
+    this._options = { ...defaults, ...options };
     if (!this._options.adapter) {
       throw new Error("No adapter provided");
     }
 
-    const {remote, events, headers, requestMode, timeout, ApiClass} = this._options;
+    const {
+      ApiClass,
+      events,
+      headers,
+      remote,
+      requestMode,
+      retry,
+      timeout,
+    } = this._options;
 
     // public properties
 
@@ -69,7 +80,13 @@ export default class KintoBase {
      * The kinto HTTP client instance.
      * @type {KintoClient}
      */
-    this.api = new ApiClass(remote, {events, headers, requestMode, timeout});
+    this.api = new ApiClass(remote, {
+      events,
+      headers,
+      requestMode,
+      retry,
+      timeout,
+    });
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -82,24 +99,30 @@ export default class KintoBase {
    * will set collection-level options like e.g. `remoteTransformers`.
    *
    * @param  {String} collName The collection name.
-   * @param  {Object} options  May contain the following fields:
-   *                           remoteTransformers: Array<RemoteTransformer>
+   * @param  {Object} [options={}]                 Extra options or override client's options.
+   * @param  {Object} [options.idSchema]           IdSchema instance (default: UUID)
+   * @param  {Object} [options.remoteTransformers] Array<RemoteTransformer> (default: `[]`])
+   * @param  {Object} [options.hooks]              Array<Hook> (default: `[]`])
    * @return {Collection}
    */
   collection(collName, options = {}) {
     if (!collName) {
       throw new Error("missing collection name");
     }
+    const { bucket, events, adapter, adapterOptions, dbPrefix } = {
+      ...this._options,
+      ...options,
+    };
+    const { idSchema, remoteTransformers, hooks } = options;
 
-    const bucket = this._options.bucket;
     return new Collection(bucket, collName, this.api, {
-      events:              this._options.events,
-      adapter:             this._options.adapter,
-      adapterOptions:      this._options.adapterOptions,
-      dbPrefix:            this._options.dbPrefix,
-      idSchema:            options.idSchema,
-      remoteTransformers:  options.remoteTransformers,
-      hooks:               options.hooks,
+      events,
+      adapter,
+      adapterOptions,
+      dbPrefix,
+      idSchema,
+      remoteTransformers,
+      hooks,
     });
   }
 }

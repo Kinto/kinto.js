@@ -7,7 +7,6 @@ import BaseAdapter from "../src/adapters/base.js";
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {
-
   describe("static properties", () => {
     describe("get adapters()", () => {
       it("should provide an adapters static getter", () => {
@@ -24,7 +23,7 @@ describe("KintoBase", () => {
     it("should complain if a database adaptor is not provided", () => {
       expect(() => {
         new KintoBase();
-      }).to.Throw(Error,/No adapter provided/);
+      }).to.Throw(Error, /No adapter provided/);
     });
   });
 });
