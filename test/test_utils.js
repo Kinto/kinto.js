@@ -6,7 +6,8 @@ export function fakeServerResponse(status, json, headers = {}) {
     headers: {
       get(name) {
         if (
-          !headers.hasOwnProperty("Content-Length") && name === "Content-Length"
+          !headers.hasOwnProperty("Content-Length") &&
+          name === "Content-Length"
         ) {
           return JSON.stringify(json).length;
         }
@@ -21,11 +22,8 @@ export function fakeServerResponse(status, json, headers = {}) {
 
 export function updateTitleWithDelay(record, str, delay) {
   return new Promise(resolve => {
-    setTimeout(
-      () => {
-        resolve({ ...record, title: record.title + str });
-      },
-      delay
-    );
+    setTimeout(() => {
+      resolve({ ...record, title: record.title + str });
+    }, delay);
   });
 }

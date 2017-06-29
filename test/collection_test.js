@@ -437,7 +437,7 @@ describe("Collection", () => {
   describe("#create", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should create a record and return created record data", () => {
       return articles.create(article).should.eventually.have.property("data");
@@ -561,7 +561,8 @@ describe("Collection", () => {
         .create({ id: uuid4() }, { useRecordId: true })
         .then(res => articles.delete(res.data.id))
         .then(res =>
-          articles.create({ id: res.data.id }, { useRecordId: true }))
+          articles.create({ id: res.data.id }, { useRecordId: true })
+        )
         .should.be.rejectedWith(Error, /virtually deleted/);
     });
   });
@@ -570,7 +571,7 @@ describe("Collection", () => {
   describe("#update", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should update a record", () => {
       return articles
@@ -704,7 +705,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.update({ ...res.data, title: "bar" }, { synced: true }))
+          articles.update({ ...res.data, title: "bar" }, { synced: true })
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("synced");
@@ -714,7 +716,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.update(Object.assign({}, res.data, { title: "bar" })))
+          articles.update(Object.assign({}, res.data, { title: "bar" }))
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("created");
@@ -725,7 +728,7 @@ describe("Collection", () => {
   describe("#put", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should update a record", () => {
       return articles
@@ -753,7 +756,8 @@ describe("Collection", () => {
       return articles
         .create({ title: "foo" })
         .then(res =>
-          articles.upsert(Object.assign({}, res.data, { title: "bar" })))
+          articles.upsert(Object.assign({}, res.data, { title: "bar" }))
+        )
         .then(res => res.data)
         .should.eventually.have.property("_status")
         .eql("created");
@@ -970,7 +974,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should isolate records by bucket", () => {
@@ -1054,7 +1058,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should retrieve a record from its id", () => {
@@ -1091,7 +1095,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should validate passed id", () => {
@@ -1184,7 +1188,7 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      return articles.create(article).then(result => id = result.data.id);
+      return articles.create(article).then(result => (id = result.data.id));
     });
 
     it("should delete an existing record", () => {
@@ -1386,7 +1390,8 @@ describe("Collection", () => {
           .then(res =>
             res.data.map(r => {
               return { title: r.title, unread: r.unread, complete: r.complete };
-            }))
+            })
+          )
           .should.eventually.become([
             { title: "art3", unread: true, complete: true },
             { title: "art1", unread: true, complete: true },
@@ -1399,7 +1404,7 @@ describe("Collection", () => {
   describe("#loadDump", () => {
     let articles;
 
-    beforeEach(() => articles = testCollection());
+    beforeEach(() => (articles = testCollection()));
 
     it("should import records in the collection", () => {
       return articles
@@ -2196,7 +2201,8 @@ describe("Collection", () => {
         .then(() =>
           articles.importChanges(result, [
             { id: id1, title: "bar", last_modified: 43 },
-          ]))
+          ])
+        )
         .then(res => {
           // No conflict, local.title == remote.title.
           expect(res.ok).eql(true);
@@ -2517,15 +2523,15 @@ describe("Collection", () => {
 
     beforeEach(() => {
       articles = testCollection();
-      sandbox.stub(api, "batch").returns({
+      sandbox.stub(api, "batch").get(() => () => ({
         errors: [],
         published: [],
         conflicts: [],
         skipped: [],
-      });
+      }));
       return Promise.all(
         fixtures.map(fixture => articles.create(fixture))
-      ).then(res => ids = res.map(r => r.data.id));
+      ).then(res => (ids = res.map(r => r.data.id)));
     });
 
     it("should validate the remote option", () => {
@@ -2747,11 +2753,10 @@ describe("Collection", () => {
         sandbox.restore();
         // Stub low-level fetch instead.
         fetch = sandbox.stub(global, "fetch");
-        // Settings
-        fetch.onCall(0).returns(fakeServerResponse(200, { settings: {} }, {}));
         // Pull
-        fetch.onCall(1).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch.onCall(0).returns(fakeServerResponse(200, { data: [] }, {}));
         // Push
+        fetch.onCall(1).returns(fakeServerResponse(200, { settings: {} }, {}));
         fetch
           .onCall(2)
           .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }));
@@ -3008,7 +3013,7 @@ describe("Collection", () => {
       articles = testCollection();
       return articles
         .create({ title: "foo" })
-        .then(({ data }) => article = data);
+        .then(({ data }) => (article = data));
     });
 
     it("should emit an event on create", done => {
