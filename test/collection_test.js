@@ -67,15 +67,11 @@ describe("Collection", () => {
   function createKeyListIdSchema() {
     return {
       generate(record) {
-        let id = [];
-        for (let key in record) {
-          id.push(key);
-        }
-        return id.join(",");
+        return Object.keys(record).sort().join(",");
       },
       validate(id) {
-        return id !== null && Array.isArray(id.split(","));
-      }
+        return id !== "";
+      },
     };
   }
 
@@ -473,12 +469,13 @@ describe("Collection", () => {
 
     it("should accept a record for the 'generate' function", () => {
       articles = testCollection({
-        idSchema: createKeyListIdSchema()
+        idSchema: createKeyListIdSchema(),
       });
 
-      return articles.create(article)
-        .then(result => result.data.id.split(","))
-        .should.eventually.be.a("Array");
+      return articles
+        .create(article)
+        .then(result => result.data.id)
+        .should.eventually.eql("title,url");
     });
 
     it("should reject when useRecordId is true and record is missing an id", () => {
