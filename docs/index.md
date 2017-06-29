@@ -19,6 +19,8 @@ tasks
 
 Take the [tutorial](tutorial.md) to get you started, then read about [API usage](api.md) and eventually browse the [detailed API docs](https://doc.esdoc.org/github.com/Kinto/kinto.js/).
 
+If you want you can have a look at some [advanced](advanced.md) usages.
+
 ## Community & Support
 
 * [Code repository](https://github.com/Kinto/kinto.js)
