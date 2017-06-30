@@ -1028,6 +1028,22 @@ coll = kinto.collection("articles", {
 });
 ```
 
+The `generate` function can also optionally accept the record being created as an argument, allowing you to use any or all of the data to generate an ID.
+
+```js
+function urlBase64IdSchema() {
+  return {
+    generate(record) {
+      return btoa(record.url);
+    },
+
+    validate(id) {
+      return !!atob(id).match("http");
+    }
+  };
+};
+```
+
 > #### Notes
 >
 > - The `generate` method should generate unique ID's;

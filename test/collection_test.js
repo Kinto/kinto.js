@@ -64,6 +64,17 @@ describe("Collection", () => {
     };
   }
 
+  function createKeyListIdSchema() {
+    return {
+      generate(record) {
+        return Object.keys(record).sort().join(",");
+      },
+      validate(id) {
+        return id !== "";
+      },
+    };
+  }
+
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
     return testCollection().clear();
@@ -454,6 +465,17 @@ describe("Collection", () => {
         .create(article)
         .then(result => result.data.id)
         .should.eventually.be.a("number");
+    });
+
+    it("should accept a record for the 'generate' function", () => {
+      articles = testCollection({
+        idSchema: createKeyListIdSchema(),
+      });
+
+      return articles
+        .create(article)
+        .then(result => result.data.id)
+        .should.eventually.eql("title,url");
     });
 
     it("should reject when useRecordId is true and record is missing an id", () => {
