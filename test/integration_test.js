@@ -97,7 +97,18 @@ describe("Integration tests", function() {
     });
   });
 
-  after(() => server.killAll());
+  after(() => {
+    const logLines = server.logs.toString().split("\n");
+    const serverDidCrash = logLines.some(l => l.startsWith("Traceback"));
+    if (serverDidCrash) {
+      // Server errors have been encountered, raise to break the build
+      const trace = logLines.join("\n");
+      throw new Error(
+        `Kinto server crashed while running the test suite.\n\n${trace}`
+      );
+    }
+    return server.killAll();
+  });
 
   after(done => {
     // Ensure no pserve process remains after tests having been executed.
