@@ -1,6 +1,6 @@
 # Hacking on Kinto.js
 
-Hacking on Kinto.js requires a working [NodeJS v0.12x environment](https://nodejs.org/download/).
+Hacking on Kinto.js requires a working [NodeJS v6.x.x or higher](https://nodejs.org/download/).
 
 ## Installation
 
