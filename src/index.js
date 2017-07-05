@@ -21,8 +21,8 @@ export default class Kinto extends KintoBase {
    */
   static get adapters() {
     return {
-      BaseAdapter: BaseAdapter,
-      IDB: IDB,
+      BaseAdapter,
+      IDB,
     };
   }
 

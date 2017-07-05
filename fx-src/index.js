@@ -16,7 +16,7 @@
 "use strict";
 
 ChromeUtils.import("resource://gre/modules/Timer.jsm");
-Cu.importGlobalProperties(["fetch"]);
+Cu.importGlobalProperties(["fetch", "indexedDB"]);
 const { EventEmitter } = ChromeUtils.import(
   "resource://gre/modules/EventEmitter.jsm",
   {}
@@ -31,14 +31,24 @@ const { KintoHttpClient } = ChromeUtils.import(
 );
 
 import KintoBase from "../src/KintoBase";
+import BaseAdapter from "../src/adapters/base";
+import IDB from "../src/adapters/IDB";
 import { RE_UUID } from "../src/utils";
 
 export default class Kinto extends KintoBase {
+  static get adapters() {
+    return {
+      BaseAdapter,
+      IDB,
+    };
+  }
+
   constructor(options = {}) {
     const events = {};
     EventEmitter.decorate(events);
 
     const defaults = {
+      adapter: IDB,
       events,
       ApiClass: KintoHttpClient,
     };
