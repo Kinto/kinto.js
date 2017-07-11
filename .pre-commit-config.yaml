@@ -1,0 +1,12 @@
+- repo: local
+  hooks:
+    - id: eslint
+      name: eslint
+      language: system
+      entry: node_modules/.bin/eslint
+      types: [javascript]
+    - id: prettier
+      name: prettier
+      language: system
+      entry: node_modules/.bin/prettier --write --jsx-bracket-same-line --trailing-comma es5 --semi
+      types: [javascript]

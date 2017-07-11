@@ -16,7 +16,6 @@
     "dist-prod": "BABEL_ENV=default browserify --ignore process -s Kinto -g uglifyify -e src/index.js -o dist/kinto.min.js -t [ babelify --sourceMapRelative . ]",
     "dist-fx": "BABEL_ENV=firefox browserify -s Kinto --bare --ignore uuid --ignore kinto-http --ignore isomorphic-fetch -e fx-src/index.js -o temp.jsm -t [ babelify --sourceMapRelative . ] && mkdir -p dist && cp fx-src/jsm_prefix.js dist/moz-kinto-offline-client.js && echo \"\n/*\n * Version $npm_package_version - $(git rev-parse --short HEAD)\n */\n\" >> dist/moz-kinto-offline-client.js && cat temp.jsm >> dist/moz-kinto-offline-client.js && rm temp.jsm",
     "lint": "eslint src test",
-    "precommit": "lint-staged",
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
@@ -27,13 +26,6 @@
     "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'"
   },
   "prettierOptions": "--trailing-comma es5 --semi",
-  "lint-staged": {
-    "{src,test}/**/*.js": [
-      "npm run lint",
-      "npm run cs-format",
-      "git add"
-    ]
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Kinto/kinto.js.git"
@@ -137,9 +129,7 @@
     "fake-indexeddb": "2.0.3",
     "gh-pages": "^1.0.0",
     "http-server": "^0.10.0",
-    "husky": "^0.14.0",
     "kinto-node-test-server": "^1.0.0",
-    "lint-staged": "^4.0.0",
     "mocha": "^3.2.0",
     "prettier": "^1.5.1",
     "sinon": "^2.3.2",
