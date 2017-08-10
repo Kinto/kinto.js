@@ -2360,7 +2360,7 @@ describe("Collection", () => {
         deleteRecord = batchSpy.expects("deleteRecord");
         createRecord = batchSpy.expects("createRecord");
         updateRecord = batchSpy.expects("updateRecord");
-        sandbox.stub(KintoClientCollection.prototype, "batch", f => {
+        sandbox.stub(KintoClientCollection.prototype, "batch").callsFake(f => {
           f(batch);
           return Promise.resolve({
             published: [],
@@ -2654,9 +2654,11 @@ describe("Collection", () => {
 
     it("should not execute a last pull on push failure", () => {
       const pullChanges = sandbox.stub(articles, "pullChanges");
-      sandbox.stub(articles, "pushChanges", (client, changes, result) => {
-        result.add("conflicts", [1]);
-      });
+      sandbox
+        .stub(articles, "pushChanges")
+        .callsFake((client, changes, result) => {
+          result.add("conflicts", [1]);
+        });
       return articles.sync().then(() => sinon.assert.calledOnce(pullChanges));
     });
 
@@ -2674,10 +2676,12 @@ describe("Collection", () => {
       const record1 = { id: uuid4(), title: "blog" };
       const record2 = { id: uuid4(), title: "post" };
       sandbox.stub(articles, "pullChanges");
-      sandbox.stub(articles, "pushChanges", (client, changes, result) => {
-        result.add("published", record1);
-        result.add("published", record2);
-      });
+      sandbox
+        .stub(articles, "pushChanges")
+        .callsFake((client, changes, result) => {
+          result.add("published", record1);
+          result.add("published", record2);
+        });
       return articles.sync().then(res => {
         expect(res.published).to.have.length(2);
         expect(articles.pullChanges.lastCall.args[2].exclude).eql([
@@ -2776,7 +2780,7 @@ describe("Collection", () => {
         // Last pull
         fetch.onCall(4).returns(fakeServerResponse(200, { data: [] }, {}));
         // Avoid actually waiting real time between retries in test suites.
-        sandbox.stub(global, "setTimeout", fn => setImmediate(fn));
+        sandbox.stub(global, "setTimeout").callsFake(fn => setImmediate(fn));
       });
 
       it("should retry if specified", () => {
