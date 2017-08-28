@@ -25,7 +25,7 @@
     "test-cover-html": "babel-node node_modules/.bin/babel-istanbul cover --report html $npm_package_config_ISTANBUL_OPTS node_modules/.bin/_mocha -- --require ./test/_setup.js 'test/**/*_test.js' && echo 'Coverage report generated in coverage/index.html'",
     "test-nocover": "babel-node node_modules/.bin/_mocha --require ./test/_setup.js 'test/**/*_test.js'"
   },
-  "prettierOptions": "--trailing-comma es5 --semi",
+  "prettierOptions": "--trailing-comma es5",
   "repository": {
     "type": "git",
     "url": "https://github.com/Kinto/kinto.js.git"
@@ -39,55 +39,72 @@
     "indexeddb"
   ],
   "author": "Mozilla <contact@mozilla.com>",
-  "contributors": [{
-    "name": "Michiel B. de Jong",
-    "url": "https://michielbdejong.com/"
-  }, {
-    "name": "Nicolas Perriault",
-    "url": "https://nicolas.perriault.net/"
-  }, {
-    "name": "Mathieu Leplatre",
-    "url": "http://mathieu-leplatre.info/"
-  }, {
-    "name": "Mark Goodwin",
-    "url": "https://www.computerist.org/"
-  }, {
-    "name": "Ethan Glasser-Camp",
-    "url": "http://betacantrips.com/"
-  }, {
-    "name": "Alexis Metaireau",
-    "url": "https://blog.notmyidea.org"
-  }, {
-    "name": "Remy Hubscher",
-    "url": "http://natim.ionyse.com"
-  }, {
-    "name": "Masataka Takeuchi",
-    "url": "https://github.com/happy-tanuki"
-  }, {
-    "name": "Peter deHaan",
-    "url": "https://about.me/peterdehaan"
-  }, {
-    "name": "Quentin Roy",
-    "url": "http://quentinroy.fr"
-  }, {
-    "name": "Fernando Jiménez Moreno",
-    "url": "http://ferjm.github.io"
-  }, {
-    "name": "Lavish Aggarwal",
-    "url": "http://lavishaggarwal.com/"
-  }, {
-    "name": "Mark Striemer ",
-    "url": "https://github.com/mstriemer"
-  }, {
-    "name": "Ipsha Bhidonia",
-    "url": "https://ipsha218.wordpress.com/"
-  }, {
-    "name": "Mathieu Agopian",
-    "url": "https://github.com/magopian"
-  }, {
-    "name": "Eric Le Lay",
-    "url": "https://github.com/elelay"
-  }],
+  "contributors": [
+    {
+      "name": "Michiel B. de Jong",
+      "url": "https://michielbdejong.com/"
+    },
+    {
+      "name": "Nicolas Perriault",
+      "url": "https://nicolas.perriault.net/"
+    },
+    {
+      "name": "Mathieu Leplatre",
+      "url": "http://mathieu-leplatre.info/"
+    },
+    {
+      "name": "Mark Goodwin",
+      "url": "https://www.computerist.org/"
+    },
+    {
+      "name": "Ethan Glasser-Camp",
+      "url": "http://betacantrips.com/"
+    },
+    {
+      "name": "Alexis Metaireau",
+      "url": "https://blog.notmyidea.org"
+    },
+    {
+      "name": "Remy Hubscher",
+      "url": "http://natim.ionyse.com"
+    },
+    {
+      "name": "Masataka Takeuchi",
+      "url": "https://github.com/happy-tanuki"
+    },
+    {
+      "name": "Peter deHaan",
+      "url": "https://about.me/peterdehaan"
+    },
+    {
+      "name": "Quentin Roy",
+      "url": "http://quentinroy.fr"
+    },
+    {
+      "name": "Fernando Jiménez Moreno",
+      "url": "http://ferjm.github.io"
+    },
+    {
+      "name": "Lavish Aggarwal",
+      "url": "http://lavishaggarwal.com/"
+    },
+    {
+      "name": "Mark Striemer ",
+      "url": "https://github.com/mstriemer"
+    },
+    {
+      "name": "Ipsha Bhidonia",
+      "url": "https://ipsha218.wordpress.com/"
+    },
+    {
+      "name": "Mathieu Agopian",
+      "url": "https://github.com/magopian"
+    },
+    {
+      "name": "Eric Le Lay",
+      "url": "https://github.com/elelay"
+    }
+  ],
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/Kinto/kinto.js/issues"
