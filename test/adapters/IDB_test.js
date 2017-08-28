@@ -48,7 +48,10 @@ describe("adapter.IDB", () => {
     });
 
     it("should close an opened connection to the database", () => {
-      return db.close().then(_ => db._db).should.become(null);
+      return db
+        .close()
+        .then(_ => db._db)
+        .should.become(null);
     });
   });
 
@@ -113,17 +116,28 @@ describe("adapter.IDB", () => {
           transaction.execute(t => t.create({ id: 1, foo: "bar" }));
           throw new Error("Unexpected");
         };
-        return db.execute(callback).catch(() => db.list()).should.become([]);
+        return db
+          .execute(callback)
+          .catch(() => db.list())
+          .should.become([]);
       });
 
       it("should provide a transaction parameter", () => {
         const callback = sandbox.spy();
         return db.execute(callback).then(() => {
           const handler = callback.getCall(0).args[0];
-          expect(handler).to.have.property("get").to.be.a("function");
-          expect(handler).to.have.property("create").to.be.a("function");
-          expect(handler).to.have.property("update").to.be.a("function");
-          expect(handler).to.have.property("delete").to.be.a("function");
+          expect(handler)
+            .to.have.property("get")
+            .to.be.a("function");
+          expect(handler)
+            .to.have.property("create")
+            .to.be.a("function");
+          expect(handler)
+            .to.have.property("update")
+            .to.be.a("function");
+          expect(handler)
+            .to.have.property("delete")
+            .to.be.a("function");
         });
       });
 
@@ -240,7 +254,10 @@ describe("adapter.IDB", () => {
     });
 
     it("should retrieve a record from its id", () => {
-      return db.get(1).then(res => res.foo).should.eventually.eql("bar");
+      return db
+        .get(1)
+        .then(res => res.foo)
+        .should.eventually.eql("bar");
     });
 
     it("should return undefined when record is not found", () => {
