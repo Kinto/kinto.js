@@ -149,7 +149,7 @@
     "kinto-node-test-server": "^1.0.0",
     "mocha": "^3.2.0",
     "prettier": "^1.6.0",
-    "sinon": "^3.2.0",
+    "sinon": "^4.0.0",
     "uglifyify": "^4.0.1"
   }
 }
