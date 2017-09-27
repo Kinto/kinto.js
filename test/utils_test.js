@@ -18,72 +18,65 @@ describe("Utils", () => {
   /** @test {sortObjects} */
   describe("#sortObjects", () => {
     it("should order on field ASC", () => {
-      expect(sortObjects("title", [{ title: "b" }, { title: "a" }])).eql([
-        { title: "a" },
-        { title: "b" },
-      ]);
+      expect(sortObjects("title", [
+          { title: "b" },
+          { title: "a" },
+        ])).eql([{ title: "a" }, { title: "b" }]);
     });
 
     it("should order on field DESC", () => {
-      expect(sortObjects("-title", [{ title: "a" }, { title: "b" }])).eql([
-        { title: "b" },
-        { title: "a" },
-      ]);
+      expect(sortObjects("-title", [
+          { title: "a" },
+          { title: "b" },
+        ])).eql([{ title: "b" }, { title: "a" }]);
     });
 
     it("should order on mixed undefined values DESC", () => {
-      expect(
-        sortObjects("-title", [
+      expect(sortObjects("-title", [
           { title: undefined },
           { title: "b" },
           { title: undefined },
-        ])
-      ).eql([{ title: "b" }, { title: undefined }, { title: undefined }]);
+        ])).eql([{ title: "b" }, { title: undefined }, { title: undefined }]);
     });
 
     it("should order on mixed undefined values ASC", () => {
-      expect(
-        sortObjects("title", [
+      expect(sortObjects("title", [
           { title: undefined },
           { title: "b" },
           { title: undefined },
-        ])
-      ).eql([{ title: undefined }, { title: undefined }, { title: "b" }]);
+        ])).eql([{ title: undefined }, { title: undefined }, { title: "b" }]);
     });
 
     it("should not change order on all fields undefined", () => {
-      expect(
-        sortObjects("-title", [
+      expect(sortObjects("-title", [
           { title: undefined, x: 1 },
           { title: undefined, x: 2 },
-        ])
-      ).eql([{ title: undefined, x: 1 }, { title: undefined, x: 2 }]);
+        ])).eql([{ title: undefined, x: 1 }, { title: undefined, x: 2 }]);
     });
 
     it("should not order the list on missing field", () => {
-      expect(sortObjects("-missing", [{ title: "a" }, { title: "b" }])).eql([
-        { title: "a" },
-        { title: "b" },
-      ]);
+      expect(sortObjects("-missing", [
+          { title: "a" },
+          { title: "b" },
+        ])).eql([{ title: "a" }, { title: "b" }]);
     });
   });
 
   /** @test {filterObjects} */
   describe("#filterObjects", () => {
     it("should filter list on a single field query", () => {
-      expect(
-        filterObjects({ title: "a" }, [{ title: "b" }, { title: "a" }])
-      ).eql([{ title: "a" }]);
+      expect(filterObjects({ title: "a" }, [
+          { title: "b" },
+          { title: "a" },
+        ])).eql([{ title: "a" }]);
     });
 
     it("should filter list on a multiple fields query", () => {
-      expect(
-        filterObjects({ title: "a", unread: true }, [
+      expect(filterObjects({ title: "a", unread: true }, [
           { title: "b", unread: true },
           { title: "a", unread: false },
           { title: "a", unread: true },
-        ])
-      ).eql([{ title: "a", unread: true }]);
+        ])).eql([{ title: "a", unread: true }]);
     });
 
     it("should filter list on missing field", () => {
@@ -91,14 +84,12 @@ describe("Utils", () => {
     });
 
     it("should filter on multiple field values", () => {
-      expect(
-        filterObjects({ title: ["a", "c"] }, [
+      expect(filterObjects({ title: ["a", "c"] }, [
           { title: "a" },
           { title: "b" },
           { title: "c" },
           { title: "d" },
-        ])
-      ).eql([{ title: "a" }, { title: "c" }]);
+        ])).eql([{ title: "a" }, { title: "c" }]);
     });
   });
 
@@ -140,10 +131,7 @@ describe("Utils", () => {
     });
 
     it("should resolve using multiple promise returning functions", () => {
-      return waterfall(
-        [x => Promise.resolve(x + 1), x => Promise.resolve(x * 2)],
-        42
-      ).should.become(86);
+      return waterfall([x => Promise.resolve(x + 1), x => Promise.resolve(x * 2)], 42).should.become(86);
     });
   });
 
@@ -189,21 +177,15 @@ describe("Utils", () => {
     });
 
     it("should return false if sub-object differs", () => {
-      expect(deepEqual({ a: { b: 1, c: 2 } }, { a: { b: 1, c: 3 } })).eql(
-        false
-      );
+      expect(deepEqual({ a: { b: 1, c: 2 } }, { a: { b: 1, c: 3 } })).eql(false);
     });
 
     it("should return true if sub-arrays of objects are equal", () => {
-      expect(
-        deepEqual({ a: [{ b: 1 }, { c: 1 }] }, { a: [{ b: 1 }, { c: 1 }] })
-      ).eql(true);
+      expect(deepEqual({ a: [{ b: 1 }, { c: 1 }] }, { a: [{ b: 1 }, { c: 1 }] })).eql(true);
     });
 
     it("should return false if sub-array orders differ", () => {
-      expect(
-        deepEqual({ a: [{ b: 1 }, { c: 1 }] }, { a: [{ c: 1 }, { b: 1 }] })
-      ).eql(false);
+      expect(deepEqual({ a: [{ b: 1 }, { c: 1 }] }, { a: [{ c: 1 }, { b: 1 }] })).eql(false);
     });
   });
 
