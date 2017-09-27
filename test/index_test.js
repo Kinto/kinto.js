@@ -78,22 +78,22 @@ describe("Kinto", () => {
 
     it("should propagate the requestMode option to child dependencies", () => {
       const requestMode = "no-cors";
-      expect(
-        new Kinto({ requestMode }).collection("x").api.http.requestMode
-      ).eql(requestMode);
+      expect(new Kinto({
+          requestMode,
+        }).collection("x").api.http.requestMode).eql(requestMode);
     });
 
     it("should propagate the timeout option to child dependencies", () => {
       const timeout = 1000;
-      expect(new Kinto({ timeout }).collection("x").api.http.timeout).eql(
-        timeout
-      );
+      expect(new Kinto({
+          timeout,
+        }).collection("x").api.http.timeout).eql(timeout);
     });
 
     it("should propagate the dbPrefix option to child dependencies", () => {
-      expect(new Kinto({ dbPrefix: "app--" }).collection("x").db.dbname).eql(
-        "app--default/x"
-      );
+      expect(new Kinto({
+          dbPrefix: "app--",
+        }).collection("x").db.dbname).eql("app--default/x");
     });
   });
 
@@ -117,10 +117,9 @@ describe("Kinto", () => {
     });
 
     it("should reject on missing collection name", () => {
-      expect(() => new Kinto().collection()).to.Throw(
-        Error,
-        /missing collection name/
-      );
+      expect(() =>
+        new Kinto().collection()
+      ).to.Throw(Error, /missing collection name/);
     });
 
     it("should setup the Api cient using default server URL", () => {
@@ -144,9 +143,7 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api._headers).eql({
-        Authorization: "Basic plop",
-      });
+      expect(coll.api._headers).eql({ Authorization: "Basic plop" });
     });
 
     it("should create collection using an optional adapter", () => {
@@ -175,9 +172,7 @@ describe("Kinto", () => {
     it("should set collection's remoteTransformers", () => {
       const transformer = { encode() {}, decode() {} };
       const db = new Kinto();
-      const options = {
-        remoteTransformers: [transformer],
-      };
+      const options = { remoteTransformers: [transformer] };
       const coll = db.collection("plop", options);
 
       expect(coll.remoteTransformers).to.deep.equal(options.remoteTransformers);
