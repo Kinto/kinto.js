@@ -78,22 +78,28 @@ describe("Kinto", () => {
 
     it("should propagate the requestMode option to child dependencies", () => {
       const requestMode = "no-cors";
-      expect(new Kinto({
+      expect(
+        new Kinto({
           requestMode,
-        }).collection("x").api.http.requestMode).eql(requestMode);
+        }).collection("x").api.http.requestMode
+      ).eql(requestMode);
     });
 
     it("should propagate the timeout option to child dependencies", () => {
       const timeout = 1000;
-      expect(new Kinto({
+      expect(
+        new Kinto({
           timeout,
-        }).collection("x").api.http.timeout).eql(timeout);
+        }).collection("x").api.http.timeout
+      ).eql(timeout);
     });
 
     it("should propagate the dbPrefix option to child dependencies", () => {
-      expect(new Kinto({
+      expect(
+        new Kinto({
           dbPrefix: "app--",
-        }).collection("x").db.dbname).eql("app--default/x");
+        }).collection("x").db.dbname
+      ).eql("app--default/x");
     });
   });
 
@@ -117,9 +123,10 @@ describe("Kinto", () => {
     });
 
     it("should reject on missing collection name", () => {
-      expect(() =>
-        new Kinto().collection()
-      ).to.Throw(Error, /missing collection name/);
+      expect(() => new Kinto().collection()).to.Throw(
+        Error,
+        /missing collection name/
+      );
     });
 
     it("should setup the Api cient using default server URL", () => {
