@@ -103,7 +103,9 @@ describe("Integration tests", function() {
     if (serverDidCrash) {
       // Server errors have been encountered, raise to break the build
       const trace = logLines.join("\n");
-      throw new Error(`Kinto server crashed while running the test suite.\n\n${trace}`);
+      throw new Error(
+        `Kinto server crashed while running the test suite.\n\n${trace}`
+      );
     }
     return server.killAll();
   });
@@ -148,12 +150,18 @@ describe("Integration tests", function() {
       }
 
       function collectionTestSync(collection, data, options) {
-        return Promise.all([].concat(// Create local unsynced records
+        return Promise.all(
+          [].concat(
+            // Create local unsynced records
             data.localUnsynced.map(record =>
               collection.create(record, { useRecordId: true })
-            ), data.localSynced.map((
-              record // Create local synced records
-            ) => collection.create(record, { synced: true })), collection.api // Create remote records
+            ),
+            // Create local synced records
+            data.localSynced.map(record =>
+              collection.create(record, { synced: true })
+            ),
+            // Create remote records
+            collection.api
               .bucket("default")
               .collection(collection._name)
               .batch(
@@ -162,7 +170,9 @@ describe("Integration tests", function() {
                   data.localSynced.forEach(r => batch.createRecord(r));
                 },
                 { safe: true }
-              ))).then(_ => {
+              )
+          )
+        ).then(_ => {
           return collection.sync(options);
         });
       }
@@ -184,7 +194,11 @@ describe("Integration tests", function() {
       }
 
       describe("No change", () => {
-        const testData = { localSynced: [], localUnsynced: [], server: [{ id: uuid4(), title: "task1", done: true }] };
+        const testData = {
+          localSynced: [],
+          localUnsynced: [],
+          server: [{ id: uuid4(), title: "task1", done: true }],
+        };
         let syncResult1;
         let syncResult2;
 
@@ -212,7 +226,14 @@ describe("Integration tests", function() {
       });
 
       describe("No conflict", () => {
-        const testData = { localSynced: [{ id: uuid4(), title: "task2", done: false }, { id: uuid4(), title: "task3", done: true }], localUnsynced: [{ id: uuid4(), title: "task4", done: false }], server: [{ id: uuid4(), title: "task1", done: true }] };
+        const testData = {
+          localSynced: [
+            { id: uuid4(), title: "task2", done: false },
+            { id: uuid4(), title: "task3", done: true },
+          ],
+          localUnsynced: [{ id: uuid4(), title: "task4", done: false }],
+          server: [{ id: uuid4(), title: "task1", done: true }],
+        };
         let syncResult;
 
         beforeEach(() => {
@@ -252,7 +273,9 @@ describe("Integration tests", function() {
 
         it("should publish local unsynced records", () => {
           expect(syncResult.published).to.have.length.of(1);
-          expect(recordsEqual(syncResult.published[0], testData.localUnsynced[0])).eql(true);
+          expect(
+            recordsEqual(syncResult.published[0], testData.localUnsynced[0])
+          ).eql(true);
         });
 
         it("should publish deletion of locally deleted records", () => {
@@ -305,7 +328,17 @@ describe("Integration tests", function() {
 
       describe("Incoming conflict", () => {
         const conflictingId = uuid4();
-        const testData = { localSynced: [{ id: uuid4(), title: "task1", done: true }, { id: uuid4(), title: "task2", done: false }, { id: uuid4(), title: "task3", done: true }], localUnsynced: [{ id: conflictingId, title: "task4-local", done: false }], server: [{ id: conflictingId, title: "task4-remote", done: true }] };
+        const testData = {
+          localSynced: [
+            { id: uuid4(), title: "task1", done: true },
+            { id: uuid4(), title: "task2", done: false },
+            { id: uuid4(), title: "task3", done: true },
+          ],
+          localUnsynced: [
+            { id: conflictingId, title: "task4-local", done: false },
+          ],
+          server: [{ id: conflictingId, title: "task4-remote", done: true }],
+        };
         let syncResult;
 
         describe("MANUAL strategy (default)", () => {
@@ -328,16 +361,20 @@ describe("Integration tests", function() {
           it("should have the incoming conflict listed", () => {
             expect(syncResult.conflicts).to.have.length.of(1);
             expect(syncResult.conflicts[0].type).eql("incoming");
-            expect(recordsEqual(syncResult.conflicts[0].local, {
+            expect(
+              recordsEqual(syncResult.conflicts[0].local, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
-              })).eql(true);
-            expect(recordsEqual(syncResult.conflicts[0].remote, {
+              })
+            ).eql(true);
+            expect(
+              recordsEqual(syncResult.conflicts[0].remote, {
                 id: conflictingId,
                 title: "task4-remote",
                 done: true,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should not skip records", () => {
@@ -454,7 +491,9 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should have no incoming conflict listed", () => {
@@ -471,11 +510,13 @@ describe("Integration tests", function() {
 
           it("should publish resolved conflict using local version", () => {
             expect(syncResult.published).to.have.length.of(1);
-            expect(recordsEqual(syncResult.published[0], {
+            expect(
+              recordsEqual(syncResult.published[0], {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should not update anything", () => {
@@ -484,11 +525,13 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(recordsEqual(syncResult.resolved[0].accepted, {
+            expect(
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should put local database in the expected state", () => {
@@ -532,11 +575,13 @@ describe("Integration tests", function() {
 
           it("should publish resolved conflict using local version", () => {
             expect(syncResult.published).to.have.length.of(1);
-            expect(recordsEqual(syncResult.published[0], {
+            expect(
+              recordsEqual(syncResult.published[0], {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should not update anything", () => {
@@ -545,11 +590,13 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(recordsEqual(syncResult.resolved[0].accepted, {
+            expect(
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should put local database in the expected state", () => {
@@ -603,7 +650,9 @@ describe("Integration tests", function() {
 
           it("should have updated lastModified", () => {
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should have no incoming conflict listed", () => {
@@ -628,11 +677,13 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(recordsEqual(syncResult.resolved[0].accepted, {
+            expect(
+              recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
                 title: "task4-remote",
                 done: true,
-              })).eql(true);
+              })
+            ).eql(true);
           });
 
           it("should put local database in the expected state", () => {
@@ -669,7 +720,13 @@ describe("Integration tests", function() {
 
         describe("Resolving conflicts doesn't interfere with sync", () => {
           const conflictingId = uuid4();
-          const testData = { localSynced: [{ id: conflictingId, title: "conflicting task", done: false }], localUnsynced: [], server: [] };
+          const testData = {
+            localSynced: [
+              { id: conflictingId, title: "conflicting task", done: false },
+            ],
+            localUnsynced: [],
+            server: [],
+          };
           let rawCollection;
 
           beforeEach(() => {
@@ -679,11 +736,17 @@ describe("Integration tests", function() {
 
           it("should sync over resolved records", () => {
             return tasks
-              .update({ id: conflictingId, title: "locally changed title" }, { patch: true })
+              .update(
+                { id: conflictingId, title: "locally changed title" },
+                { patch: true }
+              )
               .then(({ data: newRecord }) => {
                 expect(newRecord.last_modified).to.exist;
                 // Change the record remotely to introduce a comment
-                return rawCollection.updateRecord({ id: conflictingId, title: "remotely changed title" }, { patch: true });
+                return rawCollection.updateRecord(
+                  { id: conflictingId, title: "remotely changed title" },
+                  { patch: true }
+                );
               })
               .then(() => tasks.sync())
               .then(syncResult => {
@@ -691,7 +754,10 @@ describe("Integration tests", function() {
                 expect(syncResult.conflicts).to.have.length.of(1);
                 // Always pick our version.
                 // #resolve will copy the remote last_modified.
-                return tasks.resolve(syncResult.conflicts[0], syncResult.conflicts[0].local);
+                return tasks.resolve(
+                  syncResult.conflicts[0],
+                  syncResult.conflicts[0].local
+                );
               })
               .then(() => tasks.sync())
               .then(syncResult => {
@@ -710,7 +776,10 @@ describe("Integration tests", function() {
           it("should not skip other conflicts", () => {
             const conflictingId2 = uuid4();
             return tasks
-              .create({ id: conflictingId2, title: "second title" }, { useRecordId: true })
+              .create(
+                { id: conflictingId2, title: "second title" },
+                { useRecordId: true }
+              )
               .then(() => tasks.sync())
               .then(() =>
                 rawCollection.updateRecord(
@@ -743,7 +812,10 @@ describe("Integration tests", function() {
                 // resolve just one conflict and ensure that the other
                 // one continues preventing the sync, even though it
                 // happened "after" the first conflict
-                return tasks.resolve(syncResult.conflicts[1], syncResult.conflicts[1].local);
+                return tasks.resolve(
+                  syncResult.conflicts[1],
+                  syncResult.conflicts[1].local
+                );
               })
               .then(() => tasks.sync())
               .then(syncResult => {
@@ -907,7 +979,9 @@ describe("Integration tests", function() {
             // anything since lastModified
             expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1032,7 +1106,9 @@ describe("Integration tests", function() {
             // lastModified our collection will have.
             expect(tasks.lastModified).above(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1149,7 +1225,9 @@ describe("Integration tests", function() {
             // about it).
             expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(syncResult.lastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              syncResult.lastModified
+            );
           });
 
           it("should not have the outgoing conflict listed", () => {
@@ -1319,7 +1397,9 @@ describe("Integration tests", function() {
             // Nothing to update it to; we explicitly copied it from
             // the server before syncing.
             expect(tasks.lastModified).to.equal(oldLastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(oldLastModified);
+            expect(tasks.db.getLastModified()).eventually.equal(
+              oldLastModified
+            );
             expect(tasks.lastModified).equal(syncResult.lastModified);
           });
 
@@ -1458,7 +1538,9 @@ describe("Integration tests", function() {
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
             expect(syncResult.resolved[0].rejected).eql(null);
-            expect(syncResult.resolved[0].id).eql(syncResult.resolved[0].accepted.id);
+            expect(syncResult.resolved[0].id).eql(
+              syncResult.resolved[0].accepted.id
+            );
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
@@ -1567,11 +1649,13 @@ describe("Integration tests", function() {
           });
 
           it("should put local database in the expected state", () => {
-            return (tasks
+            return (
+              tasks
                 .list({ order: "title" })
                 .then(res => res.data)
                 // For SERVER_WINS strategy, local version is deleted
-                .should.become([]) );
+                .should.become([])
+            );
           });
 
           it("should put remote test server data in the expected state", () => {
@@ -1600,16 +1684,20 @@ describe("Integration tests", function() {
 
           it("should list resolved records", () => {
             expect(syncResult.resolved).to.have.length.of(1);
-            expect(syncResult.resolved[0].id).eql(syncResult.resolved[0].rejected.id);
+            expect(syncResult.resolved[0].id).eql(
+              syncResult.resolved[0].rejected.id
+            );
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 
           it("should put local database in the expected state", () => {
-            return (tasksTransformed
+            return (
+              tasksTransformed
                 .list({ order: "title" })
                 .then(res => res.data)
                 // For SERVER_WINS strategy, local version is deleted
-                .should.become([]) );
+                .should.become([])
+            );
           });
         });
       });
@@ -1619,7 +1707,12 @@ describe("Integration tests", function() {
           const id1 = uuid4();
           const id2 = uuid4();
           const tasksRemote = tasks.api.bucket("default").collection("tasks");
-          const dump = [{ id: uuid4(), last_modified: 123456, title: "task1", done: false }, { id: id1, last_modified: 123457, title: "task2", done: false }, { id: id2, last_modified: 123458, title: "task3", done: false }, { id: uuid4(), last_modified: 123459, title: "task4", done: false }];
+          const dump = [
+            { id: uuid4(), last_modified: 123456, title: "task1", done: false },
+            { id: id1, last_modified: 123457, title: "task2", done: false },
+            { id: id2, last_modified: 123458, title: "task3", done: false },
+            { id: uuid4(), last_modified: 123459, title: "task4", done: false },
+          ];
           return Promise.all(dump.map(r => tasksRemote.createRecord(r)))
             .then(() => tasks.loadDump(dump))
             .then(() =>
@@ -1668,11 +1761,14 @@ describe("Integration tests", function() {
     describe("Schemas", () => {
       function createIntegerIdSchema() {
         let _next = 0;
-        return { generate() {
+        return {
+          generate() {
             return _next++;
-          }, validate(id) {
+          },
+          validate(id) {
             return id == parseInt(id, 10) && id >= 0;
-          } };
+          },
+        };
       }
 
       describe("IdSchema", () => {
@@ -1695,11 +1791,14 @@ describe("Integration tests", function() {
 
     describe("Transformers", () => {
       function createTransformer(char) {
-        return { encode(record) {
+        return {
+          encode(record) {
             return { ...record, title: record.title + char };
-          }, decode(record) {
+          },
+          decode(record) {
             return { ...record, title: record.title.slice(0, -1) };
-          } };
+          },
+        };
       }
 
       beforeEach(() => {
@@ -1751,7 +1850,8 @@ describe("Integration tests", function() {
         // "preserve-on-send", into remote "updates".
         // Local records with "preserve-on-send" but weren't deleted
         // don't need to be "preserved", so ignore them.
-        return { encode(record) {
+        return {
+          encode(record) {
             if (record._status == "deleted") {
               if (record.title.includes("preserve-on-send")) {
                 if (record.last_modified) {
@@ -1761,7 +1861,8 @@ describe("Integration tests", function() {
               }
             }
             return record;
-          }, decode(record) {
+          },
+          decode(record) {
             // Records that were deleted locally get pushed to the
             // server with `wasDeleted` so that we know they're
             // supposed to be deleted on the client.
@@ -1769,14 +1870,26 @@ describe("Integration tests", function() {
               return { ...record, deleted: true };
             }
             return record;
-          } };
+          },
+        };
       }
 
       let tasksRemote;
       const preserveOnSendNew = { id: uuid4(), title: "preserve-on-send new" };
-      const preserveOnSendOld = { id: uuid4(), title: "preserve-on-send old", last_modified: 1234 };
-      const deleteOnReceiveRemote = { id: uuid4(), title: "delete-on-receive", wasDeleted: true };
-      const deletedByOtherClientRemote = { id: uuid4(), title: "deleted-by-other-client" };
+      const preserveOnSendOld = {
+        id: uuid4(),
+        title: "preserve-on-send old",
+        last_modified: 1234,
+      };
+      const deleteOnReceiveRemote = {
+        id: uuid4(),
+        title: "delete-on-receive",
+        wasDeleted: true,
+      };
+      const deletedByOtherClientRemote = {
+        id: uuid4(),
+        title: "deleted-by-other-client",
+      };
       beforeEach(() => {
         tasks = kinto.collection("tasks", {
           remoteTransformers: [localDeleteTransformer()],
@@ -1899,7 +2012,10 @@ describe("Integration tests", function() {
       return tasks
         .sync()
         .then(_ => tasks.sync())
-        .should.be.rejectedWith(Error, /Server is asking clients to back off; retry in 10s/);
+        .should.be.rejectedWith(
+          Error,
+          /Server is asking clients to back off; retry in 10s/
+        );
     });
   });
 
@@ -1926,7 +2042,11 @@ describe("Integration tests", function() {
 
       it("should warn when the server sends a deprecation Alert header", () => {
         return tasks.sync().then(_ => {
-          sinon.assert.calledWithExactly(console.warn, "Boom", "http://www.perdu.com");
+          sinon.assert.calledWithExactly(
+            console.warn,
+            "Boom",
+            "http://www.perdu.com"
+          );
         });
       });
     });
