@@ -138,7 +138,7 @@
     "chai": "^4.0.1",
     "chai-as-promised": "^7.0.0",
     "co-task": "^1.0.0",
-    "coveralls": "^2.11.15",
+    "coveralls": "^3.0.0",
     "esdoc": "^1.0.1",
     "esdoc-importpath-plugin": "1.0.1",
     "eslint": "^4.7.2",
