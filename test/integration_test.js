@@ -99,7 +99,7 @@ describe("Integration tests", function() {
 
   after(() => {
     const logLines = server.logs.toString().split("\n");
-    const serverDidCrash = logLines.some(l => l.startsWith("Traceback"));
+    const serverDidCrash = logLines.some(l => l.includes("Traceback"));
     if (serverDidCrash) {
       // Server errors have been encountered, raise to break the build
       const trace = logLines.join("\n");

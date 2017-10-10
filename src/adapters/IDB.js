@@ -409,6 +409,47 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
+   * Reset the sync status of this collection.
+   * This is useful when a server has been wiped, for instance.
+   *
+   * This is a semi-private method that is not part of the Adapter
+   * interface. The Firefox storage adapter offers a method
+   * like this, but that method resets sync status for *all*
+   * collections, which we can't do.
+   */
+  async resetSyncStatus() {
+    await this.open();
+    const resetLastModified = new Promise((resolve, reject) => {
+      const { transaction, store } = this.prepare("readwrite", "__meta__");
+      store.delete("lastModified");
+      transaction.onerror = event => reject(event.target.error);
+      transaction.oncomplete = event => resolve();
+    });
+    const resetStatuses = new Promise((resolve, reject) => {
+      const { transaction, store } = this.prepare("readwrite");
+      createListRequest(store, undefined, undefined, {}, results => {
+        results.forEach(record => {
+          if (record._status === "deleted") {
+            // Garbage collect deleted records.
+            store.delete(record.id);
+          } else {
+            const newRecord = {
+              ...record,
+              _status: "created",
+              last_modified: undefined,
+            };
+            store.put(newRecord);
+          }
+        });
+      });
+      transaction.onerror = event => reject(new Error(event.target.error));
+      transaction.oncomplete = event => resolve();
+    });
+
+    return Promise.all([resetLastModified, resetStatuses]);
+  }
+
+  /**
    * Load a dump of records exported from a server.
    *
    * @abstract
