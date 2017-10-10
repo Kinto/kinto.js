@@ -2030,7 +2030,7 @@ describe("Integration tests", function() {
           .toJSON()
           .slice(0, 10);
         return server.start({
-          KINTO_EOS: tomorrow,
+          KINTO_EOS: `"${tomorrow}"`,
           KINTO_EOS_URL: "http://www.perdu.com",
           KINTO_EOS_MESSAGE: "Boom",
         });
@@ -2057,7 +2057,7 @@ describe("Integration tests", function() {
           .toJSON()
           .slice(0, 10);
         return server.start({
-          KINTO_EOS: lastWeek,
+          KINTO_EOS: `"${lastWeek}"`,
           KINTO_EOS_URL: "http://www.perdu.com",
           KINTO_EOS_MESSAGE: "Boom",
         });
