@@ -14,11 +14,6 @@
       "name": "esdoc-ecmascript-proposal-plugin", 
       "option": {"all": true}
     },
-    {
-      "name": "esdoc-standard-plugin",
-      "options": {
-        "typeInference": {"enable": false}
-      }
-    }
+    { "name": "esdoc-publish-html-plugin" }
   ]
 }
