@@ -11,6 +11,12 @@
       }
     },
     {
+      "name": "esdoc-integrate-test-plugin",
+      "option": {
+        "source": "./test"
+      }
+    },
+    {
       "name": "esdoc-ecmascript-proposal-plugin", 
       "option": {"all": true}
     },
