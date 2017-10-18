@@ -13,9 +13,6 @@
     {
       "name": "esdoc-ecmascript-proposal-plugin", 
       "option": {"all": true}
-    },
-    {
-      "name": "esdoc-node"
     }
   ]
 }
