@@ -17,10 +17,7 @@
     {
       "name": "esdoc-standard-plugin",
       "options": {
-        "typeInference": {"enable": false},
-        "test": {
-          "source": "./test"
-        }
+        "typeInference": {"enable": false}
       }
     }
   ]
