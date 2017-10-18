@@ -1,10 +1,6 @@
 {
   "source": "./src",
   "destination": "./esdoc",
-  "test": {
-    "type": "mocha",
-    "source": "./test"
-  },
   "plugins": [
     {
       "name": "esdoc-importpath-plugin",
@@ -17,6 +13,11 @@
     {
       "name": "esdoc-ecmascript-proposal-plugin", 
       "option": {"all": true}
-    }
+    },
+    {
+      "name": "esdoc-integrate-test-plugin",
+      "option": {
+        "source": "./test"
+      }
   ]
 }
