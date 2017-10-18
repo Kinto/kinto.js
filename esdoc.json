@@ -5,16 +5,6 @@
     "type": "mocha",
     "source": "./test"
   },
-  "experimentalProposal": {
-    "classProperties": true,
-    "objectRestSpread": true,
-    "decorators": true,
-    "doExpressions": true,
-    "functionBind": true,
-    "asyncGenerators": true,
-    "exportExtensions": true,
-    "dynamicImport": true
-  },
   "plugins": [
     {
       "name": "esdoc-importpath-plugin",
@@ -23,6 +13,10 @@
           {"from": "^src", "to": "lib"}
         ]
       }
+    },
+    {
+      "name": "esdoc-ecmascript-proposal-plugin", 
+      "option": {"all": true}
     }
   ]
 }
