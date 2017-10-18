@@ -26,6 +26,10 @@
     {
       "name": "esdoc-type-inference-plugin",
       "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-external-ecmascript-plugin",
+      "option": {"enable": true}
     }
   ]
 }
