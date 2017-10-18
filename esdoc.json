@@ -1,20 +1,6 @@
 {
   "source": "./src",
   "destination": "./esdoc",
-  "test": {
-    "type": "mocha",
-    "source": "./test"
-  },
-  "experimentalProposal": {
-    "classProperties": true,
-    "objectRestSpread": true,
-    "decorators": true,
-    "doExpressions": true,
-    "functionBind": true,
-    "asyncGenerators": true,
-    "exportExtensions": true,
-    "dynamicImport": true
-  },
   "plugins": [
     {
       "name": "esdoc-importpath-plugin",
@@ -22,6 +8,30 @@
         "replaces": [
           {"from": "^src", "to": "lib"}
         ]
+      }
+    },
+    {
+      "name": "esdoc-ecmascript-proposal-plugin", 
+      "option": {"all": true}
+    },
+    { "name": "esdoc-publish-html-plugin" },
+    { 
+      "name": "esdoc-undocumented-identifier-plugin",
+      "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-unexported-identifier-plugin",
+      "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-type-inference-plugin",
+      "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-accessor-plugin",
+      "option": {
+        "access": ["public", "protected", "private"], 
+        "autoPrivate": true
       }
     }
   ]
