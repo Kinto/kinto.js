@@ -14,6 +14,14 @@
       "name": "esdoc-ecmascript-proposal-plugin", 
       "option": {"all": true}
     },
-    { "name": "esdoc-publish-html-plugin" }
+    { "name": "esdoc-publish-html-plugin" },
+    { 
+      "name": "esdoc-undocumented-identifier-plugin",
+      "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-unexported-identifier-plugin",
+      "option": {"enable": true}
+    }
   ]
 }
