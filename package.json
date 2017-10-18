@@ -146,7 +146,6 @@
     "esdoc": "^1.0.1",
     "esdoc-importpath-plugin": "1.0.1",
     "esdoc-ecmascript-proposal-plugin": "1.0.0",
-    "esdoc-standard-plugin": "1.0.0",
     "esdoc-integrate-test-plugin": "1.0.0",
     "eslint": "^4.7.2",
     "estraverse-fb": "^1.3.1",
