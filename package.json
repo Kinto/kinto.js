@@ -145,6 +145,7 @@
     "coveralls": "^3.0.0",
     "esdoc": "^1.0.1",
     "esdoc-ecmascript-proposal-plugin": "1.0.0",
+    "esdoc-external-ecmascript-plugin": "1.0.0",
     "esdoc-importpath-plugin": "1.0.1",
     "esdoc-integrate-test-plugin": "1.0.0",
     "esdoc-publish-html-plugin": "1.1.0",
