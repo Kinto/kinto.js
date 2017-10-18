@@ -22,6 +22,10 @@
     {
       "name": "esdoc-unexported-identifier-plugin",
       "option": {"enable": true}
+    },
+    {
+      "name": "esdoc-type-inference-plugin",
+      "option": {"enable": true}
     }
   ]
 }
