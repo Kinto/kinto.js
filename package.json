@@ -144,6 +144,7 @@
     "co-task": "^1.0.0",
     "coveralls": "^3.0.0",
     "esdoc": "^1.0.1",
+    "esdoc-accessor-plugin": "1.0.0",
     "esdoc-ecmascript-proposal-plugin": "1.0.0",
     "esdoc-external-ecmascript-plugin": "1.0.0",
     "esdoc-importpath-plugin": "1.0.1",
