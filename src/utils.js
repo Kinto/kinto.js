@@ -41,7 +41,7 @@ export function sortObjects(order, list) {
  *
  * @param  {Object} filters  The filters object.
  * @param  {Object} entry    The object to filter.
- * @return {Function}
+ * @return {Boolean}
  */
 export function filterObject(filters, entry) {
   return Object.keys(filters).every(filter => {
