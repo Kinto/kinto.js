@@ -14,6 +14,7 @@ const AVAILABLE_HOOKS = ["incoming-changes"];
  * attributes (like _status and last_modified)
  * @param {Object} a    A record to compare.
  * @param {Object} b    A record to compare.
+ * @param {Array} localFields Additional fields to ignore during the comparison
  * @return {boolean}
  */
 export function recordsEqual(a, b, localFields = []) {

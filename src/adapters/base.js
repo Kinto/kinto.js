@@ -75,6 +75,7 @@ export default class BaseAdapter {
    * Load a dump of records exported from a server.
    *
    * @abstract
+   * @param  {Array} records The records to load.
    * @return {Promise}
    */
   loadDump(records) {
