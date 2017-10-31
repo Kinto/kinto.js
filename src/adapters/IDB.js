@@ -1,4 +1,4 @@
-"use strict";
+"use strict"; 
 
 import BaseAdapter from "./base.js";
 import { filterObject, omitKeys, sortObjects } from "../utils";
