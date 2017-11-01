@@ -189,7 +189,7 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Returns a transaction and a object store for this collection.
+   * Returns a transaction and an object store for this collection.
    *
    * To determine if a transaction has completed successfully, we should rather
    * listen to the transaction’s complete event rather than the IDBObjectStore
