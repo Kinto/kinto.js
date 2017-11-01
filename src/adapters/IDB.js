@@ -115,7 +115,7 @@ export default class IDB extends BaseAdapter {
   /**
    * Constructor.
    *
-   * @param  {String} dbname The database nale.
+   * @param  {String} dbname The database name.
    */
   constructor(dbname) {
     super();
@@ -189,7 +189,7 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Returns a transaction and a store objects for this collection.
+   * Returns a transaction and an object store for this collection.
    *
    * To determine if a transaction has completed successfully, we should rather
    * listen to the transaction’s complete event rather than the IDBObjectStore
@@ -257,6 +257,7 @@ export default class IDB extends BaseAdapter {
    *   .catch(console.error.bind(console));
    *   .then(console.log.bind(console)); // => "foo"
    *
+   * @override
    * @param  {Function} callback The operation description callback.
    * @param  {Object}   options  The options object.
    * @return {Promise}
@@ -335,6 +336,7 @@ export default class IDB extends BaseAdapter {
    * Lists all records from the IndexedDB database.
    *
    * @override
+   * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
   async list(params = { filters: {} }) {
@@ -412,6 +414,7 @@ export default class IDB extends BaseAdapter {
    * Load a dump of records exported from a server.
    *
    * @abstract
+   * @param  {Array} records The records to load.
    * @return {Promise}
    */
   async loadDump(records) {
