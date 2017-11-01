@@ -490,43 +490,4 @@ describe("adapter.IDB", () => {
         .should.eventually.become(1458796543);
     });
   });
-
-  describe("#resetSyncStatus", () => {
-    it("should forget the last modified value.", () => {
-      return db
-        .saveLastModified(42)
-        .then(_ => db.resetSyncStatus())
-        .then(_ => db.getLastModified())
-        .should.eventually.become(null);
-    });
-
-    it("should clear last_modified from a record.", () => {
-      return db
-        .loadDump([
-          { id: uuid4(), title: "foo", last_modified: 1457896541 },
-          { id: uuid4(), title: "bar", last_modified: 1458796542 },
-        ])
-        .then(_ => db.resetSyncStatus())
-        .then(_ => db.list())
-        .then(records => records.map(record => record.last_modified))
-        .should.eventually.eql([undefined, undefined]);
-    });
-
-    it("should reset _status to created on updated records.", () => {
-      return db
-        .loadDump([{ id: uuid4(), title: "bar", _status: "updated" }])
-        .then(_ => db.resetSyncStatus())
-        .then(_ => db.list())
-        .then(records => records[0]._status)
-        .should.eventually.eql("created");
-    });
-
-    it("should delete records with deleted _status.", () => {
-      return db
-        .loadDump([{ id: uuid4(), title: "bar", _status: "deleted" }])
-        .then(_ => db.resetSyncStatus())
-        .then(_ => db.list())
-        .should.eventually.eql([]);
-    });
-  });
 });
