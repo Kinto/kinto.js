@@ -171,13 +171,6 @@ Result is:
 {
   data: {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
-    title: "bar",
-    last_modified: 1432222889337
-  }
-}
-{
-  data: {
-    id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
     title: "baz",
     last_modified: 1432222889337
   }
