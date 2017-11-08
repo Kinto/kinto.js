@@ -1198,7 +1198,9 @@ export default class Collection {
       const seconds = Math.ceil(this.api.backoff / 1000);
       return Promise.reject(
         new Error(
-          `Server is asking clients to back off; retry in ${seconds}s or use the ignoreBackoff option.`
+          `Server is asking clients to back off; retry in ${
+            seconds
+          }s or use the ignoreBackoff option.`
         )
       );
     }
