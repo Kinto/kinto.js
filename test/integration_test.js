@@ -179,7 +179,9 @@ describe("Integration tests", function() {
 
       function getRemoteList(collection = "tasks") {
         return fetch(
-          `${TEST_KINTO_SERVER}/buckets/default/collections/${collection}/records?_sort=title`,
+          `${TEST_KINTO_SERVER}/buckets/default/collections/${
+            collection
+          }/records?_sort=title`,
           {
             headers: { Authorization: "Basic " + btoa("user:pass") },
           }
