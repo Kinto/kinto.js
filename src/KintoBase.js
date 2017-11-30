@@ -103,6 +103,7 @@ export default class KintoBase {
    * @param  {Object} [options.idSchema]           IdSchema instance (default: UUID)
    * @param  {Object} [options.remoteTransformers] Array<RemoteTransformer> (default: `[]`])
    * @param  {Object} [options.hooks]              Array<Hook> (default: `[]`])
+   * @param  {Object} [options.localFields]        Array<Field> (default: `[]`])
    * @return {Collection}
    */
   collection(collName, options = {}) {
@@ -113,7 +114,7 @@ export default class KintoBase {
       ...this._options,
       ...options,
     };
-    const { idSchema, remoteTransformers, hooks } = options;
+    const { idSchema, remoteTransformers, hooks, localFields } = options;
 
     return new Collection(bucket, collName, this.api, {
       events,
@@ -123,6 +124,7 @@ export default class KintoBase {
       idSchema,
       remoteTransformers,
       hooks,
+      localFields,
     });
   }
 }
