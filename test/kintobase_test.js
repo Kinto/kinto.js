@@ -1,6 +1,8 @@
 "use strict";
 
 import { expect } from "chai";
+import Api from "kinto-http";
+import { EventEmitter } from "events";
 
 import KintoBase from "../src/KintoBase.js";
 import BaseAdapter from "../src/adapters/base.js";
@@ -24,6 +26,25 @@ describe("KintoBase", () => {
       expect(() => {
         new KintoBase();
       }).to.Throw(Error, /No adapter provided/);
+    });
+  });
+
+  describe("collection options", () => {
+    let kinto;
+
+    beforeEach(() => {
+      kinto = new KintoBase({
+        adapter: KintoBase.adapters.BaseAdapter,
+        events: new EventEmitter(),
+        ApiClass: Api,
+      });
+    });
+
+    it("should pass localFields option", () => {
+      const collection = kinto.collection('my_collection', {
+        localFields: ['_myLocalField']
+      });
+      expect(collection.localFields).eql(['_myLocalField']);
     });
   });
 });
