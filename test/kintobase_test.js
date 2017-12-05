@@ -41,10 +41,10 @@ describe("KintoBase", () => {
     });
 
     it("should pass localFields option", () => {
-      const collection = kinto.collection('my_collection', {
-        localFields: ['_myLocalField']
+      const collection = kinto.collection("my_collection", {
+        localFields: ["_myLocalField"],
       });
-      expect(collection.localFields).eql(['_myLocalField']);
+      expect(collection.localFields).eql(["_myLocalField"]);
     });
   });
 });
