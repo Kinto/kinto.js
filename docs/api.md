@@ -704,7 +704,7 @@ So instead of wiping your local database to reflect this new remote state, you'r
 ```js
 articles.sync()
   .catch(err => {
-    if (err.message.contains("flushed")) {
+    if (err.message.includes("flushed")) {
       return articles.resetSyncStatus()
         .then(_ => articles.sync());
     }
