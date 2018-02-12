@@ -67,7 +67,7 @@ const cursorHandlers = {
 function findIndexedField(filters) {
   const filteredFields = Object.keys(filters);
   const indexedFields = filteredFields.filter(field => {
-    return INDEXED_FIELDS.indexOf(field) !== -1;
+    return INDEXED_FIELDS.includes(field);
   });
   return indexedFields[0];
 }
