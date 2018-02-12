@@ -17,18 +17,24 @@
 
 ChromeUtils.import("resource://gre/modules/Timer.jsm");
 Cu.importGlobalProperties(["fetch"]);
-const { EventEmitter } = ChromeUtils.import("resource://gre/modules/EventEmitter.jsm", {});
-const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
+const { EventEmitter } = ChromeUtils.import(
+  "resource://gre/modules/EventEmitter.jsm",
+  {}
+);
+const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(
+  Ci.nsIUUIDGenerator
+);
 
 // Use standalone kinto-http module landed in FFx.
-const { KintoHttpClient } = ChromeUtils.import("resource://services-common/kinto-http-client.js");
+const { KintoHttpClient } = ChromeUtils.import(
+  "resource://services-common/kinto-http-client.js"
+);
 
 import KintoBase from "../src/KintoBase";
 import { RE_UUID } from "../src/utils";
 
-
 export default class Kinto extends KintoBase {
-  constructor(options={}) {
+  constructor(options = {}) {
     const events = {};
     EventEmitter.decorate(events);
 
@@ -36,17 +42,19 @@ export default class Kinto extends KintoBase {
       events,
       ApiClass: KintoHttpClient,
     };
-    super({...defaults, ...options});
+    super({ ...defaults, ...options });
   }
 
-  collection(collName, options={}) {
+  collection(collName, options = {}) {
     const idSchema = {
       validate: RE_UUID.test.bind(RE_UUID),
       generate: function() {
-        return generateUUID().toString().replace(/[{}]/g, "");
-      }
+        return generateUUID()
+          .toString()
+          .replace(/[{}]/g, "");
+      },
     };
-    return super.collection(collName, {idSchema, ...options});
+    return super.collection(collName, { idSchema, ...options });
   }
 }
 
