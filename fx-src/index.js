@@ -15,15 +15,13 @@
 
 "use strict";
 
-const {classes: Cc, interfaces: Ci, utils: Cu} = Components;
-
-Cu.import("resource://gre/modules/Timer.jsm");
+ChromeUtils.import("resource://gre/modules/Timer.jsm");
 Cu.importGlobalProperties(["fetch"]);
-const { EventEmitter } = Cu.import("resource://gre/modules/EventEmitter.jsm", {});
+const { EventEmitter } = ChromeUtils.import("resource://gre/modules/EventEmitter.jsm", {});
 const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
 
 // Use standalone kinto-http module landed in FFx.
-const { KintoHttpClient } = Cu.import("resource://services-common/kinto-http-client.js");
+const { KintoHttpClient } = ChromeUtils.import("resource://services-common/kinto-http-client.js");
 
 import KintoBase from "../src/KintoBase";
 import { RE_UUID } from "../src/utils";
