@@ -12,9 +12,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+"use strict";
 
 /*
  * This file is generated from kinto.js - do not modify directly.
  */
+
+// This is required because with Babel compiles ES2015 modules into a
+// require() form that tries to keep its modules on "this", but
+// doesn't specify "this", leaving it to default to the global
+// object. However, in strict mode, "this" no longer defaults to the
+// global object, so expose the global object explicitly. Babel's
+// compiled output will use a variable called "global" if one is
+// present.
+//
+// See https://bugzilla.mozilla.org/show_bug.cgi?id=1394556#c3 for
+// more details.
+const global = this;
 
 this.EXPORTED_SYMBOLS = ["Kinto"];

@@ -387,7 +387,7 @@ export default class Collection {
     const validatedHooks = {};
 
     for (const hook in hooks) {
-      if (AVAILABLE_HOOKS.indexOf(hook) === -1) {
+      if (!AVAILABLE_HOOKS.includes(hook)) {
         throw new Error(
           "The hook should be one of " + AVAILABLE_HOOKS.join(", ")
         );
