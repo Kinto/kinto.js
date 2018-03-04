@@ -2859,6 +2859,13 @@ describe("Collection", () => {
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
+    it("should support deleteAll", () => {
+      articles.deleteAll();
+      articles
+        .list({ filters: { _status: "deleted" } }, { includeDeleted: true })
+        .then(result => expect(result.data._status).eql("deleted"));
+    });
+
     it("should support deleteAny", () => {
       let id;
       return articles
@@ -2997,6 +3004,11 @@ describe("Collection", () => {
     it("should emit an event on delete", done => {
       articles.events.on("delete", () => done());
       articles.delete(article.id);
+    });
+
+    it("should emit an event on deleteAll", done => {
+      articles.events.on("deleteAll", () => done());
+      articles.deleteAll();
     });
 
     it("should emit an event on deleteAny", done => {
