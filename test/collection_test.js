@@ -1167,6 +1167,33 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#deleteAll} */
+  describe("#deleteAll", () => {
+    let articles;
+
+    beforeEach(() => {
+      //Create 5 Records
+      articles = testCollection();
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      return articles;
+    });
+
+    it("should be able to soft delete all articles", () => {
+      return articles.deleteAll().then(res => {
+        res.data.forEach(record => {
+          articles
+            .get(record.id)
+            .then(res => res.data._status)
+            .should.eventually.eql("deleted");
+        });
+      });
+    });
+  });
+
   /** @test {Collection#deleteAny} */
   describe("#deleteAny", () => {
     let articles, id;
@@ -2860,9 +2887,16 @@ describe("Collection", () => {
     });
 
     it("should support deleteAll", () => {
-      articles.deleteAll();
-      articles
-        .list({ filters: { _status: "deleted" } }, { includeDeleted: true })
+      let id;
+      return articles
+        .create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.deleteAll([id]), {
+            preloadIds: [id],
+          });
+        })
+        .then(result => articles.getAny(id))
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
@@ -3006,7 +3040,12 @@ describe("Collection", () => {
       articles.delete(article.id);
     });
 
-    it("should emit an event on deleteAll", done => {
+    it("should emit a 'delete' event when calling deleteAll", done => {
+      articles.events.on("delete", () => done());
+      articles.deleteAll();
+    });
+
+    it("should emit a 'deleteAll' event when calling deleteAll", done => {
       articles.events.on("deleteAll", () => done());
       articles.deleteAll();
     });

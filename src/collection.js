@@ -611,20 +611,18 @@ export default class Collection {
   }
 
   /**
-   * Soft Delete all records from the local database.
+   * Same as {@link Collection#deleteAll}, but wrapped in its own transaction, execulding the parameter.
    *
    * @return {Promise}
    */
   async deleteAll() {
-    const records = await this.db.list();
-    // await results.forEach( (record) => {
-    //     delete(record.id);
-    // });
-    // this._queueEvent("deleteAll", { data: [] });
-    // return { data: [], permissions: {} };
-    return this.execute(transaction => {
-      return transaction.deleteAll(records);
-    }, {});
+    const { data } = await this.list({}, { includeDeleted: false });
+    return this.execute(
+      transaction => {
+        return transaction.deleteAll(data.map(record => record.id));
+      },
+      { preloadIds: data.map(record => record.id) }
+    );
   }
 
   /**
@@ -1440,16 +1438,20 @@ export class CollectionTransaction {
   }
 
   /**
-   * Soft Delete all records from the local database.
-   * @param  {Object} allRecords       All the records in the collection.
+   * Soft delete all records from the local database.
+   *
+   * @param  {Array} ids        Array of non-deleted Record Ids.
    * @return {Object}
    */
-  deleteAll(allRecords) {
-    allRecords.forEach(record => {
-      delete record.id;
+  deleteAll(ids) {
+    const existingRecords = [];
+    ids.forEach(id => {
+      existingRecords.push(this.adapterTransaction.get(id));
+      this.delete(id);
     });
-    this._queueEvent("deleteAll", { data: [] });
-    return { data: [], permissions: {} };
+
+    this._queueEvent("deleteAll", { data: existingRecords });
+    return { data: existingRecords, permissions: {} };
   }
 
   /**
