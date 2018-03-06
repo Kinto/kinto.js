@@ -617,11 +617,12 @@ export default class Collection {
    */
   async deleteAll() {
     const { data } = await this.list({}, { includeDeleted: false });
+    const recordIds = data.map(record => record.id);
     return this.execute(
       transaction => {
-        return transaction.deleteAll(data.map(record => record.id));
+        return transaction.deleteAll(recordIds);
       },
-      { preloadIds: data.map(record => record.id) }
+      { preloadIds: recordIds }
     );
   }
 
