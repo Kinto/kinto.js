@@ -1167,6 +1167,41 @@ describe("Collection", () => {
     });
   });
 
+  /** @test {Collection#deleteAll} */
+  describe("#deleteAll", () => {
+    let articles;
+
+    beforeEach(() => {
+      //Create 5 Records
+      articles = testCollection();
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      articles.create(article);
+      return articles;
+    });
+
+    it("should be able to soft delete all articles", () => {
+      return articles
+        .deleteAll()
+        .then(res => articles.list())
+        .then(res => res.data)
+        .should.eventually.have.length.of(0)
+        .then(() => articles.list({}, { includeDeleted: true }))
+        .then(res => res.data)
+        .should.eventually.have.length.of(5);
+    });
+
+    it("should not delete anything when there are no records", () => {
+      return articles
+        .clear()
+        .then(res => articles.deleteAll())
+        .then(res => res.data)
+        .should.eventually.have.length.of(0);
+    });
+  });
+
   /** @test {Collection#deleteAny} */
   describe("#deleteAny", () => {
     let articles, id;
@@ -2859,6 +2894,20 @@ describe("Collection", () => {
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
+    it("should support deleteAll", () => {
+      let id;
+      return articles
+        .create(article)
+        .then(result => {
+          id = result.data.id;
+          return articles.execute(txn => txn.deleteAll([id]), {
+            preloadIds: [id],
+          });
+        })
+        .then(result => articles.getAny(id))
+        .then(result => expect(result.data._status).eql("deleted"));
+    });
+
     it("should support deleteAny", () => {
       let id;
       return articles
@@ -2997,6 +3046,16 @@ describe("Collection", () => {
     it("should emit an event on delete", done => {
       articles.events.on("delete", () => done());
       articles.delete(article.id);
+    });
+
+    it("should emit a 'delete' event when calling deleteAll", done => {
+      articles.events.on("delete", () => done());
+      articles.deleteAll();
+    });
+
+    it("should emit a 'deleteAll' event when calling deleteAll", done => {
+      articles.events.on("deleteAll", () => done());
+      articles.deleteAll();
     });
 
     it("should emit an event on deleteAny", done => {

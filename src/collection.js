@@ -611,6 +611,22 @@ export default class Collection {
   }
 
   /**
+   * Same as {@link Collection#deleteAll}, but wrapped in its own transaction, execulding the parameter.
+   *
+   * @return {Promise}
+   */
+  async deleteAll() {
+    const { data } = await this.list({}, { includeDeleted: false });
+    const recordIds = data.map(record => record.id);
+    return this.execute(
+      transaction => {
+        return transaction.deleteAll(recordIds);
+      },
+      { preloadIds: recordIds }
+    );
+  }
+
+  /**
    * The same as {@link CollectionTransaction#deleteAny}, but wrapped
    * in its own transaction.
    *
@@ -1420,6 +1436,23 @@ export class CollectionTransaction {
     }
     this._queueEvent("delete", { data: existing });
     return { data: existing, permissions: {} };
+  }
+
+  /**
+   * Soft delete all records from the local database.
+   *
+   * @param  {Array} ids        Array of non-deleted Record Ids.
+   * @return {Object}
+   */
+  deleteAll(ids) {
+    const existingRecords = [];
+    ids.forEach(id => {
+      existingRecords.push(this.adapterTransaction.get(id));
+      this.delete(id);
+    });
+
+    this._queueEvent("deleteAll", { data: existingRecords });
+    return { data: existingRecords, permissions: {} };
   }
 
   /**
