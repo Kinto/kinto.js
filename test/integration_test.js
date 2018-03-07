@@ -42,9 +42,11 @@ function futureSyncsOK(getCollection, getLastSyncResult) {
     let nextSyncResult;
 
     beforeEach(() => {
-      return getCollection().sync().then(result => {
-        nextSyncResult = result;
-      });
+      return getCollection()
+        .sync()
+        .then(result => {
+          nextSyncResult = result;
+        });
     });
 
     it("should have an ok status", () => {
@@ -260,12 +262,12 @@ describe("Integration tests", function() {
 
         it("should import server data", () => {
           expect(syncResult.created).to.have.length.of(1);
-          expect(syncResult.created[0]).to.have
-            .property("title")
+          expect(syncResult.created[0])
+            .to.have.property("title")
             .eql(testData.server[0].title);
 
-          expect(syncResult.created[0]).to.have
-            .property("done")
+          expect(syncResult.created[0])
+            .to.have.property("done")
             .eql(testData.server[0].done);
         });
 
@@ -866,9 +868,11 @@ describe("Integration tests", function() {
           });
 
           it("should have the expected conflicting remote version", () => {
-            expect(conflicts[0].remote).to.have.property("id").eql(id);
-            expect(conflicts[0].remote).to.have
-              .property("title")
+            expect(conflicts[0].remote)
+              .to.have.property("id")
+              .eql(id);
+            expect(conflicts[0].remote)
+              .to.have.property("title")
               .eql("server-updated");
           });
         });
@@ -903,7 +907,9 @@ describe("Integration tests", function() {
           });
 
           it("should provide the record", () => {
-            expect(result.skipped[0]).to.have.property("id").eql(id);
+            expect(result.skipped[0])
+              .to.have.property("id")
+              .eql(id);
           });
         });
       });

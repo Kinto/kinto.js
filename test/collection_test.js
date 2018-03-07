@@ -67,7 +67,9 @@ describe("Collection", () => {
   function createKeyListIdSchema() {
     return {
       generate(record) {
-        return Object.keys(record).sort().join(",");
+        return Object.keys(record)
+          .sort()
+          .join(",");
       },
       validate(id) {
         return id !== "";
@@ -2699,8 +2701,8 @@ describe("Collection", () => {
 
       it("should transfer the headers option", () => {
         return articles.sync({ headers: { Foo: "Bar" } }).then(() => {
-          expect(pullChanges.firstCall.args[2]).to.have
-            .property("headers")
+          expect(pullChanges.firstCall.args[2])
+            .to.have.property("headers")
             .eql({ Foo: "Bar" });
         });
       });
@@ -2709,16 +2711,16 @@ describe("Collection", () => {
         return articles
           .sync({ strategy: Collection.strategy.SERVER_WINS })
           .then(() => {
-            expect(pullChanges.firstCall.args[2]).to.have
-              .property("strategy")
+            expect(pullChanges.firstCall.args[2])
+              .to.have.property("strategy")
               .eql(Collection.strategy.SERVER_WINS);
           });
       });
 
       it("should transfer the retry option", () => {
         return articles.sync({ retry: 3 }).then(() => {
-          expect(pullChanges.firstCall.args[2]).to.have
-            .property("retry")
+          expect(pullChanges.firstCall.args[2])
+            .to.have.property("retry")
             .eql(3);
         });
       });
@@ -3078,8 +3080,8 @@ describe("Collection", () => {
 
     it("should provide created record in data", done => {
       articles.events.on("create", event => {
-        expect(event).to.have
-          .property("data")
+        expect(event)
+          .to.have.property("data")
           .to.have.property("title")
           .eql("win");
         done();
@@ -3090,8 +3092,12 @@ describe("Collection", () => {
     it("should provide new record in data and old record", done => {
       articles.events.on("update", event => {
         const { data, oldRecord } = event;
-        expect(data).to.have.property("title").eql("changed");
-        expect(oldRecord).to.have.property("title").eql("foo");
+        expect(data)
+          .to.have.property("title")
+          .eql("changed");
+        expect(oldRecord)
+          .to.have.property("title")
+          .eql("foo");
         done();
       });
       articles.update({ ...article, title: "changed" });
@@ -3107,8 +3113,8 @@ describe("Collection", () => {
 
     it("should provide old record", done => {
       articles.events.on("delete", event => {
-        expect(event).to.have
-          .property("data")
+        expect(event)
+          .to.have.property("data")
           .to.have.property("title")
           .eql("foo");
         done();
