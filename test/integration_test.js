@@ -323,6 +323,19 @@ describe("Integration tests", function() {
           ]);
         });
 
+        it("should fetch every server page", () => {
+          return collectionTestSync(tasks, {
+            localUnsynced: [],
+            localSynced: [],
+            server: Array(10)
+              .fill()
+              .map((e, i) => ({ id: uuid4(), title: `task${i}`, done: true })),
+          })
+            .then(() => tasks.list())
+            .then(res => res.data)
+            .should.eventually.have.length(10 + 4);
+        });
+
         futureSyncsOK(() => tasks, () => syncResult);
       });
 
