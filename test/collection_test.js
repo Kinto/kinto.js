@@ -1555,7 +1555,7 @@ describe("Collection", () => {
           idSchema: NULL_SCHEMA,
           remoteTransformers: [transformer],
         });
-        let id = uuid4();
+        const id = uuid4();
         return articles
           .create({ id: id, title: "some title" }, { synced: true })
           .then(() => {
@@ -1836,7 +1836,7 @@ describe("Collection", () => {
         });
 
         it("should decode incoming records even when deleted", () => {
-          let transformer = {
+          const transformer = {
             called: false,
             encode() {},
             decode(record) {
@@ -1848,7 +1848,7 @@ describe("Collection", () => {
             idSchema: NULL_SCHEMA,
             remoteTransformers: [transformer],
           });
-          let id = uuid4();
+          const id = uuid4();
           listRecords.returns(
             Promise.resolve({
               data: [{ id: id, deleted: true }],
