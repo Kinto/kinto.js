@@ -1885,6 +1885,7 @@ describe("Collection", () => {
             since: undefined,
             filters: undefined,
             retry: undefined,
+            pages: Infinity,
             headers: {},
           });
         });
@@ -1899,6 +1900,7 @@ describe("Collection", () => {
               since: "42",
               filters: undefined,
               retry: undefined,
+              pages: Infinity,
               headers: {},
             });
           });
@@ -1914,6 +1916,7 @@ describe("Collection", () => {
               since: "42",
               filters: { exclude_id: "1,2,3" },
               retry: undefined,
+              pages: Infinity,
               headers: {},
             });
           });

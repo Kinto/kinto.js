@@ -956,6 +956,8 @@ export default class Collection {
       since: options.lastModified ? `${options.lastModified}` : undefined,
       headers: options.headers,
       retry: options.retry,
+      // Fetch every page by default (FIXME: option to limit pages, see #277)
+      pages: Infinity,
       filters,
     });
     // last_modified is the ETag header value (string).
