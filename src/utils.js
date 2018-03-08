@@ -114,7 +114,7 @@ export function deepEqual(a, b) {
   if (Object.keys(a).length !== Object.keys(b).length) {
     return false;
   }
-  for (let k in a) {
+  for (const k in a) {
     if (!deepEqual(a[k], b[k])) {
       return false;
     }
