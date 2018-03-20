@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "11.0.0",
+  "version": "11.1.0",
   "description": "An Offline-First JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
@@ -115,6 +115,10 @@
     {
       "name": "François de Metz",
       "url": "https://github.com/francois2metz"
+    },
+    {
+      "name": "Amr Gawish",
+      "url": "https://github.com/agawish"
     }
   ],
   "license": "Apache-2.0",
