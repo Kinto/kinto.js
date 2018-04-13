@@ -74,8 +74,10 @@ export class SyncResultObject {
     }
     // Deduplicate entries by id. If the values don't have `id` attribute, just
     // keep all.
-    const existing = new Set(this[type].map(({ id }) => id));
-    this[type] = this[type].concat(entries.filter(({ id }) => !id || !existing.has(id)));
+    const ids = new Set(entries.map(({ id }) => id));
+    this[type] = this[type]
+      .filter(({ id }) => !id || !ids.has(id))
+      .concat(entries);
     this.ok = this.errors.length + this.conflicts.length === 0;
     return this;
   }
