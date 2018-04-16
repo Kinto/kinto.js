@@ -408,6 +408,17 @@ describe("Collection", () => {
 
         expect(result.add("resolved", [])).eql(result);
       });
+
+      it("should support adding single objects", () => {
+        const result = new SyncResultObject();
+
+        const e = {
+          type: "incoming",
+          message: "conflict",
+        };
+        result.add("errors", e);
+        expect(result.errors).eql([e]);
+      });
     });
 
     /** @test {SyncResultObject#reset} */

@@ -72,6 +72,9 @@ export class SyncResultObject {
     if (!Array.isArray(this[type])) {
       return;
     }
+    if (!Array.isArray(entries)) {
+      entries = [entries];
+    }
     // Deduplicate entries by id. If the values don't have `id` attribute, just
     // keep all.
     const ids = new Set(entries.map(({ id }) => id));
