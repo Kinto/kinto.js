@@ -363,6 +363,29 @@ describe("Collection", () => {
         expect(result.skipped).eql([1, 2, 3]);
       });
 
+      it("should overwrite entries with same id", () => {
+        const result = new SyncResultObject();
+
+        result.add("skipped", [{ id: 1, name: "a" }]);
+        result.add("skipped", [{ id: 2, name: "b" }]);
+        result.add("skipped", [{ id: 1, name: "c" }]);
+        result.add("skipped", [{ name: "d" }]);
+        result.add("skipped", [{ name: "e" }]);
+        expect(result.skipped).eql([
+          { id: 1, name: "c" },
+          { id: 2, name: "b" },
+          { name: "d" },
+          { name: "e" },
+        ]);
+      });
+
+      it("should deduplicate added entries with same id", () => {
+        const result = new SyncResultObject();
+
+        result.add("created", [{ id: 1, name: "a" }, { id: 1, name: "b" }]);
+        expect(result.created).eql([{ id: 1, name: "b" }]);
+      });
+
       it("should update the ok status flag on errors", () => {
         const result = new SyncResultObject();
 
@@ -391,6 +414,17 @@ describe("Collection", () => {
         const result = new SyncResultObject();
 
         expect(result.add("resolved", [])).eql(result);
+      });
+
+      it("should support adding single objects", () => {
+        const result = new SyncResultObject();
+
+        const e = {
+          type: "incoming",
+          message: "conflict",
+        };
+        result.add("errors", e);
+        expect(result.errors).eql([e]);
       });
     });
 
