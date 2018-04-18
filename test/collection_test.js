@@ -372,8 +372,8 @@ describe("Collection", () => {
         result.add("skipped", [{ name: "d" }]);
         result.add("skipped", [{ name: "e" }]);
         expect(result.skipped).eql([
-          { id: 2, name: "b" },
           { id: 1, name: "c" },
+          { id: 2, name: "b" },
           { name: "d" },
           { name: "e" },
         ]);
@@ -383,9 +383,7 @@ describe("Collection", () => {
         const result = new SyncResultObject();
 
         result.add("created", [{ id: 1, name: "a" }, { id: 1, name: "b" }]);
-        expect(result.created).eql([
-          { id: 1, name: "b" }
-        ]);
+        expect(result.created).eql([{ id: 1, name: "b" }]);
       });
 
       it("should update the ok status flag on errors", () => {

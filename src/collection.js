@@ -77,10 +77,20 @@ export class SyncResultObject {
     }
     // Deduplicate entries by id. If the values don't have `id` attribute, just
     // keep all.
-    const ids = new Map(entries.map(({ id }) => [id, true]));
-    this[type] = this[type]
-      .filter(({ id }) => !id || !ids.has(id))
-      .concat(entries);
+    const recordsWithoutId = new Set(this[type].filter(record => !record.id));
+    const recordsById = new Map(
+      this[type].filter(record => record.id).map(record => [record.id, record])
+    );
+    entries.forEach(record => {
+      if (!record.id) {
+        recordsWithoutId.add(record);
+      } else {
+        recordsById.set(record.id, record);
+      }
+    });
+    this[type] = Array.from(recordsById.values()).concat(
+      Array.from(recordsWithoutId)
+    );
     this.ok = this.errors.length + this.conflicts.length === 0;
     return this;
   }
