@@ -159,7 +159,7 @@
     "esdoc": "^1.0.1",
     "esdoc-accessor-plugin": "1.0.0",
     "esdoc-ecmascript-proposal-plugin": "1.0.0",
-    "esdoc-importpath-plugin": "1.0.1",
+    "esdoc-importpath-plugin": "1.0.2",
     "esdoc-integrate-test-plugin": "1.0.0",
     "esdoc-publish-html-plugin": "1.1.0",
     "esdoc-type-inference-plugin": "1.0.2",
