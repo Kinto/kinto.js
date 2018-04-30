@@ -162,7 +162,7 @@
     "esdoc-importpath-plugin": "1.0.1",
     "esdoc-integrate-test-plugin": "1.0.0",
     "esdoc-publish-html-plugin": "1.1.0",
-    "esdoc-type-inference-plugin": "1.0.1",
+    "esdoc-type-inference-plugin": "1.0.2",
     "esdoc-undocumented-identifier-plugin": "1.0.0",
     "esdoc-unexported-identifier-plugin": "1.0.0",
     "eslint": "^4.7.2",
