@@ -490,4 +490,37 @@ describe("adapter.IDB", () => {
         .should.eventually.become(1458796543);
     });
   });
+
+  describe("With custom dbName", () => {
+    it("should isolate records by dbname", async () => {
+      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+
+      await db1.open();
+      await db2.open();
+      await db1.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 2 }));
+      await db1.close();
+      await db2.close();
+
+      expect(await db1.list()).to.have.length(1);
+      expect(await db2.list()).to.have.length(2);
+    });
+
+    it("should isolate records by dbname", async () => {
+      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+
+      await db1.open();
+      await db2.open();
+      await db1.saveLastModified(41);
+      await db2.saveLastModified(42);
+      await db1.close();
+      await db2.close();
+
+      expect(await db1.getLastModified()).to.be.equal(41);
+      expect(await db2.getLastModified()).to.be.equal(42);
+    });
+  });
 });

@@ -8,9 +8,9 @@ Simply create a class extending [`Kinto.adapters.BaseAdapter`](https://doc.esdoc
 
 ```js
 class MyAdapter extends Kinto.adapters.BaseAdapter {
-  constructor(dbname, options={}) {
+  constructor(storeName, options={}) {
     super();
-    this.dbname = dbname;
+    this.storeName = storeName;
     this.options = options;
   }
 
