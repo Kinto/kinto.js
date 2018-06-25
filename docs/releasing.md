@@ -49,11 +49,11 @@ Check that the demo has been [published](http://kinto.github.io/kinto.js/) and w
 
 ### Update docs
 
-- Obtain the new sub-resource integrity hashes with:
+Obtain the new sub-resource integrity hashes with:
 
     $ npm run compute-sri
 
-- Update the table in `docs/installation.md`.
+Update the table in `docs/installation.md`.
 
 ### Publish updated esdoc
 
