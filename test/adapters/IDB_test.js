@@ -76,7 +76,9 @@ describe("adapter.IDB", () => {
           },
         },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
@@ -214,7 +216,9 @@ describe("adapter.IDB", () => {
             add() {},
           },
           transaction: {
-            get onerror() {},
+            get onerror() {
+              return null;
+            },
             set onerror(onerror) {
               onerror({ target: { error: "transaction error" } });
             },
@@ -270,7 +274,9 @@ describe("adapter.IDB", () => {
           },
         },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
@@ -308,7 +314,9 @@ describe("adapter.IDB", () => {
           },
         },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
@@ -380,7 +388,9 @@ describe("adapter.IDB", () => {
       sandbox.stub(db, "prepare").returns({
         store: { add() {} },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
@@ -397,7 +407,9 @@ describe("adapter.IDB", () => {
       sandbox.stub(db, "prepare").returns({
         store: { get() {} },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
@@ -436,7 +448,9 @@ describe("adapter.IDB", () => {
           },
         },
         transaction: {
-          get onerror() {},
+          get onerror() {
+            return null;
+          },
           set onerror(onerror) {
             onerror({ target: { error: "transaction error" } });
           },
