@@ -530,7 +530,7 @@ describe("Collection", () => {
 
     it("should reject when passed an id and synced and useRecordId are false", () => {
       return articles
-        .create({ id: uuid4() }, { synced: false, useRecordId: false })
+        .create({ id: "some-id" }, { synced: false, useRecordId: false })
         .should.be.rejectedWith(Error, /Extraneous Id/);
     });
 
@@ -570,7 +570,7 @@ describe("Collection", () => {
 
     it("should validate record's Id when provided", () => {
       return articles
-        .create({ id: 42, title: "foo" }, { useRecordId: true })
+        .create({ id: "a/b", title: "foo" }, { useRecordId: true })
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -1031,7 +1031,7 @@ describe("Collection", () => {
 
     it("should validate passed id (custom IdSchema)", () => {
       return articles
-        .get("deadbeef")
+        .get("dead.beef")
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -1123,7 +1123,7 @@ describe("Collection", () => {
 
     it("should validate passed id (custom IdSchema)", () => {
       return articles
-        .delete("deadbeef")
+        .delete("dead beef")
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -1468,13 +1468,13 @@ describe("Collection", () => {
 
     it("should fail if records is not an array", () => {
       return articles
-        .loadDump({ id: 1, title: "foo" })
+        .loadDump({ id: "abc", title: "foo" })
         .should.be.rejectedWith(Error, /^Records is not an array./);
     });
 
     it("should fail if id is invalid", () => {
       return articles
-        .loadDump([{ id: 1, title: "foo" }])
+        .loadDump([{ id: "a.b.c", title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
@@ -1510,7 +1510,11 @@ describe("Collection", () => {
     });
 
     it("should overwrite old records.", () => {
-      const record = { id: uuid4(), title: "foo", last_modified: 1457896541 };
+      const record = {
+        id: "a-record",
+        title: "foo",
+        last_modified: 1457896541,
+      };
       return articles
         .loadDump([record])
         .then(() => {

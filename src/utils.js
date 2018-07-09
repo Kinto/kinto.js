@@ -1,7 +1,5 @@
 "use strict";
 
-export const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 /**
  * Checks if a value is undefined.
  * @param  {Any}  value
@@ -64,16 +62,6 @@ export function filterObjects(filters, list) {
   return list.filter(entry => {
     return filterObject(filters, entry);
   });
-}
-
-/**
- * Checks if a string is an UUID.
- *
- * @param  {String} uuid The uuid to validate.
- * @return {Boolean}
- */
-export function isUUID(uuid) {
-  return RE_UUID.test(uuid);
 }
 
 /**

@@ -7,7 +7,6 @@ import {
   sortObjects,
   filterObjects,
   omitKeys,
-  isUUID,
   waterfall,
 } from "../src/utils";
 
@@ -99,25 +98,6 @@ describe("Utils", () => {
           { title: "d" },
         ])
       ).eql([{ title: "a" }, { title: "c" }]);
-    });
-  });
-
-  /** @test {isUUID} */
-  describe("#isUUID", () => {
-    it("should check that a string uses a valid UUID format", () => {
-      expect(isUUID("63e5ccb8-1798-3b9f-48f5-12b5ca13054e")).eql(true);
-      expect(isUUID("00000000-0000-5000-a000-000000000000")).eql(true);
-      expect(isUUID("00000000-0000-4000-e000-000000000000")).eql(true);
-    });
-
-    it("should check that a string does not use a valid UUID format", () => {
-      expect(isUUID("63e5xcb8-1798-4b9f-48f5-12b5ca13054e")).eql(false);
-      expect(isUUID("")).eql(false);
-      expect(isUUID(null)).eql(false);
-      expect(isUUID(undefined)).eql(false);
-      expect(isUUID(42)).eql(false);
-      expect(isUUID({})).eql(false);
-      expect(isUUID("00000000-0000-5000-a000-000000000000")).eql(true);
     });
   });
 
