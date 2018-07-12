@@ -33,7 +33,7 @@ const { KintoHttpClient } = ChromeUtils.import(
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
 import IDB from "../src/adapters/IDB";
-import { RE_UUID } from "../src/utils";
+import { RE_RECORD_ID } from "../src/utils";
 
 export default class Kinto extends KintoBase {
   static get adapters() {
@@ -57,12 +57,14 @@ export default class Kinto extends KintoBase {
 
   collection(collName, options = {}) {
     const idSchema = {
-      validate: RE_UUID.test.bind(RE_UUID),
-      generate: function() {
+      validate(id) {
+        return typeof id == "string" && RE_RECORD_ID.test(id);
+      },
+      generate() {
         return generateUUID()
           .toString()
           .replace(/[{}]/g, "");
-      },
+      }
     };
     return super.collection(collName, { idSchema, ...options });
   }
