@@ -16,7 +16,9 @@
 "use strict";
 
 ChromeUtils.import("resource://gre/modules/Timer.jsm");
-Cu.importGlobalProperties(["fetch", "indexedDB"]);
+ChromeUtils.import("resource://gre/modules/XPCOMUtils.jsm");
+XPCOMUtils.defineLazyGlobalGetters(global, ["fetch", "indexedDB"]);
+
 const { EventEmitter } = ChromeUtils.import(
   "resource://gre/modules/EventEmitter.jsm",
   {}
