@@ -4,7 +4,7 @@ import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
-import { omitKeys } from "./utils";
+import { omitKeys, RE_RECORD_ID } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
@@ -116,7 +116,7 @@ function createUUIDSchema() {
     },
 
     validate(id) {
-      return typeof id == "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(id);
+      return typeof id == "string" && RE_RECORD_ID.test(id);
     },
   };
 }

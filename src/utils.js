@@ -1,5 +1,7 @@
 "use strict";
 
+export const RE_RECORD_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+
 /**
  * Checks if a value is undefined.
  * @param  {Any}  value
