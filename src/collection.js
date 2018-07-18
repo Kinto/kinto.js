@@ -156,7 +156,9 @@ function importChange(transaction, remote, localFields) {
   // Compare local and remote, ignoring local fields.
   const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
-  const synced = { ...local, ...markSynced(remote) };
+  let onlyLocal = {}
+  localFields.forEach(field => onlyLocal[field] = local[field])
+  const synced = { ...onlyLocal, ...markSynced(remote) };
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
