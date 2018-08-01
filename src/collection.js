@@ -2,7 +2,6 @@
 
 import BaseAdapter from "./adapters/base";
 import { waterfall, deepEqual } from "./utils";
-import { v4 as uuid4 } from "uuid";
 import { omitKeys, RE_RECORD_ID } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -110,13 +109,13 @@ export class SyncResultObject {
 
 function createUUIDSchema() {
   return {
-    generate() {
-      return uuid4();
-    },
+    // generate() {
+    //   return uuid4();
+    // },
 
-    validate(id) {
-      return typeof id == "string" && RE_RECORD_ID.test(id);
-    },
+    // validate(id) {
+    //   return typeof id == "string" && RE_RECORD_ID.test(id);
+    // },
   };
 }
 
