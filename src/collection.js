@@ -1,9 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./adapters/base";
-import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
-import { v4 as uuid4 } from "uuid";
 import { omitKeys, RE_RECORD_ID } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -111,13 +109,13 @@ export class SyncResultObject {
 
 function createUUIDSchema() {
   return {
-    generate() {
-      return uuid4();
-    },
+    // generate() {
+    //   return uuid4();
+    // },
 
-    validate(id) {
-      return typeof id == "string" && RE_RECORD_ID.test(id);
-    },
+    // validate(id) {
+    //   return typeof id == "string" && RE_RECORD_ID.test(id);
+    // },
   };
 }
 
@@ -156,7 +154,9 @@ function importChange(transaction, remote, localFields) {
   // Compare local and remote, ignoring local fields.
   const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
-  const synced = { ...local, ...markSynced(remote) };
+  let onlyLocal = {}
+  localFields.forEach(field => onlyLocal[field] = local[field])
+  const synced = { ...onlyLocal, ...markSynced(remote) };
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
@@ -222,7 +222,7 @@ export default class Collection {
     this._name = name;
     this._lastModified = null;
 
-    const DBAdapter = options.adapter || IDB;
+    const DBAdapter = options.adapter;
     if (!DBAdapter) {
       throw new Error("No adapter provided");
     }

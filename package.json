@@ -1,6 +1,6 @@
 {
   "name": "kinto",
-  "version": "11.2.2",
+  "version": "11.2.3",
   "description": "An Offline-First JavaScript client for Kinto.",
   "main": "lib/index.js",
   "scripts": {
