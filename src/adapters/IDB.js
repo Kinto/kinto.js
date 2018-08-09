@@ -193,25 +193,24 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Returns a transaction and an object store for this collection.
+   * Returns a transaction and an object store for a store name.
    *
    * To determine if a transaction has completed successfully, we should rather
    * listen to the transaction’s complete event rather than the IDBObjectStore
    * request’s success event, because the transaction may still fail after the
    * success event fires.
    *
+   * @param  {String}      name  Store name
    * @param  {String}      mode  Transaction mode ("readwrite" or undefined)
-   * @param  {String|null} name  Store name (defaults to coll name)
    * @return {Object}
    */
-  prepare(mode = undefined, name = null) {
-    const storeName = name || this.storeName;
+  prepare(name, mode = undefined) {
     // On Safari, calling IDBDatabase.transaction with mode == undefined raises
     // a TypeError.
     const transaction = mode
-      ? this._db.transaction([storeName], mode)
-      : this._db.transaction([storeName]);
-    const store = transaction.objectStore(storeName);
+      ? this._db.transaction([name], mode)
+      : this._db.transaction([name]);
+    const store = transaction.objectStore(name);
     return { transaction, store };
   }
 
@@ -225,7 +224,7 @@ export default class IDB extends BaseAdapter {
     try {
       await this.open();
       return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare("readwrite");
+        const { transaction, store } = this.prepare("records", "readwrite");
         store.clear();
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve();
@@ -280,7 +279,7 @@ export default class IDB extends BaseAdapter {
     await this.open();
     return new Promise((resolve, reject) => {
       // Start transaction.
-      const { transaction, store } = this.prepare("readwrite");
+      const { transaction, store } = this.prepare("records", "readwrite");
       // Preload specified records using index.
       const ids = options.preload;
       store.index("id").openCursor().onsuccess = cursorHandlers.in(
@@ -326,7 +325,7 @@ export default class IDB extends BaseAdapter {
     try {
       await this.open();
       return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare();
+        const { transaction, store } = this.prepare("records");
         const request = store.get(id);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve(request.result);
@@ -354,7 +353,7 @@ export default class IDB extends BaseAdapter {
         // If `indexField` was used already, don't filter again.
         const remainingFilters = omitKeys(filters, indexField);
 
-        const { transaction, store } = this.prepare();
+        const { transaction, store } = this.prepare("records");
         createListRequest(
           store,
           indexField,
@@ -389,7 +388,7 @@ export default class IDB extends BaseAdapter {
     const value = parseInt(lastModified, 10) || null;
     await this.open();
     return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare("readwrite", "__meta__");
+      const { transaction, store } = this.prepare("readwrite", "timestamps");
       store.put({ name: `${this.storeName}-lastModified`, value: value });
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => resolve(value);
@@ -405,7 +404,7 @@ export default class IDB extends BaseAdapter {
   async getLastModified() {
     await this.open();
     return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare(undefined, "__meta__");
+      const { transaction, store } = this.prepare("timestamps");
       const request = store.get(`${this.storeName}-lastModified`);
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => {
