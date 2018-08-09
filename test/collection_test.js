@@ -143,10 +143,11 @@ describe("Collection", () => {
         TEST_COLLECTION_NAME,
         api,
         {
-          dbPrefix: "user-x/",
+          dbName: "LocalData",
         }
       );
-      expect(collection.db.dbname).eql("user-x/kinto-test/kinto-test");
+      expect(collection.db.dbName).eql("LocalData");
+      expect(collection.db.keyBase).eql(`${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`);
     });
 
     it("should use the default adapter if not any is provided", () => {

@@ -197,7 +197,7 @@ describe("adapter.IDB", () => {
           transaction: { abort() {} },
         });
         return db
-          .execute(transaction => transaction.create())
+          .execute(transaction => transaction.create({id: 42}))
           .should.be.rejectedWith(Error, "add error");
       });
 
@@ -507,7 +507,7 @@ describe("adapter.IDB", () => {
 
   describe("With custom dbName", () => {
     it("should isolate records by dbname", async () => {
-      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+      const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
       const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
 
       await db1.open();
@@ -522,8 +522,8 @@ describe("adapter.IDB", () => {
       expect(await db2.list()).to.have.length(2);
     });
 
-    it("should isolate records by dbname", async () => {
-      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+    it("should isolate timestamps by dbname", async () => {
+      const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
       const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
 
       await db1.open();
