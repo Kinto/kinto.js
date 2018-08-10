@@ -143,7 +143,9 @@ describe("Collection", () => {
         TEST_COLLECTION_NAME,
         api,
         {
-          dbName: "LocalData",
+          adapterOptions: {
+            dbName: "LocalData",
+          },
         }
       );
       expect(collection.db.dbName).eql("LocalData");

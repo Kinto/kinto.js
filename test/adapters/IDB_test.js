@@ -309,8 +309,12 @@ describe("adapter.IDB", () => {
     it("should reject on transaction error", () => {
       sandbox.stub(db, "prepare").returns({
         store: {
-          openCursor() {
-            return {};
+          index() {
+            return {
+              openCursor() {
+                return {};
+              },
+            };
           },
         },
         transaction: {
@@ -323,6 +327,22 @@ describe("adapter.IDB", () => {
         },
       });
       return db.list().should.be.rejectedWith(Error, "transaction error");
+    });
+
+    it("should isolate records by collection", async () => {
+      const db1 = new IDB("main/tippytop");
+      const db2 = new IDB("main/tippytop-2");
+
+      await db1.open();
+      await db2.open();
+      await db1.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 2 }));
+      await db1.close();
+      await db2.close();
+
+      expect(await db1.list()).to.have.length(1);
+      expect(await db2.list()).to.have.length(2);
     });
 
     describe("Filters", () => {
@@ -508,7 +528,7 @@ describe("adapter.IDB", () => {
   describe("With custom dbName", () => {
     it("should isolate records by dbname", async () => {
       const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
-      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+      const db2 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
 
       await db1.open();
       await db2.open();
@@ -524,7 +544,7 @@ describe("adapter.IDB", () => {
 
     it("should isolate timestamps by dbname", async () => {
       const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
-      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+      const db2 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
 
       await db1.open();
       await db2.open();

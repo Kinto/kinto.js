@@ -15,8 +15,9 @@ const cursorHandlers = {
     return function(event) {
       const cursor = event.target.result;
       if (cursor) {
-        if (filterObject(filters, cursor.value)) {
-          results.push(cursor.value);
+        const { value } = cursor;
+        if (filterObject(filters, value)) {
+          results.push(value);
         }
         cursor.continue();
       } else {
@@ -58,6 +59,17 @@ const cursorHandlers = {
 };
 
 /**
+ * Return an IndexedDB filter equivalent to startsWith(str)
+ * https://hacks.mozilla.org/2014/06/breaking-the-borders-of-indexeddb/
+ *
+ * @param str {String}
+ * @return {IDBKeyRange}
+ */
+function startsWith(str) {
+  return IDBKeyRange.bound(str, str + "uffff", false, false);
+}
+
+/**
  * Extract from filters definition the first indexed field. Since indexes were
  * created on single-columns, extracting a single one makes sense.
  *
@@ -85,24 +97,33 @@ function findIndexedField(filters) {
  * @param  {Function}         done       The operation completion handler.
  * @return {IDBRequest}
  */
-function createListRequest(store, indexField, value, filters, done) {
+function createListRequest(keyBase, store, indexField, value, filters, done) {
   if (!indexField) {
     // Get all records.
-    const request = store.openCursor();
+    const request = store.index("key").openCursor(startsWith(`${keyBase}/`));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
 
+  const doneFiltered = results => {
+    // XXX: we filter records for this collection here aftewards,
+    // whereas it should be a lot better to filter earlier, like
+    // WHERE _key.startsWith(this.keyBase) AND property == 42. But although
+    // I have some experience with databases and Web APIs, I could not figure
+    // out how to do this with the IndexedDB API and official docs yet.
+    done(results.filter(r => r._key.indexOf(`${keyBase}/`) === 0));
+  };
+
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
     const request = store.index(indexField).openCursor();
-    request.onsuccess = cursorHandlers.in(value, done);
+    request.onsuccess = cursorHandlers.in(value, doneFiltered);
     return request;
   }
 
   // WHERE field = value clause
   const request = store.index(indexField).openCursor(IDBKeyRange.only(value));
-  request.onsuccess = cursorHandlers.all(filters, done);
+  request.onsuccess = cursorHandlers.all(filters, doneFiltered);
   return request;
 }
 
@@ -288,35 +309,34 @@ export default class IDB extends BaseAdapter {
       const { transaction, store } = this.prepare("records", "readwrite");
       // Preload specified records using index.
       const keys = options.preload.map(id => `${this.keyBase}/${id}`);
-      store.index("key").openCursor().onsuccess = cursorHandlers.in(
-        keys,
-        records => {
-          // Store obtained records by id.
-          const preloaded = records.reduce((acc, record) => {
-            acc[record.id] = omitKeys(record, ["_key"]);
-            return acc;
-          }, {});
-          // Expose a consistent API for every adapter instead of raw store methods.
-          const proxy = transactionProxy(this, store, preloaded);
-          // The callback is executed synchronously within the same transaction.
-          let result;
-          try {
-            result = callback(proxy);
-          } catch (e) {
-            transaction.abort();
-            reject(e);
-          }
-          if (result instanceof Promise) {
-            // XXX: investigate how to provide documentation details in error.
-            reject(
-              new Error("execute() callback should not return a Promise.")
-            );
-          }
-          // XXX unsure if we should manually abort the transaction on error
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => resolve(result);
+      store
+        .index("key")
+        .openCursor(
+          startsWith(`${this.keyBase}/`)
+        ).onsuccess = cursorHandlers.in(keys, records => {
+        // Store obtained records by id.
+        const preloaded = records.reduce((acc, record) => {
+          acc[record.id] = omitKeys(record, ["_key"]);
+          return acc;
+        }, {});
+        // Expose a consistent API for every adapter instead of raw store methods.
+        const proxy = transactionProxy(this, store, preloaded);
+        // The callback is executed synchronously within the same transaction.
+        let result;
+        try {
+          result = callback(proxy);
+        } catch (e) {
+          transaction.abort();
+          reject(e);
         }
-      );
+        if (result instanceof Promise) {
+          // XXX: investigate how to provide documentation details in error.
+          reject(new Error("execute() callback should not return a Promise."));
+        }
+        // XXX unsure if we should manually abort the transaction on error
+        transaction.onerror = event => reject(new Error(event.target.error));
+        transaction.oncomplete = event => resolve(result);
+      });
     });
   }
 
@@ -361,14 +381,15 @@ export default class IDB extends BaseAdapter {
 
         const { transaction, store } = this.prepare("records");
         createListRequest(
+          this.keyBase,
           store,
           indexField,
           value,
           remainingFilters,
           _results => {
-            // we have received all requested records, parking them within
-            // current scope
-            results = _results;
+            // we have received all requested records that match the filters,
+            // we now park them within current scope and hide the `_key` attribute.
+            results = _results.map(r => omitKeys(r, ["_key"]));
           }
         );
         transaction.onerror = event => reject(new Error(event.target.error));
