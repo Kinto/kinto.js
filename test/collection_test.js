@@ -147,7 +147,9 @@ describe("Collection", () => {
         }
       );
       expect(collection.db.dbName).eql("LocalData");
-      expect(collection.db.keyBase).eql(`${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`);
+      expect(collection.db.keyBase).eql(
+        `${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`
+      );
     });
 
     it("should use the default adapter if not any is provided", () => {

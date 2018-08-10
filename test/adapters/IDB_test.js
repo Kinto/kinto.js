@@ -197,7 +197,7 @@ describe("adapter.IDB", () => {
           transaction: { abort() {} },
         });
         return db
-          .execute(transaction => transaction.create({id: 42}))
+          .execute(transaction => transaction.create({ id: 42 }))
           .should.be.rejectedWith(Error, "add error");
       });
 

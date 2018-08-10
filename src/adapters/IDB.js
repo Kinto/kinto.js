@@ -457,11 +457,11 @@ export default class IDB extends BaseAdapter {
 function transactionProxy(adapter, store, preloaded = []) {
   return {
     create(record) {
-      store.add({...record, _key: `${adapter.keyBase}/${record.id}`});
+      store.add({ ...record, _key: `${adapter.keyBase}/${record.id}` });
     },
 
     update(record) {
-      store.put({...record, _key: `${adapter.keyBase}/${record.id}`});
+      store.put({ ...record, _key: `${adapter.keyBase}/${record.id}` });
     },
 
     delete(id) {
