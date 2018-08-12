@@ -1,7 +1,7 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { filterObject, omitKeys, sortObjects } from "../utils";
+import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -12,7 +12,7 @@ const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 const cursorHandlers = {
   all(filters, done) {
     const results = [];
-    return function(event) {
+    return event => {
       const cursor = event.target.result;
       if (cursor) {
         const { value } = cursor;
@@ -30,7 +30,6 @@ const cursorHandlers = {
     if (values.length === 0) {
       return done([]);
     }
-    const sortedValues = [].slice.call(values).sort();
     const results = [];
     return function(event) {
       const cursor = event.target.result;
@@ -40,34 +39,23 @@ const cursorHandlers = {
       }
       const { key, value } = cursor;
       let i = 0;
-      while (key > sortedValues[i]) {
+      while (key > values[i]) {
         // The cursor has passed beyond this key. Check next.
         ++i;
-        if (i === sortedValues.length) {
+        if (i === values.length) {
           done(results); // There is no next. Stop searching.
           return;
         }
       }
-      if (key === sortedValues[i]) {
+      if (arrayEqual(key, values[i])) {
         results.push(value);
         cursor.continue();
       } else {
-        cursor.continue(sortedValues[i]);
+        cursor.continue(values[i]);
       }
     };
   },
 };
-
-/**
- * Return an IndexedDB filter equivalent to startsWith(str)
- * https://hacks.mozilla.org/2014/06/breaking-the-borders-of-indexeddb/
- *
- * @param str {String}
- * @return {IDBKeyRange}
- */
-function startsWith(str) {
-  return IDBKeyRange.bound(str, str + "uffff", false, false);
-}
 
 /**
  * Extract from filters definition the first indexed field. Since indexes were
@@ -97,33 +85,28 @@ function findIndexedField(filters) {
  * @param  {Function}         done       The operation completion handler.
  * @return {IDBRequest}
  */
-function createListRequest(keyBase, store, indexField, value, filters, done) {
+function createListRequest(cid, store, indexField, value, filters, done) {
   if (!indexField) {
     // Get all records.
-    const request = store.index("key").openCursor(startsWith(`${keyBase}/`));
+    const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
 
-  const doneFiltered = results => {
-    // XXX: we filter records for this collection here aftewards,
-    // whereas it should be a lot better to filter earlier, like
-    // WHERE _key.startsWith(this.keyBase) AND property == 42. But although
-    // I have some experience with databases and Web APIs, I could not figure
-    // out how to do this with the IndexedDB API and official docs yet.
-    done(results.filter(r => r._key.indexOf(`${keyBase}/`) === 0));
-  };
-
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
-    const request = store.index(indexField).openCursor();
-    request.onsuccess = cursorHandlers.in(value, doneFiltered);
+    const values = value.map(i => [cid, i]).sort();
+    const range = IDBKeyRange.bound(values[0], values[values.length - 1]);
+    const request = store.index(indexField).openCursor(range);
+    request.onsuccess = cursorHandlers.in(values, done);
     return request;
   }
 
   // WHERE field = value clause
-  const request = store.index(indexField).openCursor(IDBKeyRange.only(value));
-  request.onsuccess = cursorHandlers.all(filters, doneFiltered);
+  const request = store
+    .index(indexField)
+    .openCursor(IDBKeyRange.only([cid, value]));
+  request.onsuccess = cursorHandlers.all(filters, done);
   return request;
 }
 
@@ -136,14 +119,14 @@ export default class IDB extends BaseAdapter {
   /**
    * Constructor.
    *
-   * @param  {String} keyBase  The key base for this collection (eg. `bid/cid`)
+   * @param  {String} cid  The key base for this collection (eg. `bid/cid`)
    * @param  {Object} options
    * @param  {String} options.dbName The IndexedDB name (default: `"KintoDB"`)
    */
-  constructor(keyBase, options = {}) {
+  constructor(cid, options = {}) {
     super();
 
-    this.keyBase = keyBase;
+    this.cid = cid;
     this.dbName = options.dbName || "KintoDB";
 
     this._db = null;
@@ -165,37 +148,30 @@ export default class IDB extends BaseAdapter {
     if (this._db) {
       return Promise.resolve(this);
     }
+    // XXX: data migration
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 2);
+      const request = indexedDB.open(this.dbName, 1);
       request.onupgradeneeded = event => {
         // DB object
         const db = event.target.result;
         db.onerror = event => reject(event.target.error);
-
-        if (event.oldVersion == 1) {
-          // Version 1 is the first version of the kinto.js database.
-          // XXX: Handle data migration.
-          // transaction = event.target.transaction;
-          // https://stackoverflow.com/a/16657164
-        }
-
         // Records store
         const recordsStore = db.createObjectStore("records", {
-          keyPath: "_key",
+          keyPath: ["_cid", "id"],
         });
-        recordsStore.createIndex("key", "_key", { unique: true });
+        // An index to obtain all the records in a collection.
+        recordsStore.createIndex("cid", "_cid");
+        // Here we create indices for every known field in records by collection.
         // Record id (generated by IdSchema, UUID by default)
-        recordsStore.createIndex("id", "id");
+        recordsStore.createIndex("id", ["_cid", "id"]);
         // Local record status ("synced", "created", "updated", "deleted")
-        recordsStore.createIndex("_status", "_status");
+        recordsStore.createIndex("_status", ["_cid", "_status"]);
         // Last modified field
-        recordsStore.createIndex("last_modified", "last_modified");
-
+        recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
         // Timestamps store
-        const timestampsStore = db.createObjectStore("timestamps", {
+        db.createObjectStore("timestamps", {
           keyPath: "cid",
         });
-        timestampsStore.createIndex("cid", "cid", { unique: true });
       };
       request.onerror = event => reject(event.target.error);
       request.onsuccess = event => {
@@ -250,9 +226,19 @@ export default class IDB extends BaseAdapter {
   async clear() {
     try {
       await this.open();
-      return new Promise((resolve, reject) => {
+      await new Promise((resolve, reject) => {
         const { transaction, store } = this.prepare("records", "readwrite");
-        store.clear();
+
+        // const range = IDBKeyRange.bound([this.cid, ""], [this.cid, "\uffff"]);
+        const range = IDBKeyRange.only(this.cid);
+        store.index("cid").openCursor(range).onsuccess = event => {
+          const cursor = event.target.result;
+          if (cursor) {
+            store.delete(cursor.primaryKey);
+            cursor.continue();
+          }
+        };
+
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve();
       });
@@ -308,15 +294,15 @@ export default class IDB extends BaseAdapter {
       // Start transaction.
       const { transaction, store } = this.prepare("records", "readwrite");
       // Preload specified records using index.
-      const keys = options.preload.map(id => `${this.keyBase}/${id}`);
-      store
-        .index("key")
-        .openCursor(
-          startsWith(`${this.keyBase}/`)
-        ).onsuccess = cursorHandlers.in(keys, records => {
+      const keys = options.preload.map(i => [this.cid, i]).sort();
+      const range =
+        keys.length == 0
+          ? null
+          : IDBKeyRange.bound(keys[0], keys[keys.length - 1]);
+      store.openCursor(range).onsuccess = cursorHandlers.in(keys, records => {
         // Store obtained records by id.
         const preloaded = records.reduce((acc, record) => {
-          acc[record.id] = omitKeys(record, ["_key"]);
+          acc[record.id] = omitKeys(record, ["_cid"]);
           return acc;
         }, {});
         // Expose a consistent API for every adapter instead of raw store methods.
@@ -352,7 +338,7 @@ export default class IDB extends BaseAdapter {
       await this.open();
       return new Promise((resolve, reject) => {
         const { transaction, store } = this.prepare("records");
-        const request = store.get(`${this.keyBase}/${id}`);
+        const request = store.get([this.cid, id]);
         transaction.onerror = event => reject(new Error(event.target.error));
         transaction.oncomplete = () => resolve(request.result);
       });
@@ -381,15 +367,15 @@ export default class IDB extends BaseAdapter {
 
         const { transaction, store } = this.prepare("records");
         createListRequest(
-          this.keyBase,
+          this.cid,
           store,
           indexField,
           value,
           remainingFilters,
           _results => {
             // we have received all requested records that match the filters,
-            // we now park them within current scope and hide the `_key` attribute.
-            results = _results.map(r => omitKeys(r, ["_key"]));
+            // we now park them within current scope and hide the `_cid` attribute.
+            results = _results.map(r => omitKeys(r, ["_cid"]));
           }
         );
         transaction.onerror = event => reject(new Error(event.target.error));
@@ -416,7 +402,7 @@ export default class IDB extends BaseAdapter {
     await this.open();
     return new Promise((resolve, reject) => {
       const { transaction, store } = this.prepare("timestamps", "readwrite");
-      store.put({ cid: this.keyBase, value: value });
+      store.put({ cid: this.cid, value });
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => resolve(value);
     });
@@ -432,7 +418,7 @@ export default class IDB extends BaseAdapter {
     await this.open();
     return new Promise((resolve, reject) => {
       const { transaction, store } = this.prepare("timestamps");
-      const request = store.get(this.keyBase);
+      const request = store.get(this.cid);
       transaction.onerror = event => reject(event.target.error);
       transaction.oncomplete = event => {
         resolve((request.result && request.result.value) || null);
@@ -476,17 +462,18 @@ export default class IDB extends BaseAdapter {
  * @return {Object}
  */
 function transactionProxy(adapter, store, preloaded = []) {
+  const _cid = adapter.cid;
   return {
     create(record) {
-      store.add({ ...record, _key: `${adapter.keyBase}/${record.id}` });
+      store.add({ ...record, _cid });
     },
 
     update(record) {
-      store.put({ ...record, _key: `${adapter.keyBase}/${record.id}` });
+      store.put({ ...record, _cid });
     },
 
     delete(id) {
-      store.delete(`${adapter.keyBase}/${id}`);
+      store.delete([_cid, id]);
     },
 
     get(id) {

@@ -2,6 +2,10 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 9.x to 10.x
+
+* The `dbPrefix` option in the `Kinto` and `Collection` constructors was dropped in favor of the `dbName` field in the `adapterOptions`.
+
 ## 8.x to 9.x
 
 * When fixing #691, the types of values in SyncResultObject.resolved were changed. Previously, they were just the resolution for a given record; now, they are {accepted, rejected}, with accepted being the new value. Any code using elements of this list (e.g. `SyncResultObject.resolved[i]`) should now use the accepted property of that element (e.g. `SyncResultObject.resolved[i].accepted`).

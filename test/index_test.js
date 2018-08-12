@@ -97,7 +97,7 @@ describe("Kinto", () => {
     it("should propagate the dbName option to child dependencies", () => {
       expect(
         new Kinto({
-          dbName: "app",
+          adapterOptions: { dbName: "app" },
         }).collection("x").db.dbName
       ).eql("app");
     });

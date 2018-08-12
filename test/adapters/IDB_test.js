@@ -68,11 +68,38 @@ describe("adapter.IDB", () => {
         .should.eventually.have.length.of(0);
     });
 
+    it("should isolate records by collection", async () => {
+      const db1 = new IDB("main/tippytop");
+      const db2 = new IDB("main/tippytop-2");
+
+      await db1.open();
+      await db1.execute(t => t.create({ id: 1 }));
+      await db1.saveLastModified(42);
+      await db1.close();
+
+      await db2.open();
+      await db2.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 2 }));
+      await db1.saveLastModified(43);
+      await db2.close();
+
+      await db1.clear();
+
+      expect(await db1.list()).to.have.length(0);
+      expect(await db1.getLastModified(), null);
+      expect(await db2.list()).to.have.length(2);
+      expect(await db2.getLastModified(), 43);
+    });
+
     it("should reject on transaction error", () => {
       sandbox.stub(db, "prepare").returns({
         store: {
-          clear() {
-            return {};
+          index() {
+            return {
+              openCursor() {
+                return {};
+              },
+            };
           },
         },
         transaction: {
@@ -181,15 +208,11 @@ describe("adapter.IDB", () => {
       it("should reject on store method error", () => {
         sandbox.stub(db, "prepare").returns({
           store: {
-            index() {
-              return {
-                openCursor: () => ({
-                  set onsuccess(cb) {
-                    cb({ target: {} });
-                  },
-                }),
-              };
-            },
+            openCursor: () => ({
+              set onsuccess(cb) {
+                cb({ target: {} });
+              },
+            }),
             add() {
               throw new Error("add error");
             },
@@ -204,15 +227,11 @@ describe("adapter.IDB", () => {
       it("should reject on transaction error", () => {
         sandbox.stub(db, "prepare").returns({
           store: {
-            index() {
-              return {
-                openCursor: () => ({
-                  set onsuccess(cb) {
-                    cb({ target: {} });
-                  },
-                }),
-              };
-            },
+            openCursor: () => ({
+              set onsuccess(cb) {
+                cb({ target: {} });
+              },
+            }),
             add() {},
           },
           transaction: {
@@ -332,6 +351,8 @@ describe("adapter.IDB", () => {
     it("should isolate records by collection", async () => {
       const db1 = new IDB("main/tippytop");
       const db2 = new IDB("main/tippytop-2");
+      await db1.clear();
+      await db2.clear();
 
       await db1.open();
       await db2.open();
@@ -529,6 +550,8 @@ describe("adapter.IDB", () => {
     it("should isolate records by dbname", async () => {
       const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
       const db2 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+      await db1.clear();
+      await db2.clear();
 
       await db1.open();
       await db2.open();

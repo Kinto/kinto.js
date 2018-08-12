@@ -127,3 +127,15 @@ export function omitKeys(obj, keys = []) {
     return acc;
   }, {});
 }
+
+export function arrayEqual(a, b) {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (let i = 0, n = a.length; i < n; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
+}

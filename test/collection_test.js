@@ -149,7 +149,7 @@ describe("Collection", () => {
         }
       );
       expect(collection.db.dbName).eql("LocalData");
-      expect(collection.db.keyBase).eql(
+      expect(collection.db.cid).eql(
         `${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`
       );
     });
