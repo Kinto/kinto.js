@@ -29,11 +29,12 @@ describe("Kinto", () => {
 
   beforeEach(() => {
     sandbox = sinon.sandbox.create();
-    return testCollection().clear();
   });
 
   afterEach(() => {
-    sandbox.restore();
+    if (sandbox) {
+      sandbox.restore();
+    }
   });
 
   describe("static properties", () => {

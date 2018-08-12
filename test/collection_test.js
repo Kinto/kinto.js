@@ -2999,23 +2999,19 @@ describe("Collection", () => {
         .then(result => expect(result.data.title).eql("foo"));
     });
 
-    it("should roll back operations if there's a failure", () => {
-      let id;
-      return articles
-        .create(article)
-        .then(result => {
-          id = result.data.id;
-          return articles.execute(
-            txn => {
-              txn.deleteAny(id);
-              txn.delete(uuid4()); // this should fail
-            },
-            { preloadIds: [id] }
-          );
-        })
-        .catch(() => null)
-        .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("created"));
+    it("should roll back operations if there's a failure", async () => {
+      const { data: { id } } = await articles.create(article);
+      try {
+        await articles.execute(txn => {
+          txn.delete(id);
+          txn.delete(uuid4()); // this should fail
+        },
+        { preloadIds: [id] });
+      } catch (e) {
+        // pass.
+      }
+      const { data } = await articles.get(id);
+      return expect(data._status).eql("created");
     });
 
     it("should perform all operations if there's no failure", () => {

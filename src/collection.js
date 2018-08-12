@@ -837,7 +837,7 @@ export default class Collection {
    * @return {Promise} Resolves with the result of the given function
    *    when the transaction commits.
    */
-  execute(doOperations, { preloadIds = [] } = {}) {
+  async execute(doOperations, { preloadIds = [] } = {}) {
     for (const id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
