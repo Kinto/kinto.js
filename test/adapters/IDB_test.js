@@ -100,7 +100,7 @@ describe("adapter.IDB", () => {
                 throw new Error("transaction error");
               },
             };
-          }
+          },
         });
       });
       return db.clear().should.be.rejectedWith(Error, "transaction error");
@@ -198,37 +198,47 @@ describe("adapter.IDB", () => {
       });
 
       it("should reject on store method error", () => {
-        sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
-          callback({
-            openCursor: () => ({
-              set onsuccess(cb) {
-                cb({ target: {} });
+        sandbox
+          .stub(db, "prepare")
+          .callsFake(async (name, callback, options) => {
+            const abort = e => {
+              throw e;
+            };
+            callback(
+              {
+                openCursor: () => ({
+                  set onsuccess(cb) {
+                    cb({ target: {} });
+                  },
+                }),
+                add() {
+                  throw new Error("add error");
+                },
               },
-            }),
-            add() {
-              throw new Error("add error");
-            },
+              abort
+            );
           });
-        });
         return db
           .execute(transaction => transaction.create({ id: 42 }))
           .should.be.rejectedWith(Error, "add error");
       });
 
       it("should reject on transaction error", () => {
-        sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
-          return callback({
-            index() {
-              return {
-                openCursor() {
-                  throw new Error("transaction error");
-                },
-              };
-            }
+        sandbox
+          .stub(db, "prepare")
+          .callsFake(async (name, callback, options) => {
+            return callback({
+              index() {
+                return {
+                  openCursor() {
+                    throw new Error("transaction error");
+                  },
+                };
+              },
+            });
           });
-        });
         return db
-          .execute(transaction => transaction.create({}), { preload: [1, 2]})
+          .execute(transaction => transaction.create({}), { preload: [1, 2] })
           .should.be.rejectedWith(Error, "transaction error");
       });
     });
@@ -274,7 +284,7 @@ describe("adapter.IDB", () => {
         return callback({
           get() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.get().should.be.rejectedWith(Error, "transaction error");
@@ -308,9 +318,9 @@ describe("adapter.IDB", () => {
             return {
               openCursor() {
                 throw new Error("transaction error");
-              }
+              },
             };
-          }
+          },
         });
       });
       return db.list().should.be.rejectedWith(Error, "transaction error");
@@ -398,7 +408,7 @@ describe("adapter.IDB", () => {
         return callback({
           put() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db
@@ -413,7 +423,7 @@ describe("adapter.IDB", () => {
         return callback({
           get() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.getLastModified().should.be.rejectedWith(/transaction error/);
@@ -445,7 +455,7 @@ describe("adapter.IDB", () => {
         return callback({
           put() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.saveLastModified().should.be.rejectedWith(/transaction error/);

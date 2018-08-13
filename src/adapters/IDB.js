@@ -53,32 +53,21 @@ async function execute(db, name, callback, options = {}) {
       ? db.transaction([name], mode)
       : db.transaction([name]);
     const store = transaction.objectStore(name);
+
+    // Let the callback abort this transaction.
+    const abort = e => {
+      transaction.abort();
+      reject(e);
+    };
     // Execute the specified callback **synchronously**.
     let result;
     try {
-      result = callback(store);
+      result = callback(store, abort);
     } catch (e) {
-      transaction.abort();
-      reject(e);
-    }
-    // If the callback had returned a IDBRequest, then we will intercept errors
-    // and resolve with the request result instead.
-    const isIDBRequest = result && result.hasOwnProperty("readyState");
-    if (isIDBRequest) {
-      result.onerror = event => {
-        transaction.abort();
-        reject(event.target.error);
-      };
+      abort(e);
     }
     transaction.onerror = event => reject(event.target.error);
-    transaction.oncomplete = event => {
-      if (isIDBRequest) {
-        // The IDBRequest `result` field contains the values returned by the
-        // `request.onsuccess` callback.
-        result = result.result;
-      }
-      resolve(result);
-    };
+    transaction.oncomplete = event => resolve(result);
   });
 }
 
@@ -257,9 +246,9 @@ export default class IDB extends BaseAdapter {
       await this.saveLastModified(timestamp);
       // Delete the previous database.
       await new Promise((resolve, reject) => {
-        const req = indexedDB.deleteDatabase(this.cid);
-        req.onsuccess = resolve();
-        req.onerror = event => reject(event.target.error);
+        const request = indexedDB.deleteDatabase(this.cid);
+        request.onsuccess = resolve();
+        request.onerror = event => reject(event.target.error);
       });
     }
 
@@ -296,7 +285,7 @@ export default class IDB extends BaseAdapter {
    */
   async prepare(name, callback, options) {
     await this.open();
-    return execute(this._db, name, callback, options);
+    await execute(this._db, name, callback, options);
   }
 
   /**
@@ -371,25 +360,35 @@ export default class IDB extends BaseAdapter {
     let result;
     await this.prepare(
       "records",
-      store => {
+      (store, abort) => {
         const runCallback = (preloaded = []) => {
           // Expose a consistent API for every adapter instead of raw store methods.
           const proxy = transactionProxy(this, store, preloaded);
           // The callback is executed synchronously within the same transaction.
-          const returned = callback(proxy);
-          if (returned instanceof Promise) {
-            // XXX: investigate how to provide documentation details in error.
-            throw new Error("execute() callback should not return a Promise.");
+          try {
+            const returned = callback(proxy);
+            if (returned instanceof Promise) {
+              // XXX: investigate how to provide documentation details in error.
+              throw new Error(
+                "execute() callback should not return a Promise."
+              );
+            }
+            // Bring to scope that will be returned (once promise awaited).
+            result = returned;
+          } catch (e) {
+            // The callback has thrown an error explicitly. Abort transaction cleanly.
+            abort(e);
           }
-          result = returned;
         };
+
         // No option to preload records, go straight to `callback`.
         if (options.preload.length == 0) {
           return runCallback();
         }
-        // Preload specified records using primary key index.
+
+        // Preload specified records using a list request.
         const filters = { id: options.preload };
-        const request = createListRequest(this.cid, store, filters, records => {
+        createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
           const preloaded = records.reduce((acc, record) => {
             acc[record.id] = omitKeys(record, ["_cid"]);
@@ -397,7 +396,6 @@ export default class IDB extends BaseAdapter {
           }, {});
           runCallback(preloaded);
         });
-        return request;
       },
       { mode: "readwrite" }
     );
@@ -413,9 +411,11 @@ export default class IDB extends BaseAdapter {
    */
   async get(id) {
     try {
-      return await this.prepare("records", store => {
-        return store.get([this.cid, id]);
+      let record;
+      await this.prepare("records", store => {
+        store.get([this.cid, id]).onsuccess = e => (record = e.target.result);
       });
+      return record;
     } catch (e) {
       this._handleError("get", e);
     }
@@ -433,7 +433,7 @@ export default class IDB extends BaseAdapter {
     try {
       let results = [];
       await this.prepare("records", store => {
-        return createListRequest(this.cid, store, filters, _results => {
+        createListRequest(this.cid, store, filters, _results => {
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
           results = _results.map(r => omitKeys(r, ["_cid"]));
@@ -478,8 +478,9 @@ export default class IDB extends BaseAdapter {
    */
   async getLastModified() {
     try {
-      const entry = await this.prepare("timestamps", store => {
-        return store.get(this.cid);
+      let entry;
+      await this.prepare("timestamps", store => {
+        store.get(this.cid).onsuccess = e => (entry = e.target.result);
       });
       return entry ? entry.value : null;
     } catch (e) {
@@ -562,20 +563,25 @@ async function migrationRequired(dbName) {
   // Scan all records.
   let records;
   await execute(db, dbName, store => {
-    const request = store.openCursor();
-    request.onsuccess = cursorHandlers.all({}, res => (records = res));
-    return request;
+    store.openCursor().onsuccess = cursorHandlers.all(
+      {},
+      res => (records = res)
+    );
   });
-  // Check if there's a timestamp for this.
-  let { value: timestamp = null } = await execute(db, "__meta__", store => {
-    return store.get(`${dbName}-lastmodified`);
+  // Check if there's a entry for this.
+  let timestamp;
+  await execute(db, "__meta__", store => {
+    store.get(`${dbName}-lastmodified`).onsuccess = e => {
+      timestamp = e.target.result ? e.target.result.value : null;
+    };
   });
   // Some previous versions, also used to store the timestamps without prefix.
   if (!timestamp) {
-    const old = await execute(db, "__meta__", store => {
-      return store.get("lastmodified");
+    await execute(db, "__meta__", store => {
+      store.get("lastmodified").onsuccess = e => {
+        timestamp = e.target.result ? e.target.result.value : null;
+      };
     });
-    timestamp = old.value;
   }
   // Those will be inserted in the new database/schema.
   return { records, timestamp };

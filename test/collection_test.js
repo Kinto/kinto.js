@@ -3000,13 +3000,17 @@ describe("Collection", () => {
     });
 
     it("should roll back operations if there's a failure", async () => {
-      const { data: { id } } = await articles.create(article);
+      const {
+        data: { id },
+      } = await articles.create(article);
       try {
-        await articles.execute(txn => {
-          txn.delete(id);
-          txn.delete(uuid4()); // this should fail
-        },
-        { preloadIds: [id] });
+        await articles.execute(
+          txn => {
+            txn.delete(id);
+            txn.delete(uuid4()); // this should fail
+          },
+          { preloadIds: [id] }
+        );
       } catch (e) {
         // pass.
       }
