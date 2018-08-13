@@ -569,14 +569,14 @@ async function migrationRequired(dbName) {
   // Check if there's a entry for this.
   let timestamp;
   await execute(db, "__meta__", store => {
-    store.get(`${dbName}-lastmodified`).onsuccess = e => {
+    store.get(`${dbName}-lastModified`).onsuccess = e => {
       timestamp = e.target.result ? e.target.result.value : null;
     };
   });
   // Some previous versions, also used to store the timestamps without prefix.
   if (!timestamp) {
     await execute(db, "__meta__", store => {
-      store.get("lastmodified").onsuccess = e => {
+      store.get("lastModified").onsuccess = e => {
         timestamp = e.target.result ? e.target.result.value : null;
       };
     });
