@@ -1,5 +1,9 @@
 function main() {
-  var db = new Kinto();
+  var db = new Kinto({
+    adapterOptions: {
+      migrateOldData: true,
+    }
+  });
   var tasks = db.collection("tasks");
   var syncOptions = {
     remote: "https://kinto.dev.mozaws.net/v1/",
