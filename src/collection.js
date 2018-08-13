@@ -472,7 +472,7 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  async create(record, options = { useRecordId: false, synced: false }) {
+  create(record, options = { useRecordId: false, synced: false }) {
     // Validate the record and its ID (if any), even though this
     // validation is also done in the CollectionTransaction method,
     // because we need to pass the ID to preloadIds.
@@ -506,18 +506,16 @@ export default class Collection {
     if (!this.idSchema.validate(newRecord.id)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
-    try {
-      return await this.execute(txn => txn.create(newRecord), {
-        preloadIds: [newRecord.id],
-      });
-    } catch (e) {
+    return this.execute(txn => txn.create(newRecord), {
+      preloadIds: [newRecord.id],
+    }).catch(err => {
       if (options.useRecordId) {
         throw new Error(
           "Couldn't create record. It may have been virtually deleted."
         );
       }
-      throw e;
-    }
+      throw err;
+    });
   }
 
   /**
@@ -839,7 +837,7 @@ export default class Collection {
    * @return {Promise} Resolves with the result of the given function
    *    when the transaction commits.
    */
-  async execute(doOperations, { preloadIds = [] } = {}) {
+  execute(doOperations, { preloadIds = [] } = {}) {
     for (const id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
