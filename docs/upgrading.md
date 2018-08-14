@@ -2,9 +2,16 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
-## 9.x to 10.x
+## 11.x to 12.x
 
 * The `dbPrefix` option in the `Kinto` and `Collection` constructors was dropped in favor of the `dbName` field in the `adapterOptions`.
+
+**Database Schema Change**
+
+This version introduces a major change: instead of having one IndexedDB database per collection (named `{bucket}/{collection}`), we now have only one database (called `KintoDB` by default) which stores records indexed by collection.
+
+If you are upgrading and want your data to be manually migrated, set the `adapterOptions.migrateOldData` to `true` for the `Kinto()` constructor.
+The old database will also be deleted.
 
 ## 8.x to 9.x
 

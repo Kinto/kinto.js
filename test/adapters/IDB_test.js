@@ -3,7 +3,7 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import IDB from "../../src/adapters/IDB.js";
+import IDB, { open, execute } from "../../src/adapters/IDB.js";
 import { v4 as uuid4 } from "uuid";
 
 /** @test {IDB} */
@@ -417,6 +417,7 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#getLastModified} */
   describe("#getLastModified", () => {
     it("should reject with any encountered transaction error", () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
@@ -430,6 +431,7 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#saveLastModified} */
   describe("#saveLastModified", () => {
     it("should resolve with lastModified value", () => {
       return db.saveLastModified(42).should.eventually.become(42);
@@ -462,6 +464,7 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#loadDump} */
   describe("#loadDump", () => {
     it("should import a list of records.", () => {
       return db
@@ -507,6 +510,8 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#list} */
+  /** @test {IDB#getLastModified} */
   describe("With custom dbName", () => {
     it("should isolate records by dbname", async () => {
       const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
@@ -539,6 +544,64 @@ describe("adapter.IDB", () => {
 
       expect(await db1.getLastModified()).to.be.equal(41);
       expect(await db2.getLastModified()).to.be.equal(42);
+    });
+  });
+
+  /** @test {IDB#open} */
+  describe("#migration", () => {
+    const cid = "main/tippytop";
+    let idb;
+    before(async () => {
+      const oldDb = await open(cid, {
+        version: 1,
+        onupgradeneeded: event => {
+          // https://github.com/Kinto/kinto.js/blob/v11.2.2/src/adapters/IDB.js#L154-L171
+          const db = event.target.result;
+          db.createObjectStore(cid, { keyPath: "id" });
+          db.createObjectStore("__meta__", { keyPath: "name" });
+        },
+      });
+      await execute(
+        oldDb,
+        cid,
+        store => {
+          store.put({ id: 1 });
+          store.put({ id: 2 });
+        },
+        { mode: "readwrite" }
+      );
+      await execute(
+        oldDb,
+        "__meta__",
+        store => {
+          store.put({ name: "lastModified", value: 43 });
+        },
+        { mode: "readwrite" }
+      );
+      oldDb.close(); // synchronous.
+
+      idb = new IDB(cid, {
+        migrateOldData: true,
+      });
+    });
+
+    after(() => {
+      return idb.close();
+    });
+
+    it("should migrate records", async () => {
+      return idb.list().should.eventually.become([{ id: 1 }, { id: 2 }]);
+    });
+
+    it("should migrate timestamps", () => {
+      return idb.getLastModified().should.eventually.become(43);
+    });
+
+    it("should delete the old database", () => {
+      return open(cid, {
+        version: 1,
+        onupgradeneeded: event => event.target.transaction.abort(),
+      }).should.eventually.be.rejected;
     });
   });
 });

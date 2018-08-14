@@ -6,7 +6,7 @@ import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
 /**
- * Small private helper that wraps the opening of an IndexedDB into a Promise.
+ * Small helper that wraps the opening of an IndexedDB into a Promise.
  *
  * @param dbname          {String}   The database name.
  * @param version         {Integer}  Schema version
@@ -14,7 +14,7 @@ const INDEXED_FIELDS = ["id", "_status", "last_modified"];
  *                                   missing or different.
  * @return {Promise<IDBDatabase>}
  */
-async function open(dbname, { version, onupgradeneeded }) {
+export async function open(dbname, { version, onupgradeneeded }) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbname, version);
     request.onupgradeneeded = event => {
@@ -33,7 +33,7 @@ async function open(dbname, { version, onupgradeneeded }) {
 }
 
 /**
- * Private helper to run the specified callback in a single transaction on the
+ * Helper to run the specified callback in a single transaction on the
  * specified store.
  * The helper focuses on transaction wrapping into a promise.
  *
@@ -44,7 +44,7 @@ async function open(dbname, { version, onupgradeneeded }) {
  * @param options.mode {String}      Transaction mode (default: read).
  * @return {Promise} any value returned by the callback.
  */
-async function execute(db, name, callback, options = {}) {
+export async function execute(db, name, callback, options = {}) {
   const { mode } = options;
   return new Promise((resolve, reject) => {
     // On Safari, calling IDBDatabase.transaction with mode == undefined raises
@@ -68,6 +68,20 @@ async function execute(db, name, callback, options = {}) {
     }
     transaction.onerror = event => reject(event.target.error);
     transaction.oncomplete = event => resolve(result);
+  });
+}
+
+/**
+ * Helper to wrap the deletion of an IndexedDB database into a promise.
+ *
+ * @param dbName {String} the database to delete
+ * @return {Promise}
+ */
+async function deleteDatabase(dbName) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(dbName);
+    request.onsuccess = resolve();
+    request.onerror = event => reject(event.target.error);
   });
 }
 
@@ -211,7 +225,9 @@ export default class IDB extends BaseAdapter {
     }
 
     // In previous versions, we used to have a database with name `${bid}/${cid}`.
-    // Check if it exists, and migrate data.
+    // Check if it exists, and migrate data once new schema is in place.
+    // Note: the built-in migrations from IndexedDB can only be used if the
+    // database name does not change.
     const toMigrate = this._options.migrateOldData
       ? await migrationRequired(this.cid)
       : null;
@@ -244,12 +260,10 @@ export default class IDB extends BaseAdapter {
       const { records, timestamp } = toMigrate;
       await this.loadDump(records);
       await this.saveLastModified(timestamp);
-      // Delete the previous database.
-      await new Promise((resolve, reject) => {
-        const request = indexedDB.deleteDatabase(this.cid);
-        request.onsuccess = resolve();
-        request.onerror = event => reject(event.target.error);
-      });
+      console.log(`${this.cid}: data was migrated successfully.`);
+      // Delete the old database.
+      await deleteDatabase(this.cid);
+      console.warn(`${this.cid}: old database was deleted.`);
     }
 
     return this;
@@ -553,11 +567,16 @@ async function migrationRequired(dbName) {
     // Does it exist?
     db = await open(dbName, {
       version: 1,
-      onupgradeneeded: event => event.target.transaction.abort(),
+      onupgradeneeded: event => {
+        event.target.transaction.abort();
+      },
     });
+    console.warn(`${dbName}: old IDB database found."`);
   } catch (e) {
+    // It does not, nothing more to do!
     return null;
   }
+
   // Scan all records.
   let records;
   await execute(db, dbName, store => {
@@ -566,6 +585,8 @@ async function migrationRequired(dbName) {
       res => (records = res)
     );
   });
+  console.log(`${dbName}: found ${records.length} records."`);
+
   // Check if there's a entry for this.
   let timestamp;
   await execute(db, "__meta__", store => {
@@ -581,6 +602,10 @@ async function migrationRequired(dbName) {
       };
     });
   }
+  console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
+
+  db.close();
+
   // Those will be inserted in the new database/schema.
   return { records, timestamp };
 }
