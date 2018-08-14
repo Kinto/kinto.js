@@ -129,7 +129,7 @@ const cursorHandlers = {
       }
       const isEqual = Array.isArray(key)
         ? arrayEqual(key, values[i])
-        : key == values[i];
+        : key === values[i];
       if (isEqual) {
         results.push(value);
         cursor.continue();
