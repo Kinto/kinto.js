@@ -107,9 +107,6 @@ const cursorHandlers = {
   },
 
   in(values, done) {
-    if (values.length === 0) {
-      return done([]);
-    }
     const results = [];
     return function(event) {
       const cursor = event.target.result;
@@ -168,6 +165,9 @@ function createListRequest(cid, store, filters, done) {
 
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return done([]);
+    }
     const values = value.map(i => [cid, i]).sort();
     const range = IDBKeyRange.bound(values[0], values[values.length - 1]);
     const request = store.index(indexField).openCursor(range);
@@ -562,21 +562,22 @@ function transactionProxy(adapter, store, preloaded = []) {
  * and contained only one store with the same name.
  */
 async function migrationRequired(dbName) {
-  let db;
-  try {
-    // Does it exist?
-    db = await open(dbName, {
-      version: 1,
-      onupgradeneeded: event => {
-        event.target.transaction.abort();
-      },
-    });
-    console.warn(`${dbName}: old IDB database found."`);
-  } catch (e) {
-    // It does not, nothing more to do!
+  let exists = true;
+  const db = await open(dbName, {
+    version: 1,
+    onupgradeneeded: event => {
+      exists = false;
+    },
+  });
+
+  if (!exists) {
+    db.close();
+    // Testing the existence creates it, so delete it :)
+    await deleteDatabase(dbName);
     return null;
   }
 
+  console.warn(`${dbName}: old IDB database found."`);
   // Scan all records.
   let records;
   await execute(db, dbName, store => {

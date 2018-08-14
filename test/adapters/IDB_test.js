@@ -369,6 +369,10 @@ describe("adapter.IDB", () => {
               .list({ filters: { name: ["#4", "qux"] } })
               .should.eventually.eql([{ id: 4, name: "#4" }]);
           });
+
+          it("should handle empty lists", () => {
+            return db.list({ filters: { name: [] } }).should.eventually.eql([]);
+          });
         });
       });
 
@@ -395,6 +399,10 @@ describe("adapter.IDB", () => {
             return db
               .list({ filters: { id: [4, 9999] } })
               .should.eventually.eql([{ id: 4, name: "#4" }]);
+          });
+
+          it("should handle empty lists", () => {
+            return db.list({ filters: { id: [] } }).should.eventually.eql([]);
           });
         });
       });
@@ -549,21 +557,20 @@ describe("adapter.IDB", () => {
 
   /** @test {IDB#open} */
   describe("#migration", () => {
-    const cid = "main/tippytop";
     let idb;
-    before(async () => {
-      const oldDb = await open(cid, {
+    async function createOldDB(dbName) {
+      const oldDb = await open(dbName, {
         version: 1,
         onupgradeneeded: event => {
           // https://github.com/Kinto/kinto.js/blob/v11.2.2/src/adapters/IDB.js#L154-L171
           const db = event.target.result;
-          db.createObjectStore(cid, { keyPath: "id" });
+          db.createObjectStore(dbName, { keyPath: "id" });
           db.createObjectStore("__meta__", { keyPath: "name" });
         },
       });
       await execute(
         oldDb,
-        cid,
+        dbName,
         store => {
           store.put({ id: 1 });
           store.put({ id: 2 });
@@ -579,6 +586,13 @@ describe("adapter.IDB", () => {
         { mode: "readwrite" }
       );
       oldDb.close(); // synchronous.
+    }
+
+    const cid = "main/tippytop";
+
+    before(async () => {
+      await createOldDB(cid);
+      await createOldDB("another/not-migrated");
 
       idb = new IDB(cid, {
         migrateOldData: true,
@@ -597,11 +611,31 @@ describe("adapter.IDB", () => {
       return idb.getLastModified().should.eventually.become(43);
     });
 
+    it("should not fail if already migrated", () => {
+      return idb
+        .close()
+        .then(() => idb.open())
+        .then(() => idb.close())
+        .then(() => idb.open()).should.be.fulfilled;
+    });
+
     it("should delete the old database", () => {
       return open(cid, {
         version: 1,
         onupgradeneeded: event => event.target.transaction.abort(),
       }).should.eventually.be.rejected;
+    });
+
+    it("should not delete other databases", () => {
+      return open("another/not-migrated", {
+        version: 1,
+        onupgradeneeded: event => event.target.transaction.abort(),
+      }).should.eventually.be.fulfilled;
+    });
+
+    it("should not migrate if option is not set", () => {
+      const idb = new IDB("another/not-migrated");
+      return idb.list().should.eventually.become([]);
     });
   });
 });
