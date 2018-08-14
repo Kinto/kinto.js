@@ -1,7 +1,7 @@
 function main() {
   var db = new Kinto({
     adapterOptions: {
-      // dbName: "DemoDB",
+      // dbName: "DemoDB",  // Optional custom database name
       migrateOldData: true,
     }
   });

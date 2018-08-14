@@ -80,7 +80,7 @@ export async function execute(db, name, callback, options = {}) {
 async function deleteDatabase(dbName) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(dbName);
-    request.onsuccess = resolve();
+    request.onsuccess = event => resolve(event.target);
     request.onerror = event => reject(event.target.error);
   });
 }
@@ -115,7 +115,10 @@ const cursorHandlers = {
         return;
       }
       const { key, value } = cursor;
+      // `key` can be an array of two values (see `keyPath` in indices definitions).
       let i = 0;
+      // `values` can be an array of arrays if we filter using an index whose key path
+      // is an array (eg. `cursorHandlers.in([["bid/cid", 42], ["bid/cid", 43]], ...)`)
       while (key > values[i]) {
         // The cursor has passed beyond this key. Check next.
         ++i;
@@ -124,7 +127,10 @@ const cursorHandlers = {
           return;
         }
       }
-      if (arrayEqual(key, values[i])) {
+      const isEqual = Array.isArray(key)
+        ? arrayEqual(key, values[i])
+        : key == values[i];
+      if (isEqual) {
         results.push(value);
         cursor.continue();
       } else {
@@ -148,20 +154,22 @@ const cursorHandlers = {
  */
 function createListRequest(cid, store, filters, done) {
   // Introspect filters and check if they leverage an indexed field.
-  const indexField = Object.keys(filters).filter(field => {
+  const indexField = Object.keys(filters).find(field => {
     return INDEXED_FIELDS.includes(field);
-  })[0];
+  });
 
   if (!indexField) {
-    // Get all records.
+    // Get all records for this collection (ie. cid)
     const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
 
-  const value = filters[indexField];
   // If `indexField` was used already, don't filter again.
   const remainingFilters = omitKeys(filters, indexField);
+
+  // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
+  const value = filters[indexField];
 
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
@@ -396,7 +404,7 @@ export default class IDB extends BaseAdapter {
         };
 
         // No option to preload records, go straight to `callback`.
-        if (options.preload.length == 0) {
+        if (!options.preload.length) {
           return runCallback();
         }
 
@@ -490,7 +498,7 @@ export default class IDB extends BaseAdapter {
    */
   async getLastModified() {
     try {
-      let entry;
+      let entry = null;
       await this.prepare("timestamps", store => {
         store.get(this.cid).onsuccess = e => (entry = e.target.result);
       });

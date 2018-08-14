@@ -24,7 +24,7 @@ const db = new Kinto(options);
 The default adapter (IndexedDB) supports the following options:
 
 - `dbName`: the local database name (Default: `"KintoDB"`)
-
+- `migrateOldData`: : whether data created with older versions than v12.X should be migrated (Default: `false`)
 
 ## Collections
 
