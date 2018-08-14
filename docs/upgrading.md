@@ -10,8 +10,17 @@ This page lists the breaking API changes between major versions of Kinto.js, as 
 
 This version introduces a major change: instead of having one IndexedDB database per collection (named `{bucket}/{collection}`), we now have only one database (called `KintoDB` by default) which stores records indexed by collection.
 
-If you are upgrading and want your data to be manually migrated, set the `adapterOptions.migrateOldData` to `true` for the `Kinto()` constructor.
+If you are upgrading and want your data to be manually migrated, set the `adapterOptions.migrateOldData` to `true` in the `Kinto()` constructor.
 The old database will also be deleted.
+
+```js
+const db = new Kinto({
+  adapterOptions: {
+    migrateOldData: true,
+  }
+});
+const tasks = db.collection("tasks");
+```
 
 ## 8.x to 9.x
 
