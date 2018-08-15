@@ -1,5 +1,10 @@
 function main() {
-  var db = new Kinto();
+  var db = new Kinto({
+    adapterOptions: {
+      // dbName: "DemoDB",  // Optional custom database name
+      migrateOldData: true,
+    }
+  });
   var tasks = db.collection("tasks");
   var syncOptions = {
     remote: "https://kinto.dev.mozaws.net/v1/",

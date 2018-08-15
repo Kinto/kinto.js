@@ -1,9 +1,89 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { filterObject, omitKeys, sortObjects } from "../utils";
+import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
+
+/**
+ * Small helper that wraps the opening of an IndexedDB into a Promise.
+ *
+ * @param dbname          {String}   The database name.
+ * @param version         {Integer}  Schema version
+ * @param onupgradeneeded {Function} The callback to execute if schema is
+ *                                   missing or different.
+ * @return {Promise<IDBDatabase>}
+ */
+export async function open(dbname, { version, onupgradeneeded }) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(dbname, version);
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      db.onerror = event => reject(event.target.error);
+      return onupgradeneeded(event);
+    };
+    request.onerror = event => {
+      reject(event.target.error);
+    };
+    request.onsuccess = event => {
+      const db = event.target.result;
+      resolve(db);
+    };
+  });
+}
+
+/**
+ * Helper to run the specified callback in a single transaction on the
+ * specified store.
+ * The helper focuses on transaction wrapping into a promise.
+ *
+ * @param db           {IDBDatabase} The database instance.
+ * @param name         {String}      The store name.
+ * @param callback     {Function}    The piece of code to execute in the transaction.
+ * @param options      {Object}      Options.
+ * @param options.mode {String}      Transaction mode (default: read).
+ * @return {Promise} any value returned by the callback.
+ */
+export async function execute(db, name, callback, options = {}) {
+  const { mode } = options;
+  return new Promise((resolve, reject) => {
+    // On Safari, calling IDBDatabase.transaction with mode == undefined raises
+    // a TypeError.
+    const transaction = mode
+      ? db.transaction([name], mode)
+      : db.transaction([name]);
+    const store = transaction.objectStore(name);
+
+    // Let the callback abort this transaction.
+    const abort = e => {
+      transaction.abort();
+      reject(e);
+    };
+    // Execute the specified callback **synchronously**.
+    let result;
+    try {
+      result = callback(store, abort);
+    } catch (e) {
+      abort(e);
+    }
+    transaction.onerror = event => reject(event.target.error);
+    transaction.oncomplete = event => resolve(result);
+  });
+}
+
+/**
+ * Helper to wrap the deletion of an IndexedDB database into a promise.
+ *
+ * @param dbName {String} the database to delete
+ * @return {Promise}
+ */
+async function deleteDatabase(dbName) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(dbName);
+    request.onsuccess = event => resolve(event.target);
+    request.onerror = event => reject(event.target.error);
+  });
+}
 
 /**
  * IDB cursor handlers.
@@ -12,11 +92,12 @@ const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 const cursorHandlers = {
   all(filters, done) {
     const results = [];
-    return function(event) {
+    return event => {
       const cursor = event.target.result;
       if (cursor) {
-        if (filterObject(filters, cursor.value)) {
-          results.push(cursor.value);
+        const { value } = cursor;
+        if (filterObject(filters, value)) {
+          results.push(value);
         }
         cursor.continue();
       } else {
@@ -26,10 +107,6 @@ const cursorHandlers = {
   },
 
   in(values, done) {
-    if (values.length === 0) {
-      return done([]);
-    }
-    const sortedValues = [].slice.call(values).sort();
     const results = [];
     return function(event) {
       const cursor = event.target.result;
@@ -38,39 +115,30 @@ const cursorHandlers = {
         return;
       }
       const { key, value } = cursor;
+      // `key` can be an array of two values (see `keyPath` in indices definitions).
       let i = 0;
-      while (key > sortedValues[i]) {
+      // `values` can be an array of arrays if we filter using an index whose key path
+      // is an array (eg. `cursorHandlers.in([["bid/cid", 42], ["bid/cid", 43]], ...)`)
+      while (key > values[i]) {
         // The cursor has passed beyond this key. Check next.
         ++i;
-        if (i === sortedValues.length) {
+        if (i === values.length) {
           done(results); // There is no next. Stop searching.
           return;
         }
       }
-      if (key === sortedValues[i]) {
+      const isEqual = Array.isArray(key)
+        ? arrayEqual(key, values[i])
+        : key === values[i];
+      if (isEqual) {
         results.push(value);
         cursor.continue();
       } else {
-        cursor.continue(sortedValues[i]);
+        cursor.continue(values[i]);
       }
     };
   },
 };
-
-/**
- * Extract from filters definition the first indexed field. Since indexes were
- * created on single-columns, extracting a single one makes sense.
- *
- * @param  {Object} filters The filters object.
- * @return {String|undefined}
- */
-function findIndexedField(filters) {
-  const filteredFields = Object.keys(filters);
-  const indexedFields = filteredFields.filter(field => {
-    return INDEXED_FIELDS.includes(field);
-  });
-  return indexedFields[0];
-}
 
 /**
  * Creates an IDB request and attach it the appropriate cursor event handler to
@@ -78,31 +146,48 @@ function findIndexedField(filters) {
  *
  * Multiple matching values are handled by passing an array.
  *
+ * @param  {String}           cid        The collection id (ie. `{bid}/{cid}`)
  * @param  {IDBStore}         store      The IDB store.
- * @param  {String|undefined} indexField The indexed field to query, if any.
- * @param  {Any}              value      The value to filter, if any.
- * @param  {Object}           filters    More filters.
+ * @param  {Object}           filters    Filter the records by field.
  * @param  {Function}         done       The operation completion handler.
  * @return {IDBRequest}
  */
-function createListRequest(store, indexField, value, filters, done) {
+function createListRequest(cid, store, filters, done) {
+  // Introspect filters and check if they leverage an indexed field.
+  const indexField = Object.keys(filters).find(field => {
+    return INDEXED_FIELDS.includes(field);
+  });
+
   if (!indexField) {
-    // Get all records.
-    const request = store.openCursor();
+    // Get all records for this collection (ie. cid)
+    const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
 
+  // If `indexField` was used already, don't filter again.
+  const remainingFilters = omitKeys(filters, indexField);
+
+  // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
+  const value = filters[indexField];
+
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
-    const request = store.index(indexField).openCursor();
-    request.onsuccess = cursorHandlers.in(value, done);
+    if (value.length === 0) {
+      return done([]);
+    }
+    const values = value.map(i => [cid, i]).sort();
+    const range = IDBKeyRange.bound(values[0], values[values.length - 1]);
+    const request = store.index(indexField).openCursor(range);
+    request.onsuccess = cursorHandlers.in(values, done);
     return request;
   }
 
   // WHERE field = value clause
-  const request = store.index(indexField).openCursor(IDBKeyRange.only(value));
-  request.onsuccess = cursorHandlers.all(filters, done);
+  const request = store
+    .index(indexField)
+    .openCursor(IDBKeyRange.only([cid, value]));
+  request.onsuccess = cursorHandlers.all(remainingFilters, done);
   return request;
 }
 
@@ -115,21 +200,19 @@ export default class IDB extends BaseAdapter {
   /**
    * Constructor.
    *
-   * @param  {String} store The store name.
-   * @param  {Object} options Adapter options.
-   * @param  {String} options.dbname The IndexedDB name (default: same as store).
+   * @param  {String} cid  The key base for this collection (eg. `bid/cid`)
+   * @param  {Object} options
+   * @param  {String} options.dbName         The IndexedDB name (default: `"KintoDB"`)
+   * @param  {String} options.migrateOldData Whether old database data should be migrated (default: `false`)
    */
-  constructor(storeName, options = {}) {
+  constructor(cid, options = {}) {
     super();
+
+    this.cid = cid;
+    this.dbName = options.dbName || "KintoDB";
+
+    this._options = options;
     this._db = null;
-    // public properties
-    /**
-     * The database name.
-     * @type {String}
-     */
-    this.storeName = storeName;
-    const { dbname = storeName } = options;
-    this.dbname = dbname;
   }
 
   _handleError(method, err) {
@@ -144,38 +227,54 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  open() {
+  async open() {
     if (this._db) {
-      return Promise.resolve(this);
+      return this;
     }
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbname, 1);
-      request.onupgradeneeded = event => {
-        // DB object
-        const db = event.target.result;
-        // Main collection store
-        const collStore = db.createObjectStore(this.storeName, {
-          keyPath: "id",
-        });
-        // Primary key (generated by IdSchema, UUID by default)
-        collStore.createIndex("id", "id", { unique: true });
-        // Local record status ("synced", "created", "updated", "deleted")
-        collStore.createIndex("_status", "_status");
-        // Last modified field
-        collStore.createIndex("last_modified", "last_modified");
 
-        // Metadata store
-        const metaStore = db.createObjectStore("__meta__", {
-          keyPath: "name",
+    // In previous versions, we used to have a database with name `${bid}/${cid}`.
+    // Check if it exists, and migrate data once new schema is in place.
+    // Note: the built-in migrations from IndexedDB can only be used if the
+    // database name does not change.
+    const toMigrate = this._options.migrateOldData
+      ? await migrationRequired(this.cid)
+      : null;
+
+    this._db = await open(this.dbName, {
+      version: 1,
+      onupgradeneeded: event => {
+        const db = event.target.result;
+        // Records store
+        const recordsStore = db.createObjectStore("records", {
+          keyPath: ["_cid", "id"],
         });
-        metaStore.createIndex("name", "name", { unique: true });
-      };
-      request.onerror = event => reject(event.target.error);
-      request.onsuccess = event => {
-        this._db = event.target.result;
-        resolve(this);
-      };
+        // An index to obtain all the records in a collection.
+        recordsStore.createIndex("cid", "_cid");
+        // Here we create indices for every known field in records by collection.
+        // Record id (generated by IdSchema, UUID by default)
+        recordsStore.createIndex("id", ["_cid", "id"]);
+        // Local record status ("synced", "created", "updated", "deleted")
+        recordsStore.createIndex("_status", ["_cid", "_status"]);
+        // Last modified field
+        recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
+        // Timestamps store
+        db.createObjectStore("timestamps", {
+          keyPath: "cid",
+        });
+      },
     });
+
+    if (toMigrate) {
+      const { records, timestamp } = toMigrate;
+      await this.loadDump(records);
+      await this.saveLastModified(timestamp);
+      console.log(`${this.cid}: data was migrated successfully.`);
+      // Delete the old database.
+      await deleteDatabase(this.cid);
+      console.warn(`${this.cid}: old database was deleted.`);
+    }
+
+    return this;
   }
 
   /**
@@ -193,26 +292,22 @@ export default class IDB extends BaseAdapter {
   }
 
   /**
-   * Returns a transaction and an object store for this collection.
+   * Returns a transaction and an object store for a store name.
    *
    * To determine if a transaction has completed successfully, we should rather
    * listen to the transaction’s complete event rather than the IDBObjectStore
    * request’s success event, because the transaction may still fail after the
    * success event fires.
    *
-   * @param  {String}      mode  Transaction mode ("readwrite" or undefined)
-   * @param  {String|null} name  Store name (defaults to coll name)
+   * @param  {String}      name  Store name
+   * @param  {Function}    callback to execute
+   * @param  {Object}      options Options
+   * @param  {String}      options.mode  Transaction mode ("readwrite" or undefined)
    * @return {Object}
    */
-  prepare(mode = undefined, name = null) {
-    const storeName = name || this.storeName;
-    // On Safari, calling IDBDatabase.transaction with mode == undefined raises
-    // a TypeError.
-    const transaction = mode
-      ? this._db.transaction([storeName], mode)
-      : this._db.transaction([storeName]);
-    const store = transaction.objectStore(storeName);
-    return { transaction, store };
+  async prepare(name, callback, options) {
+    await this.open();
+    await execute(this._db, name, callback, options);
   }
 
   /**
@@ -223,13 +318,22 @@ export default class IDB extends BaseAdapter {
    */
   async clear() {
     try {
-      await this.open();
-      return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare("readwrite");
-        store.clear();
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve();
-      });
+      await this.prepare(
+        "records",
+        store => {
+          const range = IDBKeyRange.only(this.cid);
+          const request = store.index("cid").openKeyCursor(range);
+          request.onsuccess = event => {
+            const cursor = event.target.result;
+            if (cursor) {
+              store.delete(cursor.primaryKey);
+              cursor.continue();
+            }
+          };
+          return request;
+        },
+        { mode: "readwrite" }
+      );
     } catch (e) {
       this._handleError("clear", e);
     }
@@ -252,14 +356,12 @@ export default class IDB extends BaseAdapter {
    *
    * @example
    * const db = new IDB("example");
-   * db.execute(transaction => {
+   * const result = await db.execute(transaction => {
    *   transaction.create({id: 1, title: "foo"});
    *   transaction.update({id: 2, title: "bar"});
    *   transaction.delete(3);
    *   return "foo";
-   * })
-   *   .catch(console.error.bind(console));
-   *   .then(console.log.bind(console)); // => "foo"
+   * });
    *
    * @override
    * @param  {Function} callback The operation description callback.
@@ -277,42 +379,49 @@ export default class IDB extends BaseAdapter {
     // - http://stackoverflow.com/a/28388805/330911
     // - http://stackoverflow.com/a/10405196
     // - https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
-    await this.open();
-    return new Promise((resolve, reject) => {
-      // Start transaction.
-      const { transaction, store } = this.prepare("readwrite");
-      // Preload specified records using index.
-      const ids = options.preload;
-      store.index("id").openCursor().onsuccess = cursorHandlers.in(
-        ids,
-        records => {
+    let result;
+    await this.prepare(
+      "records",
+      (store, abort) => {
+        const runCallback = (preloaded = []) => {
+          // Expose a consistent API for every adapter instead of raw store methods.
+          const proxy = transactionProxy(this, store, preloaded);
+          // The callback is executed synchronously within the same transaction.
+          try {
+            const returned = callback(proxy);
+            if (returned instanceof Promise) {
+              // XXX: investigate how to provide documentation details in error.
+              throw new Error(
+                "execute() callback should not return a Promise."
+              );
+            }
+            // Bring to scope that will be returned (once promise awaited).
+            result = returned;
+          } catch (e) {
+            // The callback has thrown an error explicitly. Abort transaction cleanly.
+            abort(e);
+          }
+        };
+
+        // No option to preload records, go straight to `callback`.
+        if (!options.preload.length) {
+          return runCallback();
+        }
+
+        // Preload specified records using a list request.
+        const filters = { id: options.preload };
+        createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
           const preloaded = records.reduce((acc, record) => {
-            acc[record.id] = record;
+            acc[record.id] = omitKeys(record, ["_cid"]);
             return acc;
           }, {});
-          // Expose a consistent API for every adapter instead of raw store methods.
-          const proxy = transactionProxy(store, preloaded);
-          // The callback is executed synchronously within the same transaction.
-          let result;
-          try {
-            result = callback(proxy);
-          } catch (e) {
-            transaction.abort();
-            reject(e);
-          }
-          if (result instanceof Promise) {
-            // XXX: investigate how to provide documentation details in error.
-            reject(
-              new Error("execute() callback should not return a Promise.")
-            );
-          }
-          // XXX unsure if we should manually abort the transaction on error
-          transaction.onerror = event => reject(new Error(event.target.error));
-          transaction.oncomplete = event => resolve(result);
-        }
-      );
-    });
+          runCallback(preloaded);
+        });
+      },
+      { mode: "readwrite" }
+    );
+    return result;
   }
 
   /**
@@ -324,13 +433,11 @@ export default class IDB extends BaseAdapter {
    */
   async get(id) {
     try {
-      await this.open();
-      return new Promise((resolve, reject) => {
-        const { transaction, store } = this.prepare();
-        const request = store.get(id);
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = () => resolve(request.result);
+      let record;
+      await this.prepare("records", store => {
+        store.get([this.cid, id]).onsuccess = e => (record = e.target.result);
       });
+      return record;
     } catch (e) {
       this._handleError("get", e);
     }
@@ -345,31 +452,15 @@ export default class IDB extends BaseAdapter {
    */
   async list(params = { filters: {} }) {
     const { filters } = params;
-    const indexField = findIndexedField(filters);
-    const value = filters[indexField];
     try {
-      await this.open();
-      const results = await new Promise((resolve, reject) => {
-        let results = [];
-        // If `indexField` was used already, don't filter again.
-        const remainingFilters = omitKeys(filters, indexField);
-
-        const { transaction, store } = this.prepare();
-        createListRequest(
-          store,
-          indexField,
-          value,
-          remainingFilters,
-          _results => {
-            // we have received all requested records, parking them within
-            // current scope
-            results = _results;
-          }
-        );
-        transaction.onerror = event => reject(new Error(event.target.error));
-        transaction.oncomplete = event => resolve(results);
+      let results = [];
+      await this.prepare("records", store => {
+        createListRequest(this.cid, store, filters, _results => {
+          // we have received all requested records that match the filters,
+          // we now park them within current scope and hide the `_cid` attribute.
+          results = _results.map(r => omitKeys(r, ["_cid"]));
+        });
       });
-
       // The resulting list of records is sorted.
       // XXX: with some efforts, this could be fully implemented using IDB API.
       return params.order ? sortObjects(params.order, results) : results;
@@ -387,13 +478,16 @@ export default class IDB extends BaseAdapter {
    */
   async saveLastModified(lastModified) {
     const value = parseInt(lastModified, 10) || null;
-    await this.open();
-    return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare("readwrite", "__meta__");
-      store.put({ name: `${this.storeName}-lastModified`, value: value });
-      transaction.onerror = event => reject(event.target.error);
-      transaction.oncomplete = event => resolve(value);
-    });
+    try {
+      await this.prepare(
+        "timestamps",
+        store => store.put({ cid: this.cid, value }),
+        { mode: "readwrite" }
+      );
+      return value;
+    } catch (e) {
+      this._handleError("saveLastModified", e);
+    }
   }
 
   /**
@@ -403,15 +497,15 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   async getLastModified() {
-    await this.open();
-    return new Promise((resolve, reject) => {
-      const { transaction, store } = this.prepare(undefined, "__meta__");
-      const request = store.get(`${this.storeName}-lastModified`);
-      transaction.onerror = event => reject(event.target.error);
-      transaction.oncomplete = event => {
-        resolve((request.result && request.result.value) || null);
-      };
-    });
+    try {
+      let entry = null;
+      await this.prepare("timestamps", store => {
+        store.get(this.cid).onsuccess = e => (entry = e.target.result);
+      });
+      return entry ? entry.value : null;
+    } catch (e) {
+      this._handleError("getLastModified", e);
+    }
   }
 
   /**
@@ -443,27 +537,84 @@ export default class IDB extends BaseAdapter {
 /**
  * IDB transaction proxy.
  *
+ * @param  {IDB} adapter        The call IDB adapter
  * @param  {IDBStore} store     The IndexedDB database store.
  * @param  {Array}    preloaded The list of records to make available to
  *                              get() (default: []).
  * @return {Object}
  */
-function transactionProxy(store, preloaded = []) {
+function transactionProxy(adapter, store, preloaded = []) {
+  const _cid = adapter.cid;
   return {
     create(record) {
-      store.add(record);
+      store.add({ ...record, _cid });
     },
 
     update(record) {
-      store.put(record);
+      store.put({ ...record, _cid });
     },
 
     delete(id) {
-      store.delete(id);
+      store.delete([_cid, id]);
     },
 
     get(id) {
       return preloaded[id];
     },
   };
+}
+
+/**
+ * Up to version 10.X of kinto.js, each collection had its own collection.
+ * The database name was `${bid}/${cid}` (eg. `"blocklists/certificates"`)
+ * and contained only one store with the same name.
+ */
+async function migrationRequired(dbName) {
+  let exists = true;
+  const db = await open(dbName, {
+    version: 1,
+    onupgradeneeded: event => {
+      exists = false;
+    },
+  });
+
+  if (!exists) {
+    db.close();
+    // Testing the existence creates it, so delete it :)
+    await deleteDatabase(dbName);
+    return null;
+  }
+
+  console.warn(`${dbName}: old IDB database found."`);
+  // Scan all records.
+  let records;
+  await execute(db, dbName, store => {
+    store.openCursor().onsuccess = cursorHandlers.all(
+      {},
+      res => (records = res)
+    );
+  });
+  console.log(`${dbName}: found ${records.length} records."`);
+
+  // Check if there's a entry for this.
+  let timestamp;
+  await execute(db, "__meta__", store => {
+    store.get(`${dbName}-lastModified`).onsuccess = e => {
+      timestamp = e.target.result ? e.target.result.value : null;
+    };
+  });
+  // Some previous versions, also used to store the timestamps without prefix.
+  if (!timestamp) {
+    await execute(db, "__meta__", store => {
+      store.get("lastModified").onsuccess = e => {
+        timestamp = e.target.result ? e.target.result.value : null;
+      };
+    });
+  }
+  console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
+
+  db.close();
+
+  // Those will be inserted in the new database/schema.
+  return { records, timestamp };
 }

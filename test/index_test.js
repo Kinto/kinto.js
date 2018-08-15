@@ -94,12 +94,12 @@ describe("Kinto", () => {
       ).eql(timeout);
     });
 
-    it("should propagate the dbPrefix option to child dependencies", () => {
+    it("should propagate the dbName option to child dependencies", () => {
       expect(
         new Kinto({
-          dbPrefix: "app--",
-        }).collection("x").db.dbname
-      ).eql("app--default/x");
+          adapterOptions: { dbName: "app" },
+        }).collection("x").db.dbName
+      ).eql("app");
     });
   });
 

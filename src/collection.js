@@ -210,7 +210,6 @@ export default class Collection {
    *
    * Options:
    * - `{BaseAdapter} adapter` The DB adapter (default: `IDB`)
-   * - `{String} dbPrefix`     The DB name prefix (default: `""`)
    *
    * @param  {String} bucket  The bucket identifier.
    * @param  {String} name    The collection name.
@@ -226,11 +225,7 @@ export default class Collection {
     if (!DBAdapter) {
       throw new Error("No adapter provided");
     }
-    const dbPrefix = options.dbPrefix || "";
-    const db = new DBAdapter(
-      `${dbPrefix}${bucket}/${name}`,
-      options.adapterOptions
-    );
+    const db = new DBAdapter(`${bucket}/${name}`, options.adapterOptions);
     if (!(db instanceof BaseAdapter)) {
       throw new Error("Unsupported adapter.");
     }

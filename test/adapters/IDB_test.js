@@ -3,7 +3,7 @@
 import sinon from "sinon";
 import { expect } from "chai";
 
-import IDB from "../../src/adapters/IDB.js";
+import IDB, { open, execute } from "../../src/adapters/IDB.js";
 import { v4 as uuid4 } from "uuid";
 
 /** @test {IDB} */
@@ -68,21 +68,40 @@ describe("adapter.IDB", () => {
         .should.eventually.have.length.of(0);
     });
 
+    it("should isolate records by collection", async () => {
+      const db1 = new IDB("main/tippytop");
+      const db2 = new IDB("main/tippytop-2");
+
+      await db1.open();
+      await db1.execute(t => t.create({ id: 1 }));
+      await db1.saveLastModified(42);
+      await db1.close();
+
+      await db2.open();
+      await db2.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 2 }));
+      await db1.saveLastModified(43);
+      await db2.close();
+
+      await db1.clear();
+
+      expect(await db1.list()).to.have.length(0);
+      expect(await db1.getLastModified(), null);
+      expect(await db2.list()).to.have.length(2);
+      expect(await db2.getLastModified(), 43);
+    });
+
     it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: {
-          clear() {
-            return {};
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        callback({
+          index() {
+            return {
+              openKeyCursor() {
+                throw new Error("transaction error");
+              },
+            };
           },
-        },
-        transaction: {
-          get onerror() {
-            return null;
-          },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
       return db.clear().should.be.rejectedWith(Error, "transaction error");
     });
@@ -179,53 +198,47 @@ describe("adapter.IDB", () => {
       });
 
       it("should reject on store method error", () => {
-        sandbox.stub(db, "prepare").returns({
-          store: {
-            index() {
-              return {
+        sandbox
+          .stub(db, "prepare")
+          .callsFake(async (name, callback, options) => {
+            const abort = e => {
+              throw e;
+            };
+            callback(
+              {
                 openCursor: () => ({
                   set onsuccess(cb) {
                     cb({ target: {} });
                   },
                 }),
-              };
-            },
-            add() {
-              throw new Error("add error");
-            },
-          },
-          transaction: { abort() {} },
-        });
+                add() {
+                  throw new Error("add error");
+                },
+              },
+              abort
+            );
+          });
         return db
-          .execute(transaction => transaction.create())
+          .execute(transaction => transaction.create({ id: 42 }))
           .should.be.rejectedWith(Error, "add error");
       });
 
       it("should reject on transaction error", () => {
-        sandbox.stub(db, "prepare").returns({
-          store: {
-            index() {
-              return {
-                openCursor: () => ({
-                  set onsuccess(cb) {
-                    cb({ target: {} });
+        sandbox
+          .stub(db, "prepare")
+          .callsFake(async (name, callback, options) => {
+            return callback({
+              index() {
+                return {
+                  openCursor() {
+                    throw new Error("transaction error");
                   },
-                }),
-              };
-            },
-            add() {},
-          },
-          transaction: {
-            get onerror() {
-              return null;
-            },
-            set onerror(onerror) {
-              onerror({ target: { error: "transaction error" } });
-            },
-          },
-        });
+                };
+              },
+            });
+          });
         return db
-          .execute(transaction => transaction.create({}))
+          .execute(transaction => transaction.create({}), { preload: [1, 2] })
           .should.be.rejectedWith(Error, "transaction error");
       });
     });
@@ -267,20 +280,12 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: {
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
           get() {
-            return {};
+            throw new Error("transaction error");
           },
-        },
-        transaction: {
-          get onerror() {
-            return null;
-          },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
       return db.get().should.be.rejectedWith(Error, "transaction error");
     });
@@ -307,22 +312,36 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: {
-          openCursor() {
-            return {};
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
+          index() {
+            return {
+              openCursor() {
+                throw new Error("transaction error");
+              },
+            };
           },
-        },
-        transaction: {
-          get onerror() {
-            return null;
-          },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
       return db.list().should.be.rejectedWith(Error, "transaction error");
+    });
+
+    it("should isolate records by collection", async () => {
+      const db1 = new IDB("main/tippytop");
+      const db2 = new IDB("main/tippytop-2");
+      await db1.clear();
+      await db2.clear();
+
+      await db1.open();
+      await db2.open();
+      await db1.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 1 }));
+      await db2.execute(t => t.create({ id: 2 }));
+      await db1.close();
+      await db2.close();
+
+      expect(await db1.list()).to.have.length(1);
+      expect(await db2.list()).to.have.length(2);
     });
 
     describe("Filters", () => {
@@ -349,6 +368,10 @@ describe("adapter.IDB", () => {
             return db
               .list({ filters: { name: ["#4", "qux"] } })
               .should.eventually.eql([{ id: 4, name: "#4" }]);
+          });
+
+          it("should handle empty lists", () => {
+            return db.list({ filters: { name: [] } }).should.eventually.eql([]);
           });
         });
       });
@@ -377,6 +400,10 @@ describe("adapter.IDB", () => {
               .list({ filters: { id: [4, 9999] } })
               .should.eventually.eql([{ id: 4, name: "#4" }]);
           });
+
+          it("should handle empty lists", () => {
+            return db.list({ filters: { id: [] } }).should.eventually.eql([]);
+          });
         });
       });
     });
@@ -385,16 +412,12 @@ describe("adapter.IDB", () => {
   /** @test {IDB#loadDump} */
   describe("#loadDump", () => {
     it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: { add() {} },
-        transaction: {
-          get onerror() {
-            return null;
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
+          put() {
+            throw new Error("transaction error");
           },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
       return db
         .loadDump([{ foo: "bar" }])
@@ -402,24 +425,21 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#getLastModified} */
   describe("#getLastModified", () => {
     it("should reject with any encountered transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: { get() {} },
-        transaction: {
-          get onerror() {
-            return null;
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
+          get() {
+            throw new Error("transaction error");
           },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
-
       return db.getLastModified().should.be.rejectedWith(/transaction error/);
     });
   });
 
+  /** @test {IDB#saveLastModified} */
   describe("#saveLastModified", () => {
     it("should resolve with lastModified value", () => {
       return db.saveLastModified(42).should.eventually.become(42);
@@ -441,25 +461,18 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").returns({
-        store: {
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
           put() {
-            return {};
+            throw new Error("transaction error");
           },
-        },
-        transaction: {
-          get onerror() {
-            return null;
-          },
-          set onerror(onerror) {
-            onerror({ target: { error: "transaction error" } });
-          },
-        },
+        });
       });
       return db.saveLastModified().should.be.rejectedWith(/transaction error/);
     });
   });
 
+  /** @test {IDB#loadDump} */
   describe("#loadDump", () => {
     it("should import a list of records.", () => {
       return db
@@ -505,10 +518,14 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#list} */
+  /** @test {IDB#getLastModified} */
   describe("With custom dbName", () => {
     it("should isolate records by dbname", async () => {
-      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
-      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+      const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
+      const db2 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
+      await db1.clear();
+      await db2.clear();
 
       await db1.open();
       await db2.open();
@@ -522,9 +539,9 @@ describe("adapter.IDB", () => {
       expect(await db2.list()).to.have.length(2);
     });
 
-    it("should isolate records by dbname", async () => {
-      const db1 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
-      const db2 = new IDB("main/recipes", { dbName: "RemoteSettings" });
+    it("should isolate timestamps by dbname", async () => {
+      const db1 = new IDB("main/tippytop", { dbName: "KintoDB" });
+      const db2 = new IDB("main/tippytop", { dbName: "RemoteSettings" });
 
       await db1.open();
       await db2.open();
@@ -535,6 +552,90 @@ describe("adapter.IDB", () => {
 
       expect(await db1.getLastModified()).to.be.equal(41);
       expect(await db2.getLastModified()).to.be.equal(42);
+    });
+  });
+
+  /** @test {IDB#open} */
+  describe("#migration", () => {
+    let idb;
+    async function createOldDB(dbName) {
+      const oldDb = await open(dbName, {
+        version: 1,
+        onupgradeneeded: event => {
+          // https://github.com/Kinto/kinto.js/blob/v11.2.2/src/adapters/IDB.js#L154-L171
+          const db = event.target.result;
+          db.createObjectStore(dbName, { keyPath: "id" });
+          db.createObjectStore("__meta__", { keyPath: "name" });
+        },
+      });
+      await execute(
+        oldDb,
+        dbName,
+        store => {
+          store.put({ id: 1 });
+          store.put({ id: 2 });
+        },
+        { mode: "readwrite" }
+      );
+      await execute(
+        oldDb,
+        "__meta__",
+        store => {
+          store.put({ name: "lastModified", value: 43 });
+        },
+        { mode: "readwrite" }
+      );
+      oldDb.close(); // synchronous.
+    }
+
+    const cid = "main/tippytop";
+
+    before(async () => {
+      await createOldDB(cid);
+      await createOldDB("another/not-migrated");
+
+      idb = new IDB(cid, {
+        migrateOldData: true,
+      });
+    });
+
+    after(() => {
+      return idb.close();
+    });
+
+    it("should migrate records", async () => {
+      return idb.list().should.eventually.become([{ id: 1 }, { id: 2 }]);
+    });
+
+    it("should migrate timestamps", () => {
+      return idb.getLastModified().should.eventually.become(43);
+    });
+
+    it("should not fail if already migrated", () => {
+      return idb
+        .close()
+        .then(() => idb.open())
+        .then(() => idb.close())
+        .then(() => idb.open()).should.be.fulfilled;
+    });
+
+    it("should delete the old database", () => {
+      return open(cid, {
+        version: 1,
+        onupgradeneeded: event => event.target.transaction.abort(),
+      }).should.eventually.be.rejected;
+    });
+
+    it("should not delete other databases", () => {
+      return open("another/not-migrated", {
+        version: 1,
+        onupgradeneeded: event => event.target.transaction.abort(),
+      }).should.eventually.be.fulfilled;
+    });
+
+    it("should not migrate if option is not set", () => {
+      const idb = new IDB("another/not-migrated");
+      return idb.list().should.eventually.become([]);
     });
   });
 });

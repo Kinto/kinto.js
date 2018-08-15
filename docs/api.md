@@ -18,7 +18,13 @@ const db = new Kinto(options);
 - `requestMode`: The HTTP [CORS](https://fetch.spec.whatwg.org/#concept-request-mode) mode. Default: `cors`.
 - `timeout`: The requests timeout in ms. Default: `5000`.
 - `bucket`: The [Kinto bucket name](http://kinto.readthedocs.io/en/latest/api/buckets.html) to use for remote syncing (default: "default").
-- `dbPrefix`: The prefix for the local database name (default: `""`). Use this option to isolate different specific databases, eg. for storing distinct users data.
+
+#### Adapter options
+
+The default adapter (IndexedDB) supports the following options:
+
+- `dbName`: the local database name (Default: `"KintoDB"`)
+- `migrateOldData`: : whether data created with older versions than v12.X should be migrated (Default: `false`)
 
 ## Collections
 

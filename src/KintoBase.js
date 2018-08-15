@@ -45,7 +45,6 @@ export default class KintoBase {
    * - `{EventEmitter}` `events`         Events handler.
    * - `{BaseAdapter}`  `adapter`        The base DB adapter class.
    * - `{Object}`       `adapterOptions` Options given to the adapter.
-   * - `{String}`       `dbPrefix`       The DB name prefix.
    * - `{Object}`       `headers`        The HTTP headers to use.
    * - `{Object}`       `retry`          Number of retries when the server fails to process the request (default: `1`)
    * - `{String}`       `requestMode`    The HTTP CORS mode to use.
@@ -110,7 +109,7 @@ export default class KintoBase {
     if (!collName) {
       throw new Error("missing collection name");
     }
-    const { bucket, events, adapter, adapterOptions, dbPrefix } = {
+    const { bucket, events, adapter, adapterOptions } = {
       ...this._options,
       ...options,
     };
@@ -120,7 +119,6 @@ export default class KintoBase {
       events,
       adapter,
       adapterOptions,
-      dbPrefix,
       idSchema,
       remoteTransformers,
       hooks,

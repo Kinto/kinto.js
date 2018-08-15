@@ -2,6 +2,54 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 11.x to 12.x
+
+* The `dbPrefix` option in the `Kinto` and `Collection` constructors was dropped in favor of the `dbName` field in the `adapterOptions`.
+
+**Database Schema Change**
+
+This version introduces a major change: instead of having one IndexedDB database per collection (named `{bucket}/{collection}`), we now have only one database (called `KintoDB` by default) which stores records indexed by collection.
+
+If you are upgrading and want your data to be manually migrated, set the `adapterOptions.migrateOldData` to `true` in the `Kinto()` constructor.
+The old database will also be deleted.
+
+```js
+const db = new Kinto({
+  adapterOptions: {
+    migrateOldData: true,
+  }
+});
+const tasks = db.collection("tasks");
+```
+
+#### New Database Schema
+
+The database (named `KintoDB` by default) will have two stores `records` and `timestamps`.
+
+The ``records`` store now looks like this:
+
+```
++-----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+|                        Primary Key                        |                                                   Data                                                    |
++-----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+| ["blog/articles", "df85ec54-87aa-405d-bfc5-bcc96adef7ae"] | {_cid: "blog/articles", id: "df85ec54-87aa-405d-bfc5-bcc96adef7ae", _status: "created"}                   |
+| ["blog/articles", "161c26be-6f84-49e6-973c-533a5950223d"] | {_cid: "blog/articles", id: "161c26be-6f84-49e6-973c-533a5950223d", _status: "deleted"}                   |
+| ["default/tasks", "29db6353-276a-4c77-82ef-be937fbbcfa3"] | {_cid: "default/tasks", id: "29db6353-276a-4c77-82ef-be937fbbcfa3", _status: "sync", last_modified: 1346} |
+| ["default/tasks", "c91dcef8-062c-481a-8c06-bfa344f2837d"] | {_cid: "default/tasks", id: "c91dcef8-062c-481a-8c06-bfa344f2837d", _status: "sync", last_modified: 1142} |
++-----------------------------------------------------------+-----------------------------------------------------------------------------------------------------------+
+```
+
+The ``timestamps`` store now looks like this:
+
+```
++-----------------+--------------------------------------------+
+|   Primary Key   |                    Data                    |
++-----------------+--------------------------------------------+
+| "blog/articles" | {cid: "blog/articles", value: 12958536703} |
+| "default/tasks" | {cid: "default/tasks", value: 14896689683} |
++-----------------+--------------------------------------------+
+```
+
 ## 8.x to 9.x
 
 * When fixing #691, the types of values in SyncResultObject.resolved were changed. Previously, they were just the resolution for a given record; now, they are {accepted, rejected}, with accepted being the new value. Any code using elements of this list (e.g. `SyncResultObject.resolved[i]`) should now use the accepted property of that element (e.g. `SyncResultObject.resolved[i].accepted`).
