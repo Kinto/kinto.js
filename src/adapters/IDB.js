@@ -106,7 +106,7 @@ const cursorHandlers = {
     };
   },
 
-  in(values, done) {
+  in(values, filters, done) {
     const results = [];
     return function(event) {
       const cursor = event.target.result;
@@ -131,7 +131,9 @@ const cursorHandlers = {
         ? arrayEqual(key, values[i])
         : key === values[i];
       if (isEqual) {
-        results.push(value);
+        if (filterObject(filters, value)) {
+          results.push(value);
+        }
         cursor.continue();
       } else {
         cursor.continue(values[i]);
@@ -179,7 +181,7 @@ function createListRequest(cid, store, filters, done) {
     const values = value.map(i => [cid, i]).sort();
     const range = IDBKeyRange.bound(values[0], values[values.length - 1]);
     const request = store.index(indexField).openCursor(range);
-    request.onsuccess = cursorHandlers.in(values, done);
+    request.onsuccess = cursorHandlers.in(values, remainingFilters, done);
     return request;
   }
 
