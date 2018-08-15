@@ -398,9 +398,7 @@ describe("adapter.IDB", () => {
           it("should filter the list combined with other filters", () => {
             return db
               .list({ filters: { id: [5, 4], name: "#4" } })
-              .should.eventually.eql([
-                { id: 4, name: "#4" },
-              ]);
+              .should.eventually.eql([{ id: 4, name: "#4" }]);
           });
 
           it("should handle non-existent keys", () => {
