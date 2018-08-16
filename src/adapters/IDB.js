@@ -598,35 +598,42 @@ async function migrationRequired(dbName) {
   }
 
   console.warn(`${dbName}: old IndexedDB database found.`);
-  // Scan all records.
-  let records;
-  await execute(db, dbName, store => {
-    store.openCursor().onsuccess = cursorHandlers.all(
-      {},
-      res => (records = res)
-    );
-  });
-  console.log(`${dbName}: found ${records.length} records.`);
+  try {
+    // Scan all records.
+    let records;
+    await execute(db, dbName, store => {
+      store.openCursor().onsuccess = cursorHandlers.all(
+        {},
+        res => (records = res)
+      );
+    });
+    console.log(`${dbName}: found ${records.length} records.`);
 
-  // Check if there's a entry for this.
-  let timestamp;
-  await execute(db, "__meta__", store => {
-    store.get(`${dbName}-lastModified`).onsuccess = e => {
-      timestamp = e.target.result ? e.target.result.value : null;
-    };
-  });
-  // Some previous versions, also used to store the timestamps without prefix.
-  if (!timestamp) {
+    // Check if there's a entry for this.
+    let timestamp = null;
     await execute(db, "__meta__", store => {
-      store.get("lastModified").onsuccess = e => {
+      store.get(`${dbName}-lastModified`).onsuccess = e => {
         timestamp = e.target.result ? e.target.result.value : null;
       };
     });
+    // Some previous versions, also used to store the timestamps without prefix.
+    if (!timestamp) {
+      await execute(db, "__meta__", store => {
+        store.get("lastModified").onsuccess = e => {
+          timestamp = e.target.result ? e.target.result.value : null;
+        };
+      });
+    }
+    console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
+
+    // Those will be inserted in the new database/schema.
+    return { records, timestamp };
+
+  } catch (e) {
+    console.error(e);
+    return null;
+
+  } finally {
+    db.close();
   }
-  console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
-
-  db.close();
-
-  // Those will be inserted in the new database/schema.
-  return { records, timestamp };
 }

@@ -644,6 +644,15 @@ describe("adapter.IDB", () => {
       return idb.list().should.eventually.become([]);
     });
 
+    it("should not fail if old database is broken or incomplete", async () => {
+      await open("some/db", {
+        version: 1,
+        onupgradeneeded: event => {},
+      });
+      const idb = new IDB("some/db", { migrateOldData: true });
+      return idb.open().should.eventually.be.fulfilled;
+    });
+
     it("should throw an error if database exists and option is not set", () => {
       const idb = new IDB("another/not-migrated");
       return idb.open().should.eventually.be.rejectedWith("readthedocs");
