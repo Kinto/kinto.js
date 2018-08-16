@@ -247,8 +247,8 @@ export default class IDB extends BaseAdapter {
     if (dataToMigrate && !hasMigrateOption) {
       throw new Error(
         "An old IndexedDB database with data was found, but the `migrateOldData` option " +
-          "was not explicitly set. " +
-          "Check out upgrade notes https://kintojs.readthedocs.io/en/latest/upgrading/"
+          "was not explicitly set. Check out upgrade notes " +
+          "https://kintojs.readthedocs.io/en/latest/upgrading/#11x-to-12x"
       );
     }
 
