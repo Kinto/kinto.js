@@ -640,9 +640,7 @@ describe("adapter.IDB", () => {
     });
 
     it("should not migrate if option is set to false", () => {
-      const idb = new IDB("another/not-migrated", {
-        adapterOptions: { migrateOldData: false },
-      });
+      const idb = new IDB("another/not-migrated", { migrateOldData: false });
       return idb.list().should.eventually.become([]);
     });
 
