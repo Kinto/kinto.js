@@ -1099,18 +1099,22 @@ describe("Collection", () => {
         .should.eventually.eql(undefined);
     });
 
-    it("should resolve to virtually deleted record", () => {
+    it("should resolve to null if virtually deleted record", () => {
       return articles
         .delete(id)
         .then(res => articles.getAny(id))
         .then(res => res.data)
-        .should.eventually.become({
-          _status: "deleted",
-          id: id,
-          title: "foo",
-          url: "http://foo",
-        });
+        .should.eventually.eql(null);
     });
+
+    it("should resolve to virtually deleted record with includeDeleted", () => {
+      return articles
+        .delete(id)
+        .then(res => articles.getAny(id, { includeDeleted: true }))
+        .then(res => res.data.title)
+        .should.eventually.eql(article.title);
+    });
+
   });
 
   /** @test {Collection#delete} */
@@ -1253,7 +1257,7 @@ describe("Collection", () => {
     it("should delete an existing record", () => {
       return articles
         .deleteAny(id)
-        .then(res => articles.getAny(res.data.id))
+        .then(res => articles.getAny(res.data.id, { includeDeleted: true }))
         .then(res => res.data._status)
         .should.eventually.eql("deleted");
     });
@@ -2936,7 +2940,7 @@ describe("Collection", () => {
           id = result.data.id;
           return articles.execute(txn => txn.delete(id), { preloadIds: [id] });
         })
-        .then(result => articles.getAny(id))
+        .then(result => articles.getAny(id, { includeDeleted: true }))
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
@@ -2950,7 +2954,7 @@ describe("Collection", () => {
             preloadIds: [id],
           });
         })
-        .then(result => articles.getAny(id))
+        .then(result => articles.getAny(id, { includeDeleted: true }))
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
@@ -2964,7 +2968,7 @@ describe("Collection", () => {
             preloadIds: [id],
           });
         })
-        .then(result => articles.getAny(id))
+        .then(result => articles.getAny(id, { includeDeleted: true }))
         .then(result => expect(result.data._status).eql("deleted"));
     });
 
@@ -3036,9 +3040,9 @@ describe("Collection", () => {
             { preloadIds: [id1, id2] }
           );
         })
-        .then(result => articles.getAny(id1))
+        .then(result => articles.getAny(id1, { includeDeleted: true }))
         .then(result => expect(result.data._status).eql("deleted"))
-        .then(result => articles.getAny(id2))
+        .then(result => articles.getAny(id2, { includeDeleted: true }))
         .then(result => expect(result.data._status).eql("deleted"));
     });
 

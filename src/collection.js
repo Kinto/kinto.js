@@ -589,11 +589,15 @@ export default class Collection {
   /**
    * Like {@link CollectionTransaction#getAny}, but wrapped in its own transaction.
    *
+   * Options:
+   * - {Boolean} includeDeleted: Include virtually deleted records.
+   *
    * @param  {String} id
+   * @param  {Object} options
    * @return {Promise}
    */
-  getAny(id) {
-    return this.execute(txn => txn.getAny(id), { preloadIds: [id] });
+  getAny(id, options = { includeDeleted: false }) {
+    return this.execute(txn => txn.getAny(id, options), { preloadIds: [id] });
   }
 
   /**
@@ -1385,13 +1389,14 @@ export class CollectionTransaction {
    * Retrieve a record by its id from the local database, or
    * undefined if none exists.
    *
-   * This will also return virtually deleted records.
-   *
    * @param  {String} id
    * @return {Object}
    */
-  getAny(id) {
-    const record = this.adapterTransaction.get(id);
+  getAny(id, options = { includeDeleted: false }) {
+    let record = this.adapterTransaction.get(id);
+    if (!options.includeDeleted && record && record._status == "deleted") {
+      record = null;
+    }
     return { data: record, permissions: {} };
   }
 
@@ -1406,7 +1411,7 @@ export class CollectionTransaction {
    * @return {Object}
    */
   get(id, options = { includeDeleted: false }) {
-    const res = this.getAny(id);
+    const res = this.getAny(id, options);
     if (
       !res.data ||
       (!options.includeDeleted && res.data._status === "deleted")
