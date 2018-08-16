@@ -1114,7 +1114,6 @@ describe("Collection", () => {
         .then(res => res.data.title)
         .should.eventually.eql(article.title);
     });
-
   });
 
   /** @test {Collection#delete} */
