@@ -639,9 +639,14 @@ describe("adapter.IDB", () => {
       }).should.eventually.be.fulfilled;
     });
 
-    it("should not migrate if option is not set", () => {
-      const idb = new IDB("another/not-migrated");
+    it("should not migrate if option is set to false", () => {
+      const idb = new IDB("another/not-migrated", { adapterOptions: { migrateOldData: false } });
       return idb.list().should.eventually.become([]);
+    });
+
+    it("should throw an error if database exists and option is not set", () => {
+      const idb = new IDB("another/not-migrated");
+      return idb.open().should.eventually.be.rejectedWith("readthedocs");
     });
   });
 });

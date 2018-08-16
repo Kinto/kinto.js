@@ -238,9 +238,15 @@ export default class IDB extends BaseAdapter {
     // Check if it exists, and migrate data once new schema is in place.
     // Note: the built-in migrations from IndexedDB can only be used if the
     // database name does not change.
-    const toMigrate = this._options.migrateOldData
+    const hasMigrateOption = this._options.hasOwnProperty("migrateOldData");
+    const toMigrate = this._options.migrateOldData || !hasMigrateOption
       ? await migrationRequired(this.cid)
       : null;
+
+    if (!!toMigrate && !hasMigrateOption) {
+      throw new Error("An old IndexedDB database was found, but the `migrateOldData` option was not set. " +
+                      "Check out ugprade notes https://kintojs.readthedocs.io/en/latest/upgrading/");
+    }
 
     this._db = await open(this.dbName, {
       version: 1,
