@@ -593,7 +593,7 @@ async function migrationRequired(dbName) {
     return null;
   }
 
-  console.warn(`${dbName}: old IDB database found."`);
+  console.warn(`${dbName}: old IndexedB database found.`);
   // Scan all records.
   let records;
   await execute(db, dbName, store => {
@@ -602,7 +602,7 @@ async function migrationRequired(dbName) {
       res => (records = res)
     );
   });
-  console.log(`${dbName}: found ${records.length} records."`);
+  console.log(`${dbName}: found ${records.length} records.`);
 
   // Check if there's a entry for this.
   let timestamp;
