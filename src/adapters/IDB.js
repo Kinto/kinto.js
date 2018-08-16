@@ -239,12 +239,12 @@ export default class IDB extends BaseAdapter {
     // Note: the built-in migrations from IndexedDB can only be used if the
     // database name does not change.
     const hasMigrateOption = this._options.hasOwnProperty("migrateOldData");
-    const toMigrate =
+    const dataToMigrate =
       this._options.migrateOldData || !hasMigrateOption
         ? await migrationRequired(this.cid)
         : null;
 
-    if (!!toMigrate && !hasMigrateOption) {
+    if (dataToMigrate && !hasMigrateOption) {
       throw new Error(
         "An old IndexedDB database was found, but the `migrateOldData` option was not set. " +
           "Check out ugprade notes https://kintojs.readthedocs.io/en/latest/upgrading/"
@@ -275,8 +275,8 @@ export default class IDB extends BaseAdapter {
       },
     });
 
-    if (toMigrate) {
-      const { records, timestamp } = toMigrate;
+    if (dataToMigrate) {
+      const { records, timestamp } = dataToMigrate;
       await this.loadDump(records);
       await this.saveLastModified(timestamp);
       console.log(`${this.cid}: data was migrated successfully.`);
