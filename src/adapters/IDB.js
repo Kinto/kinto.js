@@ -246,7 +246,8 @@ export default class IDB extends BaseAdapter {
 
     if (dataToMigrate && !hasMigrateOption) {
       throw new Error(
-        "An old IndexedDB database was found, but the `migrateOldData` option was not set. " +
+        "An old IndexedDB database with data was found, but the `migrateOldData` option " +
+          "was not explicitly set. " +
           "Check out ugprade notes https://kintojs.readthedocs.io/en/latest/upgrading/"
       );
     }
@@ -596,7 +597,7 @@ async function migrationRequired(dbName) {
     return null;
   }
 
-  console.warn(`${dbName}: old IndexedB database found.`);
+  console.warn(`${dbName}: old IndexedDB database found.`);
   // Scan all records.
   let records;
   await execute(db, dbName, store => {
