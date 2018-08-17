@@ -652,10 +652,5 @@ describe("adapter.IDB", () => {
       const idb = new IDB("some/db", { migrateOldData: true });
       return idb.open().should.eventually.be.fulfilled;
     });
-
-    it("should throw an error if database exists and option is not set", () => {
-      const idb = new IDB("another/not-migrated");
-      return idb.open().should.eventually.be.rejectedWith("readthedocs");
-    });
   });
 });
