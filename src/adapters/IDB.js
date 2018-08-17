@@ -238,7 +238,7 @@ export default class IDB extends BaseAdapter {
     // Check if it exists, and migrate data once new schema is in place.
     // Note: the built-in migrations from IndexedDB can only be used if the
     // database name does not change.
-    const toMigrate = this._options.migrateOldData
+    const dataToMigrate = this._options.migrateOldData
       ? await migrationRequired(this.cid)
       : null;
 
@@ -266,8 +266,8 @@ export default class IDB extends BaseAdapter {
       },
     });
 
-    if (toMigrate) {
-      const { records, timestamp } = toMigrate;
+    if (dataToMigrate) {
+      const { records, timestamp } = dataToMigrate;
       await this.loadDump(records);
       await this.saveLastModified(timestamp);
       console.log(`${this.cid}: data was migrated successfully.`);
@@ -587,36 +587,41 @@ async function migrationRequired(dbName) {
     return null;
   }
 
-  console.warn(`${dbName}: old IDB database found."`);
-  // Scan all records.
-  let records;
-  await execute(db, dbName, store => {
-    store.openCursor().onsuccess = cursorHandlers.all(
-      {},
-      res => (records = res)
-    );
-  });
-  console.log(`${dbName}: found ${records.length} records."`);
+  console.warn(`${dbName}: old IndexedDB database found.`);
+  try {
+    // Scan all records.
+    let records;
+    await execute(db, dbName, store => {
+      store.openCursor().onsuccess = cursorHandlers.all(
+        {},
+        res => (records = res)
+      );
+    });
+    console.log(`${dbName}: found ${records.length} records.`);
 
-  // Check if there's a entry for this.
-  let timestamp;
-  await execute(db, "__meta__", store => {
-    store.get(`${dbName}-lastModified`).onsuccess = e => {
-      timestamp = e.target.result ? e.target.result.value : null;
-    };
-  });
-  // Some previous versions, also used to store the timestamps without prefix.
-  if (!timestamp) {
+    // Check if there's a entry for this.
+    let timestamp = null;
     await execute(db, "__meta__", store => {
-      store.get("lastModified").onsuccess = e => {
+      store.get(`${dbName}-lastModified`).onsuccess = e => {
         timestamp = e.target.result ? e.target.result.value : null;
       };
     });
+    // Some previous versions, also used to store the timestamps without prefix.
+    if (!timestamp) {
+      await execute(db, "__meta__", store => {
+        store.get("lastModified").onsuccess = e => {
+          timestamp = e.target.result ? e.target.result.value : null;
+        };
+      });
+    }
+    console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
+
+    // Those will be inserted in the new database/schema.
+    return { records, timestamp };
+  } catch (e) {
+    console.error(e);
+    return null;
+  } finally {
+    db.close();
   }
-  console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
-
-  db.close();
-
-  // Those will be inserted in the new database/schema.
-  return { records, timestamp };
 }
