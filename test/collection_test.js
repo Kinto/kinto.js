@@ -78,7 +78,7 @@ describe("Collection", () => {
   }
 
   beforeEach(() => {
-    sandbox = sinon.sandbox.create();
+    sandbox = sinon.createSandbox();
     return testCollection().clear();
   });
 

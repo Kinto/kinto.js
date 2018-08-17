@@ -118,7 +118,7 @@ describe("Integration tests", function() {
   beforeEach(function() {
     this.timeout(12500);
 
-    sandbox = sinon.sandbox.create();
+    sandbox = sinon.createSandbox();
 
     kinto = new Kinto({
       remote: TEST_KINTO_SERVER,

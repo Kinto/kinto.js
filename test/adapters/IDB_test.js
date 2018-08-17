@@ -11,7 +11,7 @@ describe("adapter.IDB", () => {
   let sandbox, db;
 
   beforeEach(() => {
-    sandbox = sinon.sandbox.create();
+    sandbox = sinon.createSandbox();
     db = new IDB("test/foo");
     return db.clear();
   });
