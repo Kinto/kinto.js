@@ -4,7 +4,7 @@ import { EventEmitter } from "events";
 
 // babel-polyfill can only be imported once
 if (!global._babelPolyfill) {
-  require("babel-polyfill");
+  require("@babel/polyfill");
 }
 
 import Api from "kinto-http";

@@ -1,32 +1,32 @@
 {
   "env": {
     "development": {
-      "presets": ["es2015"],
+      "presets": ["@babel/env"],
       "plugins": [
-        "transform-object-rest-spread",
-        "transform-async-to-generator",
-        "transform-runtime"
+        "@babel/plugin-syntax-object-rest-spread",
+        "@babel/plugin-transform-async-to-generator",
+        "@babel/plugin-transform-runtime"
       ],
     },
     "default": {
-      "presets": ["es2015"],
+      "presets": ["@babel/env"],
       "plugins": [
-        "transform-object-rest-spread",
-        "transform-async-to-generator",
-        "transform-runtime"
+        "@babel/plugin-syntax-object-rest-spread",
+        "@babel/plugin-transform-async-to-generator",
+        "@babel/plugin-transform-runtime"
       ],
     },
     "noshim": {
       "plugins": [
-        "transform-es2015-modules-commonjs",
-        "transform-object-rest-spread",
-        "transform-async-to-generator"
+        "@babel/plugin-transform-modules-commonjs",
+        "@babel/plugin-syntax-object-rest-spread",
+        "@babel/plugin-transform-async-to-generator"
       ]
     },
     "firefox": {
       "plugins": [
-        "transform-es2015-modules-commonjs",
-        "syntax-object-rest-spread"
+        "@babel/transform-modules-commonjs",
+        "@babel/plugin-syntax-object-rest-spread"
       ]
     }
   }
