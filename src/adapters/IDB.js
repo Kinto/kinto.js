@@ -580,6 +580,10 @@ async function migrationRequired(dbName) {
     },
   });
 
+  // Check that the DB we're looking at is really a legacy one,
+  // and not some remainder of the open() operation above.
+  exists &= db.objectStoreNames.contains("__meta__");
+
   if (!exists) {
     db.close();
     // Testing the existence creates it, so delete it :)
