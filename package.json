@@ -171,7 +171,7 @@
     "eslint": "^5.0.0",
     "estraverse-fb": "^1.3.1",
     "fake-indexeddb": "2.0.4",
-    "gh-pages": "^1.0.0",
+    "gh-pages": "^2.0.0",
     "http-server": "^0.11.0",
     "kinto-node-test-server": "^1.0.0",
     "mocha": "^5.0.0",
