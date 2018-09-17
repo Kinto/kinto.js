@@ -580,6 +580,12 @@ async function migrationRequired(dbName) {
     },
   });
 
+  // Check that the DB we're looking at is really a legacy one,
+  // and not some remainder of the open() operation above.
+  exists &=
+    db.objectStoreNames.contains("__meta__") &&
+    db.objectStoreNames.contains(dbName);
+
   if (!exists) {
     db.close();
     // Testing the existence creates it, so delete it :)
@@ -619,7 +625,7 @@ async function migrationRequired(dbName) {
     // Those will be inserted in the new database/schema.
     return { records, timestamp };
   } catch (e) {
-    console.error(e);
+    console.error("Error occured during migration", e);
     return null;
   } finally {
     db.close();

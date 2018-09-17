@@ -645,10 +645,11 @@ describe("adapter.IDB", () => {
     });
 
     it("should not fail if old database is broken or incomplete", async () => {
-      await open("some/db", {
+      const oldDb = await open("some/db", {
         version: 1,
         onupgradeneeded: event => {},
       });
+      oldDb.close();
       const idb = new IDB("some/db", { migrateOldData: true });
       return idb.open().should.eventually.be.fulfilled;
     });
