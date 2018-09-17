@@ -36,8 +36,9 @@ integrity with the hash provided below:
             crossorigin="anonymous">
     </script>
 ```
-| Filename                | Hash (for version 12.0.0)                                               |
+| Filename                | Hash (for version 12.0.1)                                               |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto.js                | sha384-uh34HPcCHpMYGWxvcmGympy/ulIxgduupH8qZ/Yu0M85YLklW77UyJyvwVZkNHk8 |
-| kinto.min.js            | sha384-uh34HPcCHpMYGWxvcmGympy/ulIxgduupH8qZ/Yu0M85YLklW77UyJyvwVZkNHk8 |
-| kinto.noshim.js         | sha384-uh34HPcCHpMYGWxvcmGympy/ulIxgduupH8qZ/Yu0M85YLklW77UyJyvwVZkNHk8 |
+| kinto.js                | sha384-mZYdqT/wcSIJjYYgZLGa8l5goSyeQiVlhElbfT4Cptvt6NPIpqDXmFrF25SLVsqr |
+| kinto.min.js            | sha384-DDiofBMNgKM5d0htPulvPdvNhU/h4nw0LzeooqRRxqUkelpT4u3rCzx7BDTvYodE |
+| kinto.noshim.js         | sha384-IU0X5GU02RL2Mvon3+LA31t/pWJpTTgDODLl5hFN7vUmG5W2MOXzE6DZyARMTQ28 |
+
