@@ -136,6 +136,7 @@
     "@babel/core": "^7.0.0",
     "@babel/plugin-transform-async-to-generator": "^7.0.0",
     "@babel/polyfill": "^7.0.0",
+    "@babel/runtime": "^7.0.0",
     "btoa": "^1.1.2",
     "kinto-http": ">=4.3.3",
     "uuid": "^3.0.0"
@@ -149,7 +150,6 @@
     "@babel/plugin-transform-modules-commonjs": "^7.0.0",
     "@babel/plugin-transform-runtime": "^7.0.0",
     "@babel/preset-env": "^7.0.0",
-    "@babel/runtime": "^7.0.0",
     "babel-eslint": "^9.0.0",
     "babel-istanbul": "^0.12.2",
     "babel-loader": "^8.0.0",
