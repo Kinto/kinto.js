@@ -48,9 +48,11 @@ The collection object has the following (read-only) attribute:
 ## Creating a record
 
 ```js
-articles.create({title: "foo"})
-  .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+try {
+  await articles.create({title: "foo"});
+} catch(e) {
+  console.error;
+}
 ```
 
 Result is:
@@ -76,9 +78,11 @@ but you can also define a [custom ID schema](#id-schemas));
 ## Retrieving a single record
 
 ```js
-articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+try {
+  await articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+} catch(e) {
+  console.error;
+}
 ```
 
 Result:
@@ -102,9 +106,11 @@ Result:
 ## Retrieving a single record if present
 
 ```js
-articles.getAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console))
-  .error(console.error.bind(console))
+try {
+  await articles.getAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+} catch(e) {
+  console.error;
+}
 ```
 
 Result:
@@ -129,8 +135,7 @@ var existing = {
 
 var updated = {...existing, title: "baz"};
 
-articles.update(updated)
-  .then(console.log.bind(console));
+await articles.update(updated);
 ```
 
 Result is:
@@ -162,13 +167,11 @@ var existing = {
   title: "bar"
 };
 
-articles.upsert(existing)
-  .then(console.log.bind(console));
+await articles.upsert(existing);
 
 var updated = {...existing, title: "baz"};
 
-articles.upsert(updated)
-  .then(console.log.bind(console));
+await articles.upsert(updated);
 ```
 
 Result is:
@@ -196,8 +199,7 @@ Result is:
 By default, local deletion is performed *virtually*, until the collection is actually synced to the remote server.
 
 ```js
-articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+await articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
 ```
 
 Result:
@@ -223,8 +225,7 @@ Result:
 ## Deleting records if present
 
 ```js
-articles.deleteAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f7")
-  .then(console.log.bind(console));
+await articles.deleteAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f7");
 ```
 
 Result:
@@ -245,8 +246,7 @@ Result:
 ## Listing records
 
 ```js
-articles.list()
-  .then(console.log.bind(console));
+await articles.list();
 ```
 
 Result is:
@@ -282,15 +282,13 @@ Result is:
 The `#list()` method accepts an object argument allowing to define filters and ordering:
 
 ```js
-articles.list({filters: {_status: "created"}, order: "rank"})
-  .then(console.log.bind(console));
+await articles.list({filters: {_status: "created"}, order: "rank"});
 ```
 
 Filters accepts an object where a key is the column name and the property value the pattern to filter the column with. For now this pattern can be either a single value or an array of values; in the latter case, results will contain all records having the filtered column value containing any of the provided ones:
 
 ```js
-articles.list({filters: {_status: ["created", "updated"]}})
-  .then(console.log.bind(console));
+await articles.list({filters: {_status: ["created", "updated"]}});
 ```
 
 > #### Notes
@@ -304,8 +302,7 @@ articles.list({filters: {_status: ["created", "updated"]}})
 Records can be filtered using the `filters` parameter mentioning field names and their expected value:
 
 ```js
-articles.list({filters: {unread: true}})
-  .then(console.log.bind(console));
+await articles.list({filters: {unread: true}});
 ```
 
 > #### Notes
@@ -319,8 +316,7 @@ articles.list({filters: {unread: true}})
 Records can be sorted using the `order` parameter:
 
 ```js
-articles.list({order: "-title"})
-  .then(console.log.bind(console));
+await articles.list({order: "-title"});
 ```
 
 > #### Notes
@@ -338,14 +334,14 @@ actually starting the first sync with it.
 The list of imported records is returned.
 
 ```js
-articles.loadDump([
+let records = await articles.loadDump([
   {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
     title: "baz",
     last_modified: 1432222889337
   }
-])
-  .then(records => console.log(records));
+]);
+console.log(records));
 ```
 
 > #### Notes
@@ -359,8 +355,7 @@ articles.loadDump([
 This will remove all existing records from the collection:
 
 ```js
-articles.clear()
-  .then(console.log.bind(console));
+await articles.clear();
 ```
 
 Result:
@@ -390,6 +385,7 @@ conflicts with the changes you've made as part of a transaction.
 
 To initiate a transaction, call `Collection#execute()` like this:
 
+//Code needs review here before async/await example refactor
 ```js
 articles.execute(txn => {
     let article1 = txn.get(id1);
