@@ -925,6 +925,8 @@ export default class Collection {
    * @param  {KintoClient.Collection} client           Kinto client Collection instance.
    * @param  {SyncResultObject}       syncResultObject The sync result object.
    * @param  {Object}                 options
+   * @param  {String}                 options.expectedTimestamp: A timestamp to use as a "cache
+   *   busting" query parameter.
    * @return {Promise}
    */
   async pullChanges(client, syncResultObject, options = {}) {
@@ -955,6 +957,12 @@ export default class Collection {
         .map(r => r.id)
         .join(",");
       filters = { exclude_id };
+    }
+    if (options.expectedTimestamp) {
+      filters = {
+        ...filters,
+        _expected: options.expectedTimestamp,
+      };
     }
     // First fetch remote changes from the server
     const { data, last_modified } = await client.listRecords({
@@ -1184,6 +1192,8 @@ export default class Collection {
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
+   * - {String} expectedTimestamp: A timestamp to use as a "cache
+   *   busting" query parameter.
    * - {Number} retry: Number of retries when server fails to process the request (default: 1).
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
@@ -1200,11 +1210,13 @@ export default class Collection {
     options = {
       strategy: Collection.strategy.MANUAL,
       headers: {},
+      filters: {},
       retry: 1,
       ignoreBackoff: false,
       bucket: null,
       collection: null,
       remote: null,
+      expectedTimestamp: null,
     }
   ) {
     options = {
