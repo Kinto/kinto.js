@@ -129,8 +129,7 @@ var existing = {
 
 var updated = {...existing, title: "baz"};
 
-articles.update(updated)
-  .then(console.log.bind(console));
+await articles.update(updated);
 ```
 
 Result is:
@@ -162,13 +161,11 @@ var existing = {
   title: "bar"
 };
 
-articles.upsert(existing)
-  .then(console.log.bind(console));
+await articles.upsert(existing);
 
 var updated = {...existing, title: "baz"};
 
-articles.upsert(updated)
-  .then(console.log.bind(console));
+await articles.upsert(updated);
 ```
 
 Result is:
@@ -196,8 +193,7 @@ Result is:
 By default, local deletion is performed *virtually*, until the collection is actually synced to the remote server.
 
 ```js
-articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console));
+await articles.delete("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
 ```
 
 Result:
@@ -223,8 +219,7 @@ Result:
 ## Deleting records if present
 
 ```js
-articles.deleteAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f7")
-  .then(console.log.bind(console));
+await articles.deleteAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f7");
 ```
 
 Result:
@@ -245,8 +240,7 @@ Result:
 ## Listing records
 
 ```js
-articles.list()
-  .then(console.log.bind(console));
+await articles.list();
 ```
 
 Result is:
@@ -282,15 +276,13 @@ Result is:
 The `#list()` method accepts an object argument allowing to define filters and ordering:
 
 ```js
-articles.list({filters: {_status: "created"}, order: "rank"})
-  .then(console.log.bind(console));
+await articles.list({filters: {_status: "created"}, order: "rank"});
 ```
 
 Filters accepts an object where a key is the column name and the property value the pattern to filter the column with. For now this pattern can be either a single value or an array of values; in the latter case, results will contain all records having the filtered column value containing any of the provided ones:
 
 ```js
-articles.list({filters: {_status: ["created", "updated"]}})
-  .then(console.log.bind(console));
+await articles.list({filters: {_status: ["created", "updated"]}});
 ```
 
 > #### Notes
@@ -304,8 +296,7 @@ articles.list({filters: {_status: ["created", "updated"]}})
 Records can be filtered using the `filters` parameter mentioning field names and their expected value:
 
 ```js
-articles.list({filters: {unread: true}})
-  .then(console.log.bind(console));
+await articles.list({filters: {unread: true}});
 ```
 
 > #### Notes
@@ -319,8 +310,7 @@ articles.list({filters: {unread: true}})
 Records can be sorted using the `order` parameter:
 
 ```js
-articles.list({order: "-title"})
-  .then(console.log.bind(console));
+await articles.list({order: "-title"});
 ```
 
 > #### Notes
@@ -359,8 +349,7 @@ articles.loadDump([
 This will remove all existing records from the collection:
 
 ```js
-articles.clear()
-  .then(console.log.bind(console));
+await articles.clear();
 ```
 
 Result:
@@ -705,7 +694,7 @@ collection.api
 
 In case a pristine or [flushed](http://kinto.readthedocs.io/en/latest/configuration/settings.html?highlight=flush#activating-the-flush-endpoint) server is used against an existing local database, [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) will reject with a *«Server has been flushed»* error. That means the remote server doesn't hold any data, while your local database is marked as synchronized and probably contains records you don't want to lose.
 
-So instead of wiping your local database to reflect this new remote state, you're notified about the situation with a proper error :) You'll most likely want to republish your local database to the server; this is very easy to achieve by calling [`#resetSyncStatus()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resetSyncStatus), then [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) again:
+So instead of wiping your local database to reflect this new remote state, you're notified about the situation with a proper error :) You'll most likely want to republish your local database to the server; this is very easy to achieve by calling [`#resetSyncStatus()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resetSyncStatus), then [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) again:
 
 ```js
 articles.sync()
@@ -877,7 +866,7 @@ coll = kinto.collection("articles", {
 > - Your transformer will be called even on deleted records, so be sure to handle those correctly in both encoding and decoding;
 > - Most transformers should pass `id` and `last_modified` through unaltered, since they are used in syncing;
 > - If you do alter `id` or `last_modified`, be careful, since this can interfere with syncing;
-> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
+> - While this example transformer returns the modified record synchronously, you can also use promises to make it asynchronous — see [dedicated section](#async-transformers).
 
 Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
 
