@@ -921,10 +921,15 @@ export default class Collection {
    *
    * Options:
    * - {String} strategy: The selected sync strategy.
+   * - {String} expectedTimestamp: A timestamp to use as a "cache busting" query parameter.
+   * - {Array<String>} exclude: A list of record ids to exclude from pull.
+   * - {Object} headers: The HTTP headers to use in the request.
+   * - {int} retry: The number of retries to do if the HTTP request fails.
+   * - {int} lastModified: The timestamp to use in `?_since` query.
    *
    * @param  {KintoClient.Collection} client           Kinto client Collection instance.
    * @param  {SyncResultObject}       syncResultObject The sync result object.
-   * @param  {Object}                 options
+   * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
   async pullChanges(client, syncResultObject, options = {}) {
@@ -955,6 +960,12 @@ export default class Collection {
         .map(r => r.id)
         .join(",");
       filters = { exclude_id };
+    }
+    if (options.expectedTimestamp) {
+      filters = {
+        ...filters,
+        _expected: options.expectedTimestamp,
+      };
     }
     // First fetch remote changes from the server
     const { data, last_modified } = await client.listRecords({
@@ -1032,6 +1043,11 @@ export default class Collection {
   /**
    * Publish local changes to the remote server and updates the passed
    * {@link SyncResultObject} with publication results.
+   *
+   * Options:
+   * - {String} strategy: The selected sync strategy.
+   * - {Object} headers: The HTTP headers to use in the request.
+   * - {int} retry: The number of retries to do if the HTTP request fails.
    *
    * @param  {KintoClient.Collection} client           Kinto client Collection instance.
    * @param  {SyncResultObject}       syncResultObject The sync result object.
@@ -1184,6 +1200,7 @@ export default class Collection {
    *
    * Options:
    * - {Object} headers: HTTP headers to attach to outgoing requests.
+   * - {String} expectedTimestamp: A timestamp to use as a "cache busting" query parameter.
    * - {Number} retry: Number of retries when server fails to process the request (default: 1).
    * - {Collection.strategy} strategy: See {@link Collection.strategy}.
    * - {Boolean} ignoreBackoff: Force synchronization even if server is currently
@@ -1205,6 +1222,7 @@ export default class Collection {
       bucket: null,
       collection: null,
       remote: null,
+      expectedTimestamp: null,
     }
   ) {
     options = {

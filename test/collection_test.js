@@ -1965,6 +1965,21 @@ describe("Collection", () => {
           });
       });
 
+      it("should respect expectedTimestamp when requesting changes", () => {
+        return articles
+          .pullChanges(client, result, { expectedTimestamp: '"123"' })
+          .then(_ => {
+            sinon.assert.calledOnce(listRecords);
+            sinon.assert.calledWithExactly(listRecords, {
+              since: undefined,
+              filters: { _expected: '"123"' },
+              retry: undefined,
+              pages: Infinity,
+              headers: {},
+            });
+          });
+      });
+
       it("should resolve with imported creations", () => {
         return articles
           .pullChanges(client, result)
@@ -2768,6 +2783,14 @@ describe("Collection", () => {
           expect(pullChanges.firstCall.args[2])
             .to.have.property("retry")
             .eql(3);
+        });
+      });
+
+      it("should transfer the expectedTimestamp option", () => {
+        return articles.sync({ expectedTimestamp: '"123"' }).then(() => {
+          expect(pullChanges.firstCall.args[2])
+            .to.have.property("expectedTimestamp")
+            .eql('"123"');
         });
       });
     });
