@@ -579,6 +579,13 @@ describe("Collection", () => {
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
+    it("should accept some characters in record's Id when provided", () => {
+      return articles
+        .create({ id: "this_is.Like-A-Domain.fr", title: "foo" }, { useRecordId: true })
+        .then(res => res.data.id)
+        .should.be.fulfilled;
+    });
+
     it("should validate record's Id when provided (custom IdSchema)", () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
@@ -1036,7 +1043,7 @@ describe("Collection", () => {
 
     it("should validate passed id (custom IdSchema)", () => {
       return articles
-        .get("dead.beef")
+        .get("dead/beef")
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -1479,7 +1486,7 @@ describe("Collection", () => {
 
     it("should fail if id is invalid", () => {
       return articles
-        .loadDump([{ id: "a.b.c", title: "foo" }])
+        .loadDump([{ id: "a/b/c", title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 

@@ -1,6 +1,6 @@
 "use strict";
 
-export const RE_RECORD_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+export const RE_RECORD_ID = /^[a-zA-Z0-9][a-zA-Z0-9\\._-]*$/;
 
 /**
  * Checks if a value is undefined.
