@@ -316,7 +316,7 @@ describe("adapter.IDB", () => {
         return callback({
           index() {
             return {
-              openCursor() {
+              getAll() {
                 throw new Error("transaction error");
               },
             };

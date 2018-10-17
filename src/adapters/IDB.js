@@ -155,13 +155,22 @@ const cursorHandlers = {
  * @return {IDBRequest}
  */
 function createListRequest(cid, store, filters, done) {
+  const filterFields = Object.keys(filters);
+
+  // If no filters, get all results in one bulk.
+  if (filterFields.length == 0) {
+    const request = store.index("cid").getAll(IDBKeyRange.only(cid));
+    request.onsuccess = event => done(event.target.result);
+    return request;
+  }
+
   // Introspect filters and check if they leverage an indexed field.
-  const indexField = Object.keys(filters).find(field => {
+  const indexField = filterFields.find(field => {
     return INDEXED_FIELDS.includes(field);
   });
 
   if (!indexField) {
-    // Get all records for this collection (ie. cid)
+    // Iterate on all records for this collection (ie. cid)
     const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
