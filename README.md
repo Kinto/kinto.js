@@ -14,11 +14,11 @@ The idea is to persist data locally in the browser by default, then synchronizin
 const kinto = new Kinto({remote: "https://kinto.dev.mozaws.net/v1/"});
 const posts = kinto.collection("posts");
 
-posts
-  // Create and store a new post in the browser local database
-  .create({title: "first post"})
-  // Publish all local data to the server, import remote changes
-  .then(_ => posts.sync());
+// Create and store a new post in the browser local database
+await posts.create({title: "first post"});
+
+// Publish all local data to the server, import remote changes
+await posts.sync();
 ```
 
 
