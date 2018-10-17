@@ -581,9 +581,11 @@ describe("Collection", () => {
 
     it("should accept some characters in record's Id when provided", () => {
       return articles
-        .create({ id: "this_is.Like-A-Domain.fr", title: "foo" }, { useRecordId: true })
-        .then(res => res.data.id)
-        .should.be.fulfilled;
+        .create(
+          { id: "this_is.Like-A-Domain.fr", title: "foo" },
+          { useRecordId: true }
+        )
+        .then(res => res.data.id).should.be.fulfilled;
     });
 
     it("should validate record's Id when provided (custom IdSchema)", () => {
