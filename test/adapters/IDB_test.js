@@ -228,12 +228,8 @@ describe("adapter.IDB", () => {
           .stub(db, "prepare")
           .callsFake(async (name, callback, options) => {
             return callback({
-              index() {
-                return {
-                  openCursor() {
-                    throw new Error("transaction error");
-                  },
-                };
+              openCursor() {
+                throw new Error("transaction error");
               },
             });
           });
