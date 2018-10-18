@@ -196,6 +196,15 @@ function createListRequest(cid, store, filters, done) {
     return request;
   }
 
+  // If no filters on custom attribute, get all results in one bulk.
+  if (remainingFilters.length == 0) {
+    const request = store
+      .index(indexField)
+      .getAll(IDBKeyRange.only([cid, value]));
+    request.onsuccess = event => done(event.target.result);
+    return request;
+  }
+
   // WHERE field = value clause
   const request = indexStore.openCursor(IDBKeyRange.only([cid, value]));
   request.onsuccess = cursorHandlers.all(remainingFilters, done);
