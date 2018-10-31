@@ -534,7 +534,17 @@ export default class IDB extends BaseAdapter {
   async loadDump(records) {
     try {
       await this.execute(transaction => {
-        records.forEach(record => transaction.update(record));
+        let i = 0;
+
+        putNext();
+
+        function putNext() {
+          if (i == records.length) {
+            return;
+          }
+          transaction.update(records[i]).onsuccess = putNext;
+          ++i;
+        }
       });
       const previousLastModified = await this.getLastModified();
       const lastModified = Math.max(
@@ -567,7 +577,7 @@ function transactionProxy(adapter, store, preloaded = []) {
     },
 
     update(record) {
-      store.put({ ...record, _cid });
+      return store.put({ ...record, _cid });
     },
 
     delete(id) {
