@@ -534,8 +534,10 @@ export default class IDB extends BaseAdapter {
   async loadDump(records) {
     try {
       await this.execute(transaction => {
+        // Since the put operations are asynchronous, we chain
+        // them together. The last one will be waited for the
+        // `transaction.oncomplete` callback.
         let i = 0;
-
         putNext();
 
         function putNext() {
