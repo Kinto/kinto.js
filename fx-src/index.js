@@ -19,18 +19,17 @@ ChromeUtils.import("resource://gre/modules/Timer.jsm");
 ChromeUtils.import("resource://gre/modules/XPCOMUtils.jsm");
 XPCOMUtils.defineLazyGlobalGetters(global, ["fetch", "indexedDB"]);
 
-const { EventEmitter } = ChromeUtils.import(
-  "resource://gre/modules/EventEmitter.jsm",
-  {}
-);
-const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(
-  Ci.nsIUUIDGenerator
-);
-
+ChromeUtils.defineModuleGetter(global, "EventEmitter",
+                               "resource://gre/modules/EventEmitter.jsm");
 // Use standalone kinto-http module landed in FFx.
-const { KintoHttpClient } = ChromeUtils.import(
-  "resource://services-common/kinto-http-client.js"
-);
+ChromeUtils.defineModuleGetter(global, "KintoHttpClient",
+                               "resource://services-common/kinto-http-client.js");
+
+XPCOMUtils.defineLazyGetter(global, "generateUUID", () => {
+  return Cc["@mozilla.org/uuid-generator;1"].getService(
+    Ci.nsIUUIDGenerator
+  );
+});
 
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
