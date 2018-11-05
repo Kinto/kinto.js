@@ -37,8 +37,8 @@ integrity with the hash provided below:
     </script>
 ```
 
-| Filename                | Hash (for version 12.2.0)                                               |
+| Filename                | Hash (for version 12.2.1)                                               |
 |-------------------------|-------------------------------------------------------------------------|
-| kinto.js                | sha384-0rc1HtuHsfzxJKSG/B+sywmn5JkvCeK7XvYp5/fXq1WM/f/5hKXz2cgPyEsh8fQr |
-| kinto.min.js            | sha384-R1UyMyYpVtgjS9II7APWQcf2T1SyRtyL07x9dV/RRqFEDFLOuQsT+UwKpOdv2TTd |
-| kinto.noshim.js         | sha384-PaooK2LSgbbp9eIK4er5LWwb2aV9u867fFzAhK1a1CUjIlSTruHeQN/x5fdTRU0R |
+| kinto.js                | sha384-ONu4crBmsMUPN59k5TBjbQeYHu/UPCXP/Vt0gfiuJkCX9ChB+N3zXJMel2BpJd38 |
+| kinto.min.js            | sha384-Erh7PcMgcp1rPZFzHiZ2TOxlKhF4qOynI4Dpo0lir8/M6KqlJGQgePjBi9DZ/50u |
+| kinto.noshim.js         | sha384-LjeUkybNgampTEdCrhrA6XkmL23/I3Kkn0rS8LPXfjE7NdI6bA7cxj2zd2XjspbC |
