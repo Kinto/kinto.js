@@ -1313,10 +1313,24 @@ export default class Collection {
    * The local records which are unsynced or whose timestamp is either missing
    * or superior to those being loaded will be ignored.
    *
+   * @deprecated Use {@link importBulk} instead.
    * @param  {Array} records The previously exported list of records to load.
    * @return {Promise} with the effectively imported records.
    */
   async loadDump(records) {
+    return this.importBulk(records);
+  }
+
+  /**
+   * Load a list of records already synced with the remote server.
+   *
+   * The local records which are unsynced or whose timestamp is either missing
+   * or superior to those being loaded will be ignored.
+   *
+   * @param  {Array} records The previously exported list of records to load.
+   * @return {Promise} with the effectively imported records.
+   */
+  async importBulk(records) {
     if (!Array.isArray(records)) {
       throw new Error("Records is not an array.");
     }
@@ -1358,7 +1372,7 @@ export default class Collection {
       return shouldKeep;
     });
 
-    return await this.db.loadDump(newRecords.map(markSynced));
+    return await this.db.importBulk(newRecords.map(markSynced));
   }
 }
 

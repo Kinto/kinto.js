@@ -18,6 +18,7 @@ describe("adapters.BaseAdapter", () => {
       "Not Implemented."
     );
     expect(() => adapter.getLastModified()).to.Throw(Error, "Not Implemented.");
+    expect(() => adapter.importBulk()).to.Throw(Error, "Not Implemented.");
     expect(() => adapter.loadDump()).to.Throw(Error, "Not Implemented.");
   });
 });

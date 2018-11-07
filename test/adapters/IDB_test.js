@@ -411,8 +411,11 @@ describe("adapter.IDB", () => {
     });
   });
 
-  /** @test {IDB#loadDump} */
-  describe("#loadDump", () => {
+  /** 
+   * @deprecated
+   * @test {IDB#loadDump} 
+   */
+  describe("Deprecated #loadDump", () => {
     it("should reject on transaction error", () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
@@ -424,6 +427,22 @@ describe("adapter.IDB", () => {
       return db
         .loadDump([{ foo: "bar" }])
         .should.be.rejectedWith(Error, /^loadDump()/);
+    });
+  });
+
+  /** @test {IDB#importBulk} */
+  describe("#importBulk", () => {
+    it("should reject on transaction error", () => {
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
+          put() {
+            throw new Error("transaction error");
+          },
+        });
+      });
+      return db
+        .importBulk([{ foo: "bar" }])
+        .should.be.rejectedWith(Error, /^importBulk()/);
     });
   });
 
@@ -474,8 +493,11 @@ describe("adapter.IDB", () => {
     });
   });
 
-  /** @test {IDB#loadDump} */
-  describe("#loadDump", () => {
+  /** 
+   * @deprecated
+   * @test {IDB#loadDump} 
+   */
+  describe("Deprecated #loadDump", () => {
     it("should import a list of records.", () => {
       return db
         .loadDump([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
@@ -511,6 +533,52 @@ describe("adapter.IDB", () => {
         .saveLastModified(1458796543)
         .then(() =>
           db.loadDump([
+            { id: uuid4(), title: "foo", last_modified: 1457896541 },
+            { id: uuid4(), title: "bar", last_modified: 1458796542 },
+          ])
+        )
+        .then(() => db.getLastModified())
+        .should.eventually.become(1458796543);
+    });
+  });
+
+  /** @test {IDB#importBulk} */
+  describe("#importBulk", () => {
+    it("should import a list of records.", () => {
+      return db
+        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .should.eventually.have.length(2);
+    });
+
+    it("should override existing records.", () => {
+      return db
+        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .then(() => {
+          return db.importBulk([{ id: 1, foo: "baz" }, { id: 3, foo: "bab" }]);
+        })
+        .then(() => db.list())
+        .should.eventually.eql([
+          { id: 1, foo: "baz" },
+          { id: 2, foo: "baz" },
+          { id: 3, foo: "bab" },
+        ]);
+    });
+
+    it("should update the collection lastModified value.", () => {
+      return db
+        .importBulk([
+          { id: uuid4(), title: "foo", last_modified: 1457896541 },
+          { id: uuid4(), title: "bar", last_modified: 1458796542 },
+        ])
+        .then(() => db.getLastModified())
+        .should.eventually.become(1458796542);
+    });
+
+    it("should preserve older collection lastModified value.", () => {
+      return db
+        .saveLastModified(1458796543)
+        .then(() =>
+          db.importBulk([
             { id: uuid4(), title: "foo", last_modified: 1457896541 },
             { id: uuid4(), title: "bar", last_modified: 1458796542 },
           ])

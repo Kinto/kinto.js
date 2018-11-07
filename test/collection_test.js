@@ -1456,8 +1456,11 @@ describe("Collection", () => {
     });
   });
 
-  /** @test {Collection#loadDump} */
-  describe("#loadDump", () => {
+  /** 
+   * @deprecated
+   * @test {Collection#loadDump} 
+   */
+  describe("Deprecated #loadDump", () => {
     let articles;
 
     beforeEach(() => (articles = testCollection()));
@@ -1553,6 +1556,108 @@ describe("Collection", () => {
             last_modified: 1457896541,
           };
           return articles.loadDump([record]);
+        })
+        .should.eventually.have.length(0);
+    });
+  });
+
+  /** @test {Collection#importBulk} */
+  describe("#importBulk", () => {
+    let articles;
+
+    beforeEach(() => (articles = testCollection()));
+
+    it("should import records in the collection", () => {
+      return articles
+        .importBulk([
+          { id: uuid4(), title: "foo", last_modified: 1452347896 },
+          { id: uuid4(), title: "bar", last_modified: 1452347985 },
+        ])
+        .should.eventually.have.length(2);
+    });
+
+    it("should fail if records is not an array", () => {
+      return articles
+        .importBulk({ id: "abc", title: "foo" })
+        .should.be.rejectedWith(Error, /^Records is not an array./);
+    });
+
+    it("should fail if id is invalid", () => {
+      return articles
+        .importBulk([{ id: "a.b.c", title: "foo" }])
+        .should.be.rejectedWith(Error, /^Record has invalid ID./);
+    });
+
+    it("should fail if id is missing", () => {
+      return articles
+        .importBulk([{ title: "foo" }])
+        .should.be.rejectedWith(Error, /^Record has invalid ID./);
+    });
+
+    it("should fail if last_modified is missing", () => {
+      return articles
+        .importBulk([{ id: uuid4(), title: "foo" }])
+        .should.be.rejectedWith(Error, /^Record has no last_modified value./);
+    });
+
+    it("should mark imported records as synced.", () => {
+      const testId = uuid4();
+      return articles
+        .importBulk([{ id: testId, title: "foo", last_modified: 1457896541 }])
+        .then(() => {
+          return articles.get(testId);
+        })
+        .then(res => res.data._status)
+        .should.eventually.eql("synced");
+    });
+
+    it("should ignore already imported records.", () => {
+      const record = { id: uuid4(), title: "foo", last_modified: 1457896541 };
+      return articles
+        .importBulk([record])
+        .then(() => articles.importBulk([record]))
+        .should.eventually.have.length(0);
+    });
+
+    it("should overwrite old records.", () => {
+      const record = {
+        id: "a-record",
+        title: "foo",
+        last_modified: 1457896541,
+      };
+      return articles
+        .importBulk([record])
+        .then(() => {
+          const updated = { ...record, last_modified: 1457896543 };
+          return articles.importBulk([updated]);
+        })
+        .should.eventually.have.length(1);
+    });
+
+    it("should not overwrite unsynced records.", () => {
+      return articles
+        .create({ title: "foo" })
+        .then(result => {
+          const record = {
+            id: result.data.id,
+            title: "foo",
+            last_modified: 1457896541,
+          };
+          return articles.importBulk([record]);
+        })
+        .should.eventually.have.length(0);
+    });
+
+    it("should not overwrite records without last modified.", () => {
+      return articles
+        .create({ id: uuid4(), title: "foo" }, { synced: true })
+        .then(result => {
+          const record = {
+            id: result.data.id,
+            title: "foo",
+            last_modified: 1457896541,
+          };
+          return articles.importBulk([record]);
         })
         .should.eventually.have.length(0);
     });

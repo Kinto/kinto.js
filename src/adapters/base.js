@@ -72,8 +72,21 @@ export default class BaseAdapter {
   }
 
   /**
+   * Load records in bulk that were exported from a server.
+   *
+   * @abstract
+   * @param  {Array} records The records to load.
+   * @return {Promise}
+   */
+  importBulk(records) {
+    throw new Error("Not Implemented.");
+  }
+
+
+  /**
    * Load a dump of records exported from a server.
    *
+   * @deprecated Use {@link importBulk} instead.
    * @abstract
    * @param  {Array} records The records to load.
    * @return {Promise}

@@ -328,7 +328,7 @@ actually starting the first sync with it.
 The list of imported records is returned.
 
 ```js
-articles.loadDump([
+articles.importBulk([ // Previously, loadDump()
   {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
     title: "baz",
@@ -340,6 +340,7 @@ articles.loadDump([
 
 > #### Notes
 >
+> - The use of `loadDump()` is deprecated.  Use `importBulk()` instead.
 > - Existing records are replaced if they do not have more recent modifications.
 > - Imported records won't be synced with the server.
 > - The importation is optimized in a single database transaction.
