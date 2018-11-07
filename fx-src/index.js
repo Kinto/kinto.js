@@ -26,10 +26,10 @@ ChromeUtils.defineModuleGetter(global, "KintoHttpClient",
                                "resource://services-common/kinto-http-client.js");
 
 XPCOMUtils.defineLazyGetter(global, "generateUUID", () => {
-  return Cc["@mozilla.org/uuid-generator;1"].getService(
-    Ci.nsIUUIDGenerator
-  );
+  const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
+  return generateUUID;
 });
+
 
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
