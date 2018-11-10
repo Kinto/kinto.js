@@ -82,7 +82,6 @@ export default class BaseAdapter {
     throw new Error("Not Implemented.");
   }
 
-
   /**
    * Load a dump of records exported from a server.
    *

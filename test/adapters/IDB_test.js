@@ -417,16 +417,14 @@ describe("adapter.IDB", () => {
    */
   describe("Deprecated #loadDump", () => {
     it("should call importBulk", () => {
-        sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
           put() {
             throw new Error("transaction error");
           },
         });
       });
-      return db
-        .loadDump([{ foo: "bar" }])
-        .should.be.a('promise');
+      return db.loadDump([{ foo: "bar" }]).should.be.a("promise");
       //return ib.should.have.been.calledOnce;
     });
   });
