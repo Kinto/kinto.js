@@ -429,7 +429,7 @@ export default class IDB extends BaseAdapter {
         createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
           const preloaded = {};
-          for(const r of records) {
+          for (const r of records) {
             const { _cid, ...record } = r; // eslint-disable-line no-unused-vars
             preloaded[record.id] = record;
           }
