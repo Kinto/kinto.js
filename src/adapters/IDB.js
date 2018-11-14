@@ -177,7 +177,7 @@ function createListRequest(cid, store, filters, done) {
   }
 
   // If `indexField` was used already, don't filter again.
-  const remainingFilters = omitKeys(filters, indexField);
+  const remainingFilters = omitKeys(filters, [indexField]);
 
   // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
   const value = filters[indexField];
@@ -428,10 +428,11 @@ export default class IDB extends BaseAdapter {
         const filters = { id: options.preload };
         createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
-          const preloaded = records.reduce((acc, record) => {
-            acc[record.id] = omitKeys(record, ["_cid"]);
-            return acc;
-          }, {});
+          const preloaded = {};
+          for (const r of records) {
+            const { _cid, ...record } = r; // eslint-disable-line no-unused-vars
+            preloaded[record.id] = record;
+          }
           runCallback(preloaded);
         });
       },
@@ -474,7 +475,10 @@ export default class IDB extends BaseAdapter {
         createListRequest(this.cid, store, filters, _results => {
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
-          results = _results.map(r => omitKeys(r, ["_cid"]));
+          results = _results.map(r => {
+            const { _cid, ...record } = r; // eslint-disable-line no-unused-vars
+            return record;
+          });
         });
       });
       // The resulting list of records is sorted.
