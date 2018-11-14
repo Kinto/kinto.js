@@ -548,6 +548,7 @@ export default class IDB extends BaseAdapter {
           if (i == records.length) {
             return;
           }
+          // On error, `transaction.onerror` is called.
           transaction.update(records[i]).onsuccess = putNext;
           ++i;
         }
