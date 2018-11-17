@@ -1461,19 +1461,10 @@ describe("Collection", () => {
    * @test {Collection#loadDump}
    */
   describe("Deprecated #loadDump", () => {
-    let articles;
-
-    beforeEach(() => (articles = testCollection()));
+    let articles = testCollection();
 
     it("should call importBulk", () => {
-      sandbox.stub(articles, "importBulk").callsFake(async (name, callback, options) => {
-        return callback({
-          put() {
-            throw new Error("transaction error");
-          },
-        });
-      });
-
+      sandbox.stub(articles, "importBulk").returns(Promise.resolve());
       articles
         .loadDump([
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
