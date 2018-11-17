@@ -1466,13 +1466,20 @@ describe("Collection", () => {
     beforeEach(() => (articles = testCollection()));
 
     it("should call importBulk", () => {
+      sandbox.stub(articles, "importBulk").callsFake(async (name, callback, options) => {
+        return callback({
+          put() {
+            throw new Error("transaction error");
+          },
+        });
+      });
+
       articles
         .loadDump([
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
           { id: uuid4(), title: "bar", last_modified: 1452347985 },
         ])
-        .should.be.a("promise");
-      //return ib.should.have.been.calledOnce;
+        .then(_ => sinon.assert.calledOnce(importBulk));
     });
   });
 
