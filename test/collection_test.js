@@ -1461,16 +1461,17 @@ describe("Collection", () => {
    * @test {Collection#loadDump}
    */
   describe("Deprecated #loadDump", () => {
-    let articles = testCollection();
+    let articles;
 
     it("should call importBulk", () => {
+      articles = testCollection();
       sandbox.stub(articles, "importBulk").returns(Promise.resolve());
       articles
         .loadDump([
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
           { id: uuid4(), title: "bar", last_modified: 1452347985 },
         ])
-        .then(_ => sinon.assert.calledOnce(importBulk));
+        .then(_ => sinon.assert.calledOnce(articles.importBulk));
     });
   });
 

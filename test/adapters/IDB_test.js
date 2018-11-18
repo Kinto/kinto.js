@@ -418,7 +418,9 @@ describe("adapter.IDB", () => {
   describe("Deprecated #loadDump", () => {
     it("should call importBulk", () => {
       sandbox.stub(db, "importBulk").returns(Promise.resolve());
-      return db.loadDump([{ foo: "bar" }]).then(_ => sinon.assert.calledOnce(importBulk));
+      return db
+        .loadDump([{ foo: "bar" }])
+        .then(_ => sinon.assert.calledOnce(db.importBulk));
     });
   });
 
