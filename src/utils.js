@@ -120,12 +120,9 @@ export function deepEqual(a, b) {
  * @return {Object}            A copy without the specified keys.
  */
 export function omitKeys(obj, keys = []) {
-  const result = {};
-  for (const k in obj) {
-    if (keys.includes(k)) {
-      continue;
-    }
-    result[k] = obj[k];
+  const result = { ...obj };
+  for (const key of keys) {
+    delete result[key];
   }
   return result;
 }

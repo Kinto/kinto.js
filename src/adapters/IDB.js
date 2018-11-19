@@ -429,8 +429,8 @@ export default class IDB extends BaseAdapter {
         createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
           const preloaded = {};
-          for (const r of records) {
-            const { _cid, ...record } = r; // eslint-disable-line no-unused-vars
+          for (const record of records) {
+            delete record["_cid"];
             preloaded[record.id] = record;
           }
           runCallback(preloaded);
@@ -475,10 +475,10 @@ export default class IDB extends BaseAdapter {
         createListRequest(this.cid, store, filters, _results => {
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
-          results = _results.map(r => {
-            const { _cid, ...record } = r; // eslint-disable-line no-unused-vars
-            return record;
-          });
+          for (const result of _results) {
+            delete result["_cid"];
+          }
+          results = _results;
         });
       });
       // The resulting list of records is sorted.
@@ -540,7 +540,7 @@ export default class IDB extends BaseAdapter {
       await this.execute(transaction => {
         // Since the put operations are asynchronous, we chain
         // them together. The last one will be waited for the
-        // `transaction.oncomplete` callback.
+        // `transaction.oncomplete` callback. (see #execute())
         let i = 0;
         putNext();
 
