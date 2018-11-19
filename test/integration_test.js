@@ -1727,7 +1727,7 @@ describe("Integration tests", function() {
             { id: uuid4(), last_modified: 123459, title: "task4", done: false },
           ];
           return Promise.all(dump.map(r => tasksRemote.createRecord(r)))
-            .then(() => tasks.loadDump(dump))
+            .then(() => tasks.importBulk(dump))
             .then(() =>
               tasksRemote.updateRecord({ id: id1, title: "task22", done: true })
             )

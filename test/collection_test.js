@@ -1456,15 +1456,34 @@ describe("Collection", () => {
     });
   });
 
-  /** @test {Collection#loadDump} */
-  describe("#loadDump", () => {
+  /**
+   * @deprecated
+   * @test {Collection#loadDump}
+   */
+  describe("Deprecated #loadDump", () => {
+    let articles;
+
+    it("should call importBulk", () => {
+      articles = testCollection();
+      sandbox.stub(articles, "importBulk").returns(Promise.resolve());
+      articles
+        .loadDump([
+          { id: uuid4(), title: "foo", last_modified: 1452347896 },
+          { id: uuid4(), title: "bar", last_modified: 1452347985 },
+        ])
+        .then(_ => sinon.assert.calledOnce(articles.importBulk));
+    });
+  });
+
+  /** @test {Collection#importBulk} */
+  describe("#importBulk", () => {
     let articles;
 
     beforeEach(() => (articles = testCollection()));
 
     it("should import records in the collection", () => {
       return articles
-        .loadDump([
+        .importBulk([
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
           { id: uuid4(), title: "bar", last_modified: 1452347985 },
         ])
@@ -1473,32 +1492,32 @@ describe("Collection", () => {
 
     it("should fail if records is not an array", () => {
       return articles
-        .loadDump({ id: "abc", title: "foo" })
+        .importBulk({ id: "abc", title: "foo" })
         .should.be.rejectedWith(Error, /^Records is not an array./);
     });
 
     it("should fail if id is invalid", () => {
       return articles
-        .loadDump([{ id: "a.b.c", title: "foo" }])
+        .importBulk([{ id: "a.b.c", title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if id is missing", () => {
       return articles
-        .loadDump([{ title: "foo" }])
+        .importBulk([{ title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if last_modified is missing", () => {
       return articles
-        .loadDump([{ id: uuid4(), title: "foo" }])
+        .importBulk([{ id: uuid4(), title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has no last_modified value./);
     });
 
     it("should mark imported records as synced.", () => {
       const testId = uuid4();
       return articles
-        .loadDump([{ id: testId, title: "foo", last_modified: 1457896541 }])
+        .importBulk([{ id: testId, title: "foo", last_modified: 1457896541 }])
         .then(() => {
           return articles.get(testId);
         })
@@ -1509,8 +1528,8 @@ describe("Collection", () => {
     it("should ignore already imported records.", () => {
       const record = { id: uuid4(), title: "foo", last_modified: 1457896541 };
       return articles
-        .loadDump([record])
-        .then(() => articles.loadDump([record]))
+        .importBulk([record])
+        .then(() => articles.importBulk([record]))
         .should.eventually.have.length(0);
     });
 
@@ -1521,10 +1540,10 @@ describe("Collection", () => {
         last_modified: 1457896541,
       };
       return articles
-        .loadDump([record])
+        .importBulk([record])
         .then(() => {
           const updated = { ...record, last_modified: 1457896543 };
-          return articles.loadDump([updated]);
+          return articles.importBulk([updated]);
         })
         .should.eventually.have.length(1);
     });
@@ -1538,7 +1557,7 @@ describe("Collection", () => {
             title: "foo",
             last_modified: 1457896541,
           };
-          return articles.loadDump([record]);
+          return articles.importBulk([record]);
         })
         .should.eventually.have.length(0);
     });
@@ -1552,7 +1571,7 @@ describe("Collection", () => {
             title: "foo",
             last_modified: 1457896541,
           };
-          return articles.loadDump([record]);
+          return articles.importBulk([record]);
         })
         .should.eventually.have.length(0);
     });

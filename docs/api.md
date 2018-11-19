@@ -328,7 +328,7 @@ actually starting the first sync with it.
 The list of imported records is returned.
 
 ```js
-articles.loadDump([
+articles.importBulk([
   {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
     title: "baz",

@@ -282,7 +282,7 @@ export default class IDB extends BaseAdapter {
 
     if (dataToMigrate) {
       const { records, timestamp } = dataToMigrate;
-      await this.loadDump(records);
+      await this.importBulk(records);
       await this.saveLastModified(timestamp);
       console.log(`${this.cid}: data was migrated successfully.`);
       // Delete the old database.
@@ -531,11 +531,23 @@ export default class IDB extends BaseAdapter {
   /**
    * Load a dump of records exported from a server.
    *
+   * @deprecated Use {@link importBulk} instead.
    * @abstract
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
   async loadDump(records) {
+    return this.importBulk(records);
+  }
+
+  /**
+   * Load records in bulk that were exported from a server.
+   *
+   * @abstract
+   * @param  {Array} records The records to load.
+   * @return {Promise}
+   */
+  async importBulk(records) {
     try {
       await this.execute(transaction => {
         // Since the put operations are asynchronous, we chain
@@ -562,7 +574,7 @@ export default class IDB extends BaseAdapter {
       }
       return records;
     } catch (e) {
-      this._handleError("loadDump", e);
+      this._handleError("importBulk", e);
     }
   }
 }

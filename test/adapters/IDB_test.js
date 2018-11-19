@@ -411,8 +411,21 @@ describe("adapter.IDB", () => {
     });
   });
 
-  /** @test {IDB#loadDump} */
-  describe("#loadDump", () => {
+  /**
+   * @deprecated
+   * @test {IDB#loadDump}
+   */
+  describe("Deprecated #loadDump", () => {
+    it("should call importBulk", () => {
+      sandbox.stub(db, "importBulk").returns(Promise.resolve());
+      return db
+        .loadDump([{ foo: "bar" }])
+        .then(_ => sinon.assert.calledOnce(db.importBulk));
+    });
+  });
+
+  /** @test {IDB#importBulk} */
+  describe("#importBulk", () => {
     it("should reject on transaction error", () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
@@ -422,8 +435,8 @@ describe("adapter.IDB", () => {
         });
       });
       return db
-        .loadDump([{ foo: "bar" }])
-        .should.be.rejectedWith(Error, /^loadDump()/);
+        .importBulk([{ foo: "bar" }])
+        .should.be.rejectedWith(Error, /^importBulk()/);
     });
   });
 
@@ -474,19 +487,19 @@ describe("adapter.IDB", () => {
     });
   });
 
-  /** @test {IDB#loadDump} */
-  describe("#loadDump", () => {
+  /** @test {IDB#importBulk} */
+  describe("#importBulk", () => {
     it("should import a list of records.", () => {
       return db
-        .loadDump([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
         .should.eventually.have.length(2);
     });
 
     it("should override existing records.", () => {
       return db
-        .loadDump([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
         .then(() => {
-          return db.loadDump([{ id: 1, foo: "baz" }, { id: 3, foo: "bab" }]);
+          return db.importBulk([{ id: 1, foo: "baz" }, { id: 3, foo: "bab" }]);
         })
         .then(() => db.list())
         .should.eventually.eql([
@@ -498,7 +511,7 @@ describe("adapter.IDB", () => {
 
     it("should update the collection lastModified value.", () => {
       return db
-        .loadDump([
+        .importBulk([
           { id: uuid4(), title: "foo", last_modified: 1457896541 },
           { id: uuid4(), title: "bar", last_modified: 1458796542 },
         ])
@@ -510,7 +523,7 @@ describe("adapter.IDB", () => {
       return db
         .saveLastModified(1458796543)
         .then(() =>
-          db.loadDump([
+          db.importBulk([
             { id: uuid4(), title: "foo", last_modified: 1457896541 },
             { id: uuid4(), title: "bar", last_modified: 1458796542 },
           ])
