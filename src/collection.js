@@ -989,7 +989,7 @@ export default class Collection {
     const serverChanged = unquoted > options.lastModified;
     const emptyCollection = data.length === 0;
     if (!options.exclude && localSynced && serverChanged && emptyCollection) {
-      throw Error("Server has been flushed.");
+      throw Error("Server has been flushed." + since);
     }
 
     syncResultObject.lastModified = unquoted;
