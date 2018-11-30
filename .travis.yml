@@ -1,6 +1,6 @@
 language: python
 python:
- - "3.5"
+ - "3.6"
 env:
   - SERVER=6.0.4 ACTION=test
   - SERVER=master ACTION=test
