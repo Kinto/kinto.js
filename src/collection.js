@@ -991,12 +991,15 @@ export default class Collection {
     if (!options.exclude && localSynced && serverChanged && emptyCollection) {
       // throw Error("Server has been flushed. Client Side Timestamp: " + localSynced + " Server Side Timestamp: "
       // + unquoted);
-        let e = new Error;
-        e.message = "Server has been flushed. Client Side Timestamp: " + localSynced + " Server Side Timestamp: "
-        + unquoted;
-        e.clientTimestamp = localSynced;
-        e.serverTimestamp = unquoted;
-        throw e;
+      let e = new Error();
+      e.message =
+        "Server has been flushed. Client Side Timestamp: " +
+        localSynced +
+        " Server Side Timestamp: " +
+        unquoted;
+      e.clientTimestamp = localSynced;
+      e.serverTimestamp = unquoted;
+      throw e;
     }
 
     syncResultObject.lastModified = unquoted;

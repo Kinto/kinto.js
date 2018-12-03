@@ -1998,7 +1998,10 @@ describe("Integration tests", function() {
     it("should reject a call to sync() with appropriate message", () => {
       return tasks
         .sync()
-        .should.be.rejectedWith(Error, /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/);
+        .should.be.rejectedWith(
+          Error,
+          /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/
+        );
     });
 
     it("should allow republishing local collection to flushed server", () => {
