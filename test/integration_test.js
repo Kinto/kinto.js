@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
 import Kinto from "../src";
-import { recordsEqual } from "../src/collection";
+import { recordsEqual, ServerWasFlushedError } from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -1999,7 +1999,7 @@ describe("Integration tests", function() {
       return tasks
         .sync()
         .should.be.rejectedWith(
-          Error,
+          ServerWasFlushedError,
           /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/
         );
     });

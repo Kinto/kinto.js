@@ -109,7 +109,7 @@ export class SyncResultObject {
   }
 }
 
-class ServerWasFlushedError extends Error {
+export class ServerWasFlushedError extends Error {
   constructor(clientTimestamp, serverTimestamp, message) {
     super(message);
 
