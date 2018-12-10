@@ -8,7 +8,7 @@ import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
 import Kinto from "../src";
-import { recordsEqual } from "../src/collection";
+import { recordsEqual, ServerWasFlushedError } from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -1998,7 +1998,10 @@ describe("Integration tests", function() {
     it("should reject a call to sync() with appropriate message", () => {
       return tasks
         .sync()
-        .should.be.rejectedWith(Error, "Server has been flushed");
+        .should.be.rejectedWith(
+          ServerWasFlushedError,
+          /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/
+        );
     });
 
     it("should allow republishing local collection to flushed server", () => {

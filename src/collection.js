@@ -109,6 +109,19 @@ export class SyncResultObject {
   }
 }
 
+export class ServerWasFlushedError extends Error {
+  constructor(clientTimestamp, serverTimestamp, message) {
+    super(message);
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ServerWasFlushedError);
+    }
+
+    this.clientTimestamp = clientTimestamp;
+    this.serverTimestamp = serverTimestamp;
+  }
+}
+
 function createUUIDSchema() {
   return {
     generate() {
@@ -989,7 +1002,15 @@ export default class Collection {
     const serverChanged = unquoted > options.lastModified;
     const emptyCollection = data.length === 0;
     if (!options.exclude && localSynced && serverChanged && emptyCollection) {
-      throw Error("Server has been flushed.");
+      let e = new ServerWasFlushedError(
+        localSynced,
+        unquoted,
+        "Server has been flushed. Client Side Timestamp: " +
+          localSynced +
+          " Server Side Timestamp: " +
+          unquoted
+      );
+      throw e;
     }
 
     syncResultObject.lastModified = unquoted;
