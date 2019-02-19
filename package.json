@@ -174,7 +174,7 @@
     "gh-pages": "^2.0.0",
     "http-server": "^0.11.0",
     "kinto-node-test-server": "^1.0.0",
-    "mocha": "^5.0.0",
+    "mocha": "^6.0.0",
     "prettier": "^1.14.2",
     "sinon": "^7.2.3",
     "uglifyify": "^5.0.0"
