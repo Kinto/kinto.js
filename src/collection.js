@@ -1002,7 +1002,7 @@ export default class Collection {
     const serverChanged = unquoted > options.lastModified;
     const emptyCollection = data.length === 0;
     if (!options.exclude && localSynced && serverChanged && emptyCollection) {
-      let e = new ServerWasFlushedError(
+      const e = new ServerWasFlushedError(
         localSynced,
         unquoted,
         "Server has been flushed. Client Side Timestamp: " +
