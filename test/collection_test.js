@@ -64,17 +64,6 @@ describe("Collection", () => {
     };
   }
 
-  function createKeyValueIdSchema() {
-    return {
-      generate() {
-        throw new Error("createKeyValueIdSchema() does not generate an id");
-      },
-      validate() {
-        return true;
-      },
-    };
-  }
-
   function createKeyListIdSchema() {
     return {
       generate(record) {
@@ -616,22 +605,6 @@ describe("Collection", () => {
           articles.create({ id: res.data.id }, { useRecordId: true })
         )
         .should.be.rejectedWith(Error, /virtually deleted/);
-    });
-
-    it("should throw error when using createKeyValueStoreIdSchema.generate", () => {
-      articles = testCollection({ idSchema: createKeyValueIdSchema() });
-      expect(() => articles.create(article)).to.throw(
-        "createKeyValueIdSchema() does not generate an id"
-      );
-    });
-
-    it("should return true when using createKeyValueStoreIdSchema.validate", () => {
-      articles = testCollection({ idSchema: createKeyValueIdSchema() });
-      return articles
-        .create({ ...article, id: article.title }, { useRecordId: true })
-        .then(result => articles.getAny(result.data.id))
-        .then(result => result.data.id)
-        .should.become(article.title);
     });
   });
 
