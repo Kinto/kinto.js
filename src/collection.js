@@ -140,16 +140,14 @@ function createUUIDSchema() {
  * This will be the property used to retrieve this record.
  *
  * @example
- * const exampleCollection = db.collection("example", { idSchema: createKeyValueIdSchema() })
+ * const exampleCollection = db.collection("example", { idSchema: createKeyValueStoreIdSchema() })
  * await exampleCollection.create({ title: "How to tie a tie", favoriteColor: "blue", id: "user123" }, { useRecordId: true })
  * await exampleCollection.getAny("user123")
- *
  */
-
-export function createKeyValueIdSchema() {
+export function createKeyValueStoreIdSchema() {
   return {
     generate() {
-      throw new Error("createKeyValueIdSchema() does not generate an id");
+      throw new Error("createKeyValueStoreIdSchema() does not generate an id");
     },
     validate() {
       return true;

@@ -14,6 +14,7 @@ import KintoClient from "kinto-http";
 import KintoClientCollection from "kinto-http/lib/collection.js";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
+import { createKeyValueStoreIdSchema } from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -605,6 +606,22 @@ describe("Collection", () => {
           articles.create({ id: res.data.id }, { useRecordId: true })
         )
         .should.be.rejectedWith(Error, /virtually deleted/);
+    });
+
+    it("should throw error when using createKeyValueStoreIdSchema.generate", () => {
+      articles = testCollection({ idSchema: createKeyValueStoreIdSchema() });
+      expect(() => articles.create(article)).to.throw(
+        "createKeyValueStoreIdSchema() does not generate an id"
+      );
+    });
+
+    it("should return true when using createKeyValueStoreIdSchema.validate", () => {
+      articles = testCollection({ idSchema: createKeyValueStoreIdSchema() });
+      return articles
+        .create({ ...article, id: article.title }, { useRecordId: true })
+        .then(result => articles.getAny(result.data.id))
+        .then(result => result.data.id)
+        .should.become(article.title);
     });
   });
 
