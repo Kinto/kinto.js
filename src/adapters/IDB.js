@@ -155,7 +155,6 @@ const cursorHandlers = {
  * @return {IDBRequest}
  */
 function createListRequest(cid, store, filters, done) {
-  // console.log("FILTERS: ", filters);
   const filterFields = Object.keys(filters);
 
   // If no filters, get all results in one bulk.
