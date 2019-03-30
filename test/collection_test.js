@@ -1443,6 +1443,32 @@ describe("Collection", () => {
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art1"]);
       });
+
+      it("should support sub-object filtering", () => {
+        return articles
+          .list({
+            filters: { "article.complete": true },
+          })
+          .then(res =>
+            res.data.map(r => {
+              return r.title;
+            })
+          )
+          .should.eventually.become(["art1", "art2"]);
+      });
+
+      it("should support partial sub-object filtering", () => {
+        return articles
+          .list({
+            filters: { "article.complete": true, title: "art1" },
+          })
+          .then(res =>
+            res.data.map(r => {
+              return r.title;
+            })
+          )
+          .should.eventually.become(["art1"]);
+      });
     });
 
     describe("Ordering & Filtering", () => {
