@@ -155,6 +155,7 @@ const cursorHandlers = {
  * @return {IDBRequest}
  */
 function createListRequest(cid, store, filters, done) {
+  // console.log("FILTERS: ", filters);
   const filterFields = Object.keys(filters);
 
   // If no filters, get all results in one bulk.
@@ -171,11 +172,28 @@ function createListRequest(cid, store, filters, done) {
 
   if (!indexField) {
     // Iterate on all records for this collection (ie. cid)
+    const isSubQuery = Object.keys(filters).some(key => key.includes(".")); // (ie. filters: {"article.title": "hello"})
+    if (isSubQuery) {
+      const newFilter = {};
+      Object.entries(filters).map(filter => {
+        filter.reduce((pv, cv) => {
+          if (pv.includes(".")) {
+            newFilter[pv.split(".")[1]] = cv;
+          } else {
+            newFilter[pv] = cv;
+          }
+        });
+      });
+
+      const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
+      request.onsuccess = cursorHandlers.all(newFilter, done);
+      return request;
+    }
+
     const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
-
   // If `indexField` was used already, don't filter again.
   const remainingFilters = omitKeys(filters, [indexField]);
 
