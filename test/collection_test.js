@@ -1497,8 +1497,8 @@ describe("Collection", () => {
         return articles
           .list({
             filters: {
-              "article.author.name": "John",
-              "article.author.otherBook.title": "book3",
+              "author.name": "John",
+              "author.otherBook.title": "book3",
             },
           })
           .then(res => {
@@ -1513,8 +1513,8 @@ describe("Collection", () => {
         return articles
           .list({
             filters: {
-              "article.author.name": "John",
-              "article.author.unknownField": "blahblahblah",
+              "author.name": "John",
+              "author.unknownField": "blahblahblah",
             },
           })
           .then(res => {

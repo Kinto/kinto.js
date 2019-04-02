@@ -156,7 +156,7 @@ const transformSubObjectFilters = filtersObj => {
     return newFilter;
   };
   for (const key in filtersObj) {
-    const keysArr = key.split(".").slice(1);
+    const keysArr = key.split(".");
     const val = filtersObj[key];
     makeNestedObjectFromArr(keysArr, val);
   }
