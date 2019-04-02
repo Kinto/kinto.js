@@ -139,7 +139,7 @@ const cursorHandlers = {
         cursor.continue(values[i]);
       }
     };
-  }
+  },
 };
 
 const transformSubObjectFilters = filtersObj => {
@@ -292,7 +292,7 @@ export default class IDB extends BaseAdapter {
         const db = event.target.result;
         // Records store
         const recordsStore = db.createObjectStore("records", {
-          keyPath: ["_cid", "id"]
+          keyPath: ["_cid", "id"],
         });
         // An index to obtain all the records in a collection.
         recordsStore.createIndex("cid", "_cid");
@@ -303,9 +303,9 @@ export default class IDB extends BaseAdapter {
         recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
         // Timestamps store
         db.createObjectStore("timestamps", {
-          keyPath: "cid"
+          keyPath: "cid",
         });
-      }
+      },
     });
 
     if (dataToMigrate) {
@@ -633,7 +633,7 @@ function transactionProxy(adapter, store, preloaded = []) {
 
     get(id) {
       return preloaded[id];
-    }
+    },
   };
 }
 
@@ -648,7 +648,7 @@ async function migrationRequired(dbName) {
     version: 1,
     onupgradeneeded: event => {
       exists = false;
-    }
+    },
   });
 
   // Check that the DB we're looking at is really a legacy one,
