@@ -139,7 +139,28 @@ const cursorHandlers = {
         cursor.continue(values[i]);
       }
     };
-  },
+  }
+};
+
+const transformSubObjectFilters = filtersObj => {
+  const newFilter = {};
+  const makeNestedObjectFromArr = (arr, val) => {
+    const last = arr.length - 1;
+    arr.reduce((acc, cv, i) => {
+      return i === last
+        ? (acc[cv] = val)
+        : acc.hasOwnProperty(cv)
+        ? acc[cv]
+        : (acc[cv] = {});
+    }, newFilter);
+    return newFilter;
+  };
+  for (const key in filtersObj) {
+    const keysArr = key.split(".").slice(1);
+    const val = filtersObj[key];
+    makeNestedObjectFromArr(keysArr, val);
+  }
+  return newFilter;
 };
 
 /**
@@ -173,17 +194,7 @@ function createListRequest(cid, store, filters, done) {
     // Iterate on all records for this collection (ie. cid)
     const isSubQuery = Object.keys(filters).some(key => key.includes(".")); // (ie. filters: {"article.title": "hello"})
     if (isSubQuery) {
-      const newFilter = {};
-      Object.entries(filters).map(filter => {
-        filter.reduce((pv, cv) => {
-          if (pv.includes(".")) {
-            newFilter[pv.split(".")[1]] = cv;
-          } else {
-            newFilter[pv] = cv;
-          }
-        });
-      });
-
+      const newFilter = transformSubObjectFilters(filters);
       const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
       request.onsuccess = cursorHandlers.all(newFilter, done);
       return request;
@@ -281,7 +292,7 @@ export default class IDB extends BaseAdapter {
         const db = event.target.result;
         // Records store
         const recordsStore = db.createObjectStore("records", {
-          keyPath: ["_cid", "id"],
+          keyPath: ["_cid", "id"]
         });
         // An index to obtain all the records in a collection.
         recordsStore.createIndex("cid", "_cid");
@@ -292,9 +303,9 @@ export default class IDB extends BaseAdapter {
         recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
         // Timestamps store
         db.createObjectStore("timestamps", {
-          keyPath: "cid",
+          keyPath: "cid"
         });
-      },
+      }
     });
 
     if (dataToMigrate) {
@@ -622,7 +633,7 @@ function transactionProxy(adapter, store, preloaded = []) {
 
     get(id) {
       return preloaded[id];
-    },
+    }
   };
 }
 
@@ -637,7 +648,7 @@ async function migrationRequired(dbName) {
     version: 1,
     onupgradeneeded: event => {
       exists = false;
-    },
+    }
   });
 
   // Check that the DB we're looking at is really a legacy one,

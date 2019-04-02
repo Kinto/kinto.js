@@ -48,6 +48,12 @@ export function filterObject(filters, entry) {
     const value = filters[filter];
     if (Array.isArray(value)) {
       return value.some(candidate => candidate === entry[filter]);
+    } else if (
+      typeof value === "object" &&
+      value instanceof Object &&
+      !Array.isArray(value)
+    ) {
+      return filterObject(value, entry[filter]);
     }
     return entry[filter] === value;
   });
