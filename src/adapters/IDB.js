@@ -1,7 +1,13 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
+import {
+  filterObject,
+  omitKeys,
+  sortObjects,
+  arrayEqual,
+  transformSubObjectFilters,
+} from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -140,27 +146,6 @@ const cursorHandlers = {
       }
     };
   },
-};
-
-const transformSubObjectFilters = filtersObj => {
-  const newFilter = {};
-  const makeNestedObjectFromArr = (arr, val) => {
-    const last = arr.length - 1;
-    arr.reduce((acc, cv, i) => {
-      return i === last
-        ? (acc[cv] = val)
-        : acc.hasOwnProperty(cv)
-        ? acc[cv]
-        : (acc[cv] = {});
-    }, newFilter);
-    return newFilter;
-  };
-  for (const key in filtersObj) {
-    const keysArr = key.split(".");
-    const val = filtersObj[key];
-    makeNestedObjectFromArr(keysArr, val);
-  }
-  return newFilter;
 };
 
 /**

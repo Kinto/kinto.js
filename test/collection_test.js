@@ -1509,7 +1509,7 @@ describe("Collection", () => {
           .should.eventually.become(["art3"]);
       });
 
-      it("should filter records on missing subObject field", () => {
+      it("should throw on records missing subObject field", () => {
         return articles
           .list({
             filters: {
@@ -1517,11 +1517,7 @@ describe("Collection", () => {
               "author.unknownField": "blahblahblah",
             },
           })
-          .then(res => {
-            return res.data.map(r => {
-              return r.title;
-            });
-          })
+          .then(res => res.data)
           .should.eventually.become([]);
       });
     });

@@ -48,12 +48,11 @@ export function filterObject(filters, entry) {
     const value = filters[filter];
     if (Array.isArray(value)) {
       return value.some(candidate => candidate === entry[filter]);
-    } else if (
-      typeof value === "object" &&
-      value instanceof Object &&
-      !Array.isArray(value)
-    ) {
+    } else if (typeof value === "object") {
       return filterObject(value, entry[filter]);
+    } else if (!entry.hasOwnProperty(filter)) {
+      console.error(`The property ${filter} does not exist`);
+      return false;
     }
     return entry[filter] === value;
   });
@@ -143,4 +142,27 @@ export function arrayEqual(a, b) {
     }
   }
   return true;
+}
+
+function makeNestedObjectFromArr(arr, val, nestedFiltersObj) {
+  const last = arr.length - 1;
+  return arr.reduce((acc, cv, i) => {
+    if (i === last) {
+      return (acc[cv] = val);
+    } else if (acc.hasOwnProperty(cv)) {
+      return acc[cv];
+    } else {
+      return (acc[cv] = {});
+    }
+  }, nestedFiltersObj);
+}
+
+export function transformSubObjectFilters(filtersObj) {
+  const transformedFilters = {};
+  for (const key in filtersObj) {
+    const keysArr = key.split(".");
+    const val = filtersObj[key];
+    makeNestedObjectFromArr(keysArr, val, transformedFilters);
+  }
+  return transformedFilters;
 }
