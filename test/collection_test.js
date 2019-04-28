@@ -1509,7 +1509,7 @@ describe("Collection", () => {
           .should.eventually.become(["art3"]);
       });
 
-      it("should throw on records missing subObject field", () => {
+      it("should return empty array if missing subObject field", () => {
         return articles
           .list({
             filters: {
