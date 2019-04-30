@@ -1445,6 +1445,83 @@ describe("Collection", () => {
       });
     });
 
+    describe("SubObject Filtering", () => {
+      const fixtures = [
+        {
+          title: "art1",
+          last_modified: 3,
+          unread: true,
+          complete: true,
+          author: {
+            name: "John",
+            city: "Miami",
+            otherBook: {
+              title: "book1",
+            },
+          },
+        },
+        {
+          title: "art2",
+          last_modified: 2,
+          unread: false,
+          complete: true,
+          author: {
+            name: "Daniel",
+            city: "New York",
+            otherBook: {
+              title: "book2",
+            },
+          },
+        },
+        {
+          title: "art3",
+          last_modified: 1,
+          unread: true,
+          complete: true,
+          author: {
+            name: "John",
+            city: "Chicago",
+            otherBook: {
+              title: "book3",
+            },
+          },
+        },
+      ];
+
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
+
+      it("Filters nested objects", () => {
+        return articles
+          .list({
+            filters: {
+              "author.name": "John",
+              "author.otherBook.title": "book3",
+            },
+          })
+          .then(res => {
+            return res.data.map(r => {
+              return r.title;
+            });
+          })
+          .should.eventually.become(["art3"]);
+      });
+
+      it("should return empty array if missing subObject field", () => {
+        return articles
+          .list({
+            filters: {
+              "author.name": "John",
+              "author.unknownField": "blahblahblah",
+            },
+          })
+          .then(res => res.data)
+          .should.eventually.become([]);
+      });
+    });
+
     describe("Ordering & Filtering", () => {
       const fixtures = [
         { title: "art1", last_modified: 3, unread: true, complete: true },
