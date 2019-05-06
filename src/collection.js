@@ -1401,7 +1401,9 @@ export default class Collection {
 
   async pullMetadata(client, options = {}) {
     const { expectedTimestamp } = options;
-    const query = expectedTimestamp ? { query: { _expected: expectedTimestamp } } : undefined;
+    const query = expectedTimestamp
+      ? { query: { _expected: expectedTimestamp } }
+      : undefined;
     const metadata = await client.getData(query);
     return this.db.saveMetadata(metadata);
   }

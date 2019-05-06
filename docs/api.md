@@ -653,6 +653,27 @@ A [`#cleanLocalFields()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/
 stripped = collection.cleanLocalFields(record);
 ```
 
+## Collection Metadata
+
+During synchronization, the collection metadata is fetched and stored in storage. It can be accessed with the ``.metadata()`` method.
+
+```js
+collection = kinto.collection("articles");
+await collection.sync();
+
+metadata = collection.metadata();
+```
+
+The result is:
+
+```js
+{
+  id: "articles",
+  last_modified: 124768977,
+  displayFields: ["title"]
+}
+```
+
 ## Raw HTTP calls
 
 Every CRUD operations are performed locally using the *database adapter* and the HTTP calls to the remote API are performed automatically during *synchronization*.

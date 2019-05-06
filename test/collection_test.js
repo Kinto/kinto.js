@@ -2777,6 +2777,18 @@ describe("Collection", () => {
       });
     });
 
+    it("should store collection metadata", () => {
+      sandbox.stub(articles, "pullChanges");
+      const metadata = { id: "articles", last_modified: 42 };
+      sandbox
+        .stub(KintoClientCollection.prototype, "getData")
+        .returns(Promise.resolve(metadata));
+      return articles.sync().then(async () => {
+        const stored = await articles.metadata();
+        expect(stored, metadata);
+      });
+    });
+
     describe("Options", () => {
       let pullChanges;
 
