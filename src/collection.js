@@ -1272,6 +1272,9 @@ export default class Collection {
 
     const result = new SyncResultObject();
     try {
+      // Fetch collection metadata.
+      await this.pullMetadata(client, options);
+
       // Fetch last changes from the server.
       await this.pullChanges(client, result, options);
       const { lastModified } = result;
@@ -1394,6 +1397,17 @@ export default class Collection {
     });
 
     return await this.db.importBulk(newRecords.map(markSynced));
+  }
+
+  async pullMetadata(client, options = {}) {
+    const { expectedTimestamp } = options;
+    const query = expectedTimestamp ? { query: { _expected: expectedTimestamp } } : undefined;
+    const metadata = await client.getData(query);
+    return this.db.saveMetadata(metadata);
+  }
+
+  async metadata() {
+    return this.db.getMetadata();
   }
 }
 
