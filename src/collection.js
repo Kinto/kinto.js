@@ -134,6 +134,27 @@ function createUUIDSchema() {
   };
 }
 
+/**
+ * IDSchema for when using kinto.js as a key-value store.
+ * Using this IDSchema requires you to set a property as the id.
+ * This will be the property used to retrieve this record.
+ *
+ * @example
+ * const exampleCollection = db.collection("example", { idSchema: createKeyValueStoreIdSchema() })
+ * await exampleCollection.create({ title: "How to tie a tie", favoriteColor: "blue", id: "user123" }, { useRecordId: true })
+ * await exampleCollection.getAny("user123")
+ */
+export function createKeyValueStoreIdSchema() {
+  return {
+    generate() {
+      throw new Error("createKeyValueStoreIdSchema() does not generate an id");
+    },
+    validate() {
+      return true;
+    },
+  };
+}
+
 function markStatus(record, status) {
   return { ...record, _status: status };
 }

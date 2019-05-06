@@ -14,6 +14,7 @@ import KintoClient from "kinto-http";
 import KintoClientCollection from "kinto-http/lib/collection.js";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
+import { createKeyValueStoreIdSchema } from "../src/collection";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -605,6 +606,22 @@ describe("Collection", () => {
           articles.create({ id: res.data.id }, { useRecordId: true })
         )
         .should.be.rejectedWith(Error, /virtually deleted/);
+    });
+
+    it("should throw error when using createKeyValueStoreIdSchema.generate", () => {
+      articles = testCollection({ idSchema: createKeyValueStoreIdSchema() });
+      expect(() => articles.create(article)).to.throw(
+        "createKeyValueStoreIdSchema() does not generate an id"
+      );
+    });
+
+    it("should return true when using createKeyValueStoreIdSchema.validate", () => {
+      articles = testCollection({ idSchema: createKeyValueStoreIdSchema() });
+      return articles
+        .create({ ...article, id: article.title }, { useRecordId: true })
+        .then(result => articles.getAny(result.data.id))
+        .then(result => result.data.id)
+        .should.become(article.title);
     });
   });
 
@@ -1425,6 +1442,83 @@ describe("Collection", () => {
           .list({ filters: { unread: true, complete: true } })
           .then(res => res.data.map(r => r.title))
           .should.eventually.become(["art1"]);
+      });
+    });
+
+    describe("SubObject Filtering", () => {
+      const fixtures = [
+        {
+          title: "art1",
+          last_modified: 3,
+          unread: true,
+          complete: true,
+          author: {
+            name: "John",
+            city: "Miami",
+            otherBook: {
+              title: "book1",
+            },
+          },
+        },
+        {
+          title: "art2",
+          last_modified: 2,
+          unread: false,
+          complete: true,
+          author: {
+            name: "Daniel",
+            city: "New York",
+            otherBook: {
+              title: "book2",
+            },
+          },
+        },
+        {
+          title: "art3",
+          last_modified: 1,
+          unread: true,
+          complete: true,
+          author: {
+            name: "John",
+            city: "Chicago",
+            otherBook: {
+              title: "book3",
+            },
+          },
+        },
+      ];
+
+      beforeEach(() => {
+        articles = testCollection();
+        return Promise.all(fixtures.map(r => articles.create(r)));
+      });
+
+      it("Filters nested objects", () => {
+        return articles
+          .list({
+            filters: {
+              "author.name": "John",
+              "author.otherBook.title": "book3",
+            },
+          })
+          .then(res => {
+            return res.data.map(r => {
+              return r.title;
+            });
+          })
+          .should.eventually.become(["art3"]);
+      });
+
+      it("should return empty array if missing subObject field", () => {
+        return articles
+          .list({
+            filters: {
+              "author.name": "John",
+              "author.unknownField": "blahblahblah",
+            },
+          })
+          .then(res => res.data)
+          .should.eventually.become([]);
       });
     });
 

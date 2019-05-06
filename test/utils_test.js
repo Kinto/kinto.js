@@ -8,6 +8,7 @@ import {
   filterObjects,
   omitKeys,
   waterfall,
+  transformSubObjectFilters,
 } from "../src/utils";
 
 chai.should();
@@ -195,6 +196,36 @@ describe("Utils", () => {
 
     it("should omit specified keys", () => {
       expect(omitKeys({ a: 1, b: 2 }, ["b", "c"])).eql({ a: 1 });
+    });
+  });
+
+  describe("transformSubObjectFilters", () => {
+    it("should convert string in dot notation to nested object", () => {
+      const input = { "a.b.c.d": 0 };
+      expect(transformSubObjectFilters(input)).eql({
+        a: { b: { c: { d: 0 } } },
+      });
+    });
+
+    it("multiple strings with repeated keys become one object with unique keys", () => {
+      const input = {
+        "a.b.c.d": 0,
+        "a.b.c.arr": [1, 2, 3],
+        "a.b.k.hello": "world",
+      };
+      expect(transformSubObjectFilters(input)).eql({
+        a: {
+          b: {
+            c: {
+              d: 0,
+              arr: [1, 2, 3],
+            },
+            k: {
+              hello: "world",
+            },
+          },
+        },
+      });
     });
   });
 });

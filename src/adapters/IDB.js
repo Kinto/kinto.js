@@ -1,7 +1,13 @@
 "use strict";
 
 import BaseAdapter from "./base.js";
-import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
+import {
+  filterObject,
+  omitKeys,
+  sortObjects,
+  arrayEqual,
+  transformSubObjectFilters,
+} from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -171,11 +177,18 @@ function createListRequest(cid, store, filters, done) {
 
   if (!indexField) {
     // Iterate on all records for this collection (ie. cid)
+    const isSubQuery = Object.keys(filters).some(key => key.includes(".")); // (ie. filters: {"article.title": "hello"})
+    if (isSubQuery) {
+      const newFilter = transformSubObjectFilters(filters);
+      const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
+      request.onsuccess = cursorHandlers.all(newFilter, done);
+      return request;
+    }
+
     const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
-
   // If `indexField` was used already, don't filter again.
   const remainingFilters = omitKeys(filters, [indexField]);
 
