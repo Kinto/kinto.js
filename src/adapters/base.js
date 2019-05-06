@@ -93,4 +93,12 @@ export default class BaseAdapter {
   loadDump(records) {
     throw new Error("Not Implemented.");
   }
+
+  saveMetadata(metadata) {
+    throw new Error("Not Implemented.");
+  }
+
+  getMetadata() {
+    throw new Error("Not Implemented.");
+  }
 }

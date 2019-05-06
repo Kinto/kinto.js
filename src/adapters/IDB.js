@@ -272,24 +272,34 @@ export default class IDB extends BaseAdapter {
       : null;
 
     this._db = await open(this.dbName, {
-      version: 1,
+      version: 2,
       onupgradeneeded: event => {
         const db = event.target.result;
-        // Records store
-        const recordsStore = db.createObjectStore("records", {
-          keyPath: ["_cid", "id"],
-        });
-        // An index to obtain all the records in a collection.
-        recordsStore.createIndex("cid", "_cid");
-        // Here we create indices for every known field in records by collection.
-        // Local record status ("synced", "created", "updated", "deleted")
-        recordsStore.createIndex("_status", ["_cid", "_status"]);
-        // Last modified field
-        recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
-        // Timestamps store
-        db.createObjectStore("timestamps", {
-          keyPath: "cid",
-        });
+
+        if (event.oldVersion < 1) {
+          // Records store
+          const recordsStore = db.createObjectStore("records", {
+            keyPath: ["_cid", "id"],
+          });
+          // An index to obtain all the records in a collection.
+          recordsStore.createIndex("cid", "_cid");
+          // Here we create indices for every known field in records by collection.
+          // Local record status ("synced", "created", "updated", "deleted")
+          recordsStore.createIndex("_status", ["_cid", "_status"]);
+          // Last modified field
+          recordsStore.createIndex("last_modified", ["_cid", "last_modified"]);
+          // Timestamps store
+          db.createObjectStore("timestamps", {
+            keyPath: "cid",
+          });
+        }
+
+        if (event.oldVersion < 2) {
+          // Collections store
+          db.createObjectStore("collections", {
+            keyPath: "cid",
+          });
+        }
       },
     });
 
@@ -588,6 +598,31 @@ export default class IDB extends BaseAdapter {
       return records;
     } catch (e) {
       this._handleError("importBulk", e);
+    }
+  }
+
+  async saveMetadata(metadata) {
+    try {
+      await this.prepare(
+        "collections",
+        store => store.put({ cid: this.cid, metadata }),
+        { mode: "readwrite" }
+      );
+      return metadata;
+    } catch (e) {
+      this._handleError("saveMetadata", e);
+    }
+  }
+
+  async getMetadata() {
+    try {
+      let entry = null;
+      await this.prepare("collections", store => {
+        store.get(this.cid).onsuccess = e => (entry = e.target.result);
+      });
+      return entry ? entry.metadata : null;
+    } catch (e) {
+      this._handleError("getMetadata", e);
     }
   }
 }

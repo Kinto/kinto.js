@@ -461,6 +461,7 @@ describe("Collection", () => {
       return Promise.all([
         articles.create({ title: "foo" }),
         articles.create({ title: "bar" }),
+        articles.db.saveMetadata({ id: "articles", last_modified: 42 }),
       ]);
     });
 
@@ -472,11 +473,18 @@ describe("Collection", () => {
         .should.eventually.have.length.of(0);
     });
 
-    it("should clear collection metas", () => {
+    it("should clear collection timestamp", () => {
       return articles.db
         .saveLastModified(42)
         .then(_ => articles.clear())
         .then(_ => articles.db.getLastModified())
+        .should.eventually.eql(null);
+    });
+
+    it("should clear collection metadata", () => {
+      return articles
+        .clear()
+        .then(_ => articles.metadata())
         .should.eventually.eql(null);
     });
   });
@@ -2757,6 +2765,7 @@ describe("Collection", () => {
     });
 
     it("should fetch latest changes from the server", () => {
+      sandbox.stub(articles, "pullMetadata");
       const listRecords = sandbox
         .stub(KintoClientCollection.prototype, "listRecords")
         .returns(
@@ -2773,6 +2782,7 @@ describe("Collection", () => {
     });
 
     it("should store latest lastModified value when no conflicts", () => {
+      sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "42",
@@ -2786,6 +2796,7 @@ describe("Collection", () => {
     });
 
     it("shouldn't store latest lastModified on conflicts", () => {
+      sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "43",
@@ -2805,6 +2816,7 @@ describe("Collection", () => {
     });
 
     it("shouldn't store latest lastModified on errors", () => {
+      sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "43",
@@ -2826,6 +2838,7 @@ describe("Collection", () => {
     });
 
     it("should not execute a last pull on push failure", () => {
+      sandbox.stub(articles, "pullMetadata");
       const pullChanges = sandbox.stub(articles, "pullChanges");
       sandbox
         .stub(articles, "pushChanges")
@@ -2836,6 +2849,7 @@ describe("Collection", () => {
     });
 
     it("should not execute a last pull if nothing to push", () => {
+      sandbox.stub(articles, "pullMetadata");
       sandbox.stub(articles, "gatherLocalChanges").returns(Promise.resolve([]));
       const pullChanges = sandbox
         .stub(articles, "pullChanges")
@@ -2848,6 +2862,7 @@ describe("Collection", () => {
     it("should not redownload pushed changes", () => {
       const record1 = { id: uuid4(), title: "blog" };
       const record2 = { id: uuid4(), title: "post" };
+      sandbox.stub(articles, "pullMetadata");
       sandbox.stub(articles, "pullChanges");
       sandbox
         .stub(articles, "pushChanges")
@@ -2864,10 +2879,23 @@ describe("Collection", () => {
       });
     });
 
+    it("should store collection metadata", () => {
+      sandbox.stub(articles, "pullChanges");
+      const metadata = { id: "articles", last_modified: 42 };
+      sandbox
+        .stub(KintoClientCollection.prototype, "getData")
+        .returns(Promise.resolve(metadata));
+      return articles.sync().then(async () => {
+        const stored = await articles.metadata();
+        expect(stored, metadata);
+      });
+    });
+
     describe("Options", () => {
       let pullChanges;
 
       beforeEach(() => {
+        sandbox.stub(articles, "pullMetadata");
         pullChanges = sandbox
           .stub(articles, "pullChanges")
           .returns(Promise.resolve(new SyncResultObject()));
@@ -2920,6 +2948,7 @@ describe("Collection", () => {
         sandbox
           .stub(articles.db, "getLastModified")
           .returns(Promise.resolve({}));
+        sandbox.stub(articles, "pullMetadata");
         const pullChanges = sandbox.stub(articles, "pullChanges");
         sandbox.stub(articles, "pushChanges");
         articles.api.events.emit("backoff", new Date().getTime() + 30000);
@@ -2938,14 +2967,16 @@ describe("Collection", () => {
         sandbox.restore();
         // Stub low-level fetch instead.
         fetch = sandbox.stub(global, "fetch");
-        // Pull
-        fetch.onCall(0).returns(fakeServerResponse(200, { data: [] }, {}));
+        // Pull metadata
+        fetch.onCall(0).returns(fakeServerResponse(200, { data: {} }, {}));
+        // Pull records
+        fetch.onCall(1).returns(fakeServerResponse(200, { data: [] }, {}));
         // Push
-        fetch.onCall(1).returns(fakeServerResponse(200, { settings: {} }, {}));
+        fetch.onCall(2).returns(fakeServerResponse(200, { settings: {} }, {}));
         fetch
-          .onCall(2)
+          .onCall(3)
           .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }));
-        fetch.onCall(3).returns(
+        fetch.onCall(4).returns(
           fakeServerResponse(
             200,
             {
@@ -2959,7 +2990,7 @@ describe("Collection", () => {
           )
         );
         // Last pull
-        fetch.onCall(4).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch.onCall(5).returns(fakeServerResponse(200, { data: [] }, {}));
         // Avoid actually waiting real time between retries in test suites.
         sandbox.stub(global, "setTimeout").callsFake(fn => setImmediate(fn));
       });
@@ -2985,6 +3016,7 @@ describe("Collection", () => {
         sandbox
           .stub(articles.db, "getLastModified")
           .returns(Promise.resolve({}));
+        sandbox.stub(articles, "pullMetadata");
         sandbox.stub(articles, "pullChanges");
         sandbox.stub(articles, "pushChanges");
       });

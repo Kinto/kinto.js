@@ -572,6 +572,20 @@ describe("adapter.IDB", () => {
     });
   });
 
+  /** @test {IDB#saveMetadata} */
+  describe("#saveMetadata", () => {
+    it("should return null when no metadata is found", () => {
+      return db.getMetadata().should.eventually.eql(null);
+    });
+
+    it("should store metadata in db", async () => {
+      await db.saveMetadata({ id: "abc", schema: { type: "object" } });
+
+      const retrieved = await db.getMetadata();
+      expect(retrieved.id, "abc");
+    });
+  });
+
   /** @test {IDB#open} */
   describe("#migration", () => {
     let idb;
@@ -626,6 +640,12 @@ describe("adapter.IDB", () => {
 
     it("should migrate timestamps", () => {
       return idb.getLastModified().should.eventually.become(43);
+    });
+
+    it("should create the collections store", async () => {
+      const metadata = { id: "abc" };
+      await idb.saveMetadata(metadata);
+      return idb.getMetadata().should.eventually.become(metadata);
     });
 
     it("should not fail if already migrated", () => {
