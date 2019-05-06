@@ -461,7 +461,7 @@ describe("Collection", () => {
       return Promise.all([
         articles.create({ title: "foo" }),
         articles.create({ title: "bar" }),
-        articles.db.saveMetadata({ id: "articles", last_modified: 42 })
+        articles.db.saveMetadata({ id: "articles", last_modified: 42 }),
       ]);
     });
 
