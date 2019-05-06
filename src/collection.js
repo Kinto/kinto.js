@@ -445,6 +445,7 @@ export default class Collection {
    */
   async clear() {
     await this.db.clear();
+    await this.db.saveMetadata(null);
     await this.db.saveLastModified(null);
     return { data: [], permissions: {} };
   }

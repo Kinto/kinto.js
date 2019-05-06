@@ -461,6 +461,7 @@ describe("Collection", () => {
       return Promise.all([
         articles.create({ title: "foo" }),
         articles.create({ title: "bar" }),
+        articles.saveMetata({ id: "articles", last_modified: 42 })
       ]);
     });
 
@@ -472,11 +473,18 @@ describe("Collection", () => {
         .should.eventually.have.length.of(0);
     });
 
-    it("should clear collection metas", () => {
+    it("should clear collection timestamp", () => {
       return articles.db
         .saveLastModified(42)
         .then(_ => articles.clear())
         .then(_ => articles.db.getLastModified())
+        .should.eventually.eql(null);
+    });
+
+    it("should clear collection metadata", () => {
+      return articles
+        .clear()
+        .then(_ => articles.metadata())
         .should.eventually.eql(null);
     });
   });
