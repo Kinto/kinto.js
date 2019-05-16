@@ -1426,7 +1426,9 @@ export default class Collection {
     const query = expectedTimestamp
       ? { query: { _expected: expectedTimestamp } }
       : undefined;
-    const metadata = await client.getData(query);
+    const metadata = await client.getData(query, {
+      headers: options.headers,
+    });
     return this.db.saveMetadata(metadata);
   }
 

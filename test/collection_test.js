@@ -2764,6 +2764,28 @@ describe("Collection", () => {
         .should.eventually.have.length.of(3);
     });
 
+    it("should pullMetadata with options", () => {
+      const pullMetadata = sandbox.stub(articles, "pullMetadata");
+      sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
+        Promise.resolve({
+          last_modified: "42",
+          next: () => {},
+          data: [],
+        })
+      );
+      const options = {
+        headers: {
+          Authorization: "Basic 123",
+        },
+      };
+      return articles.sync(options).then(res => {
+        expect(pullMetadata.callCount).equal(1);
+        // First argument is the client, which we don't care too much about
+        // Second argument is the options
+        expect(pullMetadata.getCall(0).args[1]).include(options);
+      });
+    });
+
     it("should fetch latest changes from the server", () => {
       sandbox.stub(articles, "pullMetadata");
       const listRecords = sandbox
@@ -3234,6 +3256,28 @@ describe("Collection", () => {
           );
         })
         .then(result => expect(createdArticle.title).eql("foo"));
+    });
+  });
+
+  /** @test {Collection#pullMetadata} */
+  describe("#pullMetadata", () => {
+    let articles;
+
+    beforeEach(() => (articles = testCollection()));
+
+    it.only("passes headers to underlying client", () => {
+      const headers = {
+        Authorization: "Basic 123",
+      };
+
+      let client = {
+        getData: sandbox.stub(),
+      };
+      return articles.pullMetadata(client, { headers }).then(_ => {
+        sinon.assert.calledWithExactly(client.getData, undefined, {
+          headers,
+        });
+      });
     });
   });
 
