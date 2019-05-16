@@ -3265,7 +3265,7 @@ describe("Collection", () => {
 
     beforeEach(() => (articles = testCollection()));
 
-    it.only("passes headers to underlying client", () => {
+    it("passes headers to underlying client", () => {
       const headers = {
         Authorization: "Basic 123",
       };
