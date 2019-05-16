@@ -3274,7 +3274,7 @@ describe("Collection", () => {
         getData: sandbox.stub(),
       };
       return articles.pullMetadata(client, { headers }).then(_ => {
-        sinon.assert.calledWithExactly(client.getData, undefined, {
+        sinon.assert.calledWithExactly(client.getData, {
           headers,
         });
       });
