@@ -1648,7 +1648,8 @@ export class CollectionTransaction {
     // If status is created, keep record as created.
     // If status is deleted, mark as updated.
     const isIdentical =
-      oldRecord && recordsEqual(oldRecord, updated, this.localFields);
+      oldRecord &&
+      recordsEqual(oldRecord, updated, this.collection.localFields);
     const keepSynced = isIdentical && oldRecord._status == "synced";
     const neverSynced =
       !oldRecord || (oldRecord && oldRecord._status == "created");
