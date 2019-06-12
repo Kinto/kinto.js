@@ -637,7 +637,7 @@ describe("Collection", () => {
   describe("#update", () => {
     let articles;
 
-    beforeEach(() => (articles = testCollection()));
+    beforeEach(() => (articles = testCollection({ localFields: ["read"] })));
 
     it("should update a record", () => {
       return articles
@@ -671,6 +671,15 @@ describe("Collection", () => {
         .then(data => articles.update({ ...data, title: "blah" }))
         .then(res => res.data._status)
         .should.eventually.eql("updated");
+    });
+
+    it("should not update record status if only local fields are changed", () => {
+      return articles
+        .create({ id: uuid4() }, { synced: true })
+        .then(res => res.data)
+        .then(data => articles.update({ ...data, read: true }))
+        .then(res => res.data._status)
+        .should.eventually.eql("synced");
     });
 
     it("should reject updates on a non-existent record", () => {
