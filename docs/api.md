@@ -328,7 +328,7 @@ actually starting the first sync with it.
 The list of imported records is returned.
 
 ```js
-articles.importBulk([
+await articles.importBulk([
   {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
     title: "baz",
@@ -380,7 +380,7 @@ conflicts with the changes you've made as part of a transaction.
 To initiate a transaction, call `Collection#execute()` like this:
 
 ```js
-articles.execute(txn => {
+await articles.execute(txn => {
     let article1 = txn.get(id1);
     let article2 = txn.get(id2);
     return [article1, article2];
@@ -497,7 +497,7 @@ Synopsis:
         * If `strategy` is set to `Kinto.syncStrategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
 
 ```js
-articles.sync()
+await articles.sync()
   .then(console.log.bind(console))
   .catch(err => {
     if (err.response && err.response.status === 401) {
@@ -536,7 +536,7 @@ You can override default options by passing [`#sync()`](https://doc.esdoc.org/gi
 ```js
 import Collection from "kinto/lib/collection";
 
-articles.sync({
+await articles.sync({
   strategy: Kinto.syncStrategy.CLIENT_WINS,
   remote: "https://alt.server.tld/v1",
   headers: {Authorization: "Basic bWF0Og=="},
