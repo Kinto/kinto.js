@@ -2148,7 +2148,15 @@ describe("Collection", () => {
           .should.eventually.become([]);
       });
 
-      it("should actually import changes into the collection", () => {
+      it("should actually import changes into the collection", async () => {
+
+        try{
+          const articles = await articles.list({order: "title"})
+          const res = res.data
+        }
+        catch(err){
+          
+        }
         return articles
           .pullChanges(client, result)
           .then(_ => articles.list({ order: "title" }))
