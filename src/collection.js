@@ -391,6 +391,7 @@ export default class Collection {
     return {
       CLIENT_WINS: "client_wins",
       SERVER_WINS: "server_wins",
+      PULL_ONLY: "pull_only",
       MANUAL: "manual",
     };
   }
@@ -1359,27 +1360,29 @@ export default class Collection {
       await this.pullChanges(client, result, options);
       const { lastModified } = result;
 
-      // Fetch local changes
-      const toSync = await this.gatherLocalChanges();
+      if (options.strategy != Collection.strategy.PULL_ONLY) {
+        // Fetch local changes
+        const toSync = await this.gatherLocalChanges();
 
-      // Publish local changes and pull local resolutions
-      await this.pushChanges(client, toSync, result, options);
+        // Publish local changes and pull local resolutions
+        await this.pushChanges(client, toSync, result, options);
 
-      // Publish local resolution of push conflicts to server (on CLIENT_WINS)
-      const resolvedUnsynced = result.resolved.filter(
-        r => r._status !== "synced"
-      );
-      if (resolvedUnsynced.length > 0) {
-        const resolvedEncoded = await Promise.all(
-          resolvedUnsynced.map(resolution => {
-            let record = resolution.accepted;
-            if (record === null) {
-              record = { id: resolution.id, _status: resolution._status };
-            }
-            return this._encodeRecord("remote", record);
-          })
+        // Publish local resolution of push conflicts to server (on CLIENT_WINS)
+        const resolvedUnsynced = result.resolved.filter(
+          r => r._status !== "synced"
         );
-        await this.pushChanges(client, resolvedEncoded, result, options);
+        if (resolvedUnsynced.length > 0) {
+          const resolvedEncoded = await Promise.all(
+            resolvedUnsynced.map(resolution => {
+              let record = resolution.accepted;
+              if (record === null) {
+                record = { id: resolution.id, _status: resolution._status };
+              }
+              return this._encodeRecord("remote", record);
+            })
+          );
+          await this.pushChanges(client, resolvedEncoded, result, options);
+        }
       }
       // Perform a last pull to catch changes that occured after the last pull,
       // while local changes were pushed. Do not do it nothing was pushed.

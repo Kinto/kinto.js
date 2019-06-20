@@ -354,6 +354,52 @@ describe("Integration tests", function() {
         };
         let syncResult;
 
+        describe("PULL_ONLY strategy (default)", () => {
+          beforeEach(() => {
+            const pullTestData = {
+              ...testData,
+              localUnsynced: [
+                ...testData.localUnsynced,
+                { id: uuid4(), title: "task4", done: true },
+              ],
+            };
+            return testSync(pullTestData, {
+              strategy: Kinto.syncStrategy.PULL_ONLY,
+            }).then(res => (syncResult = res));
+          });
+
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have no conflicts", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.resolved).to.have.length.of(1);
+            expect(
+              recordsEqual(syncResult.resolved[0].rejected, {
+                id: conflictingId,
+                title: "task4-local",
+                done: false,
+              })
+            ).eql(true);
+            expect(
+              recordsEqual(syncResult.resolved[0].accepted, {
+                id: conflictingId,
+                title: "task4-remote",
+                done: true,
+              })
+            ).eql(true);
+          });
+        });
+
         describe("MANUAL strategy (default)", () => {
           beforeEach(() => {
             return testSync(testData).then(res => (syncResult = res));
