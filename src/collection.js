@@ -8,6 +8,7 @@ import { omitKeys, RE_RECORD_ID } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS = ["incoming-changes"];
+const IMPORT_CHUNK_SIZE = 200;
 
 /**
  * Compare two records omitting local fields and synchronization
@@ -768,31 +769,34 @@ export default class Collection {
   ) {
     // Retrieve records matching change ids.
     try {
-      const { imports, resolved } = await this.db.execute(
-        transaction => {
-          const imports = decodedChanges.map(remote => {
-            // Store remote change into local database.
-            return importChange(transaction, remote, this.localFields);
-          });
-          const conflicts = imports
-            .filter(i => i.type === "conflicts")
-            .map(i => i.data);
-          const resolved = this._handleConflicts(
-            transaction,
-            conflicts,
-            strategy
-          );
-          return { imports, resolved };
-        },
-        { preload: decodedChanges.map(record => record.id) }
-      );
+      for (let i = 0; i < decodedChanges.length; i += IMPORT_CHUNK_SIZE) {
+        const slice = decodedChanges.slice(i, i + IMPORT_CHUNK_SIZE);
 
-      // Lists of created/updated/deleted records
-      imports.forEach(({ type, data }) => syncResultObject.add(type, data));
+        const { imports, resolved } = await this.db.execute(
+          transaction => {
+            const imports = slice.map(remote => {
+              // Store remote change into local database.
+              return importChange(transaction, remote, this.localFields);
+            });
+            const conflicts = imports
+              .filter(i => i.type === "conflicts")
+              .map(i => i.data);
+            const resolved = this._handleConflicts(
+              transaction,
+              conflicts,
+              strategy
+            );
+            return { imports, resolved };
+          },
+          { preload: slice.map(record => record.id) }
+        );
 
-      // Automatically resolved conflicts (if not manual)
-      if (resolved.length > 0) {
-        syncResultObject.reset("conflicts").add("resolved", resolved);
+        // Lists of created/updated/deleted records
+        imports.forEach(({ type, data }) => syncResultObject.add(type, data));
+        // Automatically resolved conflicts (if not manual)
+        if (resolved.length > 0) {
+          syncResultObject.reset("conflicts").add("resolved", resolved);
+        }
       }
     } catch (err) {
       const data = {
