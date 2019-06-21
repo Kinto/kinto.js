@@ -328,8 +328,9 @@ describe("Collection", () => {
   /** @test {SyncResultObject} */
   describe("SyncResultObject", () => {
     it("should create a result object", () => {
-      expect(new SyncResultObject()).to.include.keys([
-        "lastModified",
+      const r = new SyncResultObject();
+      expect(r.lastModified).to.eql(null);
+      [
         "errors",
         "created",
         "updated",
@@ -337,7 +338,7 @@ describe("Collection", () => {
         "published",
         "conflicts",
         "skipped",
-      ]);
+      ].forEach(l => expect(r[l]).to.eql([]));
     });
 
     describe("set lastModified", () => {
@@ -2223,32 +2224,46 @@ describe("Collection", () => {
           })
         );
 
-        return articles.pullChanges(client, result).should.eventually.become({
-          ok: false,
-          lastModified: 42,
-          errors: [],
-          created: [],
-          updated: [],
-          deleted: [],
-          skipped: [],
-          published: [],
-          conflicts: [
-            {
-              type: "incoming",
-              local: {
-                _status: "created",
-                id: createdId,
-                title: "art2",
+        return articles
+          .pullChanges(client, result)
+          .then(result => ({
+            ok: result.ok,
+            lastModified: result.lastModified,
+            errors: result.errors,
+            created: result.created,
+            updated: result.updated,
+            deleted: result.deleted,
+            skipped: result.skipped,
+            published: result.published,
+            conflicts: result.conflicts,
+            resolved: result.resolved,
+          }))
+          .should.eventually.become({
+            ok: false,
+            lastModified: 42,
+            errors: [],
+            created: [],
+            updated: [],
+            deleted: [],
+            skipped: [],
+            published: [],
+            conflicts: [
+              {
+                type: "incoming",
+                local: {
+                  _status: "created",
+                  id: createdId,
+                  title: "art2",
+                },
+                remote: {
+                  id: createdId,
+                  title: "art2mod",
+                  last_modified: 42,
+                },
               },
-              remote: {
-                id: createdId,
-                title: "art2mod",
-                last_modified: 42,
-              },
-            },
-          ],
-          resolved: [],
-        });
+            ],
+            resolved: [],
+          });
       });
 
       it("should ignore resolved conflicts during sync", () => {
@@ -2266,6 +2281,18 @@ describe("Collection", () => {
         return articles
           .resolve(conflict, resolution)
           .then(() => articles.pullChanges(client, syncResult))
+          .then(result => ({
+            ok: result.ok,
+            lastModified: result.lastModified,
+            errors: result.errors,
+            created: result.created,
+            updated: result.updated,
+            deleted: result.deleted,
+            skipped: result.skipped,
+            published: result.published,
+            conflicts: result.conflicts,
+            resolved: result.resolved,
+          }))
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -2300,23 +2327,37 @@ describe("Collection", () => {
       });
 
       it("should resolve with solved changes", () => {
-        return articles.pullChanges(client, result).should.eventually.become({
-          ok: true,
-          lastModified: 42,
-          errors: [],
-          created: [],
-          published: [],
-          updated: [
-            {
-              old: { id: createdId, title: "art2", _status: "created" },
-              new: { id: createdId, title: "art2", _status: "synced" },
-            },
-          ],
-          skipped: [],
-          deleted: [],
-          conflicts: [],
-          resolved: [],
-        });
+        return articles
+          .pullChanges(client, result)
+          .then(result => ({
+            ok: result.ok,
+            lastModified: result.lastModified,
+            errors: result.errors,
+            created: result.created,
+            updated: result.updated,
+            deleted: result.deleted,
+            skipped: result.skipped,
+            published: result.published,
+            conflicts: result.conflicts,
+            resolved: result.resolved,
+          }))
+          .should.eventually.become({
+            ok: true,
+            lastModified: 42,
+            errors: [],
+            created: [],
+            published: [],
+            updated: [
+              {
+                old: { id: createdId, title: "art2", _status: "created" },
+                new: { id: createdId, title: "art2", _status: "synced" },
+              },
+            ],
+            skipped: [],
+            deleted: [],
+            conflicts: [],
+            resolved: [],
+          });
       });
     });
   });
