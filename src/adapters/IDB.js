@@ -10,6 +10,7 @@ import {
 } from "../utils";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
+const MAX_PRELOAD = 25;
 
 /**
  * Small helper that wraps the opening of an IndexedDB into a Promise.
@@ -448,7 +449,10 @@ export default class IDB extends BaseAdapter {
         }
 
         // Preload specified records using a list request.
-        const filters = { id: options.preload };
+        // If the records to preload is too big, the `.in()` will cost more
+        // than loading the whole list (ie. no filters).
+        const filters =
+          options.preload.length < MAX_PRELOAD ? { id: options.preload } : {};
         createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
           const preloaded = {};
