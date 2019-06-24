@@ -130,7 +130,7 @@
   },
   "homepage": "https://github.com/Kinto/kinto.js",
   "engines": {
-    "node": ">=6"
+    "node": ">=10"
   },
   "dependencies": {
     "@babel/core": "^7.0.0",
