@@ -3279,7 +3279,7 @@ describe("Collection", () => {
         Authorization: "Basic 123",
       };
 
-      let client = {
+      const client = {
         getData: sandbox.stub(),
       };
       return articles.pullMetadata(client, { headers }).then(_ => {
