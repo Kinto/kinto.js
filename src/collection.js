@@ -1035,6 +1035,9 @@ export default class Collection {
       throw e;
     }
 
+    // Atomic updates are not sensible here because unquoted is not
+    // computed as a function of syncResultObject.lastModified.
+    // eslint-disable-next-line require-atomic-updates
     syncResultObject.lastModified = unquoted;
 
     // Decode incoming changes.
