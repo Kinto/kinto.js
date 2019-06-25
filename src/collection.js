@@ -30,25 +30,6 @@ export function recordsEqual(a, b, localFields = []) {
  */
 export class SyncResultObject {
   /**
-   * Object default values.
-   * @type {Object}
-   */
-  static get defaults() {
-    return {
-      ok: true,
-      lastModified: null,
-      errors: [],
-      created: [],
-      updated: [],
-      deleted: [],
-      published: [],
-      conflicts: [],
-      skipped: [],
-      resolved: [],
-    };
-  }
-
-  /**
    * Public constructor.
    */
   constructor() {
@@ -57,8 +38,20 @@ export class SyncResultObject {
      * errors are registered.
      * @type {Boolean}
      */
-    this.ok = true;
-    Object.assign(this, SyncResultObject.defaults);
+    this.lastModified = null;
+    this._lists = {};
+    [
+      "errors",
+      "created",
+      "updated",
+      "deleted",
+      "published",
+      "conflicts",
+      "skipped",
+      "resolved",
+      "void",
+    ].forEach(l => (this._lists[l] = []));
+    this._cached = {};
   }
 
   /**
@@ -69,31 +62,72 @@ export class SyncResultObject {
    * @return {SyncResultObject}
    */
   add(type, entries) {
-    if (!Array.isArray(this[type])) {
+    if (!Array.isArray(this._lists[type])) {
+      console.warn(`Unknown type "${type}"`);
       return;
     }
     if (!Array.isArray(entries)) {
       entries = [entries];
     }
-    // Deduplicate entries by id. If the values don't have `id` attribute, just
-    // keep all.
-    const recordsWithoutId = new Set();
-    const recordsById = new Map();
-    function addOneRecord(record) {
-      if (!record.id) {
-        recordsWithoutId.add(record);
-      } else {
-        recordsById.set(record.id, record);
-      }
-    }
-    this[type].forEach(addOneRecord);
-    entries.forEach(addOneRecord);
-
-    this[type] = Array.from(recordsById.values()).concat(
-      Array.from(recordsWithoutId)
-    );
-    this.ok = this.errors.length + this.conflicts.length === 0;
+    this._lists[type] = this._lists[type].concat(entries);
+    delete this._cached[type];
     return this;
+  }
+
+  get ok() {
+    return this.errors.length + this.conflicts.length === 0;
+  }
+
+  get errors() {
+    return this._lists["errors"];
+  }
+
+  get conflicts() {
+    return this._lists["conflicts"];
+  }
+
+  get skipped() {
+    return this._deduplicate("skipped");
+  }
+
+  get resolved() {
+    return this._deduplicate("resolved");
+  }
+
+  get created() {
+    return this._deduplicate("created");
+  }
+
+  get updated() {
+    return this._deduplicate("updated");
+  }
+
+  get deleted() {
+    return this._deduplicate("deleted");
+  }
+
+  get published() {
+    return this._deduplicate("published");
+  }
+
+  _deduplicate(list) {
+    if (!(list in this._cached)) {
+      // Deduplicate entries by id. If the values don't have `id` attribute, just
+      // keep all.
+      const recordsWithoutId = new Set();
+      const recordsById = new Map();
+      this._lists[list].forEach(record => {
+        if (!record.id) {
+          recordsWithoutId.add(record);
+        } else {
+          recordsById.set(record.id, record);
+        }
+      });
+      this._cached[list] = Array.from(recordsById.values()).concat(
+        Array.from(recordsWithoutId)
+      );
+    }
+    return this._cached[list];
   }
 
   /**
@@ -103,9 +137,25 @@ export class SyncResultObject {
    * @return {SyncResultObject}
    */
   reset(type) {
-    this[type] = SyncResultObject.defaults[type];
-    this.ok = this.errors.length + this.conflicts.length === 0;
+    this._lists[type] = [];
+    delete this._cached[type];
     return this;
+  }
+
+  toObject() {
+    // Only used in tests.
+    return {
+      ok: this.ok,
+      lastModified: this.lastModified,
+      errors: this.errors,
+      created: this.created,
+      updated: this.updated,
+      deleted: this.deleted,
+      skipped: this.skipped,
+      published: this.published,
+      conflicts: this.conflicts,
+      resolved: this.resolved,
+    };
   }
 }
 
