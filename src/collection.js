@@ -30,23 +30,6 @@ export function recordsEqual(a, b, localFields = []) {
  */
 export class SyncResultObject {
   /**
-   * Object default values.
-   * @type {Object}
-   */
-  static get defaults() {
-    return {
-      errors: [],
-      created: [],
-      updated: [],
-      deleted: [],
-      published: [],
-      conflicts: [],
-      skipped: [],
-      resolved: [],
-    };
-  }
-
-  /**
    * Public constructor.
    */
   constructor() {
@@ -56,7 +39,17 @@ export class SyncResultObject {
      * @type {Boolean}
      */
     this.lastModified = null;
-    this._lists = { ...SyncResultObject.defaults };
+    this._lists = {};
+    [
+      "errors",
+      "created",
+      "updated",
+      "deleted",
+      "published",
+      "conflicts",
+      "skipped",
+      "resolved",
+    ].forEach(l => (this._lists[l] = []));
     this._cached = {};
   }
 
@@ -143,7 +136,7 @@ export class SyncResultObject {
    * @return {SyncResultObject}
    */
   reset(type) {
-    this._lists[type] = SyncResultObject.defaults[type];
+    this._lists[type] = [];
     delete this._cached[type];
     return this;
   }
