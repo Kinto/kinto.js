@@ -49,6 +49,7 @@ export class SyncResultObject {
       "conflicts",
       "skipped",
       "resolved",
+      "void",
     ].forEach(l => (this._lists[l] = []));
     this._cached = {};
   }
