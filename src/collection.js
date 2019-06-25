@@ -140,6 +140,21 @@ export class SyncResultObject {
     delete this._cached[type];
     return this;
   }
+
+  toObject() {
+    return {
+      ok: this.ok,
+      lastModified: this.lastModified,
+      errors: this.errors,
+      created: this.created,
+      updated: this.updated,
+      deleted: this.deleted,
+      skipped: this.skipped,
+      published: this.published,
+      conflicts: this.conflicts,
+      resolved: this.resolved,
+    };
+  }
 }
 
 export class ServerWasFlushedError extends Error {

@@ -2226,18 +2226,7 @@ describe("Collection", () => {
 
         return articles
           .pullChanges(client, result)
-          .then(result => ({
-            ok: result.ok,
-            lastModified: result.lastModified,
-            errors: result.errors,
-            created: result.created,
-            updated: result.updated,
-            deleted: result.deleted,
-            skipped: result.skipped,
-            published: result.published,
-            conflicts: result.conflicts,
-            resolved: result.resolved,
-          }))
+          .then(result => result.toObject())
           .should.eventually.become({
             ok: false,
             lastModified: 42,
@@ -2281,18 +2270,7 @@ describe("Collection", () => {
         return articles
           .resolve(conflict, resolution)
           .then(() => articles.pullChanges(client, syncResult))
-          .then(result => ({
-            ok: result.ok,
-            lastModified: result.lastModified,
-            errors: result.errors,
-            created: result.created,
-            updated: result.updated,
-            deleted: result.deleted,
-            skipped: result.skipped,
-            published: result.published,
-            conflicts: result.conflicts,
-            resolved: result.resolved,
-          }))
+          .then(result => result.toObject())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -2329,18 +2307,7 @@ describe("Collection", () => {
       it("should resolve with solved changes", () => {
         return articles
           .pullChanges(client, result)
-          .then(result => ({
-            ok: result.ok,
-            lastModified: result.lastModified,
-            errors: result.errors,
-            created: result.created,
-            updated: result.updated,
-            deleted: result.deleted,
-            skipped: result.skipped,
-            published: result.published,
-            conflicts: result.conflicts,
-            resolved: result.resolved,
-          }))
+          .then(result => result.toObject())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
