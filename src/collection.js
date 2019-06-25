@@ -143,6 +143,7 @@ export class SyncResultObject {
   }
 
   toObject() {
+    // Only used in tests.
     return {
       ok: this.ok,
       lastModified: this.lastModified,
