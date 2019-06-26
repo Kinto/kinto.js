@@ -114,6 +114,7 @@ const cursorHandlers = {
 
   in(values, filters, done) {
     const results = [];
+    let i = 0;
     return function(event) {
       const cursor = event.target.result;
       if (!cursor) {
@@ -122,7 +123,6 @@ const cursorHandlers = {
       }
       const { key, value } = cursor;
       // `key` can be an array of two values (see `keyPath` in indices definitions).
-      let i = 0;
       // `values` can be an array of arrays if we filter using an index whose key path
       // is an array (eg. `cursorHandlers.in([["bid/cid", 42], ["bid/cid", 43]], ...)`)
       while (key > values[i]) {

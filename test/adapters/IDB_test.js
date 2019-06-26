@@ -240,7 +240,14 @@ describe("adapter.IDB", () => {
     });
 
     describe("Preloaded records", () => {
-      const articles = [{ id: 1, title: "title1" }, { id: 2, title: "title2" }];
+      const articles = [];
+      for (let i = 0; i < 100; i++) {
+        articles.push({ id: `${i}`, title: `title${i}` });
+      }
+      const preload = [];
+      for (let i = 0; i < 10; i++) {
+        preload.push(articles[Math.ceil(Math.random() * articles.length)].id);
+      }
 
       it("should expose preloaded records using get()", () => {
         return db
@@ -248,12 +255,16 @@ describe("adapter.IDB", () => {
           .then(_ => {
             return db.execute(
               transaction => {
-                return [transaction.get(1), transaction.get(2)];
+                return preload.map(p => transaction.get(p));
               },
-              { preload: articles.map(article => article.id) }
+              { preload }
             );
           })
-          .should.become(articles);
+          .then(preloaded => {
+            preloaded.forEach((p, i) => {
+              expect(p.title).eql(articles[preload[i]].title);
+            });
+          });
       });
     });
   });
