@@ -2354,17 +2354,6 @@ describe("Collection", () => {
         ]);
     });
 
-    it("should return typed errors", () => {
-      const error = new Error("unknown error");
-      sandbox.stub(articles, "get").returns(Promise.reject(error));
-
-      return articles
-        .importChanges(result, { changes: [{ title: "bar" }] })
-        .then(res => res.errors[0])
-        .should.eventually.have.property("type")
-        .eql("incoming");
-    });
-
     it("should only retrieve the changed record", () => {
       const id1 = uuid4();
       const id2 = uuid4();
