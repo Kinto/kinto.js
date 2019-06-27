@@ -2407,6 +2407,28 @@ describe("Collection", () => {
           expect(res.updated[0].new.last_modified).eql(43);
         });
     });
+
+    it("should overwrite local records with PULL_ONLY", () => {
+      const id1 = uuid4();
+      const id2 = uuid4();
+      return articles
+        .create({ id: id1, title: "bar" }, { synced: true })
+        .then(() => articles.update({ id: id1, title: "foo" }))
+        .then(() =>
+          articles.importChanges(
+            result,
+            [{ id: id1, title: "baz" }, { id: id2, title: "pow" }],
+            Collection.strategy.PULL_ONLY
+          )
+        )
+        .then(res => {
+          expect(res.ok).eql(true);
+          expect(res.resolved.length).eql(0);
+          expect(res.created[0].title).eql("pow");
+          expect(res.updated[0].old.title).eql("foo");
+          expect(res.updated[0].new.title).eql("baz");
+        });
+    });
   });
 
   /** @test {Collection#pushChanges} */

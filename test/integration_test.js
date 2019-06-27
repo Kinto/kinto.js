@@ -382,16 +382,17 @@ describe("Integration tests", function() {
 
           it("should have no conflicts", () => {
             expect(syncResult.conflicts).to.have.length.of(0);
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.length.of(0);
+            expect(syncResult.updated).to.have.length.of(1);
             expect(
-              recordsEqual(syncResult.resolved[0].rejected, {
+              recordsEqual(syncResult.updated[0].old, {
                 id: conflictingId,
                 title: "task4-local",
                 done: false,
               })
             ).eql(true);
             expect(
-              recordsEqual(syncResult.resolved[0].accepted, {
+              recordsEqual(syncResult.updated[0].new, {
                 id: conflictingId,
                 title: "task4-remote",
                 done: true,

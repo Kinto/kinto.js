@@ -226,7 +226,7 @@ function markSynced(record) {
  * @param  {Array<String>}       localFields The list of fields that remain local.
  * @return {Object}
  */
-function importChange(transaction, remote, localFields) {
+function importChange(transaction, remote, localFields, strategy) {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -242,13 +242,14 @@ function importChange(transaction, remote, localFields) {
   const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
   const synced = { ...local, ...markSynced(remote) };
+
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
       return { type: "skipped", data: local };
     }
-    if (isIdentical) {
+    if (isIdentical || strategy === Collection.strategy.PULL_ONLY) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
@@ -777,7 +778,12 @@ export default class Collection {
           transaction => {
             const imports = slice.map(remote => {
               // Store remote change into local database.
-              return importChange(transaction, remote, this.localFields);
+              return importChange(
+                transaction,
+                remote,
+                this.localFields,
+                strategy
+              );
             });
             const conflicts = imports
               .filter(i => i.type === "conflicts")
