@@ -224,6 +224,7 @@ function markSynced(record) {
  * @param  {IDBTransactionProxy} transaction The transaction handler.
  * @param  {Object}              remote      The remote change object to import.
  * @param  {Array<String>}       localFields The list of fields that remain local.
+ * @param  {String}              strategy    The {@link Collection.strategy}.
  * @return {Object}
  */
 function importChange(transaction, remote, localFields, strategy) {
@@ -242,7 +243,6 @@ function importChange(transaction, remote, localFields, strategy) {
   const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
   const synced = { ...local, ...markSynced(remote) };
-
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
