@@ -1383,17 +1383,17 @@ export default class Collection {
           );
           await this.pushChanges(client, resolvedEncoded, result, options);
         }
-      }
-      // Perform a last pull to catch changes that occured after the last pull,
-      // while local changes were pushed. Do not do it nothing was pushed.
-      if (result.published.length > 0) {
-        // Avoid redownloading our own changes during the last pull.
-        const pullOpts = {
-          ...options,
-          lastModified,
-          exclude: result.published,
-        };
-        await this.pullChanges(client, result, pullOpts);
+        // Perform a last pull to catch changes that occured after the last pull,
+        // while local changes were pushed. Do not do it nothing was pushed.
+        if (result.published.length > 0) {
+          // Avoid redownloading our own changes during the last pull.
+          const pullOpts = {
+            ...options,
+            lastModified,
+            exclude: result.published,
+          };
+          await this.pullChanges(client, result, pullOpts);
+        }
       }
 
       // Don't persist lastModified value if any conflict or error occured
