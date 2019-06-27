@@ -494,6 +494,7 @@ Synopsis:
     - Fail on any publication conflict detected;
         * If `strategy` is set to `Kinto.syncStrategy.SERVER_WINS`, no client data will overwrite the remote data;
         * If `strategy` is set to `Kinto.syncStrategy.CLIENT_WINS`, conflicting server records will be overwritten with local changes;
+        * If `strategy` is set to `Kinto.syncStrategy.PULL_ONLY`, the local changes are never pushed, and overwritten by remote data;
         * If `strategy` is set to `Kinto.syncStrategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
 
 ```js
@@ -526,6 +527,7 @@ For publication conflicts, the `sync()` method accepts a `strategy` option, whic
 - `Kinto.syncStrategy.MANUAL` (default): Conflicts are reflected in a `conflicts` array as a result, and need to be resolved manually;
 - `Kinto.syncStrategy.SERVER_WINS`: Server data will always be preserved;
 - `Kinto.syncStrategy.CLIENT_WINS`: Client data will always be preserved.
+- `Kinto.syncStrategy.PULL_ONLY`: Server data will always be preserved and local data never pushed.
 
 > Note:
 > `strategy` only applies to *outgoing* conflicts. *Incoming* conflicts will still
