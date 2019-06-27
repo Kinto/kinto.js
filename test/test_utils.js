@@ -6,7 +6,7 @@ export function fakeServerResponse(status, json, headers = {}) {
     headers: {
       get(name) {
         if (
-          !headers.hasOwnProperty("Content-Length") &&
+          !Object.prototype.hasOwnProperty.call(headers, "Content-Length") &&
           name === "Content-Length"
         ) {
           return JSON.stringify(json).length;

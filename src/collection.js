@@ -568,7 +568,7 @@ export default class Collection {
     }
     if (
       (options.synced || options.useRecordId) &&
-      !record.hasOwnProperty("id")
+      !Object.prototype.hasOwnProperty.call(record, "id")
     ) {
       return reject(
         "Missing required Id; synced and useRecordId options require one"
@@ -577,7 +577,7 @@ export default class Collection {
     if (
       !options.synced &&
       !options.useRecordId &&
-      record.hasOwnProperty("id")
+      Object.prototype.hasOwnProperty.call(record, "id")
     ) {
       return reject("Extraneous Id; can't create a record having one set.");
     }
@@ -623,7 +623,7 @@ export default class Collection {
     if (typeof record !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.hasOwnProperty("id")) {
+    if (!Object.prototype.hasOwnProperty.call(record, "id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
@@ -648,7 +648,7 @@ export default class Collection {
     if (typeof record !== "object") {
       return Promise.reject(new Error("Record is not an object."));
     }
-    if (!record.hasOwnProperty("id")) {
+    if (!Object.prototype.hasOwnProperty.call(record, "id")) {
       return Promise.reject(new Error("Cannot update a record missing id."));
     }
     if (!this.idSchema.validate(record.id)) {
@@ -1089,6 +1089,9 @@ export default class Collection {
       throw e;
     }
 
+    // Atomic updates are not sensible here because unquoted is not
+    // computed as a function of syncResultObject.lastModified.
+    // eslint-disable-next-line require-atomic-updates
     syncResultObject.lastModified = unquoted;
 
     // Decode incoming changes.
@@ -1122,7 +1125,8 @@ export default class Collection {
         return record => {
           const result = hook(payload, this);
           const resultThenable = result && typeof result.then === "function";
-          const resultChanges = result && result.hasOwnProperty("changes");
+          const resultChanges =
+            result && Object.prototype.hasOwnProperty.call(result, "changes");
           if (!(resultThenable || resultChanges)) {
             throw new Error(
               `Invalid return value for hook: ${JSON.stringify(
@@ -1436,7 +1440,10 @@ export default class Collection {
     }
 
     for (const record of records) {
-      if (!record.hasOwnProperty("id") || !this.idSchema.validate(record.id)) {
+      if (
+        !Object.prototype.hasOwnProperty.call(record, "id") ||
+        !this.idSchema.validate(record.id)
+      ) {
         throw new Error("Record has invalid ID: " + JSON.stringify(record));
       }
 
@@ -1638,7 +1645,7 @@ export class CollectionTransaction {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
-    if (!record.hasOwnProperty("id")) {
+    if (!Object.prototype.hasOwnProperty.call(record, "id")) {
       throw new Error("Cannot create a record missing id");
     }
     if (!this.collection.idSchema.validate(record.id)) {
@@ -1666,7 +1673,7 @@ export class CollectionTransaction {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
-    if (!record.hasOwnProperty("id")) {
+    if (!Object.prototype.hasOwnProperty.call(record, "id")) {
       throw new Error("Cannot update a record missing id.");
     }
     if (!this.collection.idSchema.validate(record.id)) {
@@ -1727,7 +1734,7 @@ export class CollectionTransaction {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
-    if (!record.hasOwnProperty("id")) {
+    if (!Object.prototype.hasOwnProperty.call(record, "id")) {
       throw new Error("Cannot update a record missing id.");
     }
     if (!this.collection.idSchema.validate(record.id)) {

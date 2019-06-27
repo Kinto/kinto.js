@@ -50,7 +50,7 @@ export function filterObject(filters, entry) {
       return value.some(candidate => candidate === entry[filter]);
     } else if (typeof value === "object") {
       return filterObject(value, entry[filter]);
-    } else if (!entry.hasOwnProperty(filter)) {
+    } else if (!Object.prototype.hasOwnProperty.call(entry, filter)) {
       console.error(`The property ${filter} does not exist`);
       return false;
     }
@@ -149,7 +149,7 @@ function makeNestedObjectFromArr(arr, val, nestedFiltersObj) {
   return arr.reduce((acc, cv, i) => {
     if (i === last) {
       return (acc[cv] = val);
-    } else if (acc.hasOwnProperty(cv)) {
+    } else if (Object.prototype.hasOwnProperty.call(acc, cv)) {
       return acc[cv];
     } else {
       return (acc[cv] = {});
