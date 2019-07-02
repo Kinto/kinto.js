@@ -2411,22 +2411,35 @@ describe("Collection", () => {
     it("should overwrite local records with PULL_ONLY", () => {
       const id1 = uuid4();
       const id2 = uuid4();
+      const id3 = uuid4();
       return articles
         .create({ id: id1, title: "bar" }, { synced: true })
         .then(() => articles.update({ id: id1, title: "foo" }))
         .then(() =>
+          articles.create({ id: id3, title: "bam" }, { synced: true })
+        )
+        .then(() =>
           articles.importChanges(
             result,
-            [{ id: id1, title: "baz" }, { id: id2, title: "pow" }],
+            [
+              { id: id1, title: "baz", last_modified: 123 },
+              { id: id2, title: "pow", last_modified: 124 },
+              { id: id3, deleted: true, last_modified: 125 },
+            ],
             Collection.strategy.PULL_ONLY
           )
         )
         .then(res => {
           expect(res.ok).eql(true);
           expect(res.resolved.length).eql(0);
+          expect(res.published.length).eql(0);
+          expect(res.created.length).eql(1);
+          expect(res.updated.length).eql(1);
+          expect(res.deleted.length).eql(1);
           expect(res.created[0].title).eql("pow");
           expect(res.updated[0].old.title).eql("foo");
           expect(res.updated[0].new.title).eql("baz");
+          expect(res.deleted[0].id).eql(id3);
         });
     });
   });

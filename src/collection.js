@@ -239,17 +239,29 @@ function importChange(transaction, remote, localFields, strategy) {
     transaction.create(synced);
     return { type: "created", data: synced };
   }
-  // Compare local and remote, ignoring local fields.
-  const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
   const synced = { ...local, ...markSynced(remote) };
+
+  // With pull only, we don't need to compare records since we override them.
+  if (strategy === Collection.strategy.PULL_ONLY) {
+    if (remote.deleted) {
+      transaction.delete(remote.id);
+      return { type: "deleted", data: local };
+    }
+    transaction.update(synced);
+    return { type: "updated", data: { old: local, new: synced } };
+  }
+
+  // With other sync strategies, we detect conflicts,
+  // by comparing local and remote, ignoring local fields.
+  const isIdentical = recordsEqual(local, remote, localFields);
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
       return { type: "skipped", data: local };
     }
-    if (isIdentical || strategy === Collection.strategy.PULL_ONLY) {
+    if (isIdentical) {
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
