@@ -224,9 +224,10 @@ function markSynced(record) {
  * @param  {IDBTransactionProxy} transaction The transaction handler.
  * @param  {Object}              remote      The remote change object to import.
  * @param  {Array<String>}       localFields The list of fields that remain local.
+ * @param  {String}              strategy    The {@link Collection.strategy}.
  * @return {Object}
  */
-function importChange(transaction, remote, localFields) {
+function importChange(transaction, remote, localFields, strategy) {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -238,10 +239,22 @@ function importChange(transaction, remote, localFields) {
     transaction.create(synced);
     return { type: "created", data: synced };
   }
-  // Compare local and remote, ignoring local fields.
-  const isIdentical = recordsEqual(local, remote, localFields);
   // Apply remote changes on local record.
   const synced = { ...local, ...markSynced(remote) };
+
+  // With pull only, we don't need to compare records since we override them.
+  if (strategy === Collection.strategy.PULL_ONLY) {
+    if (remote.deleted) {
+      transaction.delete(remote.id);
+      return { type: "deleted", data: local };
+    }
+    transaction.update(synced);
+    return { type: "updated", data: { old: local, new: synced } };
+  }
+
+  // With other sync strategies, we detect conflicts,
+  // by comparing local and remote, ignoring local fields.
+  const isIdentical = recordsEqual(local, remote, localFields);
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
     // Locally deleted, unsynced: scheduled for remote deletion.
@@ -391,6 +404,7 @@ export default class Collection {
     return {
       CLIENT_WINS: "client_wins",
       SERVER_WINS: "server_wins",
+      PULL_ONLY: "pull_only",
       MANUAL: "manual",
     };
   }
@@ -776,7 +790,12 @@ export default class Collection {
           transaction => {
             const imports = slice.map(remote => {
               // Store remote change into local database.
-              return importChange(transaction, remote, this.localFields);
+              return importChange(
+                transaction,
+                remote,
+                this.localFields,
+                strategy
+              );
             });
             const conflicts = imports
               .filter(i => i.type === "conflicts")
@@ -1359,38 +1378,40 @@ export default class Collection {
       await this.pullChanges(client, result, options);
       const { lastModified } = result;
 
-      // Fetch local changes
-      const toSync = await this.gatherLocalChanges();
+      if (options.strategy != Collection.strategy.PULL_ONLY) {
+        // Fetch local changes
+        const toSync = await this.gatherLocalChanges();
 
-      // Publish local changes and pull local resolutions
-      await this.pushChanges(client, toSync, result, options);
+        // Publish local changes and pull local resolutions
+        await this.pushChanges(client, toSync, result, options);
 
-      // Publish local resolution of push conflicts to server (on CLIENT_WINS)
-      const resolvedUnsynced = result.resolved.filter(
-        r => r._status !== "synced"
-      );
-      if (resolvedUnsynced.length > 0) {
-        const resolvedEncoded = await Promise.all(
-          resolvedUnsynced.map(resolution => {
-            let record = resolution.accepted;
-            if (record === null) {
-              record = { id: resolution.id, _status: resolution._status };
-            }
-            return this._encodeRecord("remote", record);
-          })
+        // Publish local resolution of push conflicts to server (on CLIENT_WINS)
+        const resolvedUnsynced = result.resolved.filter(
+          r => r._status !== "synced"
         );
-        await this.pushChanges(client, resolvedEncoded, result, options);
-      }
-      // Perform a last pull to catch changes that occured after the last pull,
-      // while local changes were pushed. Do not do it nothing was pushed.
-      if (result.published.length > 0) {
-        // Avoid redownloading our own changes during the last pull.
-        const pullOpts = {
-          ...options,
-          lastModified,
-          exclude: result.published,
-        };
-        await this.pullChanges(client, result, pullOpts);
+        if (resolvedUnsynced.length > 0) {
+          const resolvedEncoded = await Promise.all(
+            resolvedUnsynced.map(resolution => {
+              let record = resolution.accepted;
+              if (record === null) {
+                record = { id: resolution.id, _status: resolution._status };
+              }
+              return this._encodeRecord("remote", record);
+            })
+          );
+          await this.pushChanges(client, resolvedEncoded, result, options);
+        }
+        // Perform a last pull to catch changes that occured after the last pull,
+        // while local changes were pushed. Do not do it nothing was pushed.
+        if (result.published.length > 0) {
+          // Avoid redownloading our own changes during the last pull.
+          const pullOpts = {
+            ...options,
+            lastModified,
+            exclude: result.published,
+          };
+          await this.pullChanges(client, result, pullOpts);
+        }
       }
 
       // Don't persist lastModified value if any conflict or error occured

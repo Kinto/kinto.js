@@ -150,31 +150,40 @@ describe("Integration tests", function() {
       }
 
       function collectionTestSync(collection, data, options) {
-        return Promise.all(
-          [].concat(
-            // Create local unsynced records
-            data.localUnsynced.map(record =>
-              collection.create(record, { useRecordId: true })
-            ),
-            // Create local synced records
-            data.localSynced.map(record =>
-              collection.create(record, { synced: true })
-            ),
-            // Create remote records
-            collection.api
-              .bucket("default")
-              .collection(collection._name)
-              .batch(
-                batch => {
-                  data.server.forEach(r => batch.createRecord(r));
-                  data.localSynced.forEach(r => batch.createRecord(r));
-                },
-                { safe: true }
-              )
+        // Create remote records
+        return collection.api
+          .bucket("default")
+          .collection(collection._name)
+          .batch(
+            batch => {
+              data.localSynced.forEach(r => batch.createRecord(r));
+            },
+            { safe: true }
           )
-        ).then(_ => {
-          return collection.sync(options);
-        });
+          .then(_ => collection.sync(options))
+          .then(_ => {
+            return Promise.all(
+              [].concat(
+                // Create local unsynced records
+                data.localUnsynced.map(record =>
+                  collection.create(record, { useRecordId: true })
+                ),
+                // Create remote records
+                collection.api
+                  .bucket("default")
+                  .collection(collection._name)
+                  .batch(
+                    batch => {
+                      data.server.forEach(r => batch.createRecord(r));
+                    },
+                    { safe: true }
+                  )
+              )
+            );
+          })
+          .then(_ => {
+            return collection.sync(options);
+          });
       }
 
       function getRemoteList(collection = "tasks") {
@@ -353,6 +362,47 @@ describe("Integration tests", function() {
           server: [{ id: conflictingId, title: "task4-remote", done: true }],
         };
         let syncResult;
+
+        describe("PULL_ONLY strategy (default)", () => {
+          beforeEach(() => {
+            return testSync(testData, {
+              strategy: Kinto.syncStrategy.PULL_ONLY,
+            }).then(res => (syncResult = res));
+          });
+
+          it("should have an ok status", () => {
+            expect(syncResult.ok).eql(true);
+          });
+
+          it("should contain no errors", () => {
+            expect(syncResult.errors).to.have.length.of(0);
+          });
+
+          it("should have a valid lastModified value", () => {
+            expect(syncResult.lastModified).to.be.a("number");
+          });
+
+          it("should have no conflicts", () => {
+            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.resolved).to.have.length.of(0);
+            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.updated).to.have.length.of(1);
+            expect(
+              recordsEqual(syncResult.updated[0].old, {
+                id: conflictingId,
+                title: "task4-local",
+                done: false,
+              })
+            ).eql(true);
+            expect(
+              recordsEqual(syncResult.updated[0].new, {
+                id: conflictingId,
+                title: "task4-remote",
+                done: true,
+              })
+            ).eql(true);
+          });
+        });
 
         describe("MANUAL strategy (default)", () => {
           beforeEach(() => {
