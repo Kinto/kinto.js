@@ -4,7 +4,7 @@ import sinon from "sinon";
 import { expect } from "chai";
 
 import IDB, { open, execute } from "../../src/adapters/IDB.js";
-import { v4 as uuid4 } from "uuid";
+import uuid from "uuid/v4";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
@@ -98,9 +98,9 @@ describe("adapter.IDB", () => {
             return {
               openKeyCursor() {
                 throw new Error("transaction error");
-              }
+              },
             };
-          }
+          },
         });
       });
       return db.clear().should.be.rejectedWith(Error, "transaction error");
@@ -209,11 +209,11 @@ describe("adapter.IDB", () => {
                 openCursor: () => ({
                   set onsuccess(cb) {
                     cb({ target: {} });
-                  }
+                  },
                 }),
                 add() {
                   throw new Error("add error");
-                }
+                },
               },
               abort
             );
@@ -230,7 +230,7 @@ describe("adapter.IDB", () => {
             return callback({
               openCursor() {
                 throw new Error("transaction error");
-              }
+              },
             });
           });
         return db
@@ -291,7 +291,7 @@ describe("adapter.IDB", () => {
         return callback({
           get() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.get().should.be.rejectedWith(Error, "transaction error");
@@ -325,9 +325,9 @@ describe("adapter.IDB", () => {
             return {
               getAll() {
                 throw new Error("transaction error");
-              }
+              },
             };
-          }
+          },
         });
       });
       return db
@@ -369,7 +369,7 @@ describe("adapter.IDB", () => {
               .list({ filters: { name: ["#4", "#5"] } })
               .should.eventually.eql([
                 { id: 4, name: "#4" },
-                { id: 5, name: "#5" }
+                { id: 5, name: "#5" },
               ]);
           });
 
@@ -400,7 +400,7 @@ describe("adapter.IDB", () => {
               .list({ filters: { id: [5, 4] } })
               .should.eventually.eql([
                 { id: 4, name: "#4" },
-                { id: 5, name: "#5" }
+                { id: 5, name: "#5" },
               ]);
           });
 
@@ -444,7 +444,7 @@ describe("adapter.IDB", () => {
         return callback({
           put() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db
@@ -460,7 +460,7 @@ describe("adapter.IDB", () => {
         return callback({
           get() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.getLastModified().should.be.rejectedWith(/transaction error/);
@@ -493,7 +493,7 @@ describe("adapter.IDB", () => {
         return callback({
           put() {
             throw new Error("transaction error");
-          }
+          },
         });
       });
       return db.saveLastModified().should.be.rejectedWith(/transaction error/);
@@ -518,15 +518,15 @@ describe("adapter.IDB", () => {
         .should.eventually.eql([
           { id: 1, foo: "baz" },
           { id: 2, foo: "baz" },
-          { id: 3, foo: "bab" }
+          { id: 3, foo: "bab" },
         ]);
     });
 
     it("should update the collection lastModified value.", () => {
       return db
         .importBulk([
-          { id: uuid4(), title: "foo", last_modified: 1457896541 },
-          { id: uuid4(), title: "bar", last_modified: 1458796542 }
+          { id: uuid(), title: "foo", last_modified: 1457896541 },
+          { id: uuid(), title: "bar", last_modified: 1458796542 },
         ])
         .then(() => db.getLastModified())
         .should.eventually.become(1458796542);
@@ -537,8 +537,8 @@ describe("adapter.IDB", () => {
         .saveLastModified(1458796543)
         .then(() =>
           db.importBulk([
-            { id: uuid4(), title: "foo", last_modified: 1457896541 },
-            { id: uuid4(), title: "bar", last_modified: 1458796542 }
+            { id: uuid(), title: "foo", last_modified: 1457896541 },
+            { id: uuid(), title: "bar", last_modified: 1458796542 },
           ])
         )
         .then(() => db.getLastModified())
@@ -608,7 +608,7 @@ describe("adapter.IDB", () => {
           const db = event.target.result;
           db.createObjectStore(dbName, { keyPath: "id" });
           db.createObjectStore("__meta__", { keyPath: "name" });
-        }
+        },
       });
       await execute(
         oldDb,
@@ -637,7 +637,7 @@ describe("adapter.IDB", () => {
       await createOldDB("another/not-migrated");
 
       idb = new IDB(cid, {
-        migrateOldData: true
+        migrateOldData: true,
       });
     });
 
@@ -670,14 +670,14 @@ describe("adapter.IDB", () => {
     it("should delete the old database", () => {
       return open(cid, {
         version: 1,
-        onupgradeneeded: event => event.target.transaction.abort()
+        onupgradeneeded: event => event.target.transaction.abort(),
       }).should.eventually.be.rejected;
     });
 
     it("should not delete other databases", () => {
       return open("another/not-migrated", {
         version: 1,
-        onupgradeneeded: event => event.target.transaction.abort()
+        onupgradeneeded: event => event.target.transaction.abort(),
       }).should.eventually.be.fulfilled;
     });
 
@@ -689,7 +689,7 @@ describe("adapter.IDB", () => {
     it("should not fail if old database is broken or incomplete", async () => {
       const oldDb = await open("some/db", {
         version: 1,
-        onupgradeneeded: event => {}
+        onupgradeneeded: event => {},
       });
       oldDb.close();
       const idb = new IDB("some/db", { migrateOldData: true });

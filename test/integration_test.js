@@ -1,7 +1,7 @@
 "use strict";
 
 import { spawn } from "child_process";
-import { v4 as uuid4 } from "uuid";
+import uuid from "uuid/v4";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -206,7 +206,7 @@ describe("Integration tests", function() {
         const testData = {
           localSynced: [],
           localUnsynced: [],
-          server: [{ id: uuid4(), title: "task1", done: true }],
+          server: [{ id: uuid(), title: "task1", done: true }],
         };
         let syncResult1;
         let syncResult2;
@@ -237,11 +237,11 @@ describe("Integration tests", function() {
       describe("No conflict", () => {
         const testData = {
           localSynced: [
-            { id: uuid4(), title: "task2", done: false },
-            { id: uuid4(), title: "task3", done: true },
+            { id: uuid(), title: "task2", done: false },
+            { id: uuid(), title: "task3", done: true },
           ],
-          localUnsynced: [{ id: uuid4(), title: "task4", done: false }],
-          server: [{ id: uuid4(), title: "task1", done: true }],
+          localUnsynced: [{ id: uuid(), title: "task4", done: false }],
+          server: [{ id: uuid(), title: "task1", done: true }],
         };
         let syncResult;
 
@@ -338,7 +338,7 @@ describe("Integration tests", function() {
             localSynced: [],
             server: Array(10)
               .fill()
-              .map((e, i) => ({ id: uuid4(), title: `task${i}`, done: true })),
+              .map((e, i) => ({ id: uuid(), title: `task${i}`, done: true })),
           })
             .then(() => tasks.list())
             .then(res => res.data)
@@ -349,12 +349,12 @@ describe("Integration tests", function() {
       });
 
       describe("Incoming conflict", () => {
-        const conflictingId = uuid4();
+        const conflictingId = uuid();
         const testData = {
           localSynced: [
-            { id: uuid4(), title: "task1", done: true },
-            { id: uuid4(), title: "task2", done: false },
-            { id: uuid4(), title: "task3", done: true },
+            { id: uuid(), title: "task1", done: true },
+            { id: uuid(), title: "task2", done: false },
+            { id: uuid(), title: "task3", done: true },
           ],
           localUnsynced: [
             { id: conflictingId, title: "task4-local", done: false },
@@ -782,7 +782,7 @@ describe("Integration tests", function() {
         });
 
         describe("Resolving conflicts doesn't interfere with sync", () => {
-          const conflictingId = uuid4();
+          const conflictingId = uuid();
           const testData = {
             localSynced: [
               { id: conflictingId, title: "conflicting task", done: false },
@@ -837,7 +837,7 @@ describe("Integration tests", function() {
           });
 
           it("should not skip other conflicts", () => {
-            const conflictingId2 = uuid4();
+            const conflictingId2 = uuid();
             return tasks
               .create(
                 { id: conflictingId2, title: "second title" },
@@ -1767,14 +1767,14 @@ describe("Integration tests", function() {
 
       describe("Load dump", () => {
         beforeEach(() => {
-          const id1 = uuid4();
-          const id2 = uuid4();
+          const id1 = uuid();
+          const id2 = uuid();
           const tasksRemote = tasks.api.bucket("default").collection("tasks");
           const dump = [
-            { id: uuid4(), last_modified: 123456, title: "task1", done: false },
+            { id: uuid(), last_modified: 123456, title: "task1", done: false },
             { id: id1, last_modified: 123457, title: "task2", done: false },
             { id: id2, last_modified: 123458, title: "task3", done: false },
-            { id: uuid4(), last_modified: 123459, title: "task4", done: false },
+            { id: uuid(), last_modified: 123459, title: "task4", done: false },
           ];
           return Promise.all(dump.map(r => tasksRemote.createRecord(r)))
             .then(() => tasks.importBulk(dump))
@@ -1870,8 +1870,8 @@ describe("Integration tests", function() {
         });
 
         return Promise.all([
-          tasks.create({ id: uuid4(), title: "abc" }, { useRecordId: true }),
-          tasks.create({ id: uuid4(), title: "def" }, { useRecordId: true }),
+          tasks.create({ id: uuid(), title: "abc" }, { useRecordId: true }),
+          tasks.create({ id: uuid(), title: "def" }, { useRecordId: true }),
         ]);
       });
 
@@ -1938,19 +1938,19 @@ describe("Integration tests", function() {
       }
 
       let tasksRemote;
-      const preserveOnSendNew = { id: uuid4(), title: "preserve-on-send new" };
+      const preserveOnSendNew = { id: uuid(), title: "preserve-on-send new" };
       const preserveOnSendOld = {
-        id: uuid4(),
+        id: uuid(),
         title: "preserve-on-send old",
         last_modified: 1234,
       };
       const deleteOnReceiveRemote = {
-        id: uuid4(),
+        id: uuid(),
         title: "delete-on-receive",
         wasDeleted: true,
       };
       const deletedByOtherClientRemote = {
-        id: uuid4(),
+        id: uuid(),
         title: "deleted-by-other-client",
       };
       beforeEach(() => {
