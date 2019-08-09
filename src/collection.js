@@ -311,10 +311,10 @@ export default class Collection {
    *
    * @param  {String} bucket  The bucket identifier.
    * @param  {String} name    The collection name.
-   * @param  {Api}    api     The Api instance.
+   * @param  {KintoBase}    kinto   The Kinto instance.
    * @param  {Object} options The options object.
    */
-  constructor(bucket, name, api, options = {}) {
+  constructor(bucket, name, kinto, options = {}) {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
@@ -337,7 +337,7 @@ export default class Collection {
      * The Api instance.
      * @type {KintoClient}
      */
-    this.api = api;
+    this.kinto = kinto;
     /**
      * The event emitter instance.
      * @type {EventEmitter}
@@ -367,6 +367,9 @@ export default class Collection {
     this.localFields = options.localFields || [];
   }
 
+  get api() {
+    return this.kinto.api;
+  }
   /**
    * The collection name.
    * @type {String}
