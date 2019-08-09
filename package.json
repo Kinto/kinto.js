@@ -136,7 +136,7 @@
   },
   "dependencies": {
     "btoa": "^1.1.2",
-    "kinto-http": "^5.0.0-alpha.0",
+    "kinto-http": "^5.0.0-alpha.1",
     "uuid": "^3.0.0"
   },
   "devDependencies": {
