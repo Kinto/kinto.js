@@ -309,10 +309,10 @@ export default class Collection {
    * Options:
    * - `{BaseAdapter} adapter` The DB adapter (default: `IDB`)
    *
-   * @param  {String} bucket  The bucket identifier.
-   * @param  {String} name    The collection name.
-   * @param  {KintoBase}    kinto   The Kinto instance.
-   * @param  {Object} options The options object.
+   * @param  {String}    bucket  The bucket identifier.
+   * @param  {String}    name    The collection name.
+   * @param  {KintoBase} kinto   The Kinto instance.
+   * @param  {Object}    options The options object.
    */
   constructor(bucket, name, kinto, options = {}) {
     this._bucket = bucket;
@@ -334,8 +334,8 @@ export default class Collection {
      */
     this.db = db;
     /**
-     * The Api instance.
-     * @type {KintoClient}
+     * The KintoBase instance.
+     * @type {KintoBase}
      */
     this.kinto = kinto;
     /**
@@ -367,9 +367,14 @@ export default class Collection {
     this.localFields = options.localFields || [];
   }
 
+  /**
+   * The HTTP client.
+   * @type {KintoClient}
+   */
   get api() {
     return this.kinto.api;
   }
+
   /**
    * The collection name.
    * @type {String}
