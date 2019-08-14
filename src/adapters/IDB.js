@@ -74,6 +74,7 @@ export async function execute(db, name, callback, options = {}) {
     }
     transaction.onerror = event => reject(event.target.error);
     transaction.oncomplete = event => resolve(result);
+    transaction.onabort = () => reject(transaction.error);
   });
 }
 
