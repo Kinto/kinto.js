@@ -1,7 +1,6 @@
 "use strict";
 
 import { expect } from "chai";
-import Api from "kinto-http";
 import { EventEmitter } from "events";
 
 import KintoBase from "../src/KintoBase.js";
@@ -36,7 +35,6 @@ describe("KintoBase", () => {
       kinto = new KintoBase({
         adapter: KintoBase.adapters.BaseAdapter,
         events: new EventEmitter(),
-        ApiClass: Api,
       });
     });
 

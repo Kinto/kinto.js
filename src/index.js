@@ -26,11 +26,14 @@ export default class Kinto extends KintoBase {
     };
   }
 
+  get ApiClass() {
+    return Api;
+  }
+
   constructor(options = {}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
       events: new EventEmitter(),
-      ApiClass: Api,
     };
 
     super({ ...defaults, ...options });

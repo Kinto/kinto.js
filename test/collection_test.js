@@ -41,7 +41,12 @@ describe("Collection", () => {
     events = new EventEmitter();
     const opts = { events, ...options };
     api = new Api(FAKE_SERVER_URL, events);
-    return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, opts);
+    return new Collection(
+      TEST_BUCKET_NAME,
+      TEST_COLLECTION_NAME,
+      { api },
+      opts
+    );
   }
 
   function createEncodeTransformer(char, delay) {
@@ -119,7 +124,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        api,
+        { api },
         { events }
       );
       expect(collection.events).to.eql(events);
@@ -131,7 +136,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        api,
+        { api },
         { events }
       );
       expect(collection.api.events).eql(collection.events);
@@ -142,7 +147,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        api,
+        { api },
         {
           adapterOptions: {
             dbName: "LocalData",
@@ -162,7 +167,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        api,
+        { api },
         { hooks }
       );
       expect(collection.db).to.be.an.instanceof(IDB);
@@ -172,9 +177,14 @@ describe("Collection", () => {
       const events = new EventEmitter();
       const api = new Api(FAKE_SERVER_URL, { events });
       expect(() => {
-        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          adapter: function() {},
-        });
+        new Collection(
+          TEST_BUCKET_NAME,
+          TEST_COLLECTION_NAME,
+          { api },
+          {
+            adapter: function() {},
+          }
+        );
       }).to.Throw(Error, /Unsupported adapter/);
     });
 
@@ -183,7 +193,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        api,
+        { api },
         {
           adapter: MyAdapter,
         }
@@ -199,18 +209,28 @@ describe("Collection", () => {
           myOptions = options;
         }
       };
-      new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-        adapter: MyAdapter,
-        adapterOptions: "my options",
-      });
+      new Collection(
+        TEST_BUCKET_NAME,
+        TEST_COLLECTION_NAME,
+        { api },
+        {
+          adapter: MyAdapter,
+          adapterOptions: "my options",
+        }
+      );
       expect(myOptions).eql("my options");
     });
 
     describe("transformers registration", () => {
       function registerTransformers(transformers) {
-        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          remoteTransformers: transformers,
-        });
+        new Collection(
+          TEST_BUCKET_NAME,
+          TEST_COLLECTION_NAME,
+          { api },
+          {
+            remoteTransformers: transformers,
+          }
+        );
       }
 
       it("should throw an error on non-array remoteTransformers", () => {
@@ -244,9 +264,14 @@ describe("Collection", () => {
 
     describe("hooks registration", () => {
       function registerHooks(hooks) {
-        return new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          hooks,
-        });
+        return new Collection(
+          TEST_BUCKET_NAME,
+          TEST_COLLECTION_NAME,
+          { api },
+          {
+            hooks,
+          }
+        );
       }
 
       it("should throw an error on non-object hooks", () => {
@@ -295,9 +320,14 @@ describe("Collection", () => {
 
     describe("idSchema registration", () => {
       function registerIdSchema(idSchema) {
-        new Collection(TEST_BUCKET_NAME, TEST_COLLECTION_NAME, api, {
-          idSchema: idSchema,
-        });
+        new Collection(
+          TEST_BUCKET_NAME,
+          TEST_COLLECTION_NAME,
+          { api },
+          {
+            idSchema: idSchema,
+          }
+        );
       }
 
       it("should throw an error on non-object transformer", () => {
@@ -1039,7 +1069,9 @@ describe("Collection", () => {
     });
 
     it("should isolate records by bucket", () => {
-      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, api);
+      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, {
+        api,
+      });
       return otherbucket
         .get(id)
         .then(res => res.data)
@@ -3001,7 +3033,7 @@ describe("Collection", () => {
 
     describe("Server backoff", () => {
       it("should reject on server backoff by default", () => {
-        articles.api = { backoff: 30000 };
+        articles.kinto = { api: { backoff: 30000 } };
         return articles
           .sync()
           .should.be.rejectedWith(Error, /back off; retry in 30s/);
