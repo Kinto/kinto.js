@@ -62,9 +62,21 @@ export default class KintoBase {
     if (!this._options.adapter) {
       throw new Error("No adapter provided");
     }
+    this._api = null;
 
+    /**
+     * The event emitter instance.
+     * @type {EventEmitter}
+     */
+    this.events = this._options.events;
+  }
+
+  /**
+   * The kinto HTTP client instance.
+   * @type {KintoClient}
+   */
+  get api() {
     const {
-      ApiClass,
       events,
       headers,
       remote,
@@ -73,24 +85,17 @@ export default class KintoBase {
       timeout,
     } = this._options;
 
-    // public properties
+    if (!this._api) {
+      this._api = new this.ApiClass(remote, {
+        events,
+        headers,
+        requestMode,
+        retry,
+        timeout,
+      });
+    }
 
-    /**
-     * The kinto HTTP client instance.
-     * @type {KintoClient}
-     */
-    this.api = new ApiClass(remote, {
-      events,
-      headers,
-      requestMode,
-      retry,
-      timeout,
-    });
-    /**
-     * The event emitter instance.
-     * @type {EventEmitter}
-     */
-    this.events = this._options.events;
+    return this._api;
   }
 
   /**
@@ -115,7 +120,7 @@ export default class KintoBase {
     };
     const { idSchema, remoteTransformers, hooks, localFields } = options;
 
-    return new Collection(bucket, collName, this.api, {
+    return new Collection(bucket, collName, this, {
       events,
       adapter,
       adapterOptions,
