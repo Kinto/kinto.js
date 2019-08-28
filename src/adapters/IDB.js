@@ -26,6 +26,16 @@ export async function open(dbname, { version, onupgradeneeded }) {
     request.onupgradeneeded = event => {
       const db = event.target.result;
       db.onerror = event => reject(event.target.error);
+      // When an upgrade is needed, a transaction is started.
+      const transaction = event.target.transaction;
+      transaction.onabort = event => {
+        const error =
+          event.target.error ||
+          transaction.error ||
+          new DOMException("The operation has been aborted", "AbortError");
+        reject(error);
+      };
+      // Callback for store creation etc.
       return onupgradeneeded(event);
     };
     request.onerror = event => {
@@ -74,6 +84,13 @@ export async function execute(db, name, callback, options = {}) {
     }
     transaction.onerror = event => reject(event.target.error);
     transaction.oncomplete = event => resolve(result);
+    transaction.onabort = event => {
+      const error =
+        event.target.error ||
+        transaction.error ||
+        new DOMException("The operation has been aborted", "AbortError");
+      reject(error);
+    };
   });
 }
 
