@@ -74,7 +74,13 @@ export async function execute(db, name, callback, options = {}) {
     }
     transaction.onerror = event => reject(event.target.error);
     transaction.oncomplete = event => resolve(result);
-    transaction.onabort = () => reject(transaction.error);
+    transaction.onabort = event => {
+      const error =
+        event.target.error ||
+        transaction.error ||
+        new DOMException("The operation has been aborted", "AbortError");
+      reject(error);
+    };
   });
 }
 
