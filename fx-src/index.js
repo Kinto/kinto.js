@@ -44,6 +44,10 @@ export default class Kinto extends KintoBase {
     };
   }
 
+  get ApiClass() {
+    return KintoHttpClient;
+  }
+
   constructor(options = {}) {
     const events = {};
     EventEmitter.decorate(events);
@@ -51,7 +55,6 @@ export default class Kinto extends KintoBase {
     const defaults = {
       adapter: IDB,
       events,
-      ApiClass: KintoHttpClient,
     };
     super({ ...defaults, ...options });
   }
