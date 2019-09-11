@@ -4,14 +4,14 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { v4 as uuid4 } from "uuid";
+import uuid from "uuid/v4";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "kinto-http";
 import KintoClient from "kinto-http";
-import KintoClientCollection from "kinto-http/lib/collection.js";
+import KintoClientCollection from "kinto-http/lib/cjs-es5/collection.js";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 import { createKeyValueStoreIdSchema } from "../src/collection";
@@ -605,7 +605,7 @@ describe("Collection", () => {
     });
 
     it("should support the useRecordId option", () => {
-      const testId = uuid4();
+      const testId = uuid();
       return articles
         .create({ id: testId, title: "foo" }, { useRecordId: true })
         .then(result => articles.get(result.data.id))
@@ -639,7 +639,7 @@ describe("Collection", () => {
 
     it("should reject with a hint if useRecordId has been used", () => {
       return articles
-        .create({ id: uuid4() }, { useRecordId: true })
+        .create({ id: uuid() }, { useRecordId: true })
         .then(res => articles.delete(res.data.id))
         .then(res =>
           articles.create({ id: res.data.id }, { useRecordId: true })
@@ -697,7 +697,7 @@ describe("Collection", () => {
 
     it("should update record status on update", () => {
       return articles
-        .create({ id: uuid4() }, { synced: true })
+        .create({ id: uuid() }, { synced: true })
         .then(res => res.data)
         .then(data => articles.update({ ...data, title: "blah" }))
         .then(res => res.data._status)
@@ -706,7 +706,7 @@ describe("Collection", () => {
 
     it("should not update record status if only local fields are changed", () => {
       return articles
-        .create({ id: uuid4() }, { synced: true })
+        .create({ id: uuid() }, { synced: true })
         .then(res => res.data)
         .then(data => articles.update({ ...data, read: true }))
         .then(res => res.data._status)
@@ -715,7 +715,7 @@ describe("Collection", () => {
 
     it("should reject updates on a non-existent record", () => {
       return articles
-        .update({ id: uuid4() })
+        .update({ id: uuid() })
         .should.be.rejectedWith(Error, /not found/);
     });
 
@@ -756,7 +756,7 @@ describe("Collection", () => {
     });
 
     it("should patch existing record when patch option is used", () => {
-      const id = uuid4();
+      const id = uuid();
       return articles
         .create(
           { id, title: "foo", last_modified: 42 },
@@ -844,7 +844,7 @@ describe("Collection", () => {
 
     it("should change record status to updated", () => {
       return articles
-        .create({ id: uuid4() }, { synced: true })
+        .create({ id: uuid() }, { synced: true })
         .then(res => res.data)
         .then(data => articles.upsert({ ...data, title: "blah" }))
         .then(res => res.data._status)
@@ -864,14 +864,14 @@ describe("Collection", () => {
 
     it("should create a new record if non-existent", () => {
       return articles
-        .upsert({ id: uuid4(), title: "new title" })
+        .upsert({ id: uuid(), title: "new title" })
         .then(res => res.data.title)
         .should.eventually.become("new title");
     });
 
     it("should set status to created if it created a record", () => {
       return articles
-        .upsert({ id: uuid4() })
+        .upsert({ id: uuid() })
         .then(res => res.data._status)
         .should.eventually.become("created");
     });
@@ -976,7 +976,7 @@ describe("Collection", () => {
 
     it("should signal when a record was created by oldRecord=undefined", () => {
       return articles
-        .upsert({ id: uuid4() })
+        .upsert({ id: uuid() })
         .then(res => res.oldRecord)
         .should.become(undefined);
     });
@@ -1014,7 +1014,7 @@ describe("Collection", () => {
       articles = testCollection();
       return articles
         .create(
-          { id: uuid4(), title: "local title", last_modified: 41 },
+          { id: uuid(), title: "local title", last_modified: 41 },
           { synced: true }
         )
         .then(res => {
@@ -1116,7 +1116,7 @@ describe("Collection", () => {
 
     it("should reject in case of record not found", () => {
       return articles
-        .get(uuid4())
+        .get(uuid())
         .then(res => res.data)
         .should.be.rejectedWith(Error, /not found/);
     });
@@ -1161,7 +1161,7 @@ describe("Collection", () => {
 
     it("should resolve to undefined if not present", () => {
       return articles
-        .getAny(uuid4())
+        .getAny(uuid())
         .then(res => res.data)
         .should.eventually.eql(undefined);
     });
@@ -1210,7 +1210,7 @@ describe("Collection", () => {
 
       it("should reject on non-existent record", () => {
         return articles
-          .delete(uuid4(), { virtual: true })
+          .delete(uuid(), { virtual: true })
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
@@ -1249,7 +1249,7 @@ describe("Collection", () => {
 
       it("should reject on non-existent record", () => {
         return articles
-          .delete(uuid4(), { virtual: false })
+          .delete(uuid(), { virtual: false })
           .then(res => res.data)
           .should.eventually.be.rejectedWith(Error, /not found/);
       });
@@ -1326,7 +1326,7 @@ describe("Collection", () => {
     });
 
     it("should resolve on non-existant record", () => {
-      const id = uuid4();
+      const id = uuid();
       return articles
         .deleteAny(id)
         .then(res => res.data.id)
@@ -1341,7 +1341,7 @@ describe("Collection", () => {
     });
 
     it("should indicate that it didn't delete when record is gone", () => {
-      const id = uuid4();
+      const id = uuid();
       return articles
         .deleteAny(id)
         .then(res => res.deleted)
@@ -1449,7 +1449,7 @@ describe("Collection", () => {
         { title: "art1", last_modified: 3, unread: true, complete: true },
         { title: "art2", last_modified: 2, unread: false, complete: true },
         {
-          id: uuid4(),
+          id: uuid(),
           title: "art3",
           last_modified: 1,
           unread: true,
@@ -1612,8 +1612,8 @@ describe("Collection", () => {
       sandbox.stub(articles, "importBulk").returns(Promise.resolve());
       articles
         .loadDump([
-          { id: uuid4(), title: "foo", last_modified: 1452347896 },
-          { id: uuid4(), title: "bar", last_modified: 1452347985 },
+          { id: uuid(), title: "foo", last_modified: 1452347896 },
+          { id: uuid(), title: "bar", last_modified: 1452347985 },
         ])
         .then(_ => sinon.assert.calledOnce(articles.importBulk));
     });
@@ -1628,8 +1628,8 @@ describe("Collection", () => {
     it("should import records in the collection", () => {
       return articles
         .importBulk([
-          { id: uuid4(), title: "foo", last_modified: 1452347896 },
-          { id: uuid4(), title: "bar", last_modified: 1452347985 },
+          { id: uuid(), title: "foo", last_modified: 1452347896 },
+          { id: uuid(), title: "bar", last_modified: 1452347985 },
         ])
         .should.eventually.have.length(2);
     });
@@ -1654,12 +1654,12 @@ describe("Collection", () => {
 
     it("should fail if last_modified is missing", () => {
       return articles
-        .importBulk([{ id: uuid4(), title: "foo" }])
+        .importBulk([{ id: uuid(), title: "foo" }])
         .should.be.rejectedWith(Error, /^Record has no last_modified value./);
     });
 
     it("should mark imported records as synced.", () => {
-      const testId = uuid4();
+      const testId = uuid();
       return articles
         .importBulk([{ id: testId, title: "foo", last_modified: 1457896541 }])
         .then(() => {
@@ -1670,7 +1670,7 @@ describe("Collection", () => {
     });
 
     it("should ignore already imported records.", () => {
-      const record = { id: uuid4(), title: "foo", last_modified: 1457896541 };
+      const record = { id: uuid(), title: "foo", last_modified: 1457896541 };
       return articles
         .importBulk([record])
         .then(() => articles.importBulk([record]))
@@ -1708,7 +1708,7 @@ describe("Collection", () => {
 
     it("should not overwrite records without last modified.", () => {
       return articles
-        .create({ id: uuid4(), title: "foo" }, { synced: true })
+        .create({ id: uuid(), title: "foo" }, { synced: true })
         .then(result => {
           const record = {
             id: result.data.id,
@@ -1761,7 +1761,7 @@ describe("Collection", () => {
           idSchema: NULL_SCHEMA,
           remoteTransformers: [transformer],
         });
-        const id = uuid4();
+        const id = uuid();
         return articles
           .create({ id: id, title: "some title" }, { synced: true })
           .then(() => {
@@ -1788,15 +1788,15 @@ describe("Collection", () => {
     });
 
     describe("When no conflicts occured", () => {
-      const id_1 = uuid4();
-      const id_2 = uuid4();
-      const id_3 = uuid4();
-      const id_4 = uuid4();
-      const id_5 = uuid4();
-      const id_6 = uuid4();
-      const id_7 = uuid4();
-      const id_8 = uuid4();
-      const id_9 = uuid4();
+      const id_1 = uuid();
+      const id_2 = uuid();
+      const id_3 = uuid();
+      const id_4 = uuid();
+      const id_5 = uuid();
+      const id_6 = uuid();
+      const id_7 = uuid();
+      const id_8 = uuid();
+      const id_9 = uuid();
 
       const localData = [
         { id: id_1, title: "art1" },
@@ -2009,7 +2009,7 @@ describe("Collection", () => {
         beforeEach(() => {
           return listRecords.returns(
             Promise.resolve({
-              data: [{ id: uuid4(), title: "bar" }],
+              data: [{ id: uuid(), title: "bar" }],
               next: () => {},
               last_modified: "42",
             })
@@ -2054,7 +2054,7 @@ describe("Collection", () => {
             idSchema: NULL_SCHEMA,
             remoteTransformers: [transformer],
           });
-          const id = uuid4();
+          const id = uuid();
           listRecords.returns(
             Promise.resolve({
               data: [{ id: id, deleted: true }],
@@ -2387,8 +2387,8 @@ describe("Collection", () => {
     });
 
     it("should only retrieve the changed record", () => {
-      const id1 = uuid4();
-      const id2 = uuid4();
+      const id1 = uuid();
+      const id2 = uuid();
       const execute = sandbox
         .stub(articles.db, "execute")
         .returns(Promise.resolve([]));
@@ -2405,7 +2405,7 @@ describe("Collection", () => {
     });
 
     it("should merge remote with local fields", () => {
-      const id1 = uuid4();
+      const id1 = uuid();
       return articles
         .create({ id: id1, title: "bar", size: 12 }, { synced: true })
         .then(() => articles.importChanges(result, [{ id: id1, title: "foo" }]))
@@ -2416,7 +2416,7 @@ describe("Collection", () => {
     });
 
     it("should ignore local fields when detecting conflicts", () => {
-      const id1 = uuid4();
+      const id1 = uuid();
       articles = testCollection({ localFields: ["size"] });
       // Create record with status not synced.
       return articles
@@ -2441,9 +2441,9 @@ describe("Collection", () => {
     });
 
     it("should overwrite local records with PULL_ONLY", () => {
-      const id1 = uuid4();
-      const id2 = uuid4();
-      const id3 = uuid4();
+      const id1 = uuid();
+      const id2 = uuid();
+      const id3 = uuid();
       return articles
         .create({ id: id1, title: "bar" }, { synced: true })
         .then(() => articles.update({ id: id1, title: "foo" }))
@@ -2479,7 +2479,7 @@ describe("Collection", () => {
   /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
     let client, articles, result;
-    const records = [{ id: uuid4(), title: "foo", _status: "created" }];
+    const records = [{ id: uuid(), title: "foo", _status: "created" }];
 
     beforeEach(() => {
       client = new KintoClient("http://server.com/v1")
@@ -2712,9 +2712,9 @@ describe("Collection", () => {
   /** @test {Collection#resetSyncStatus} */
   describe("#resetSyncStatus", () => {
     const fixtures = [
-      { id: uuid4(), last_modified: 42, title: "art1" },
-      { id: uuid4(), last_modified: 42, title: "art2" },
-      { id: uuid4(), last_modified: 42, title: "art3" },
+      { id: uuid(), last_modified: 42, title: "art1" },
+      { id: uuid(), last_modified: 42, title: "art2" },
+      { id: uuid(), last_modified: 42, title: "art3" },
     ];
     let articles;
 
@@ -2955,8 +2955,8 @@ describe("Collection", () => {
     });
 
     it("should not redownload pushed changes", () => {
-      const record1 = { id: uuid4(), title: "blog" };
-      const record2 = { id: uuid4(), title: "post" };
+      const record1 = { id: uuid(), title: "blog" };
+      const record2 = { id: uuid(), title: "post" };
       sandbox.stub(articles, "pullMetadata");
       sandbox.stub(articles, "pullChanges");
       sandbox
@@ -3232,7 +3232,7 @@ describe("Collection", () => {
     });
 
     it("should support create", () => {
-      const id = uuid4();
+      const id = uuid();
       return articles
         .execute(txn => txn.create({ id, ...article }), { preloadIds: [id] })
         .then(result => expect(result.data.title).eql("foo"));
@@ -3254,7 +3254,7 @@ describe("Collection", () => {
     });
 
     it("should support upsert", () => {
-      const id = uuid4();
+      const id = uuid();
       return articles
         .upsert({ id, ...article })
         .then(result => result.data.id)
@@ -3271,7 +3271,7 @@ describe("Collection", () => {
           return articles.execute(
             txn => {
               txn.deleteAny(id);
-              txn.delete(uuid4()); // this should fail
+              txn.delete(uuid()); // this should fail
             },
             { preloadIds: [id] }
           );
@@ -3396,12 +3396,12 @@ describe("Collection", () => {
 
     it("should not emit if deleteAny fails", done => {
       articles.events.on("delete", () => done(new Error("fail")));
-      articles.deleteAny(uuid4()).then(() => done());
+      articles.deleteAny(uuid()).then(() => done());
     });
 
     it("should emit a create event on upsert", done => {
       articles.events.on("create", () => done());
-      articles.upsert({ id: uuid4(), create: "new" });
+      articles.upsert({ id: uuid(), create: "new" });
     });
 
     it("should emit a update event on upsert", done => {
@@ -3439,7 +3439,7 @@ describe("Collection", () => {
         expect(event).not.to.have.property("oldRecord");
         done();
       });
-      articles.upsert({ id: uuid4(), some: "new" });
+      articles.upsert({ id: uuid(), some: "new" });
     });
 
     it("should provide old record", done => {
@@ -3460,8 +3460,8 @@ describe("Collection", () => {
 
         return articles
           .execute(txn => {
-            txn.create({ id: uuid4(), title: "foo" });
-            txn.create({ id: uuid4(), title: "bar" });
+            txn.create({ id: uuid(), title: "foo" });
+            txn.create({ id: uuid(), title: "bar" });
           })
           .then(() => expect(callback.callCount, 2));
       });
@@ -3472,7 +3472,7 @@ describe("Collection", () => {
 
         return articles
           .execute(txn => {
-            txn.create({ id: uuid4(), title: "foo" });
+            txn.create({ id: uuid(), title: "foo" });
             throw new Error("Fail!");
           })
           .catch(() => {})
@@ -3485,15 +3485,15 @@ describe("Collection", () => {
 
         return articles
           .execute(txn => {
-            txn.deleteAny({ id: uuid4() });
+            txn.deleteAny({ id: uuid() });
           })
           .then(() => expect(callback.callCount).eql(0));
       });
 
       it("should send a single changed event for the whole transaction", () => {
         const callback = sinon.spy();
-        const id = uuid4();
-        const id2 = uuid4();
+        const id = uuid();
+        const id2 = uuid();
 
         return articles
           .create({ id, title: "foo" }, { useRecordId: true })

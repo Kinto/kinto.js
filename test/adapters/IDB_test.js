@@ -4,7 +4,7 @@ import sinon from "sinon";
 import { expect } from "chai";
 
 import IDB, { open, execute } from "../../src/adapters/IDB.js";
-import { v4 as uuid4 } from "uuid";
+import uuid from "uuid/v4";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
@@ -246,7 +246,7 @@ describe("adapter.IDB", () => {
       }
       const preload = [];
       for (let i = 0; i < 10; i++) {
-        preload.push(articles[Math.ceil(Math.random() * articles.length)].id);
+        preload.push(articles[Math.floor(Math.random() * articles.length)].id);
       }
 
       it("should expose preloaded records using get()", () => {
@@ -525,8 +525,8 @@ describe("adapter.IDB", () => {
     it("should update the collection lastModified value.", () => {
       return db
         .importBulk([
-          { id: uuid4(), title: "foo", last_modified: 1457896541 },
-          { id: uuid4(), title: "bar", last_modified: 1458796542 },
+          { id: uuid(), title: "foo", last_modified: 1457896541 },
+          { id: uuid(), title: "bar", last_modified: 1458796542 },
         ])
         .then(() => db.getLastModified())
         .should.eventually.become(1458796542);
@@ -537,8 +537,8 @@ describe("adapter.IDB", () => {
         .saveLastModified(1458796543)
         .then(() =>
           db.importBulk([
-            { id: uuid4(), title: "foo", last_modified: 1457896541 },
-            { id: uuid4(), title: "bar", last_modified: 1458796542 },
+            { id: uuid(), title: "foo", last_modified: 1457896541 },
+            { id: uuid(), title: "bar", last_modified: 1458796542 },
           ])
         )
         .then(() => db.getLastModified())
