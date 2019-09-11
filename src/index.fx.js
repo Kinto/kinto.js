@@ -16,25 +16,34 @@
 "use strict";
 
 ChromeUtils.import("resource://gre/modules/Timer.jsm", global);
-const { XPCOMUtils } = ChromeUtils.import("resource://gre/modules/XPCOMUtils.jsm");
+const { XPCOMUtils } = ChromeUtils.import(
+  "resource://gre/modules/XPCOMUtils.jsm"
+);
 XPCOMUtils.defineLazyGlobalGetters(global, ["fetch", "indexedDB"]);
 
-ChromeUtils.defineModuleGetter(global, "EventEmitter",
-                               "resource://gre/modules/EventEmitter.jsm");
+ChromeUtils.defineModuleGetter(
+  global,
+  "EventEmitter",
+  "resource://gre/modules/EventEmitter.jsm"
+);
 // Use standalone kinto-http module landed in FFx.
-ChromeUtils.defineModuleGetter(global, "KintoHttpClient",
-                               "resource://services-common/kinto-http-client.js");
+ChromeUtils.defineModuleGetter(
+  global,
+  "KintoHttpClient",
+  "resource://services-common/kinto-http-client.js"
+);
 
 XPCOMUtils.defineLazyGetter(global, "generateUUID", () => {
-  const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(Ci.nsIUUIDGenerator);
+  const { generateUUID } = Cc["@mozilla.org/uuid-generator;1"].getService(
+    Ci.nsIUUIDGenerator
+  );
   return generateUUID;
 });
 
-
-import KintoBase from "../src/KintoBase";
-import BaseAdapter from "../src/adapters/base";
-import IDB from "../src/adapters/IDB";
-import { RE_RECORD_ID } from "../src/utils";
+import KintoBase from "./KintoBase";
+import BaseAdapter from "./adapters/base";
+import IDB from "./adapters/IDB";
+import { RE_RECORD_ID } from "./utils";
 
 export default class Kinto extends KintoBase {
   static get adapters() {
@@ -68,14 +77,8 @@ export default class Kinto extends KintoBase {
         return generateUUID()
           .toString()
           .replace(/[{}]/g, "");
-      }
+      },
     };
     return super.collection(collName, { idSchema, ...options });
   }
-}
-
-// This fixes compatibility with CommonJS required by browserify.
-// See http://stackoverflow.com/questions/33505992/babel-6-changes-how-it-exports-default/33683495#33683495
-if (typeof module === "object") {
-  module.exports = Kinto;
 }

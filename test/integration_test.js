@@ -1,7 +1,7 @@
 "use strict";
 
 import { spawn } from "child_process";
-import { v4 as uuid4 } from "uuid";
+import { default as uuid4 } from "uuid/v4";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";

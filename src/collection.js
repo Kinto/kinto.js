@@ -3,7 +3,7 @@
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
-import { v4 as uuid4 } from "uuid";
+import { default as uuid4 } from "uuid/v4";
 import { omitKeys, RE_RECORD_ID } from "./utils";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];

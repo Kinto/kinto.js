@@ -6,3 +6,5 @@
 /esdoc
 /node_modules
 /demo/kinto*
+.DS_Store
+.nyc_output
