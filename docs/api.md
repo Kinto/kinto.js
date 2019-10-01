@@ -48,9 +48,7 @@ The collection object has the following (read-only) attribute:
 ## Creating a record
 
 ```js
-articles.create({title: "foo"})
-  .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+await articles.create({title: "foo"});
 ```
 
 Result is:
@@ -76,9 +74,7 @@ but you can also define a [custom ID schema](#id-schemas));
 ## Retrieving a single record
 
 ```js
-articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console))
-  .catch(console.error.bind(console));
+await articles.get("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
 ```
 
 Result:
