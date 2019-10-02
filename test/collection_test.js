@@ -4,14 +4,14 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { v4 as uuid4 } from "uuid";
+import { default as uuid4 } from "uuid/v4";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import Api from "kinto-http";
 import KintoClient from "kinto-http";
-import KintoClientCollection from "kinto-http/lib/collection.js";
+import KintoClientCollection from "kinto-http/lib/cjs-es5/collection.js";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 import { createKeyValueStoreIdSchema } from "../src/collection";

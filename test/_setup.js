@@ -28,3 +28,6 @@ if (typeof root.indexedDB !== "object") {
 
   root.indexedDB = require("fake-indexeddb");
 }
+
+root.FormData = require("form-data");
+root.Headers = require("node-fetch").Headers;

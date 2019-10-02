@@ -4,7 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http/lib/base";
+import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http/lib/cjs-es5/base";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";

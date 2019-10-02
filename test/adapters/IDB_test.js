@@ -4,7 +4,7 @@ import sinon from "sinon";
 import { expect } from "chai";
 
 import IDB, { open, execute } from "../../src/adapters/IDB.js";
-import { v4 as uuid4 } from "uuid";
+import { default as uuid4 } from "uuid/v4";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
@@ -246,7 +246,7 @@ describe("adapter.IDB", () => {
       }
       const preload = [];
       for (let i = 0; i < 10; i++) {
-        preload.push(articles[Math.ceil(Math.random() * articles.length)].id);
+        preload.push(articles[Math.floor(Math.random() * articles.length)].id);
       }
 
       it("should expose preloaded records using get()", () => {
