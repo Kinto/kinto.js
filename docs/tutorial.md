@@ -67,19 +67,18 @@ function main() {
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", function(event) {
+    .addEventListener("submit", async function(event) {
       event.preventDefault();
-      tasks.create({
-        title: event.target.title.value,
-        done: false
-      })
-      .then(function(res) {
+      try {
+        await tasks.create({
+          title: event.target.title.value,
+          done: false
+        });
         event.target.title.value = "";
         event.target.title.focus();
-      })
-      .catch(function(err) {
+      } catch(err) {
         console.error(err);
-      });
+      }
     });
 }
 
@@ -108,21 +107,20 @@ function main() {
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", function(event) {
+    .addEventListener("submit", async function(event) {
       event.preventDefault();
-      tasks.create({
-        title: event.target.title.value,
-        done: false
-      })
-      .then(function(res) {
+      try {
+        await tasks.create({
+          title: event.target.title.value,
+          done: false
+        });
         event.target.title.value = "";
         event.target.title.focus();
-      })
-	    // Render the list once a value had been submitted.
-      .then(render)
-      .catch(function(err) {
+	      // Render the list once a value had been submitted.
+        await render();
+      } catch(err) {
         console.error(err);
-      });
+      }
     });
 
   function renderTask(task) {
@@ -140,13 +138,13 @@ function main() {
     });
   }
 
-  function render() {
-    tasks.list().then(function(res) {
+  async function render() {
+    try {
+      const res = await tasks.list();
       renderTasks(res.data);
-    })
-    .catch(function(err) {
+    } catch(err) {
       console.error(err);
-    });
+    }
   }
 
   render();
@@ -221,18 +219,19 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
     // initialize it with task status
     checkbox.checked = task.done;
     // listen to clicks
-    checkbox.addEventListener("click", function(event) {
+    checkbox.addEventListener("click", async function(event) {
       // prevent the click to actually toggle the checkbox
       event.preventDefault();
       // invert the task status
       task.done = !task.done;
-      // update task status
-      tasks.update(task)
-      // on success, re-render to actually reflect the checkbox states.
-      .then(render)
-      .catch(function(err) {
+      try {
+        // update task status
+        await tasks.update(task);
+        // on success, re-render to actually reflect the checkbox states.
+        render();
+      } catch (err) {
         console.error(err);
-      });
+      }
     });
     return li;
   }
@@ -261,23 +260,22 @@ Then the JavaScript:
 
 ```js
   document.getElementById("clearCompleted")
-    .addEventListener("click", function(event) {
+    .addEventListener("click", async function(event) {
       event.preventDefault();
-      tasks.list()
-        .then(function(res) {
-          // Filter tasks according to their done status
-          var completed = res.data.filter(function(task) {
-            return task.done;
-          });
-          // Delete all completed tasks
-          return Promise.all(completed.map(function(task) {
-            return tasks.delete(task.id);
-          }));
-        })
-        .then(render)
-        .catch(function(err) {
-          console.error(err);
+      try {
+        const res = await tasks.list();
+        // Filter tasks according to their done status
+        const completed = res.data.filter(function(task) {
+          return task.done;
         });
+        // Delete all completed tasks
+        await Promise.all(completed.map(function(task) {
+          return tasks.delete(task.id);
+        }));
+        await render();
+      } catch (err) {
+        console.error(err);
+      }
     });
 ```
 
@@ -323,16 +321,15 @@ var syncOptions = {
 };
 
 document.getElementById("sync")
-  .addEventListener("click", function(event) {
+  .addEventListener("click", async function(event) {
     event.preventDefault();
-    tasks.sync(syncOptions)
-      .then(function(res) {
-        document.getElementById("results").value = JSON.stringify(res, null, 2);
-      })
-      .then(render)
-      .catch(function(err) {
-        console.error(err);
-      });
+    try {
+      const res = await tasks.sync(syncOptions)
+      document.getElementById("results").value = JSON.stringify(res, null, 2);
+      await render();
+    } catch(err) {
+      console.error(err);
+    }
   });
 ```
 
@@ -466,30 +463,25 @@ Now it's up to you how you want to resolve the conflict; for example, you could:
 Your take really. Let's take the former approach:
 
 ```js
-  function handleConflicts(conflicts) {
-    return Promise.all(conflicts.map(function(conflict) {
+  async function handleConflicts(conflicts) {
+    await Promise.all(conflicts.map(function(conflict) {
       return tasks.resolve(conflict, conflict.remote);
     }))
-      .then(function() {
-        tasks.sync(syncOptions);
-      });
+    return tasks.sync(syncOptions);
   }
 
   document.getElementById("sync")
-    .addEventListener("click", function(event) {
+    .addEventListener("click", async function(event) {
       event.preventDefault();
-      tasks.sync(syncOptions)
-        .then(function(res) {
-          document.getElementById("results").value = JSON.stringify(res, null, 2);
-          if (res.conflicts.length) {
-            return handleConflicts(res.conflicts);
-          }
-          return res;
-        })
-        .then(render)
-        .catch(function(err) {
-          console.error(err);
-        });
+      try {
+        const res = tasks.sync(syncOptions)
+        document.getElementById("results").value = JSON.stringify(res, null, 2);
+        if (res.conflicts.length) {
+          await handleConflicts(res.conflicts);
+        }
+      } catch (err) {
+        console.error(err);
+      }
     });
 ```
 

@@ -81,16 +81,14 @@ By default, the list of preloaded records is empty.
 The typical target usage flow is a follow:
 
 ```js
-db.list()
-  .then(preload => {
-    return db.execute(transaction => {
-      const existing = transaction.get(1);
-      if (!existing) {
-        throw new Error("Missing record #1");
-      }
-      transaction.update({...existing, foo: "bar"});
-    }, {preload});
-  });
+const preload = db.list();
+db.execute(transaction => {
+  const existing = transaction.get(1);
+  if (!existing) {
+    throw new Error("Missing record #1");
+  }
+  transaction.update({...existing, foo: "bar"});
+}, {preload});
 ```
 
 ## Hooks

@@ -98,9 +98,12 @@ Result:
 ## Retrieving a single record if present
 
 ```js
-articles.getAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f8")
-  .then(console.log.bind(console))
-  .error(console.error.bind(console))
+try {
+  const article = await articles.getAny("2dcd0e65-468c-4655-8015-30c8b3a1c8f8");
+  console.log(article);
+} catch (err) {
+  console.error(err);
+}
 ```
 
 Result:
@@ -324,14 +327,14 @@ actually starting the first sync with it.
 The list of imported records is returned.
 
 ```js
-articles.importBulk([
+const records = await articles.importBulk([
   {
     id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
     title: "baz",
     last_modified: 1432222889337
   }
-])
-  .then(records => console.log(records));
+]);
+console.log(records);
 ```
 
 > #### Notes
@@ -376,12 +379,13 @@ conflicts with the changes you've made as part of a transaction.
 To initiate a transaction, call `Collection#execute()` like this:
 
 ```js
-articles.execute(txn => {
-    let article1 = txn.get(id1);
-    let article2 = txn.get(id2);
-    return [article1, article2];
-  }, {preloadIds: [id1, id2])
-  .then(console.log.bind(console));
+const articles = articles.execute(txn => {
+  let article1 = txn.get(id1);
+  let article2 = txn.get(id2);
+  return [article1, article2];
+}, {preloadIds: [id1, id2]});
+
+console.log(records);
 ```
 
 The `execute` function takes two arguments. The first is a function
@@ -439,13 +443,14 @@ const kinto = new Kinto({
 You can also provide this authentication header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync):
 
 ```js
-kinto.collection("articles")
+await kinto.collection("articles")
   .sync({
     headers: {Authorization: "Basic " + btoa(`${username}:${password}`)}
-  }).then(…);
+  });
+// ...
 ```
 
-> #### Notes
+>#### Notes
 >
 > - You're not obliged to use the `username:password` format; basically whatever unique string gets you covered.
 
@@ -465,10 +470,11 @@ const kinto = new Kinto({
 As with Basic Auth, you can pass the header to [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) as well:
 
 ```js
-kinto.collection("articles")
+await kinto.collection("articles")
   .sync({
     headers: {Authorization: "Basic " + oauthBearerToken}
-  }).then(…);
+  });
+// ...
 ```
 
 > #### Notes
@@ -494,13 +500,14 @@ Synopsis:
         * If `strategy` is set to `Kinto.syncStrategy.MANUAL`, both incoming and outgoing conflicts will be reported in a dedicated array.
 
 ```js
-articles.sync()
-  .then(console.log.bind(console))
-  .catch(err => {
-    if (err.response && err.response.status === 401) {
-      console.error('HTTP status code indicates auth problem');
-    }
-  });
+try {
+  const result = await articles.sync();
+  console.log(result);
+} catch (err) {
+  if (err.response && err.response.status === 401) {
+    console.error('HTTP status code indicates auth problem');
+  }
+}
 ```
 
 > #### Notes
@@ -534,18 +541,17 @@ You can override default options by passing [`#sync()`](https://doc.esdoc.org/gi
 ```js
 import Collection from "kinto/lib/collection";
 
-articles.sync({
-  strategy: Kinto.syncStrategy.CLIENT_WINS,
-  remote: "https://alt.server.tld/v1",
-  headers: {Authorization: "Basic bWF0Og=="},
-  retry: 3
-})
-  .then(result => {
-    console.log(result);
-  })
-  .catch(error => {
-    console.error(error);
+try {
+  const result = await articles.sync({
+    strategy: Kinto.syncStrategy.CLIENT_WINS,
+    remote: "https://alt.server.tld/v1",
+    headers: {Authorization: "Basic bWF0Og=="},
+    retry: 3
   });
+  console.log(result);
+} catch (error) {
+  console.error(error);
+}
 ```
 
 ## The synchronization result object
@@ -615,19 +621,23 @@ Once the developer is done with merging records, conflicts are marked as
 resolved using the [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resolve) method of the collection:
 
 ```js
-function sync() {
-  return articles.sync()
-    .then(res => {
-      if (res.ok)
-        return res;
+async function sync() {
+  try {
+    const res = articles.sync();
 
-      // If conflicts, take remote version and sync again.
-      return Promise.all(res.conflicts.map(conflict => {
-        return articles.resolve(conflict, conflict.remote);
-      }))
-      .then(_ => sync());
-    })
-  .catch(console.error.bind(console));
+    if (res.ok) {
+      return res;
+    }
+
+    // If conflicts, take remote version and sync again.
+    await Promise.all(res.conflicts.map(conflict => {
+      return articles.resolve(conflict, conflict.remote);
+    }))
+
+    return sync();
+  } catch (error) {
+    console.error(error);
+  }
 }
 ```
 
@@ -688,8 +698,8 @@ const kinto = new Kinto({
   }
 });
 
-kinto.api.listBuckets()
-  .then(({data}) => ...);
+const { data } = await kinto.api.listBuckets();
+// ...
 ```
 
 On a collection, the `api` instance must be set to a bucket and a collection name:
@@ -701,11 +711,11 @@ const kinto = new Kinto({
 const collection = kinto.collection("articles");
 
 // List records from "articles" collection in "blog" bucket:
-collection.api
+const { data } = await collection.api
   .bucket(collection.bucket)
   .collection(collection.name)
-  .listRecords()
-    .then(({data}) => ...);
+  .listRecords();
+// ...
 ```
 
 
@@ -716,15 +726,16 @@ In case a pristine or [flushed](http://kinto.readthedocs.io/en/latest/configurat
 So instead of wiping your local database to reflect this new remote state, you're notified about the situation with a proper error :) You'll most likely want to republish your local database to the server; this is very easy to achieve by calling [`#resetSyncStatus()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-resetSyncStatus), then [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) again:
 
 ```js
-articles.sync()
-  .catch(err => {
-    if (err.message.includes("flushed")) {
-      return articles.resetSyncStatus()
-        .then(_ => articles.sync());
-    }
-    throw err;
-  })
-  .then(console.log.bind(console));
+try {
+  const result = await articles.sync();
+  console.log(result);
+} catch (err) {
+  if (err.message.includes("flushed")) {
+    await articles.resetSyncStatus();
+    return articles.sync();
+  }
+  throw err;
+}
 ```
 
 ## Handling server backoff
@@ -736,8 +747,8 @@ When this happens, Kinto.js will reject calls to [`#sync()`](https://doc.esdoc.o
 While not necessarily recommended, if you ever want to bypass this restriction, you can pass the `ignoreBackoff` option set to `true`:
 
 ```js
-articles.sync({ignoreBackoff: true})
-  .then(…)
+await articles.sync({ignoreBackoff: true});
+// ...
 ```
 
 ## Events
@@ -890,7 +901,8 @@ coll = kinto.collection("articles", {
 Calling `coll.sync()` here will store encoded records on the server; when pulling for changes, the client will decode remote data before importing them, so you're always guaranteed to have the local database containing data in clear:
 
 ```js
-coll.create({title: "foo"}).then(_ => coll.sync())
+await coll.create({title: "foo"});
+coll.sync();
 // remotely saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo!"}
 // locally saved:
@@ -997,7 +1009,8 @@ coll = kinto.collection("articles", {
   ]
 });
 
-coll.create({title: "foo"}).then(_ => coll.sync())
+await coll.create({title: "foo"});
+coll.sync();
 // remotely saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo!?"}
 // locally saved:
