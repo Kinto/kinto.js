@@ -379,13 +379,13 @@ conflicts with the changes you've made as part of a transaction.
 To initiate a transaction, call `Collection#execute()` like this:
 
 ```js
-const articles = articles.execute(txn => {
+const articles = await articles.execute(txn => {
   let article1 = txn.get(id1);
   let article2 = txn.get(id2);
   return [article1, article2];
 }, {preloadIds: [id1, id2]});
 
-console.log(records);
+console.log(articles);
 ```
 
 The `execute` function takes two arguments. The first is a function
@@ -623,7 +623,7 @@ resolved using the [`#resolve()`](https://doc.esdoc.org/github.com/Kinto/kinto.j
 ```js
 async function sync() {
   try {
-    const res = articles.sync();
+    const res = await articles.sync();
 
     if (res.ok) {
       return res;
@@ -902,7 +902,7 @@ Calling `coll.sync()` here will store encoded records on the server; when pullin
 
 ```js
 await coll.create({title: "foo"});
-coll.sync();
+await coll.sync();
 // remotely saved:
 // {id: "125b3bff-e80f-4823-8b8f-bfae10bfc3e8", title: "foo!"}
 // locally saved:

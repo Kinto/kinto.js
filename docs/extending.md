@@ -23,7 +23,7 @@ class MyAdapter extends Kinto.adapters.BaseAdapter {
   }
 
   list() {
-    retrieve the list of records
+    // retrieve the list of records
   }
   …
 }
@@ -81,8 +81,8 @@ By default, the list of preloaded records is empty.
 The typical target usage flow is a follow:
 
 ```js
-const preload = db.list();
-db.execute(transaction => {
+const preload = await db.list();
+await db.execute(transaction => {
   const existing = transaction.get(1);
   if (!existing) {
     throw new Error("Missing record #1");
