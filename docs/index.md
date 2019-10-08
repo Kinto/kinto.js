@@ -7,9 +7,8 @@ const tasks = new Kinto({
   remote: "https://kinto.dev.mozaws.net/v1"
 }).collection("tasks");
 
-tasks
-  .create({label: "First item", done: false})
-  .then(_ => tasks.sync());
+await tasks.create({label: "First item", done: false});
+await tasks.sync();
 ```
 
 ## Key concepts
