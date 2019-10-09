@@ -491,7 +491,7 @@ describe("adapter.IDB", () => {
     it("should reject on transaction error", () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
-          put() {
+          delete() {
             throw new Error("transaction error");
           },
         });
