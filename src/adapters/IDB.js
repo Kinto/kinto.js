@@ -541,7 +541,13 @@ export default class IDB extends BaseAdapter {
     try {
       await this.prepare(
         "timestamps",
-        store => store.put({ cid: this.cid, value }),
+        store => {
+          if (value === null) {
+            store.delete(this.cid);
+          } else {
+            store.put({ cid: this.cid, value });
+          }
+        },
         { mode: "readwrite" }
       );
       return value;
