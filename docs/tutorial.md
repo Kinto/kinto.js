@@ -46,8 +46,8 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 }
 
 window.addEventListener("DOMContentLoaded", main);
@@ -63,11 +63,11 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", async function(event) {
+    .addEventListener("submit", async event => {
       event.preventDefault();
       try {
         await tasks.create({
@@ -103,11 +103,11 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", async function(event) {
+    .addEventListener("submit", async event => {
       event.preventDefault();
       try {
         await tasks.create({
@@ -124,16 +124,16 @@ function main() {
     });
 
   function renderTask(task) {
-    var li = document.createElement("li");
+    const li = document.createElement("li");
     li.classList.add("list-group-item");
     li.innerHTML = task.title;
     return li;
   }
 
   function renderTasks(tasks) {
-    var ul = document.getElementById("tasks");
+    const ul = document.getElementById("tasks");
     ul.innerHTML = "";
-    tasks.forEach(function(task) {
+    tasks.forEach(task => {
       ul.appendChild(renderTask(task));
     });
   }
@@ -195,8 +195,8 @@ Our `renderTask()` function becomes:
 
 ```js
   function renderTask(task) {
-    var tpl = document.getElementById("task-tpl");
-    var li = tpl.content.cloneNode(true);
+    const tpl = document.getElementById("task-tpl");
+    const li = tpl.content.cloneNode(true);
     li.querySelector(".title").textContent = task.title;
     li.querySelector(".done").checked = task.done;
     return li;
@@ -211,15 +211,15 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
 
 ```js
   function renderTask(task) {
-    var tpl = document.getElementById("task-tpl");
-    var li = tpl.content.cloneNode(true);
+    const tpl = document.getElementById("task-tpl");
+    const li = tpl.content.cloneNode(true);
     li.querySelector(".title").textContent = task.title;
     // retrieve a reference to the checkbox element
-    var checkbox = li.querySelector(".done");
+    const checkbox = li.querySelector(".done");
     // initialize it with task status
     checkbox.checked = task.done;
     // listen to clicks
-    checkbox.addEventListener("click", async function(event) {
+    checkbox.addEventListener("click", async event => {
       // prevent the click to actually toggle the checkbox
       event.preventDefault();
       // invert the task status
@@ -260,16 +260,16 @@ Then the JavaScript:
 
 ```js
   document.getElementById("clearCompleted")
-    .addEventListener("click", async function(event) {
+    .addEventListener("click", async event => {
       event.preventDefault();
       try {
         const res = await tasks.list();
         // Filter tasks according to their done status
-        const completed = res.data.filter(function(task) {
+        const completed = res.data.filter(task => {
           return task.done;
         });
         // Delete all completed tasks
-        await Promise.all(completed.map(function(task) {
+        await Promise.all(completed.map(task => {
           return tasks.delete(task.id);
         }));
         await render();
@@ -315,13 +315,13 @@ Now back to our web page: let's add a shiny *Synchronize* button and a textarea 
 Then, update the JavaScript:
 
 ```js
-var syncOptions = {
+const syncOptions = {
   remote: "https://kinto.dev.mozaws.net/v1",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 };
 
 document.getElementById("sync")
-  .addEventListener("click", async function(event) {
+  .addEventListener("click", async event => {
     event.preventDefault();
     try {
       const res = await tasks.sync(syncOptions)
@@ -464,14 +464,14 @@ Your take really. Let's take the former approach:
 
 ```js
   async function handleConflicts(conflicts) {
-    await Promise.all(conflicts.map(function(conflict) {
+    await Promise.all(conflicts.map(conflict => {
       return tasks.resolve(conflict, conflict.remote);
     }))
     return tasks.sync(syncOptions);
   }
 
   document.getElementById("sync")
-    .addEventListener("click", async function(event) {
+    .addEventListener("click", async event => {
       event.preventDefault();
       try {
         const res = tasks.sync(syncOptions)

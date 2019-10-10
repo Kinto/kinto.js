@@ -121,12 +121,12 @@ undefined
 ## Updating a record
 
 ```js
-var existing = {
+const existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
   title: "bar"
 };
 
-var updated = {...existing, title: "baz"};
+const updated = {...existing, title: "baz"};
 
 await articles.update(updated);
 ```
@@ -155,14 +155,14 @@ Result is:
 `upsert()` will create a record or replace the one that exists (equivalent to «put»).
 
 ```js
-var existing = {
+const existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
   title: "bar"
 };
 
 await articles.upsert(existing);
 
-var updated = {...existing, title: "baz"};
+const updated = {...existing, title: "baz"};
 
 await articles.upsert(updated);
 ```
@@ -650,7 +650,7 @@ By default, kinto.js sends every record attribute stored locally.
 In order to store some field only locally, and never publish them to the server, you can provide a list of field names in the `localFields` option of `Kinto#collection`:
 
 ```js
-collection = kinto.collection("articles", {
+const collection = kinto.collection("articles", {
   localFields: ["captain", "age"]
 });
 ```
@@ -666,10 +666,10 @@ stripped = collection.cleanLocalFields(record);
 During synchronization, the collection metadata is fetched and stored in storage. It can be accessed with the ``.metadata()`` method.
 
 ```js
-collection = kinto.collection("articles");
+const collection = kinto.collection("articles");
 await collection.sync();
 
-metadata = collection.metadata();
+const metadata = collection.metadata();
 ```
 
 The result is:
@@ -779,7 +779,7 @@ The `backoff` event notifies what's the backoff release timestamp you should wai
 ```js
 const kinto = new Kinto();
 
-kinto.events.on("backoff", function(releaseTime) {
+kinto.events.on("backoff", releaseTime => {
   const releaseDate = new Date(releaseTime).toLocaleString();
   alert(`Backed off; wait until ${releaseDate} to retry`);
 });
@@ -796,7 +796,7 @@ Triggered when an `Alert` HTTP header is received from the server, meaning that 
 ```js
 const kinto = new Kinto();
 
-kinto.events.on("deprecated", function(event) {
+kinto.events.on("deprecated", event => {
   console.log(event.message);
 });
 ```
@@ -815,7 +815,7 @@ The `event` argument contains the following information:
 const kinto = new Kinto();
 const articles = kinto.collection("articles");
 
-articles.events.on("change", function(event) {
+articles.events.on("change", event => {
   const first = event.targets[0];
   console.log(first.action);
   console.log(first.data.id);
@@ -841,7 +841,7 @@ The ``update`` event contains an additional attribute:
 const kinto = new Kinto();
 const articles = kinto.collection("articles");
 
-articles.events.on("update", function(event) {
+articles.events.on("update", event => {
   console.log(`Title was changed from "${event.oldRecord.title}" to "${event.data.title}"`);
 });
 
@@ -870,9 +870,7 @@ A transformer object is basically an object literal having and `encode` and a `d
 ```js
 import Kinto from "kinto";
 
-function update(obj1, obj2) {
-  return {...obj1, ...obj2};
-}
+const update = (obj1, obj2) => ({ ...obj1, ...obj2 });
 
 const exclamationMarkTransformer = {
   encode(record) {
@@ -885,7 +883,7 @@ const exclamationMarkTransformer = {
 };
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
@@ -982,7 +980,7 @@ const exclamationMarkTransformer = {
   }
 };
 
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
@@ -1002,7 +1000,7 @@ function createTitleCharTransformer(char) {
   }
 }
 
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [
     createTitleCharTransformer("!"),
     createTitleCharTransformer("?")
@@ -1032,7 +1030,7 @@ You can define a custom ID schema on a collection by passing it to `Kinto#collec
 ```js
 import Kinto from "kinto";
 
-function createIntegerIdSchema() {
+const createIntegerIdSchema = () => ({
   generate() {
     return _next++;
   },
@@ -1040,10 +1038,10 @@ function createIntegerIdSchema() {
   validate(id) {
     return (typeof id == "number");
   }
-};
+});
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   idSchema: createIntegerIdSchema()
 });
 ```
@@ -1051,8 +1049,7 @@ coll = kinto.collection("articles", {
 The `generate` function can also optionally accept the record being created as an argument, allowing you to use any or all of the data to generate an ID.
 
 ```js
-function urlBase64IdSchema() {
-  return {
+const urlBase64IdSchema = () => ({
     generate(record) {
       return btoa(record.url);
     },
@@ -1060,8 +1057,7 @@ function urlBase64IdSchema() {
     validate(id) {
       return !!atob(id).match("http");
     }
-  };
-};
+});
 ```
 
 > #### Notes
@@ -1073,10 +1069,10 @@ function urlBase64IdSchema() {
 For ids chosen by your application (like "config", "last-save", etc.), you'll want a NOP id generator:
 ```js
 const nopSchema = {
-    generate: function() {
+    generate() {
         throw new Error("can't generate keys");
     },
-    validate: function(id) {
+    validate(id) {
         return true;
     }
 };
