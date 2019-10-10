@@ -31,7 +31,7 @@ channel.bind_all((evtName, data) => {
 
 function applyChanges(collectionName, evtName, data) {
   const changes = data.map(record => record.new);
-  const timestamps = changes.map(record => ecord.last_modified)
+  const timestamps = changes.map(record => record.last_modified)
   const changeObj = {
     changes: changes,
     lastModified: Math.max.apply(null, timestamps)
