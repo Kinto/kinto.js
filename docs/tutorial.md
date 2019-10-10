@@ -67,7 +67,7 @@ function main() {
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", async function(event) {
+    .addEventListener("submit", async event => {
       event.preventDefault();
       try {
         await tasks.create({
@@ -107,7 +107,7 @@ function main() {
   var tasks = db.collection("tasks");
 
   document.getElementById("form")
-    .addEventListener("submit", async function(event) {
+    .addEventListener("submit", async event => {
       event.preventDefault();
       try {
         await tasks.create({
@@ -133,7 +133,7 @@ function main() {
   function renderTasks(tasks) {
     var ul = document.getElementById("tasks");
     ul.innerHTML = "";
-    tasks.forEach(function(task) {
+    tasks.forEach(task => {
       ul.appendChild(renderTask(task));
     });
   }
@@ -219,7 +219,7 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
     // initialize it with task status
     checkbox.checked = task.done;
     // listen to clicks
-    checkbox.addEventListener("click", async function(event) {
+    checkbox.addEventListener("click", async event => {
       // prevent the click to actually toggle the checkbox
       event.preventDefault();
       // invert the task status
@@ -260,16 +260,16 @@ Then the JavaScript:
 
 ```js
   document.getElementById("clearCompleted")
-    .addEventListener("click", async function(event) {
+    .addEventListener("click", async event => {
       event.preventDefault();
       try {
         const res = await tasks.list();
         // Filter tasks according to their done status
-        const completed = res.data.filter(function(task) {
+        const completed = res.data.filter(task => {
           return task.done;
         });
         // Delete all completed tasks
-        await Promise.all(completed.map(function(task) {
+        await Promise.all(completed.map(task => {
           return tasks.delete(task.id);
         }));
         await render();
@@ -321,7 +321,7 @@ var syncOptions = {
 };
 
 document.getElementById("sync")
-  .addEventListener("click", async function(event) {
+  .addEventListener("click", async event => {
     event.preventDefault();
     try {
       const res = await tasks.sync(syncOptions)
@@ -464,14 +464,14 @@ Your take really. Let's take the former approach:
 
 ```js
   async function handleConflicts(conflicts) {
-    await Promise.all(conflicts.map(function(conflict) {
+    await Promise.all(conflicts.map(conflict => {
       return tasks.resolve(conflict, conflict.remote);
     }))
     return tasks.sync(syncOptions);
   }
 
   document.getElementById("sync")
-    .addEventListener("click", async function(event) {
+    .addEventListener("click", async event => {
       event.preventDefault();
       try {
         const res = tasks.sync(syncOptions)

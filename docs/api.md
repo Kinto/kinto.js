@@ -779,7 +779,7 @@ The `backoff` event notifies what's the backoff release timestamp you should wai
 ```js
 const kinto = new Kinto();
 
-kinto.events.on("backoff", function(releaseTime) {
+kinto.events.on("backoff", releaseTime => {
   const releaseDate = new Date(releaseTime).toLocaleString();
   alert(`Backed off; wait until ${releaseDate} to retry`);
 });
@@ -796,7 +796,7 @@ Triggered when an `Alert` HTTP header is received from the server, meaning that 
 ```js
 const kinto = new Kinto();
 
-kinto.events.on("deprecated", function(event) {
+kinto.events.on("deprecated", event => {
   console.log(event.message);
 });
 ```
@@ -815,7 +815,7 @@ The `event` argument contains the following information:
 const kinto = new Kinto();
 const articles = kinto.collection("articles");
 
-articles.events.on("change", function(event) {
+articles.events.on("change", event => {
   const first = event.targets[0];
   console.log(first.action);
   console.log(first.data.id);
@@ -841,7 +841,7 @@ The ``update`` event contains an additional attribute:
 const kinto = new Kinto();
 const articles = kinto.collection("articles");
 
-articles.events.on("update", function(event) {
+articles.events.on("update", event => {
   console.log(`Title was changed from "${event.oldRecord.title}" to "${event.data.title}"`);
 });
 
@@ -870,9 +870,7 @@ A transformer object is basically an object literal having and `encode` and a `d
 ```js
 import Kinto from "kinto";
 
-function update(obj1, obj2) {
-  return {...obj1, ...obj2};
-}
+const update = (obj1, obj2) => ({ ...obj1, ...obj2 });
 
 const exclamationMarkTransformer = {
   encode(record) {
@@ -1032,7 +1030,7 @@ You can define a custom ID schema on a collection by passing it to `Kinto#collec
 ```js
 import Kinto from "kinto";
 
-function createIntegerIdSchema() {
+const createIntegerIdSchema = () => ({
   generate() {
     return _next++;
   },
@@ -1040,7 +1038,7 @@ function createIntegerIdSchema() {
   validate(id) {
     return (typeof id == "number");
   }
-};
+});
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
 coll = kinto.collection("articles", {
@@ -1051,8 +1049,7 @@ coll = kinto.collection("articles", {
 The `generate` function can also optionally accept the record being created as an argument, allowing you to use any or all of the data to generate an ID.
 
 ```js
-function urlBase64IdSchema() {
-  return {
+const urlBase64IdSchema = () => ({
     generate(record) {
       return btoa(record.url);
     },
@@ -1060,8 +1057,7 @@ function urlBase64IdSchema() {
     validate(id) {
       return !!atob(id).match("http");
     }
-  };
-};
+});
 ```
 
 > #### Notes
@@ -1073,10 +1069,10 @@ function urlBase64IdSchema() {
 For ids chosen by your application (like "config", "last-save", etc.), you'll want a NOP id generator:
 ```js
 const nopSchema = {
-    generate: function() {
+    generate() {
         throw new Error("can't generate keys");
     },
-    validate: function(id) {
+    validate(id) {
         return true;
     }
 };

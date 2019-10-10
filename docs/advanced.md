@@ -22,7 +22,7 @@ var collectionName = 'tasks';
 var channelName = 'mybucket-tasks-record'; // Should match the setting `kinto.event_listeners.pusher.channel`
 var channel = pusher.subscribe(channelName);
 
-channel.bind_all(function(evtName, data) {
+channel.bind_all((evtName, data) => {
   if (evtName === 'pusher:subscription_succeeded') {
     return;
   }
@@ -30,8 +30,8 @@ channel.bind_all(function(evtName, data) {
 });
 
 function applyChanges(collectionName, evtName, data) {
-  var changes = data.map(function(record) { return record.new; });
-  var timestamps = changes.map(function(record) { return record.last_modified; })
+  var changes = data.map(record => record.new);
+  var timestamps = changes.map(record => ecord.last_modified)
   var changeObj = {
     changes: changes,
     lastModified: Math.max.apply(null, timestamps)
