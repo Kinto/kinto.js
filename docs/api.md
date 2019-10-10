@@ -121,12 +121,12 @@ undefined
 ## Updating a record
 
 ```js
-var existing = {
+const existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f8",
   title: "bar"
 };
 
-var updated = {...existing, title: "baz"};
+const updated = {...existing, title: "baz"};
 
 await articles.update(updated);
 ```
@@ -155,14 +155,14 @@ Result is:
 `upsert()` will create a record or replace the one that exists (equivalent to «put»).
 
 ```js
-var existing = {
+const existing = {
   id: "2dcd0e65-468c-4655-8015-30c8b3a1c8f7",
   title: "bar"
 };
 
 await articles.upsert(existing);
 
-var updated = {...existing, title: "baz"};
+const updated = {...existing, title: "baz"};
 
 await articles.upsert(updated);
 ```
@@ -650,7 +650,7 @@ By default, kinto.js sends every record attribute stored locally.
 In order to store some field only locally, and never publish them to the server, you can provide a list of field names in the `localFields` option of `Kinto#collection`:
 
 ```js
-collection = kinto.collection("articles", {
+const collection = kinto.collection("articles", {
   localFields: ["captain", "age"]
 });
 ```
@@ -666,10 +666,10 @@ stripped = collection.cleanLocalFields(record);
 During synchronization, the collection metadata is fetched and stored in storage. It can be accessed with the ``.metadata()`` method.
 
 ```js
-collection = kinto.collection("articles");
+const collection = kinto.collection("articles");
 await collection.sync();
 
-metadata = collection.metadata();
+const metadata = collection.metadata();
 ```
 
 The result is:
@@ -883,7 +883,7 @@ const exclamationMarkTransformer = {
 };
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
@@ -980,7 +980,7 @@ const exclamationMarkTransformer = {
   }
 };
 
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [ exclamationMarkTransformer ]
 });
 ```
@@ -1000,7 +1000,7 @@ function createTitleCharTransformer(char) {
   }
 }
 
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   remoteTransformers: [
     createTitleCharTransformer("!"),
     createTitleCharTransformer("?")
@@ -1041,7 +1041,7 @@ const createIntegerIdSchema = () => ({
 });
 
 const kinto = new Kinto({remote: "https://my.server.tld/v1"});
-coll = kinto.collection("articles", {
+const coll = kinto.collection("articles", {
   idSchema: createIntegerIdSchema()
 });
 ```

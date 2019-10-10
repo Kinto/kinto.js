@@ -46,8 +46,8 @@ For now, our `demo.js` file content is simply:
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 }
 
 window.addEventListener("DOMContentLoaded", main);
@@ -63,8 +63,8 @@ We want to listen to form submission events to add tasks into our local database
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 
   document.getElementById("form")
     .addEventListener("submit", async event => {
@@ -103,8 +103,8 @@ All that is great, though we badly want to render our list of tasks now. Let's d
 
 ```js
 function main() {
-  var db = new Kinto();
-  var tasks = db.collection("tasks");
+  const db = new Kinto();
+  const tasks = db.collection("tasks");
 
   document.getElementById("form")
     .addEventListener("submit", async event => {
@@ -124,14 +124,14 @@ function main() {
     });
 
   function renderTask(task) {
-    var li = document.createElement("li");
+    const li = document.createElement("li");
     li.classList.add("list-group-item");
     li.innerHTML = task.title;
     return li;
   }
 
   function renderTasks(tasks) {
-    var ul = document.getElementById("tasks");
+    const ul = document.getElementById("tasks");
     ul.innerHTML = "";
     tasks.forEach(task => {
       ul.appendChild(renderTask(task));
@@ -195,8 +195,8 @@ Our `renderTask()` function becomes:
 
 ```js
   function renderTask(task) {
-    var tpl = document.getElementById("task-tpl");
-    var li = tpl.content.cloneNode(true);
+    const tpl = document.getElementById("task-tpl");
+    const li = tpl.content.cloneNode(true);
     li.querySelector(".title").textContent = task.title;
     li.querySelector(".done").checked = task.done;
     return li;
@@ -211,11 +211,11 @@ But that's not enough. We need to listen to clicks made on the checkbox, so we c
 
 ```js
   function renderTask(task) {
-    var tpl = document.getElementById("task-tpl");
-    var li = tpl.content.cloneNode(true);
+    const tpl = document.getElementById("task-tpl");
+    const li = tpl.content.cloneNode(true);
     li.querySelector(".title").textContent = task.title;
     // retrieve a reference to the checkbox element
-    var checkbox = li.querySelector(".done");
+    const checkbox = li.querySelector(".done");
     // initialize it with task status
     checkbox.checked = task.done;
     // listen to clicks
@@ -315,7 +315,7 @@ Now back to our web page: let's add a shiny *Synchronize* button and a textarea 
 Then, update the JavaScript:
 
 ```js
-var syncOptions = {
+const syncOptions = {
   remote: "https://kinto.dev.mozaws.net/v1",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 };
