@@ -33,7 +33,7 @@ const NULL_SCHEMA = {
 /** @test {Collection} */
 describe("Collection", () => {
   /*eslint-disable */
-  let sandbox, events, idSchema, remoteTransformers, hooks, api;
+  let sandbox, events, api;
   /*eslint-enable */
   const article = { title: "foo", url: "http://foo" };
 
