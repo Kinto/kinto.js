@@ -1,6 +1,5 @@
 "use strict";
 
-import { spawn } from "child_process";
 import { default as uuid4 } from "uuid/v4";
 import btoa from "btoa";
 import chai, { expect } from "chai";
@@ -110,9 +109,9 @@ describe("Integration tests", function() {
     return server.killAll();
   });
 
-  after(done => {
+  after(() => {
     // Ensure no pserve process remains after tests having been executed.
-    spawn("killall", ["pserve"]).on("close", () => done());
+    return server.killAll();
   });
 
   beforeEach(function() {
