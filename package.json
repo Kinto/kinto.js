@@ -12,7 +12,7 @@
     "build-demo": "npm run dist && shx cp dist/kinto.min.js demo/kinto.min.js && shx cp dist/kinto.min.js.map demo/kinto.min.js.map",
     "compute-sri": "version=$(npm view kinto version); printf \"| Filename %-14s | Hash %-66s |\\n\" \"\" \"(for version $version)\"; printf \"|-------------------------|-------------------------------------------------------------------------|\\n\"; cd dist; for file in kinto*.js; do printf \"| %-23s | %-71s |\\n\" ${file} $(echo -n 'sha384-' && curl --silent https://unpkg.com/kinto@$version/dist/${file} | openssl dgst -sha384 -binary | openssl enc -base64); done",
     "cs-check": "prettier -l \"{src,test,bin}/**/*.{js,ts}\"",
-    "cs-format": "prettier -l \"{src,test,bin}/**/*.{js,ts}\"",
+    "cs-format": "prettier \"{src,test,bin}/**/*.{js,ts}\" --write",
     "demo": "npm run build-demo && http-server demo",
     "dist": "cross-env NODE_ENV=production rollup -c && npm run dist:fx",
     "dist:dev": "rollup -c && npm run dist:fx",
