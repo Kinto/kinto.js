@@ -57,7 +57,10 @@ describe("Utils", () => {
           { title: undefined, x: 1 },
           { title: undefined, x: 2 },
         ])
-      ).eql([{ title: undefined, x: 1 }, { title: undefined, x: 2 }]);
+      ).eql([
+        { title: undefined, x: 1 },
+        { title: undefined, x: 2 },
+      ]);
     });
 
     it("should not order the list on missing field", () => {

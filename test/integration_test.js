@@ -344,7 +344,10 @@ describe("Integration tests", function() {
             .should.eventually.have.length(10 + 4);
         });
 
-        futureSyncsOK(() => tasks, () => syncResult);
+        futureSyncsOK(
+          () => tasks,
+          () => syncResult
+        );
       });
 
       describe("Incoming conflict", () => {
@@ -625,7 +628,10 @@ describe("Integration tests", function() {
             ]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
@@ -777,7 +783,10 @@ describe("Integration tests", function() {
             ]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("Resolving conflicts doesn't interfere with sync", () => {
@@ -1221,7 +1230,10 @@ describe("Integration tests", function() {
             ]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
@@ -1338,7 +1350,10 @@ describe("Integration tests", function() {
             ]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("SERVER_WINS strategy with transformers", () => {
@@ -1627,7 +1642,10 @@ describe("Integration tests", function() {
             ]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
@@ -1724,7 +1742,10 @@ describe("Integration tests", function() {
             return getRemoteList().should.become([]);
           });
 
-          futureSyncsOK(() => tasks, () => syncResult);
+          futureSyncsOK(
+            () => tasks,
+            () => syncResult
+          );
         });
 
         describe("SERVER_WINS strategy with transformers", () => {

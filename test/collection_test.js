@@ -419,7 +419,10 @@ describe("Collection", () => {
       it("should deduplicate added entries with same id", () => {
         const result = new SyncResultObject();
 
-        result.add("created", [{ id: 1, name: "a" }, { id: 1, name: "b" }]);
+        result.add("created", [
+          { id: 1, name: "a" },
+          { id: 1, name: "b" },
+        ]);
         expect(result.created).eql([{ id: 1, name: "b" }]);
       });
 

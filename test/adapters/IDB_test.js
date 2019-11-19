@@ -396,12 +396,10 @@ describe("adapter.IDB", () => {
 
         describe("multiple values", () => {
           it("should filter the list on a single pre-indexed column", () => {
-            return db
-              .list({ filters: { id: [5, 4] } })
-              .should.eventually.eql([
-                { id: 4, name: "#4" },
-                { id: 5, name: "#5" },
-              ]);
+            return db.list({ filters: { id: [5, 4] } }).should.eventually.eql([
+              { id: 4, name: "#4" },
+              { id: 5, name: "#5" },
+            ]);
           });
 
           it("should filter the list combined with other filters", () => {
@@ -504,15 +502,24 @@ describe("adapter.IDB", () => {
   describe("#importBulk", () => {
     it("should import a list of records.", () => {
       return db
-        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .importBulk([
+          { id: 1, foo: "bar" },
+          { id: 2, foo: "baz" },
+        ])
         .should.eventually.have.length(2);
     });
 
     it("should override existing records.", () => {
       return db
-        .importBulk([{ id: 1, foo: "bar" }, { id: 2, foo: "baz" }])
+        .importBulk([
+          { id: 1, foo: "bar" },
+          { id: 2, foo: "baz" },
+        ])
         .then(() => {
-          return db.importBulk([{ id: 1, foo: "baz" }, { id: 3, foo: "bab" }]);
+          return db.importBulk([
+            { id: 1, foo: "baz" },
+            { id: 3, foo: "bab" },
+          ]);
         })
         .then(() => db.list())
         .should.eventually.eql([
