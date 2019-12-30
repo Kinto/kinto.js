@@ -1,5 +1,3 @@
-"use strict";
-
 export const RE_RECORD_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
 
 /**
@@ -7,7 +5,7 @@ export const RE_RECORD_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
  * @param  {Any}  value
  * @return {Boolean}
  */
-function _isUndefined(value) {
+function _isUndefined(value: unknown): boolean {
   return typeof value === "undefined";
 }
 
@@ -18,7 +16,10 @@ function _isUndefined(value) {
  * @param  {Array}  list  The collection to order.
  * @return {Array}
  */
-export function sortObjects(order, list) {
+export function sortObjects<T extends { [key: string]: any }>(
+  order: string,
+  list: T[]
+): T[] {
   const hasDash = order[0] === "-";
   const field = hasDash ? order.slice(1) : order;
   const direction = hasDash ? -1 : 1;
@@ -43,7 +44,10 @@ export function sortObjects(order, list) {
  * @param  {Object} entry    The object to filter.
  * @return {Boolean}
  */
-export function filterObject(filters, entry) {
+export function filterObject<T extends { [key: string]: any }>(
+  filters: { [key: string]: any },
+  entry: T
+): boolean {
   return Object.keys(filters).every(filter => {
     const value = filters[filter];
     if (Array.isArray(value)) {
@@ -65,7 +69,10 @@ export function filterObject(filters, entry) {
  * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
-export function filterObjects(filters, list) {
+export function filterObjects<T>(
+  filters: { [key: string]: any },
+  list: T[]
+): T[] {
   return list.filter(entry => {
     return filterObject(filters, entry);
   });
@@ -79,7 +86,10 @@ export function filterObjects(filters, list) {
  * @param  {Any}   init The initial value.
  * @return {Promise}
  */
-export function waterfall(fns, init) {
+export function waterfall(
+  fns: ((...args: any[]) => unknown)[],
+  init?: unknown
+): Promise<unknown> {
   if (!fns.length) {
     return Promise.resolve(init);
   }
@@ -96,7 +106,7 @@ export function waterfall(fns, init) {
  * @param  {Object} b The compared object.
  * @return {Boolean}
  */
-export function deepEqual(a, b) {
+export function deepEqual(a: any, b: any): boolean {
   if (a === b) {
     return true;
   }
@@ -124,7 +134,10 @@ export function deepEqual(a, b) {
  * @param  {Array}  keys       The list of keys to exclude.
  * @return {Object}            A copy without the specified keys.
  */
-export function omitKeys(obj, keys = []) {
+export function omitKeys<T extends { [key: string]: any }>(
+  obj: T,
+  keys: string[] = []
+): Partial<T> {
   const result = { ...obj };
   for (const key of keys) {
     delete result[key];
@@ -132,7 +145,7 @@ export function omitKeys(obj, keys = []) {
   return result;
 }
 
-export function arrayEqual(a, b) {
+export function arrayEqual(a: unknown[], b: unknown[]): boolean {
   if (a.length !== b.length) {
     return false;
   }
@@ -144,7 +157,11 @@ export function arrayEqual(a, b) {
   return true;
 }
 
-function makeNestedObjectFromArr(arr, val, nestedFiltersObj) {
+function makeNestedObjectFromArr(
+  arr: string[],
+  val: any,
+  nestedFiltersObj: { [key: string]: any }
+): { [key: string]: any } {
   const last = arr.length - 1;
   return arr.reduce((acc, cv, i) => {
     if (i === last) {
@@ -157,7 +174,7 @@ function makeNestedObjectFromArr(arr, val, nestedFiltersObj) {
   }, nestedFiltersObj);
 }
 
-export function transformSubObjectFilters(filtersObj) {
+export function transformSubObjectFilters(filtersObj: { [key: string]: any }) {
   const transformedFilters = {};
   for (const key in filtersObj) {
     const keysArr = key.split(".");
