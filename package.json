@@ -139,6 +139,9 @@
     "uuid": "^3.0.0"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.7",
+    "@types/chai-as-promised": "^7.1.2",
+    "@types/mocha": "^5.2.7",
     "@types/shelljs": "^0.8.6",
     "@typescript-eslint/eslint-plugin": "^2.2.0",
     "@typescript-eslint/parser": "^2.2.0",
