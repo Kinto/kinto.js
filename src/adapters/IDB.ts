@@ -1,6 +1,6 @@
 "use strict";
 
-import BaseAdapter from "./base.js";
+import BaseAdapter, { StorageProxy, AbstractBaseAdapter } from "./base";
 import {
   filterObject,
   omitKeys,
@@ -8,6 +8,7 @@ import {
   arrayEqual,
   transformSubObjectFilters,
 } from "../utils";
+import { KintoObject, KintoIdObject } from "kinto-http";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -20,17 +21,26 @@ const INDEXED_FIELDS = ["id", "_status", "last_modified"];
  *                                   missing or different.
  * @return {Promise<IDBDatabase>}
  */
-export async function open(dbname, { version, onupgradeneeded }) {
+export async function open(
+  dbname: string,
+  {
+    version,
+    onupgradeneeded,
+  }: {
+    version?: number;
+    onupgradeneeded: (event: IDBVersionChangeEvent) => void;
+  }
+): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbname, version);
     request.onupgradeneeded = event => {
-      const db = event.target.result;
-      db.onerror = event => reject(event.target.error);
+      const db = request.result;
+      db.onerror = event => reject(request.error);
       // When an upgrade is needed, a transaction is started.
-      const transaction = event.target.transaction;
+      const transaction = request.transaction!;
       transaction.onabort = event => {
         const error =
-          event.target.error ||
+          request.error ||
           transaction.error ||
           new DOMException("The operation has been aborted", "AbortError");
         reject(error);
@@ -39,10 +49,10 @@ export async function open(dbname, { version, onupgradeneeded }) {
       return onupgradeneeded(event);
     };
     request.onerror = event => {
-      reject(event.target.error);
+      reject((event.target as IDBRequest).error);
     };
     request.onsuccess = event => {
-      const db = event.target.result;
+      const db = request.result;
       resolve(db);
     };
   });
@@ -60,7 +70,12 @@ export async function open(dbname, { version, onupgradeneeded }) {
  * @param options.mode {String}      Transaction mode (default: read).
  * @return {Promise} any value returned by the callback.
  */
-export async function execute(db, name, callback, options = {}) {
+export async function execute(
+  db: IDBDatabase,
+  name: string,
+  callback: (store: IDBObjectStore, abort?: (...args: any[]) => any) => any,
+  options: { mode?: IDBTransactionMode } = {}
+): Promise<unknown> {
   const { mode } = options;
   return new Promise((resolve, reject) => {
     // On Safari, calling IDBDatabase.transaction with mode == undefined raises
@@ -71,22 +86,23 @@ export async function execute(db, name, callback, options = {}) {
     const store = transaction.objectStore(name);
 
     // Let the callback abort this transaction.
-    const abort = e => {
+    const abort = (e: any) => {
       transaction.abort();
       reject(e);
     };
     // Execute the specified callback **synchronously**.
-    let result;
+    let result: unknown;
     try {
       result = callback(store, abort);
     } catch (e) {
       abort(e);
     }
-    transaction.onerror = event => reject(event.target.error);
+    transaction.onerror = event =>
+      reject((event.target as IDBTransaction).error);
     transaction.oncomplete = event => resolve(result);
     transaction.onabort = event => {
       const error =
-        event.target.error ||
+        (event.target as IDBTransaction).error ||
         transaction.error ||
         new DOMException("The operation has been aborted", "AbortError");
       reject(error);
@@ -100,11 +116,11 @@ export async function execute(db, name, callback, options = {}) {
  * @param dbName {String} the database to delete
  * @return {Promise}
  */
-async function deleteDatabase(dbName) {
+async function deleteDatabase(dbName: string): Promise<IDBOpenDBRequest> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(dbName);
-    request.onsuccess = event => resolve(event.target);
-    request.onerror = event => reject(event.target.error);
+    request.onsuccess = event => resolve(event.target as IDBOpenDBRequest);
+    request.onerror = event => reject((event.target as IDBOpenDBRequest).error);
   });
 }
 
@@ -113,10 +129,15 @@ async function deleteDatabase(dbName) {
  * @type {Object}
  */
 const cursorHandlers = {
-  all(filters, done) {
-    const results = [];
-    return event => {
-      const cursor = event.target.result;
+  all(
+    filters: {
+      [key: string]: any;
+    },
+    done: (records: KintoObject[]) => void
+  ) {
+    const results: KintoObject[] = [];
+    return (event: Event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (cursor) {
         const { value } = cursor;
         if (filterObject(filters, value)) {
@@ -129,11 +150,17 @@ const cursorHandlers = {
     };
   },
 
-  in(values, filters, done) {
-    const results = [];
+  in(
+    values: any[],
+    filters: {
+      [key: string]: any;
+    },
+    done: (records: KintoObject[]) => void
+  ) {
+    const results: KintoObject[] = [];
     let i = 0;
-    return function(event) {
-      const cursor = event.target.result;
+    return function(event: Event) {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (!cursor) {
         done(results);
         return;
@@ -177,13 +204,20 @@ const cursorHandlers = {
  * @param  {Function}         done       The operation completion handler.
  * @return {IDBRequest}
  */
-function createListRequest(cid, store, filters, done) {
+function createListRequest(
+  cid: string,
+  store: IDBObjectStore,
+  filters: {
+    [key: string]: any;
+  },
+  done: (records: KintoObject[]) => void
+) {
   const filterFields = Object.keys(filters);
 
   // If no filters, get all results in one bulk.
-  if (filterFields.length == 0) {
+  if (filterFields.length === 0) {
     const request = store.index("cid").getAll(IDBKeyRange.only(cid));
-    request.onsuccess = event => done(event.target.result);
+    request.onsuccess = event => done((event.target as IDBRequest).result);
     return request;
   }
 
@@ -229,7 +263,8 @@ function createListRequest(cid, store, filters, done) {
   // If no filters on custom attribute, get all results in one bulk.
   if (remainingFilters.length == 0) {
     const request = indexStore.getAll(IDBKeyRange.only([cid, value]));
-    request.onsuccess = event => done(event.target.result);
+    request.onsuccess = (event: Event) =>
+      done((event.target as IDBRequest).result);
     return request;
   }
 
@@ -245,6 +280,10 @@ function createListRequest(cid, store, filters, done) {
  * This adapter doesn't support any options.
  */
 export default class IDB extends BaseAdapter {
+  private _db: IDBDatabase | null;
+  public cid: string;
+  public dbName: string;
+  private _options: { dbName?: string; migrateOldData?: boolean };
   /**
    * Constructor.
    *
@@ -253,7 +292,10 @@ export default class IDB extends BaseAdapter {
    * @param  {String} options.dbName         The IndexedDB name (default: `"KintoDB"`)
    * @param  {String} options.migrateOldData Whether old database data should be migrated (default: `false`)
    */
-  constructor(cid, options = {}) {
+  constructor(
+    cid: string,
+    options: { dbName?: string; migrateOldData?: boolean } = {}
+  ) {
     super();
 
     this.cid = cid;
@@ -263,7 +305,7 @@ export default class IDB extends BaseAdapter {
     this._db = null;
   }
 
-  _handleError(method, err) {
+  _handleError(method: string, err: Error) {
     const error = new Error(`IndexedDB ${method}() ${err.message}`);
     error.stack = err.stack;
     throw error;
@@ -290,8 +332,8 @@ export default class IDB extends BaseAdapter {
 
     this._db = await open(this.dbName, {
       version: 2,
-      onupgradeneeded: event => {
-        const db = event.target.result;
+      onupgradeneeded: (event: IDBVersionChangeEvent) => {
+        const db = (event.target as IDBRequest<IDBDatabase>).result;
 
         if (event.oldVersion < 1) {
           // Records store
@@ -323,7 +365,7 @@ export default class IDB extends BaseAdapter {
     if (dataToMigrate) {
       const { records, timestamp } = dataToMigrate;
       await this.importBulk(records);
-      await this.saveLastModified(timestamp);
+      await this.saveLastModified(timestamp ?? 0);
       console.log(`${this.cid}: data was migrated successfully.`);
       // Delete the old database.
       await deleteDatabase(this.cid);
@@ -361,9 +403,13 @@ export default class IDB extends BaseAdapter {
    * @param  {String}      options.mode  Transaction mode ("readwrite" or undefined)
    * @return {Object}
    */
-  async prepare(name, callback, options) {
+  async prepare(
+    name: string,
+    callback: (store: IDBObjectStore, abort?: (...args: any[]) => any) => any,
+    options?: { mode?: IDBTransactionMode }
+  ) {
     await this.open();
-    await execute(this._db, name, callback, options);
+    await execute(this._db!, name, callback, options);
   }
 
   /**
@@ -379,8 +425,8 @@ export default class IDB extends BaseAdapter {
         store => {
           const range = IDBKeyRange.only(this.cid);
           const request = store.index("cid").openKeyCursor(range);
-          request.onsuccess = event => {
-            const cursor = event.target.result;
+          request.onsuccess = (event: Event) => {
+            const cursor = (event.target as IDBRequest<IDBCursor>).result;
             if (cursor) {
               store.delete(cursor.primaryKey);
               cursor.continue();
@@ -424,7 +470,10 @@ export default class IDB extends BaseAdapter {
    * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  async execute(callback, options = { preload: [] }) {
+  async execute<T>(
+    callback: (proxy: StorageProxy) => T,
+    options: { preload: string[] } = { preload: [] }
+  ): Promise<T> {
     // Transactions in IndexedDB are autocommited when a callback does not
     // perform any additional operation.
     // The way Promises are implemented in Firefox (see https://bugzilla.mozilla.org/show_bug.cgi?id=1193394)
@@ -435,11 +484,11 @@ export default class IDB extends BaseAdapter {
     // - http://stackoverflow.com/a/28388805/330911
     // - http://stackoverflow.com/a/10405196
     // - https://jakearchibald.com/2015/tasks-microtasks-queues-and-schedules/
-    let result;
+    let result: T;
     await this.prepare(
       "records",
       (store, abort) => {
-        const runCallback = (preloaded = []) => {
+        const runCallback = (preloaded = {}) => {
           // Expose a consistent API for every adapter instead of raw store methods.
           const proxy = transactionProxy(this, store, preloaded);
           // The callback is executed synchronously within the same transaction.
@@ -455,12 +504,12 @@ export default class IDB extends BaseAdapter {
             result = returned;
           } catch (e) {
             // The callback has thrown an error explicitly. Abort transaction cleanly.
-            abort(e);
+            abort && abort(e);
           }
         };
 
         // No option to preload records, go straight to `callback`.
-        if (!options.preload.length) {
+        if (!options.preload) {
           return runCallback();
         }
 
@@ -468,7 +517,7 @@ export default class IDB extends BaseAdapter {
         const filters = { id: options.preload };
         createListRequest(this.cid, store, filters, records => {
           // Store obtained records by id.
-          const preloaded = {};
+          const preloaded: { [key: string]: KintoObject } = {};
           for (const record of records) {
             delete record["_cid"];
             preloaded[record.id] = record;
@@ -478,7 +527,7 @@ export default class IDB extends BaseAdapter {
       },
       { mode: "readwrite" }
     );
-    return result;
+    return result!;
   }
 
   /**
@@ -488,13 +537,14 @@ export default class IDB extends BaseAdapter {
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  async get(id) {
+  async get(id: string) {
     try {
-      let record;
+      let record: KintoObject;
       await this.prepare("records", store => {
-        store.get([this.cid, id]).onsuccess = e => (record = e.target.result);
+        store.get([this.cid, id]).onsuccess = e =>
+          (record = (e.target as IDBRequest<KintoObject>).result);
       });
-      return record;
+      return record!;
     } catch (e) {
       this._handleError("get", e);
     }
@@ -507,10 +557,14 @@ export default class IDB extends BaseAdapter {
    * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
-  async list(params = { filters: {} }) {
+  async list(
+    params: { filters: { [key: string]: any }; order?: string } = {
+      filters: {},
+    }
+  ) {
     const { filters } = params;
     try {
-      let results = [];
+      let results: KintoObject[] = [];
       await this.prepare("records", store => {
         createListRequest(this.cid, store, filters, _results => {
           // we have received all requested records that match the filters,
@@ -527,6 +581,8 @@ export default class IDB extends BaseAdapter {
     } catch (e) {
       this._handleError("list", e);
     }
+
+    return [];
   }
 
   /**
@@ -536,8 +592,8 @@ export default class IDB extends BaseAdapter {
    * @param  {Number}  lastModified
    * @return {Promise}
    */
-  async saveLastModified(lastModified) {
-    const value = parseInt(lastModified, 10) || null;
+  async saveLastModified(lastModified: number): Promise<number | null> {
+    const value = lastModified || null;
     try {
       await this.prepare(
         "timestamps",
@@ -554,6 +610,8 @@ export default class IDB extends BaseAdapter {
     } catch (e) {
       this._handleError("saveLastModified", e);
     }
+
+    return null;
   }
 
   /**
@@ -562,16 +620,19 @@ export default class IDB extends BaseAdapter {
    * @override
    * @return {Promise}
    */
-  async getLastModified() {
+  async getLastModified(): Promise<number | null> {
     try {
-      let entry = null;
+      let entry: number | null = null;
       await this.prepare("timestamps", store => {
-        store.get(this.cid).onsuccess = e => (entry = e.target.result);
+        store.get(this.cid).onsuccess = (e: Event) =>
+          (entry = (e.target as IDBRequest<number>).result);
       });
-      return entry ? entry.value : null;
+      return entry ? (entry as { value: number }).value : null;
     } catch (e) {
       this._handleError("getLastModified", e);
     }
+
+    return null;
   }
 
   /**
@@ -582,7 +643,7 @@ export default class IDB extends BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  async loadDump(records) {
+  async loadDump(records: KintoObject[]) {
     return this.importBulk(records);
   }
 
@@ -593,7 +654,7 @@ export default class IDB extends BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  async importBulk(records) {
+  async importBulk(records: KintoObject[]): Promise<KintoObject[]> {
     try {
       await this.execute(transaction => {
         // Since the put operations are asynchronous, we chain
@@ -615,16 +676,18 @@ export default class IDB extends BaseAdapter {
       const lastModified = Math.max(
         ...records.map(record => record.last_modified)
       );
-      if (lastModified > previousLastModified) {
+      if (previousLastModified && lastModified > previousLastModified) {
         await this.saveLastModified(lastModified);
       }
       return records;
     } catch (e) {
       this._handleError("importBulk", e);
     }
+
+    return [];
   }
 
-  async saveMetadata(metadata) {
+  async saveMetadata(metadata: any) {
     try {
       await this.prepare(
         "collections",
@@ -639,11 +702,12 @@ export default class IDB extends BaseAdapter {
 
   async getMetadata() {
     try {
-      let entry = null;
-      await this.prepare("collections", store => {
-        store.get(this.cid).onsuccess = e => (entry = e.target.result);
+      let entry: { metadata: any } | null = null;
+      await this.prepare("collections", (store: IDBObjectStore) => {
+        store.get(this.cid).onsuccess = (e: Event) =>
+          (entry = (e.target as IDBRequest<{ metadata: any }>).result);
       });
-      return entry ? entry.metadata : null;
+      return entry ? (entry as { metadata: any }).metadata : null;
     } catch (e) {
       this._handleError("getMetadata", e);
     }
@@ -659,22 +723,26 @@ export default class IDB extends BaseAdapter {
  *                              get() (default: []).
  * @return {Object}
  */
-function transactionProxy(adapter, store, preloaded = []) {
+function transactionProxy(
+  adapter: IDB,
+  store: IDBObjectStore,
+  preloaded: { [key: string]: KintoObject } = {}
+) {
   const _cid = adapter.cid;
   return {
-    create(record) {
+    create(record: KintoIdObject) {
       store.add({ ...record, _cid });
     },
 
-    update(record) {
+    update(record: KintoIdObject) {
       return store.put({ ...record, _cid });
     },
 
-    delete(id) {
+    delete(id: string) {
       store.delete([_cid, id]);
     },
 
-    get(id) {
+    get(id: string) {
       return preloaded[id];
     },
   };
@@ -685,7 +753,9 @@ function transactionProxy(adapter, store, preloaded = []) {
  * The database name was `${bid}/${cid}` (eg. `"blocklists/certificates"`)
  * and contained only one store with the same name.
  */
-async function migrationRequired(dbName) {
+async function migrationRequired(
+  dbName: string
+): Promise<{ records: KintoObject[]; timestamp: number | null } | null> {
   let exists = true;
   const db = await open(dbName, {
     version: 1,
@@ -696,7 +766,7 @@ async function migrationRequired(dbName) {
 
   // Check that the DB we're looking at is really a legacy one,
   // and not some remainder of the open() operation above.
-  exists &=
+  exists =
     db.objectStoreNames.contains("__meta__") &&
     db.objectStoreNames.contains(dbName);
 
@@ -710,34 +780,38 @@ async function migrationRequired(dbName) {
   console.warn(`${dbName}: old IndexedDB database found.`);
   try {
     // Scan all records.
-    let records;
+    let records: KintoObject[];
     await execute(db, dbName, store => {
       store.openCursor().onsuccess = cursorHandlers.all(
         {},
         res => (records = res)
       );
     });
-    console.log(`${dbName}: found ${records.length} records.`);
+    console.log(`${dbName}: found ${records!.length} records.`);
 
     // Check if there's a entry for this.
-    let timestamp = null;
+    let timestamp: number | null = null;
     await execute(db, "__meta__", store => {
-      store.get(`${dbName}-lastModified`).onsuccess = e => {
-        timestamp = e.target.result ? e.target.result.value : null;
+      store.get(`${dbName}-lastModified`).onsuccess = (e: Event) => {
+        timestamp = (e.target as IDBRequest).result
+          ? (e.target as IDBRequest<{ value: number }>).result.value
+          : null;
       };
     });
     // Some previous versions, also used to store the timestamps without prefix.
     if (!timestamp) {
       await execute(db, "__meta__", store => {
-        store.get("lastModified").onsuccess = e => {
-          timestamp = e.target.result ? e.target.result.value : null;
+        store.get("lastModified").onsuccess = (e: Event) => {
+          timestamp = (e.target as IDBRequest).result
+            ? (e.target as IDBRequest<{ value: number }>).result.value
+            : null;
         };
       });
     }
     console.log(`${dbName}: ${timestamp ? "found" : "no"} timestamp.`);
 
     // Those will be inserted in the new database/schema.
-    return { records, timestamp };
+    return { records: records!, timestamp };
   } catch (e) {
     console.error("Error occured during migration", e);
     return null;

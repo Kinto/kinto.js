@@ -1,18 +1,46 @@
-"use strict";
+import { KintoObject, KintoIdObject } from "kinto-http";
+
+export interface StorageProxy {
+  create: (record: KintoIdObject) => void;
+  update: (record: KintoIdObject) => any;
+  delete: (id: string) => void;
+  get: (id: string) => KintoObject;
+}
+
+export abstract class AbstractBaseAdapter {
+  abstract clear(): Promise<void>;
+  abstract execute<T>(
+    callback: (proxy: StorageProxy) => T,
+    options: { preload: string[] }
+  ): Promise<T>;
+  abstract get(id: string): Promise<any>;
+  abstract list(params: {
+    filters: { [key: string]: any };
+    order: string;
+  }): Promise<any[]>;
+  abstract saveLastModified(lastModified: number): Promise<number | null>;
+  abstract getLastModified(): Promise<number | null>;
+  abstract importBulk(records: KintoObject[]): Promise<KintoObject[]>;
+  abstract loadDump(records: KintoObject[]): Promise<KintoObject[]>;
+  abstract saveMetadata(metadata: {
+    [key: string]: any;
+  }): Promise<{ [key: string]: any }>;
+  abstract getMetadata<T>(): Promise<T>;
+}
 
 /**
  * Base db adapter.
  *
  * @abstract
  */
-export default class BaseAdapter {
+export default class BaseAdapter implements AbstractBaseAdapter {
   /**
    * Deletes every records present in the database.
    *
    * @abstract
    * @return {Promise}
    */
-  clear() {
+  clear(): Promise<void> {
     throw new Error("Not Implemented.");
   }
 
@@ -24,7 +52,10 @@ export default class BaseAdapter {
    * @param  {Object}   options  The options object.
    * @return {Promise}
    */
-  execute(callback, options = { preload: [] }) {
+  execute<T>(
+    callback: (proxy: StorageProxy) => T,
+    options: { preload: string[] } = { preload: [] }
+  ): Promise<T> {
     throw new Error("Not Implemented.");
   }
 
@@ -35,7 +66,7 @@ export default class BaseAdapter {
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  get(id) {
+  get(id: string): Promise<any> {
     throw new Error("Not Implemented.");
   }
 
@@ -46,7 +77,12 @@ export default class BaseAdapter {
    * @param  {Object} params  The filters and order to apply to the results.
    * @return {Promise}
    */
-  list(params = { filters: {}, order: "" }) {
+  list(
+    params: { filters: { [key: string]: any }; order: string } = {
+      filters: {},
+      order: "",
+    }
+  ): Promise<any[]> {
     throw new Error("Not Implemented.");
   }
 
@@ -57,7 +93,7 @@ export default class BaseAdapter {
    * @param  {Number}  lastModified
    * @return {Promise}
    */
-  saveLastModified(lastModified) {
+  saveLastModified(lastModified: number): Promise<number | null> {
     throw new Error("Not Implemented.");
   }
 
@@ -67,7 +103,7 @@ export default class BaseAdapter {
    * @abstract
    * @return {Promise}
    */
-  getLastModified() {
+  getLastModified(): Promise<number | null> {
     throw new Error("Not Implemented.");
   }
 
@@ -78,7 +114,7 @@ export default class BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  importBulk(records) {
+  importBulk(records: KintoObject[]): Promise<KintoObject[]> {
     throw new Error("Not Implemented.");
   }
 
@@ -90,15 +126,17 @@ export default class BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  loadDump(records) {
+  loadDump(records: KintoObject[]): Promise<KintoObject[]> {
     throw new Error("Not Implemented.");
   }
 
-  saveMetadata(metadata) {
+  saveMetadata(metadata: {
+    [key: string]: any;
+  }): Promise<{ [key: string]: any }> {
     throw new Error("Not Implemented.");
   }
 
-  getMetadata() {
+  getMetadata<T>(): Promise<T> {
     throw new Error("Not Implemented.");
   }
 }

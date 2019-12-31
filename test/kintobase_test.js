@@ -3,8 +3,8 @@
 import { expect } from "chai";
 import { EventEmitter } from "events";
 
-import KintoBase from "../src/KintoBase.js";
-import BaseAdapter from "../src/adapters/base.js";
+import KintoBase from "../src/KintoBase";
+import BaseAdapter from "../src/adapters/base";
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {
