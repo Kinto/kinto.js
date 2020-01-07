@@ -1,6 +1,6 @@
 "use strict";
 
-import BaseAdapter, { StorageProxy, AbstractBaseAdapter } from "./base";
+import BaseAdapter, { StorageProxy } from "./base";
 import {
   filterObject,
   omitKeys,
