@@ -10,7 +10,7 @@ const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
 const DEFAULT_RETRY = 1;
 
-interface KintoBaseOptions {
+export interface KintoBaseOptions {
   remote?: string;
   bucket?: string;
   events?: EventEmitter;
@@ -135,6 +135,7 @@ export default class KintoBase {
   collection(
     collName: string,
     options: {
+      adapter?: typeof IDB;
       idSchema?: IdSchema;
       remoteTransformers?: RemoteTransformer[];
       hooks?: Hooks;

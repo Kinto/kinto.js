@@ -1,10 +1,8 @@
-"use strict";
-
 import { EventEmitter } from "events";
 import Api from "kinto-http";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
-import KintoBase from "./KintoBase";
+import KintoBase, { KintoBaseOptions } from "./KintoBase";
 
 export default class Kinto extends KintoBase {
   /**
@@ -24,7 +22,7 @@ export default class Kinto extends KintoBase {
     return Api;
   }
 
-  constructor(options = {}) {
+  constructor(options: KintoBaseOptions = {}) {
     const defaults = {
       adapter: Kinto.adapters.IDB,
       events: new EventEmitter(),
