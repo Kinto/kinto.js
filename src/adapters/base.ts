@@ -15,16 +15,20 @@ export abstract class AbstractBaseAdapter {
   ): Promise<T>;
   abstract get(id: string): Promise<any>;
   abstract list(params: {
-    filters: { [key: string]: any };
-    order: string;
+    filters?: { [key: string]: any };
+    order?: string;
   }): Promise<any[]>;
-  abstract saveLastModified(lastModified: number): Promise<number | null>;
+  abstract saveLastModified(
+    lastModified?: number | null
+  ): Promise<number | null>;
   abstract getLastModified(): Promise<number | null>;
   abstract importBulk(records: KintoObject[]): Promise<KintoObject[]>;
   abstract loadDump(records: KintoObject[]): Promise<KintoObject[]>;
-  abstract saveMetadata(metadata: {
-    [key: string]: any;
-  }): Promise<{ [key: string]: any }>;
+  abstract saveMetadata(
+    metadata: {
+      [key: string]: any;
+    } | null
+  ): Promise<{ [key: string]: any }>;
   abstract getMetadata<T>(): Promise<T>;
 }
 
@@ -78,7 +82,7 @@ export default class BaseAdapter implements AbstractBaseAdapter {
    * @return {Promise}
    */
   list(
-    params: { filters: { [key: string]: any }; order: string } = {
+    params: { filters?: { [key: string]: any }; order?: string } = {
       filters: {},
       order: "",
     }
@@ -93,7 +97,7 @@ export default class BaseAdapter implements AbstractBaseAdapter {
    * @param  {Number}  lastModified
    * @return {Promise}
    */
-  saveLastModified(lastModified: number): Promise<number | null> {
+  saveLastModified(lastModified?: number | null): Promise<number | null> {
     throw new Error("Not Implemented.");
   }
 
@@ -130,9 +134,11 @@ export default class BaseAdapter implements AbstractBaseAdapter {
     throw new Error("Not Implemented.");
   }
 
-  saveMetadata(metadata: {
-    [key: string]: any;
-  }): Promise<{ [key: string]: any }> {
+  saveMetadata(
+    metadata: {
+      [key: string]: any;
+    } | null
+  ): Promise<{ [key: string]: any }> {
     throw new Error("Not Implemented.");
   }
 

@@ -1,16 +1,34 @@
 "use strict";
-
+import { EventEmitter } from "events";
+import Api from "kinto-http";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
+import IDB from "./adapters/IDB";
+import { IdSchema, RemoteTransformer, Hooks } from "./types";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
 const DEFAULT_RETRY = 1;
 
+interface KintoBaseOptions {
+  remote?: string;
+  bucket?: string;
+  events?: EventEmitter;
+  adapter?: typeof IDB;
+  adapterOptions?: object;
+  headers?: Record<string, string>;
+  retry?: number;
+  requestMode?: RequestMode;
+  timeout?: number;
+}
+
 /**
  * KintoBase class.
  */
 export default class KintoBase {
+  private _options: KintoBaseOptions;
+  private _api: Api | null;
+  public events?: EventEmitter;
   /**
    * Provides a public access to the base adapter class. Users can create a
    * custom DB adapter by extending {@link BaseAdapter}.
@@ -52,7 +70,7 @@ export default class KintoBase {
    *
    * @param  {Object} options The options object.
    */
-  constructor(options = {}) {
+  constructor(options: KintoBaseOptions = {}) {
     const defaults = {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
@@ -71,6 +89,10 @@ export default class KintoBase {
     this.events = this._options.events;
   }
 
+  get ApiClass() {
+    return Api;
+  }
+
   /**
    * The kinto HTTP client instance.
    * @type {KintoClient}
@@ -86,7 +108,7 @@ export default class KintoBase {
     } = this._options;
 
     if (!this._api) {
-      this._api = new this.ApiClass(remote, {
+      this._api = new this.ApiClass(remote!, {
         events,
         headers,
         requestMode,
@@ -110,7 +132,15 @@ export default class KintoBase {
    * @param  {Object} [options.localFields]        Array<Field> (default: `[]`])
    * @return {Collection}
    */
-  collection(collName, options = {}) {
+  collection(
+    collName: string,
+    options: {
+      idSchema?: IdSchema;
+      remoteTransformers?: RemoteTransformer[];
+      hooks?: Hooks;
+      localFields?: string[];
+    } = {}
+  ) {
     if (!collName) {
       throw new Error("missing collection name");
     }
@@ -120,7 +150,7 @@ export default class KintoBase {
     };
     const { idSchema, remoteTransformers, hooks, localFields } = options;
 
-    return new Collection(bucket, collName, this, {
+    return new Collection(bucket!, collName, this, {
       events,
       adapter,
       adapterOptions,
