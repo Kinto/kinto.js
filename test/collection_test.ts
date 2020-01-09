@@ -10,7 +10,7 @@ import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import { Hooks, IdSchema, RemoteTransformer } from "../src/types";
-import Api from "kinto-http";
+import Api, { KintoIdObject } from "kinto-http";
 import KintoClient from "kinto-http";
 import { Collection as KintoClientCollection, KintoObject } from "kinto-http";
 import { recordsEqual } from "../src/collection";
@@ -156,8 +156,8 @@ describe("Collection", () => {
           },
         }
       );
-      expect((collection.db as IDB).dbName).eql("LocalData");
-      expect((collection.db as IDB).cid).eql(
+      expect((collection.db as IDB<any>).dbName).eql("LocalData");
+      expect((collection.db as IDB<any>).cid).eql(
         `${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`
       );
     });
@@ -191,7 +191,7 @@ describe("Collection", () => {
     });
 
     it("should allow providing an adapter option", () => {
-      const MyAdapter = class extends BaseAdapter {};
+      const MyAdapter = class extends BaseAdapter<any> {};
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
@@ -205,7 +205,7 @@ describe("Collection", () => {
 
     it("should pass adapterOptions to adapter", () => {
       let myOptions;
-      const MyAdapter = class extends BaseAdapter {
+      const MyAdapter = class extends BaseAdapter<any> {
         constructor(collectionName: string, options: any) {
           super();
           myOptions = options;
@@ -595,7 +595,7 @@ describe("Collection", () => {
 
     it("should reject if passed argument is not an object", () => {
       return articles
-        .create(42)
+        .create(42 as any)
         .should.eventually.be.rejectedWith(Error, /is not an object/);
     });
 
@@ -662,7 +662,7 @@ describe("Collection", () => {
       return articles
         .create({ ...article, id: article.title }, { useRecordId: true })
         .then(result => articles.getAny(result.data.id))
-        .then(result => result.data.id)
+        .then(result => result.data!.id)
         .should.become(article.title);
     });
   });
@@ -724,19 +724,19 @@ describe("Collection", () => {
 
     it("should reject updates on a non-object record", () => {
       return articles
-        .update("invalid")
+        .update("invalid" as any)
         .should.be.rejectedWith(Error, /Record is not an object/);
     });
 
     it("should reject updates on a record without an id", () => {
       return articles
-        .update({ title: "foo" })
+        .update({ title: "foo" } as any)
         .should.be.rejectedWith(Error, /missing id/);
     });
 
     it("should validate record's id when provided", () => {
       return articles
-        .update({ id: 42 })
+        .update({ id: 42 } as any)
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -1160,7 +1160,7 @@ describe("Collection", () => {
     it("should retrieve a record from its id", () => {
       return articles
         .getAny(id)
-        .then(res => res.data.title)
+        .then(res => res.data!.title)
         .should.eventually.eql(article.title);
     });
 
@@ -1328,7 +1328,7 @@ describe("Collection", () => {
       return articles
         .deleteAny(id)
         .then(res => articles.getAny(res.data.id))
-        .then(res => res.data._status)
+        .then(res => res.data!._status)
         .should.eventually.eql("deleted");
     });
 
@@ -2259,7 +2259,7 @@ describe("Collection", () => {
     });
 
     describe("When a conflict occured", () => {
-      let createdId: string, local: KintoObject;
+      let createdId: string, local: KintoIdObject;
 
       beforeEach(() => {
         return articles.create({ title: "art2" }).then(res => {
@@ -2283,7 +2283,7 @@ describe("Collection", () => {
 
         return articles
           .pullChanges(client, result)
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: false,
             lastModified: 42,
@@ -2329,7 +2329,7 @@ describe("Collection", () => {
         return articles
           .resolve(conflict, resolution)
           .then(() => articles.pullChanges(client, syncResult))
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -2368,7 +2368,7 @@ describe("Collection", () => {
       it("should resolve with solved changes", () => {
         return articles
           .pullChanges(client, result)
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -3267,7 +3267,7 @@ describe("Collection", () => {
           return articles.execute(txn => txn.delete(id), { preloadIds: [id] });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support deleteAll", () => {
@@ -3281,7 +3281,7 @@ describe("Collection", () => {
           });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support deleteAny", () => {
@@ -3295,7 +3295,7 @@ describe("Collection", () => {
           });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support create", () => {
@@ -3345,7 +3345,7 @@ describe("Collection", () => {
         })
         .catch(() => null)
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("created"));
+        .then(result => expect(result.data!._status).eql("created"));
     });
 
     it("should perform all operations if there's no failure", () => {
@@ -3367,9 +3367,9 @@ describe("Collection", () => {
           );
         })
         .then(result => articles.getAny(id1))
-        .then(result => expect(result.data._status).eql("deleted"))
+        .then(result => expect(result.data!._status).eql("deleted"))
         .then(result => articles.getAny(id2))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should resolve to the return value of the transaction", () => {

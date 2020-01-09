@@ -1,16 +1,20 @@
-import { KintoObject, KintoIdObject } from "kinto-http";
+import { RecordStatus } from "../types";
 
-export interface StorageProxy {
-  create: (record: KintoIdObject) => void;
-  update: (record: KintoIdObject) => any;
+export interface StorageProxy<
+  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+> {
+  create: (record: T) => void;
+  update: (record: T & { id: string }) => any;
   delete: (id: string) => void;
-  get: (id: string) => KintoObject;
+  get: (id: string) => T | undefined;
 }
 
-export abstract class AbstractBaseAdapter {
+export abstract class AbstractBaseAdapter<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> {
   abstract clear(): Promise<void>;
   abstract execute<T>(
-    callback: (proxy: StorageProxy) => T,
+    callback: (proxy: StorageProxy<B>) => T,
     options: { preload: string[] }
   ): Promise<T>;
   abstract get(id: string): Promise<any>;
@@ -22,8 +26,8 @@ export abstract class AbstractBaseAdapter {
     lastModified?: number | null
   ): Promise<number | null>;
   abstract getLastModified(): Promise<number | null>;
-  abstract importBulk(records: KintoObject[]): Promise<KintoObject[]>;
-  abstract loadDump(records: KintoObject[]): Promise<KintoObject[]>;
+  abstract importBulk(records: B[]): Promise<B[]>;
+  abstract loadDump(records: B[]): Promise<B[]>;
   abstract saveMetadata(
     metadata: {
       [key: string]: any;
@@ -37,7 +41,9 @@ export abstract class AbstractBaseAdapter {
  *
  * @abstract
  */
-export default class BaseAdapter implements AbstractBaseAdapter {
+export default class BaseAdapter<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> implements AbstractBaseAdapter<B> {
   /**
    * Deletes every records present in the database.
    *
@@ -57,7 +63,7 @@ export default class BaseAdapter implements AbstractBaseAdapter {
    * @return {Promise}
    */
   execute<T>(
-    callback: (proxy: StorageProxy) => T,
+    callback: (proxy: StorageProxy<B>) => T,
     options: { preload: string[] } = { preload: [] }
   ): Promise<T> {
     throw new Error("Not Implemented.");
@@ -118,7 +124,7 @@ export default class BaseAdapter implements AbstractBaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  importBulk(records: KintoObject[]): Promise<KintoObject[]> {
+  importBulk(records: B[]): Promise<B[]> {
     throw new Error("Not Implemented.");
   }
 
@@ -130,7 +136,7 @@ export default class BaseAdapter implements AbstractBaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  loadDump(records: KintoObject[]): Promise<KintoObject[]> {
+  loadDump(records: B[]): Promise<B[]> {
     throw new Error("Not Implemented.");
   }
 

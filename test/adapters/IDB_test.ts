@@ -8,7 +8,7 @@ import { KintoIdObject } from "kinto-http/lib/esm";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
-  let sandbox: sinon.SinonSandbox, db: IDB;
+  let sandbox: sinon.SinonSandbox, db: IDB<any>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -50,7 +50,7 @@ describe("adapter.IDB", () => {
     it("should close an opened connection to the database", () => {
       return db
         .close()
-        .then(_ => db["_db"])
+        .then(() => db["_db"])
         .should.become(null);
     });
   });
@@ -117,9 +117,9 @@ describe("adapter.IDB", () => {
       it("should open a connection to the db", () => {
         const open = sandbox
           .stub(db, "open")
-          .returns(Promise.resolve({} as IDB));
+          .returns(Promise.resolve({} as IDB<any>));
 
-        return db.execute(() => {}).then(_ => sinon.assert.calledOnce(open));
+        return db.execute(() => {}).then(() => sinon.assert.calledOnce(open));
       });
 
       it("should execute the specified callback", () => {
@@ -136,7 +136,7 @@ describe("adapter.IDB", () => {
 
       it("should rollback if the callback fails", () => {
         const callback = (transaction: any) => {
-          transaction.execute((t: StorageProxy) =>
+          transaction.execute((t: StorageProxy<any>) =>
             t.create({ id: "1", foo: "bar" })
           );
           throw new Error("Unexpected");
@@ -178,12 +178,12 @@ describe("adapter.IDB", () => {
         const data = { id: "1", foo: "bar" };
         return db
           .execute(t => t.create(data))
-          .then(_ => {
+          .then(() => {
             return db.execute(transaction => {
               transaction.update({ ...data, foo: "baz" });
             });
           })
-          .then(_ => db.get(data.id))
+          .then(() => db.get(data.id))
           .then(res => res!.foo)
           .should.become("baz");
       });
@@ -192,12 +192,12 @@ describe("adapter.IDB", () => {
         const data = { id: "1", foo: "bar" };
         return db
           .execute(t => t.create(data))
-          .then(_ => {
+          .then(() => {
             return db.execute(transaction => {
               transaction.delete(data.id);
             });
           })
-          .then(_ => db.get(data.id))
+          .then(() => db.get(data.id))
           .should.become(undefined);
       });
 
@@ -258,7 +258,7 @@ describe("adapter.IDB", () => {
       it("should expose preloaded records using get()", () => {
         return db
           .execute(t => articles.map(a => t.create(a)))
-          .then(_ => {
+          .then(() => {
             return db.execute(
               transaction => {
                 return preload.map(p => transaction.get(p));
@@ -443,7 +443,7 @@ describe("adapter.IDB", () => {
         .returns(Promise.resolve([]));
       return db
         .loadDump([{ id: "1", last_modified: 0, foo: "bar" }])
-        .then(_ => sinon.assert.calledOnce(importBulkStub));
+        .then(() => sinon.assert.calledOnce(importBulkStub));
     });
   });
 
@@ -486,15 +486,15 @@ describe("adapter.IDB", () => {
     it("should save a lastModified value", () => {
       return db
         .saveLastModified(42)
-        .then(_ => db.getLastModified())
+        .then(() => db.getLastModified())
         .should.eventually.become(42);
     });
 
     it("should allow updating previous value", () => {
       return db
         .saveLastModified(42)
-        .then(_ => db.saveLastModified(43))
-        .then(_ => db.getLastModified())
+        .then(() => db.saveLastModified(43))
+        .then(() => db.getLastModified())
         .should.eventually.become(43);
     });
 
@@ -620,7 +620,7 @@ describe("adapter.IDB", () => {
 
   /** @test {IDB#open} */
   describe("#migration", () => {
-    let idb: IDB;
+    let idb: IDB<any>;
     async function createOldDB(dbName: string) {
       const oldDb = await open(dbName, {
         version: 1,

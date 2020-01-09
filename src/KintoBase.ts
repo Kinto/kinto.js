@@ -132,13 +132,13 @@ export default class KintoBase {
    * @param  {Object} [options.localFields]        Array<Field> (default: `[]`])
    * @return {Collection}
    */
-  collection(
+  collection<T extends { id: string } = any>(
     collName: string,
     options: {
       adapter?: typeof IDB;
       idSchema?: IdSchema;
       remoteTransformers?: RemoteTransformer[];
-      hooks?: Hooks;
+      hooks?: Hooks<T>;
       localFields?: string[];
     } = {}
   ) {
@@ -151,7 +151,7 @@ export default class KintoBase {
     };
     const { idSchema, remoteTransformers, hooks, localFields } = options;
 
-    return new Collection(bucket!, collName, this, {
+    return new Collection<T>(bucket!, collName, this, {
       events,
       adapter,
       adapterOptions,

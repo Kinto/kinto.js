@@ -3,7 +3,7 @@ import { expect } from "chai";
 import BaseAdapter from "../../src/adapters/base";
 
 describe("adapters.BaseAdapter", () => {
-  let adapter: BaseAdapter;
+  let adapter: BaseAdapter<any>;
   beforeEach(() => (adapter = new BaseAdapter()));
 
   it("should throw for non-implemented methods", () => {

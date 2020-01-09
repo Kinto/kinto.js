@@ -8,7 +8,8 @@ import {
   arrayEqual,
   transformSubObjectFilters,
 } from "../utils";
-import { KintoObject, KintoIdObject } from "kinto-http";
+import { RecordStatus } from "../types";
+import { KintoObject } from "kinto-http";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 
@@ -279,7 +280,9 @@ function createListRequest(
  *
  * This adapter doesn't support any options.
  */
-export default class IDB extends BaseAdapter {
+export default class IDB<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> extends BaseAdapter<B> {
   private _db: IDBDatabase | null;
   public cid: string;
   public dbName: string;
@@ -364,7 +367,11 @@ export default class IDB extends BaseAdapter {
 
     if (dataToMigrate) {
       const { records, timestamp } = dataToMigrate;
-      await this.importBulk(records);
+      await this.importBulk(
+        records as (B & {
+          last_modified: number;
+        })[]
+      );
       await this.saveLastModified(timestamp ?? 0);
       console.log(`${this.cid}: data was migrated successfully.`);
       // Delete the old database.
@@ -471,7 +478,7 @@ export default class IDB extends BaseAdapter {
    * @return {Promise}
    */
   async execute<T>(
-    callback: (proxy: StorageProxy) => T,
+    callback: (proxy: StorageProxy<B>) => T,
     options: { preload: string[] } = { preload: [] }
   ): Promise<T> {
     // Transactions in IndexedDB are autocommited when a callback does not
@@ -537,12 +544,12 @@ export default class IDB extends BaseAdapter {
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  async get(id: string) {
+  async get(id: string): Promise<B | undefined> {
     try {
-      let record: KintoObject;
+      let record: B;
       await this.prepare("records", store => {
         store.get([this.cid, id]).onsuccess = e =>
-          (record = (e.target as IDBRequest<KintoObject>).result);
+          (record = (e.target as IDBRequest<KintoObject>).result as B);
       });
       return record!;
     } catch (e) {
@@ -643,7 +650,11 @@ export default class IDB extends BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  async loadDump(records: KintoObject[]) {
+  async loadDump(
+    records: (B & {
+      last_modified: number;
+    })[]
+  ) {
     return this.importBulk(records);
   }
 
@@ -654,7 +665,7 @@ export default class IDB extends BaseAdapter {
    * @param  {Array} records The records to load.
    * @return {Promise}
    */
-  async importBulk(records: KintoObject[]): Promise<KintoObject[]> {
+  async importBulk(records: (B & { last_modified: number })[]): Promise<B[]> {
     try {
       await this.execute(transaction => {
         // Since the put operations are asynchronous, we chain
@@ -723,18 +734,20 @@ export default class IDB extends BaseAdapter {
  *                              get() (default: []).
  * @return {Object}
  */
-function transactionProxy(
-  adapter: IDB,
+function transactionProxy<
+  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+>(
+  adapter: IDB<T>,
   store: IDBObjectStore,
-  preloaded: { [key: string]: KintoObject } = {}
+  preloaded: { [key: string]: T } = {}
 ) {
   const _cid = adapter.cid;
   return {
-    create(record: KintoIdObject) {
+    create(record: T) {
       store.add({ ...record, _cid });
     },
 
-    update(record: KintoIdObject) {
+    update(record: T) {
       return store.put({ ...record, _cid });
     },
 
@@ -753,9 +766,9 @@ function transactionProxy(
  * The database name was `${bid}/${cid}` (eg. `"blocklists/certificates"`)
  * and contained only one store with the same name.
  */
-async function migrationRequired(
-  dbName: string
-): Promise<{ records: KintoObject[]; timestamp: number | null } | null> {
+async function migrationRequired<
+  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+>(dbName: string): Promise<{ records: T[]; timestamp: number | null } | null> {
   let exists = true;
   const db = await open(dbName, {
     version: 1,
@@ -780,11 +793,11 @@ async function migrationRequired(
   console.warn(`${dbName}: old IndexedDB database found.`);
   try {
     // Scan all records.
-    let records: KintoObject[];
+    let records: T[];
     await execute(db, dbName, store => {
       store.openCursor().onsuccess = cursorHandlers.all(
         {},
-        res => (records = res)
+        res => (records = res as T[])
       );
     });
     console.log(`${dbName}: found ${records!.length} records.`);

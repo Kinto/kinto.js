@@ -98,7 +98,7 @@ describe("Kinto", () => {
       expect(
         (new Kinto({
           adapterOptions: { dbName: "app" },
-        }).collection("x").db as IDB).dbName
+        }).collection("x").db as IDB<any>).dbName
       ).eql("app");
     });
   });
@@ -153,7 +153,7 @@ describe("Kinto", () => {
     });
 
     it("should create collection using an optional adapter", () => {
-      const MyAdapter = class extends BaseAdapter {};
+      const MyAdapter = class extends BaseAdapter<any> {};
       const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
       const coll = db.collection("plop");
 
@@ -161,8 +161,8 @@ describe("Kinto", () => {
     });
 
     it("should override adapter for collection if specified", () => {
-      const MyAdapter = class extends BaseAdapter {};
-      const MyOtherAdapter = class extends BaseAdapter {};
+      const MyAdapter = class extends BaseAdapter<any> {};
+      const MyOtherAdapter = class extends BaseAdapter<any> {};
       const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
       const coll = db.collection("plop", {
         adapter: (MyOtherAdapter as unknown) as typeof IDB,
