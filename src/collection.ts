@@ -19,6 +19,8 @@ import {
   WithOptional,
   $TSFixMe,
   RecordStatus,
+  SyncResult,
+  KintoError,
 } from "./types";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -56,8 +58,8 @@ export class SyncResultObject {
    * Public constructor.
    */
   public lastModified?: number | null;
-  private _lists: { [key: string]: any[] };
-  private _cached: { [key: string]: any[] };
+  private _lists: SyncResult;
+  private _cached: Partial<SyncResult>;
   constructor() {
     /**
      * Current synchronization result status; becomes `false` when conflicts or
@@ -65,18 +67,17 @@ export class SyncResultObject {
      * @type {Boolean}
      */
     this.lastModified = null;
-    this._lists = {};
-    [
-      "errors",
-      "created",
-      "updated",
-      "deleted",
-      "published",
-      "conflicts",
-      "skipped",
-      "resolved",
-      "void",
-    ].forEach(l => (this._lists[l] = []));
+    this._lists = {
+      errors: [],
+      created: [],
+      updated: [],
+      deleted: [],
+      published: [],
+      conflicts: [],
+      skipped: [],
+      resolved: [],
+      void: [],
+    };
     this._cached = {};
   }
 
@@ -87,7 +88,10 @@ export class SyncResultObject {
    * @param {Array}  entries The result entries.
    * @return {SyncResultObject}
    */
-  add(type: string, entries: any[] | any): SyncResultObject {
+  add<K extends keyof SyncResult>(
+    type: K,
+    entries: SyncResult[K] | SyncResult[K][0]
+  ): SyncResultObject {
     if (!Array.isArray(this._lists[type])) {
       console.warn(`Unknown type "${type}"`);
       return this;
@@ -95,7 +99,7 @@ export class SyncResultObject {
     if (!Array.isArray(entries)) {
       entries = [entries];
     }
-    this._lists[type] = this._lists[type].concat(entries);
+    this._lists[type] = [...this._lists[type], ...(entries as SyncResult[K])];
     delete this._cached[type];
     return this;
   }
@@ -136,7 +140,7 @@ export class SyncResultObject {
     return this._deduplicate("published");
   }
 
-  private _deduplicate(list: string) {
+  private _deduplicate<K extends keyof SyncResult>(list: K): SyncResult[K] {
     if (!(list in this._cached)) {
       // Deduplicate entries by id. If the values don't have `id` attribute, just
       // keep all.
@@ -153,7 +157,7 @@ export class SyncResultObject {
         Array.from(recordsWithoutId)
       );
     }
-    return this._cached[list];
+    return (this._cached as NonNullable<SyncResult>)[list];
   }
 
   /**
@@ -162,7 +166,7 @@ export class SyncResultObject {
    * @param  {String} type The result type.
    * @return {SyncResultObject}
    */
-  reset(type: string): SyncResultObject {
+  reset(type: keyof SyncResult): SyncResultObject {
     this._lists[type] = [];
     delete this._cached[type];
     return this;
@@ -267,7 +271,7 @@ function importChange<
   remote: any,
   localFields: string[],
   strategy: string
-) {
+): { type: keyof SyncResult; data?: $TSFixMe } {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -948,7 +952,7 @@ export default class Collection<
         }
       }
     } catch (err) {
-      const data = {
+      const data: KintoError = {
         type: "incoming",
         message: err.message,
         stack: err.stack,

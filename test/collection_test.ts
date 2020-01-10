@@ -9,7 +9,7 @@ import { default as uuid4 } from "uuid/v4";
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
-import { Hooks, IdSchema, RemoteTransformer } from "../src/types";
+import { Hooks, IdSchema, RemoteTransformer, KintoError } from "../src/types";
 import Api, { KintoIdObject } from "kinto-http";
 import KintoClient from "kinto-http";
 import { Collection as KintoClientCollection, KintoObject } from "kinto-http";
@@ -429,7 +429,7 @@ describe("Collection", () => {
       it("should update the ok status flag on errors", () => {
         const result = new SyncResultObject();
 
-        result.add("errors", [1]);
+        result.add("errors", [1 as any]);
 
         expect(result.ok).eql(false);
       });
@@ -437,7 +437,7 @@ describe("Collection", () => {
       it("should update the ok status flag on conflicts", () => {
         const result = new SyncResultObject();
 
-        result.add("conflicts", [1]);
+        result.add("conflicts", [1 as any]);
 
         expect(result.ok).eql(false);
       });
@@ -445,7 +445,7 @@ describe("Collection", () => {
       it("should alter non-array properties", () => {
         const result = new SyncResultObject();
 
-        result.add("ok", false);
+        result.add("ok" as any, false);
 
         expect(result.ok).eql(true);
       });
@@ -459,7 +459,7 @@ describe("Collection", () => {
       it("should support adding single objects", () => {
         const result = new SyncResultObject();
 
-        const e = {
+        const e: KintoError = {
           type: "incoming",
           message: "conflict",
         };
@@ -2092,7 +2092,7 @@ describe("Collection", () => {
 
       it("should not fetch remote records if result status isn't ok", () => {
         const withConflicts = new SyncResultObject();
-        withConflicts.add("conflicts", [1]);
+        withConflicts.add("conflicts", [1 as any]);
         return articles
           .pullChanges(client, withConflicts)
           .then(_ => sinon.assert.notCalled(listRecords));
@@ -3000,7 +3000,7 @@ describe("Collection", () => {
       sandbox
         .stub(articles, "pushChanges")
         .callsFake((client, changes, result) => {
-          result.add("conflicts", [1]);
+          result.add("conflicts", [1 as any]);
           return Promise.resolve(result);
         });
       return articles.sync().then(() => sinon.assert.calledOnce(pullChanges));

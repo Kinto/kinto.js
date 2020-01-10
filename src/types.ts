@@ -53,3 +53,21 @@ export interface Update<T> {
   old: T;
   new: T;
 }
+
+export interface KintoError {
+  type: "incoming";
+  message: string;
+  stack?: string;
+}
+
+export interface SyncResult<T = $TSFixMe> {
+  errors: KintoError[];
+  created: T[];
+  updated: Update<T>[];
+  deleted: T[];
+  published: T[];
+  conflicts: Conflict<T>[];
+  skipped: T[];
+  resolved: T[];
+  void: unknown[];
+}
