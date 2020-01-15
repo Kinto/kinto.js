@@ -23,7 +23,10 @@ export type AvailableHook = "incoming-changes";
 export type Hooks<
   T extends { id: string; [key: string]: unknown } = { id: string }
 > = {
-  [key in AvailableHook]?: ((record: any, collection: Collection<T>) => any)[];
+  [key in AvailableHook]?: ((
+    record: any,
+    collection: Collection<T>
+  ) => Promise<{ changes: T[] }>)[];
 };
 
 export interface KintoRepresentation<T = unknown> {

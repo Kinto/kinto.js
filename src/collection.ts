@@ -15,7 +15,6 @@ import {
   UndefiendKintoRepresentation,
   UpdateRepresentation,
   WithOptional,
-  $TSFixMe,
   RecordStatus,
   SyncResult,
   KintoError,
@@ -269,7 +268,7 @@ function importChange<
   T extends { id: string; last_modified?: number; _status?: RecordStatus }
 >(
   transaction: StorageProxy<T>,
-  remote: any,
+  remote: T & { deleted?: boolean },
   localFields: string[],
   strategy: string
 ): Change<T> {
@@ -543,8 +542,8 @@ export default class Collection<
    * @return {Array}
    **/
   private _validateHook(
-    hook: ((record: any, collection: Collection<B>) => any)[]
-  ): ((record: any, collection: Collection<B>) => any)[] {
+    hook: ((record: B, collection: Collection<B>) => any)[]
+  ): ((record: B, collection: Collection<B>) => any)[] {
     if (!Array.isArray(hook)) {
       throw new Error("A hook definition should be an array of functions.");
     }
@@ -565,7 +564,7 @@ export default class Collection<
   private _validateHooks(
     hooks?: {
       [key in AvailableHook]?: ((
-        record: any,
+        record: B,
         collection: Collection<B>
       ) => any)[];
     }
@@ -582,7 +581,7 @@ export default class Collection<
 
     const validatedHooks: {
       [key in AvailableHook]?: ((
-        record: any,
+        record: B,
         collection: Collection<B>
       ) => any)[];
     } = {};
@@ -620,7 +619,7 @@ export default class Collection<
    * @param  {Object} record The record object to encode.
    * @return {Promise}
    */
-  private _encodeRecord(type: "remote" | "local", record: any) {
+  private _encodeRecord(type: "remote" | "local", record: B): Promise<unknown> {
     const transformers = type === "remote" ? this.remoteTransformers : [];
     if (!transformers.length) {
       return Promise.resolve(record);
@@ -640,7 +639,7 @@ export default class Collection<
    * @param  {Object} record The record object to decode.
    * @return {Promise}
    */
-  private _decodeRecord(type: "remote" | "local", record: any) {
+  private _decodeRecord(type: "remote" | "local", record: any): Promise<B> {
     const transformers = type === "remote" ? this.remoteTransformers : [];
     if (!transformers.length) {
       return Promise.resolve(record);
@@ -650,7 +649,7 @@ export default class Collection<
         return record => transformer.decode(record);
       }),
       record
-    );
+    ) as Promise<B>;
   }
 
   /**
@@ -1290,7 +1289,7 @@ export default class Collection<
     return syncResultObject;
   }
 
-  applyHook(hookName: AvailableHook, payload: any): Promise<$TSFixMe> {
+  applyHook(hookName: AvailableHook, payload: any): Promise<{ changes: B[] }> {
     if (typeof this.hooks[hookName] === "undefined") {
       return Promise.resolve(payload);
     }
@@ -1312,7 +1311,7 @@ export default class Collection<
         };
       }),
       payload
-    );
+    ) as Promise<{ changes: B[] }>;
   }
 
   /**
@@ -1621,8 +1620,8 @@ export default class Collection<
    * @param  {Array} records The previously exported list of records to load.
    * @return {Promise} with the effectively imported records.
    */
-  async loadDump(records: B[]): Promise<B[]> {
-    return this.importBulk(records as $TSFixMe);
+  async loadDump(records: (B & { last_modified: number })[]): Promise<B[]> {
+    return this.importBulk(records);
   }
 
   /**
@@ -1679,7 +1678,7 @@ export default class Collection<
       return shouldKeep;
     });
 
-    return await this.db.importBulk(newRecords.map(markSynced) as $TSFixMe);
+    return await this.db.importBulk(newRecords.map(markSynced));
   }
 
   async pullMetadata(
@@ -1810,7 +1809,7 @@ export class CollectionTransaction<
     }
     // Virtual updates status.
     if (options.virtual) {
-      this.adapterTransaction.update(markDeleted(existing as $TSFixMe));
+      this.adapterTransaction.update(markDeleted(existing));
     } else {
       // Delete for real.
       this.adapterTransaction.delete(id);
@@ -1846,7 +1845,7 @@ export class CollectionTransaction<
   deleteAny(id: string): KintoRepresentation<B> & { deleted: boolean } {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
-      this.adapterTransaction.update(markDeleted(existing as $TSFixMe));
+      this.adapterTransaction.update(markDeleted(existing));
       this._queueEvent("delete", { data: existing });
     }
     return {

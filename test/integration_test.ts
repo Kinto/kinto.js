@@ -1015,7 +1015,7 @@ describe("Integration tests", function() {
               return collection.api
                 .bucket("default")
                 .collection(collection["_name"])
-                .createRecord(record);
+                .createRecord(record as any);
             })
             .then(() => collection.sync())
             .then(res => {
@@ -1424,7 +1424,7 @@ describe("Integration tests", function() {
               return collection.api
                 .bucket("default")
                 .collection(collection["_name"])
-                .createRecord(record);
+                .createRecord(record as any);
             })
             .then(() => collection.sync())
             .then(res => {
