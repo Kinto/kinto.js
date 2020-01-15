@@ -19,6 +19,9 @@ import {
   RecordStatus,
   SyncResult,
   KintoError,
+  Conflict,
+  Change,
+  ConflictsChange,
 } from "./types";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -269,7 +272,7 @@ function importChange<
   remote: any,
   localFields: string[],
   strategy: string
-): { type: keyof SyncResult; data?: $TSFixMe } {
+): Change<T> {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -336,8 +339,10 @@ function importChange<
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
-  const type = isIdentical ? "void" : "updated";
-  return { type, data: { old: local, new: synced } };
+  if (isIdentical) {
+    return { type: "void" };
+  }
+  return { type: "updated", data: { old: local, new: synced } };
 }
 
 /**
@@ -912,7 +917,7 @@ export default class Collection<
     syncResultObject: SyncResultObject,
     decodedChanges: any[],
     strategy: string = Collection.strategy.MANUAL
-  ) {
+  ): Promise<SyncResultObject> {
     // Retrieve records matching change ids.
     try {
       for (let i = 0; i < decodedChanges.length; i += IMPORT_CHUNK_SIZE) {
@@ -929,9 +934,9 @@ export default class Collection<
                 strategy
               );
             });
-            const conflicts = imports
-              .filter(i => i.type === "conflicts")
-              .map(i => i.data);
+            const conflicts = (imports.filter(
+              i => i.type === "conflicts"
+            ) as ConflictsChange<B>[]).map(i => i.data);
             const resolved = this._handleConflicts(
               transaction,
               conflicts,
@@ -1450,9 +1455,9 @@ export default class Collection<
    * @return {Promise}
    */
   resolve(
-    conflict: any,
-    resolution: any
-  ): Promise<KintoRepresentation<$TSFixMe>> {
+    conflict: Conflict<B>,
+    resolution: B
+  ): Promise<KintoRepresentation<B>> {
     return this.db.execute(transaction => {
       const updated = this._resolveRaw(conflict, resolution);
       transaction.update(updated);
@@ -1463,8 +1468,8 @@ export default class Collection<
   /**
    * @private
    */
-  private _resolveRaw(conflict: any, resolution: any) {
-    const resolved = {
+  private _resolveRaw(conflict: Conflict<B>, resolution: B): B {
+    const resolved: B = {
       ...resolution,
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote && conflict.remote.last_modified,

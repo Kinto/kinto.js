@@ -71,3 +71,64 @@ export interface SyncResult<T = $TSFixMe> {
   resolved: T[];
   void: unknown[];
 }
+
+// const imports: {
+//   type: "created" | "updated" | "deleted" | "resolved" | "errors" | "published" | "conflicts" | "skipped" | "void";
+//   data?: any;
+// }[]
+
+interface CreatedChange<T> {
+  type: "created";
+  data: T;
+}
+
+interface UpdatedChange<T> {
+  type: "updated";
+  data: Update<T>;
+}
+
+interface DeletedChange<T> {
+  type: "deleted";
+  data: T;
+}
+
+interface ResolvedChange {
+  type: "resolved";
+  data: never;
+}
+
+interface ErrorChange {
+  type: "errors";
+  data: never;
+}
+
+interface PublishedChange {
+  type: "published";
+  data: never;
+}
+
+export interface ConflictsChange<T> {
+  type: "conflicts";
+  data: Conflict<T>;
+}
+
+interface SkippedChange<T> {
+  type: "skipped";
+  data: T;
+}
+
+interface VoidChange {
+  type: "void";
+  data?: never;
+}
+
+export type Change<T> =
+  | CreatedChange<T>
+  | UpdatedChange<T>
+  | DeletedChange<T>
+  | ResolvedChange
+  | ErrorChange
+  | PublishedChange
+  | ConflictsChange<T>
+  | SkippedChange<T>
+  | VoidChange;

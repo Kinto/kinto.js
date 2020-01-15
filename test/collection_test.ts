@@ -2314,7 +2314,11 @@ describe("Collection", () => {
 
       it("should ignore resolved conflicts during sync", () => {
         const remote = { ...local, title: "blah", last_modified: 42 };
-        const conflict = { type: "incoming", local: local, remote: remote };
+        const conflict = {
+          type: "incoming" as const,
+          local: local,
+          remote: remote,
+        };
         const resolution = { ...local, title: "resolved" };
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
