@@ -217,7 +217,7 @@ function createUUIDSchema(): IdSchema {
     },
 
     validate(id: string): boolean {
-      return typeof id == "string" && RE_RECORD_ID.test(id);
+      return typeof id === "string" && RE_RECORD_ID.test(id);
     },
   };
 }
@@ -1344,7 +1344,7 @@ export default class Collection<
     }
     // FIXME: replacing `undefined` with Collection.strategy.CLIENT_WINS breaks tests
     const safe = !options.strategy || options.strategy !== undefined;
-    const toDelete = changes.filter((r: any) => r._status == "deleted");
+    const toDelete = changes.filter((r: any) => r._status === "deleted");
     const toSync = changes.filter((r: any) => r._status != "deleted");
 
     // Perform a batch request with every changes.
@@ -1801,7 +1801,7 @@ export class CollectionTransaction<
   ): KintoRepresentation<B> {
     // Ensure the record actually exists.
     const existing = this.adapterTransaction.get(id);
-    const alreadyDeleted = existing && existing._status == "deleted";
+    const alreadyDeleted = existing && existing._status === "deleted";
     if (!existing || (alreadyDeleted && options.virtual)) {
       throw new Error(`Record with id=${id} not found.`);
     }
@@ -1940,9 +1940,9 @@ export class CollectionTransaction<
     const isIdentical =
       oldRecord &&
       recordsEqual(oldRecord, updated, this.collection.localFields);
-    const keepSynced = isIdentical && oldRecord._status == "synced";
+    const keepSynced = isIdentical && oldRecord._status === "synced";
     const neverSynced =
-      !oldRecord || (oldRecord && oldRecord._status == "created");
+      !oldRecord || (oldRecord && oldRecord._status === "created");
     const newStatus =
       keepSynced || synced ? "synced" : neverSynced ? "created" : "updated";
     return markStatus(updated, newStatus);
@@ -1975,7 +1975,7 @@ export class CollectionTransaction<
     const updated = this._updateRaw(oldRecord, record);
     this.adapterTransaction.update(updated);
     // Don't return deleted records -- pretend they are gone
-    if (oldRecord && oldRecord._status == "deleted") {
+    if (oldRecord && oldRecord._status === "deleted") {
       oldRecord = undefined;
     }
     if (oldRecord) {

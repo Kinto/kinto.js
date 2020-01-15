@@ -247,7 +247,7 @@ function createListRequest(
   // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
   const value = filters[indexField];
   // For the "id" field, use the primary key.
-  const indexStore = indexField == "id" ? store : store.index(indexField);
+  const indexStore = indexField === "id" ? store : store.index(indexField);
 
   // WHERE IN equivalent clause
   if (Array.isArray(value)) {
@@ -262,7 +262,7 @@ function createListRequest(
   }
 
   // If no filters on custom attribute, get all results in one bulk.
-  if (remainingFilters.length == 0) {
+  if (remainingFilters.length === 0) {
     const request = indexStore.getAll(IDBKeyRange.only([cid, value]));
     request.onsuccess = (event: Event) =>
       done((event.target as IDBRequest).result);
@@ -675,7 +675,7 @@ export default class IDB<
         putNext();
 
         function putNext() {
-          if (i == records.length) {
+          if (i === records.length) {
             return;
           }
           // On error, `transaction.onerror` is called.

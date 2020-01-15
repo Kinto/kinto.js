@@ -77,7 +77,7 @@ export default class Kinto extends KintoBase {
   collection(collName: string, options = {}) {
     const idSchema: IdSchema = {
       validate(id) {
-        return typeof id == "string" && RE_RECORD_ID.test(id);
+        return typeof id === "string" && RE_RECORD_ID.test(id);
       },
       generate() {
         return (global as any)

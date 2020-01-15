@@ -1950,7 +1950,7 @@ describe("Integration tests", function() {
         // don't need to be "preserved", so ignore them.
         return {
           encode(record: any) {
-            if (record._status == "deleted") {
+            if (record._status === "deleted") {
               if (record.title.includes("preserve-on-send")) {
                 if (record.last_modified) {
                   return { ...record, _status: "updated", wasDeleted: true };
