@@ -16,7 +16,7 @@ function ignoreInput(list) {
 }
 
 const geckoBuild = {
-  input: "./src/index.fx.js",
+  input: "./src/index.fx.ts",
   output: [
     {
       file: "dist/temp.js",
@@ -36,7 +36,7 @@ const geckoBuild = {
 };
 
 const browserBuild = {
-  input: "./src/index.js",
+  input: "./src/index.ts",
   output: [
     {
       file: "dist/kinto.min.js",
