@@ -1,5 +1,3 @@
-"use strict";
-
 import BaseAdapter, { StorageProxy } from "./base";
 import {
   filterObject,

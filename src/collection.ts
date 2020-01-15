@@ -1,5 +1,3 @@
-"use strict";
-
 import { EventEmitter } from "events";
 import BaseAdapter, { StorageProxy } from "./adapters/base";
 import IDB from "./adapters/IDB";

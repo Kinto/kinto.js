@@ -1,4 +1,3 @@
-"use strict";
 import { EventEmitter } from "events";
 import Api from "kinto-http";
 import Collection from "./collection";
