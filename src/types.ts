@@ -75,11 +75,6 @@ export interface SyncResult<T = $TSFixMe> {
   void: unknown[];
 }
 
-// const imports: {
-//   type: "created" | "updated" | "deleted" | "resolved" | "errors" | "published" | "conflicts" | "skipped" | "void";
-//   data?: any;
-// }[]
-
 interface CreatedChange<T> {
   type: "created";
   data: T;
