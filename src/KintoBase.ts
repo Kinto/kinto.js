@@ -88,8 +88,8 @@ export default class KintoBase {
     this.events = this._options.events;
   }
 
-  get ApiClass() {
-    return Api;
+  get ApiClass(): typeof Api {
+    throw new Error("ApiClass() must be implemented by subclasses.");
   }
 
   /**
