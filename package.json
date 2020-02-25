@@ -136,7 +136,7 @@
   "dependencies": {
     "btoa": "^1.1.2",
     "kinto-http": "^5.0.0-alpha.2",
-    "uuid": "^3.0.0"
+    "uuid": "^7.0.0"
   },
   "devDependencies": {
     "@types/shelljs": "^0.8.6",
