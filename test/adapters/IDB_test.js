@@ -315,7 +315,9 @@ describe("adapter.IDB", () => {
 
     it("should prefix error encountered", () => {
       sandbox.stub(db, "open").returns(Promise.reject("error"));
-      return db.list().should.be.rejectedWith(Error, /^IndexedDB list()/);
+      return db
+        .list()
+        .should.be.rejectedWith(IDB.IDBError, /^IndexedDB list()/);
     });
 
     it("should reject on transaction error", () => {
@@ -332,7 +334,10 @@ describe("adapter.IDB", () => {
       });
       return db
         .list()
-        .should.be.rejectedWith(Error, "IndexedDB list() transaction error");
+        .should.be.rejectedWith(
+          IDB.IDBError,
+          "IndexedDB list() transaction error"
+        );
     });
 
     it("should isolate records by collection", async () => {
@@ -447,7 +452,7 @@ describe("adapter.IDB", () => {
       });
       return db
         .importBulk([{ foo: "bar" }])
-        .should.be.rejectedWith(Error, /^IndexedDB importBulk()/);
+        .should.be.rejectedWith(IDB.IDBError, /^IndexedDB importBulk()/);
     });
   });
 
