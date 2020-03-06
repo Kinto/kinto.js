@@ -1,6 +1,6 @@
 "use strict";
 
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";

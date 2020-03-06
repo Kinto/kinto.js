@@ -2,7 +2,7 @@ import { EventEmitter } from "events";
 import BaseAdapter, { StorageProxy } from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 import { omitKeys, RE_RECORD_ID } from "./utils";
 import KintoBase from "./KintoBase";
 import { AggregateResponse, Collection as KintoCollection } from "kinto-http";

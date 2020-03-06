@@ -4,7 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";

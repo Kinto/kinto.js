@@ -2,7 +2,7 @@ import sinon from "sinon";
 import { expect } from "chai";
 
 import IDB, { open, execute } from "../../src/adapters/IDB";
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 import { StorageProxy } from "../../src/adapters/base";
 import { KintoIdObject } from "kinto-http";
 
