@@ -135,7 +135,7 @@
   },
   "dependencies": {
     "btoa": "^1.1.2",
-    "kinto-http": "^5.0.0-alpha.2",
+    "kinto-http": "^5.0.0-alpha.3",
     "uuid": "^7.0.0"
   },
   "devDependencies": {
@@ -148,6 +148,7 @@
     "@types/uuid": "^3.4.6",
     "@typescript-eslint/eslint-plugin": "^2.2.0",
     "@typescript-eslint/parser": "^2.2.0",
+    "atob": "^2.1.2",
     "chai": "^4.0.1",
     "chai-as-promised": "^7.0.0",
     "co-task": "^1.0.0",
@@ -188,5 +189,21 @@
     "tslib": "^1.10.0",
     "typescript": "^3.5.3",
     "uglifyify": "^5.0.0"
+  },
+  "peerDependencies": {
+    "node-fetch": ">=2.6.0",
+    "form-data": ">=3.0.0",
+    "atob": ">=2.1.2"
+  },
+  "peerDependenciesMeta": {
+    "node-fetch": {
+      "optional": true
+    },
+    "form-data": {
+      "optional": true
+    },
+    "atob": {
+      "optional": true
+    }
   }
 }

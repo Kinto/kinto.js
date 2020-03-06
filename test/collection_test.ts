@@ -12,7 +12,7 @@ import Collection, { SyncResultObject } from "../src/collection";
 import { Hooks, IdSchema, RemoteTransformer, KintoError } from "../src/types";
 import Api, { KintoIdObject } from "kinto-http";
 import KintoClient from "kinto-http";
-import { Collection as KintoClientCollection, KintoObject } from "kinto-http";
+import { KintoObject, Collection as KintoClientCollection } from "kinto-http";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 import { createKeyValueStoreIdSchema } from "../src/collection";
@@ -2851,11 +2851,15 @@ describe("Collection", () => {
         .stub(articles, "pushChanges")
         .returns(Promise.resolve(new SyncResultObject()));
       const fetch = sandbox
-        .stub(global as any, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).then(res => {
-        sinon.assert.calledWith(fetch, sinon.match(/http:\/\/test\/v1/));
+        sinon.assert.calledWith(
+          fetch,
+          sinon.match(/http:\/\/test\/v1/),
+          sinon.match.any
+        );
       });
     });
 
@@ -2865,8 +2869,8 @@ describe("Collection", () => {
         .stub(articles, "pushChanges")
         .returns(Promise.resolve(new SyncResultObject()));
       sandbox
-        .stub(global as any, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).then(_ => {
         expect(api.remote).eql(FAKE_SERVER_URL);
@@ -2877,8 +2881,8 @@ describe("Collection", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
       sandbox
-        .stub(global as any, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).catch(_ => {
         expect(api.remote).eql(FAKE_SERVER_URL);
@@ -3114,7 +3118,7 @@ describe("Collection", () => {
         sandbox.stub(articles, "pullMetadata");
         const pullChanges = sandbox.stub(articles, "pullChanges");
         sandbox.stub(articles, "pushChanges");
-        articles.api.events.emit("backoff", new Date().getTime() + 30000);
+        articles.api.events!.emit("backoff", new Date().getTime() + 30000);
 
         return articles
           .sync({ ignoreBackoff: true })
@@ -3129,16 +3133,22 @@ describe("Collection", () => {
         // Disable stubbing of kinto-http of upper tests.
         sandbox.restore();
         // Stub low-level fetch instead.
-        fetch = sandbox.stub(global as any, "fetch");
+        fetch = sandbox.stub(articles.api.http, "timedFetch");
         // Pull metadata
-        fetch.onCall(0).returns(fakeServerResponse(200, { data: {} }, {}));
+        fetch
+          .onCall(0)
+          .returns(fakeServerResponse(200, { data: {} }, {}) as any);
         // Pull records
-        fetch.onCall(1).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch
+          .onCall(1)
+          .returns(fakeServerResponse(200, { data: [] }, {}) as any);
         // Push
-        fetch.onCall(2).returns(fakeServerResponse(200, { settings: {} }, {}));
+        fetch
+          .onCall(2)
+          .returns(fakeServerResponse(200, { settings: {} }, {}) as any);
         fetch
           .onCall(3)
-          .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }));
+          .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }) as any);
         fetch.onCall(4).returns(
           fakeServerResponse(
             200,
@@ -3150,10 +3160,12 @@ describe("Collection", () => {
               ],
             },
             { ETag: '"123"' }
-          )
+          ) as any
         );
         // Last pull
-        fetch.onCall(5).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch
+          .onCall(5)
+          .returns(fakeServerResponse(200, { data: [] }, {}) as any);
         // Avoid actually waiting real time between retries in test suites.
         sandbox
           .stub(global as any, "setTimeout")
