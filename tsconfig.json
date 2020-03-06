@@ -15,5 +15,11 @@
     "isolatedModules": true,
     "experimentalDecorators": true
   },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "sourceMap": true
+    }
+  },
   "include": ["./src/"]
 }

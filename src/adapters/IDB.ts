@@ -273,6 +273,14 @@ function createListRequest(
   return request;
 }
 
+class IDBError extends Error {
+  constructor(method: string, err: Error) {
+    super(`IndexedDB ${method}() ${err.message}`);
+    this.name = err.name;
+    this.stack = err.stack;
+  }
+}
+
 /**
  * IndexedDB adapter.
  *
@@ -285,6 +293,12 @@ export default class IDB<
   public cid: string;
   public dbName: string;
   private _options: { dbName?: string; migrateOldData?: boolean };
+
+  /* Expose the IDBError class publicly */
+  static get IDBError() {
+    return IDBError;
+  }
+
   /**
    * Constructor.
    *
@@ -307,9 +321,7 @@ export default class IDB<
   }
 
   _handleError(method: string, err: Error) {
-    const error = new Error(`IndexedDB ${method}() ${err.message}`);
-    error.stack = err.stack;
-    throw error;
+    throw new IDBError(method, err);
   }
 
   /**
