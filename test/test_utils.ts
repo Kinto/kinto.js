@@ -23,7 +23,7 @@ export function fakeServerResponse(
 }
 
 export function updateTitleWithDelay(record: any, str: string, delay: number) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(() => {
       resolve({ ...record, title: record.title + str });
     }, delay);

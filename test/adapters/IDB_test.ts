@@ -59,7 +59,7 @@ describe("adapter.IDB", () => {
   describe("#clear", () => {
     it("should clear the database", () => {
       return db
-        .execute(transaction => {
+        .execute((transaction) => {
           transaction.create({ id: "1" });
           transaction.create({ id: "2" });
         })
@@ -73,13 +73,13 @@ describe("adapter.IDB", () => {
       const db2 = new IDB("main/tippytop-2");
 
       await db1.open();
-      await db1.execute(t => t.create({ id: "1" }));
+      await db1.execute((t) => t.create({ id: "1" }));
       await db1.saveLastModified(42);
       await db1.close();
 
       await db2.open();
-      await db2.execute(t => t.create({ id: "1" }));
-      await db2.execute(t => t.create({ id: "2" }));
+      await db2.execute((t) => t.create({ id: "1" }));
+      await db2.execute((t) => t.create({ id: "2" }));
       await db2.saveLastModified(43);
       await db2.close();
 
@@ -151,25 +151,17 @@ describe("adapter.IDB", () => {
         const callback = sandbox.spy();
         return db.execute(callback).then(() => {
           const handler = callback.getCall(0).args[0];
-          expect(handler)
-            .to.have.property("get")
-            .to.be.a("function");
-          expect(handler)
-            .to.have.property("create")
-            .to.be.a("function");
-          expect(handler)
-            .to.have.property("update")
-            .to.be.a("function");
-          expect(handler)
-            .to.have.property("delete")
-            .to.be.a("function");
+          expect(handler).to.have.property("get").to.be.a("function");
+          expect(handler).to.have.property("create").to.be.a("function");
+          expect(handler).to.have.property("update").to.be.a("function");
+          expect(handler).to.have.property("delete").to.be.a("function");
         });
       });
 
       it("should create a record", () => {
         const data = { id: "1", foo: "bar" };
         return db
-          .execute(t => t.create(data))
+          .execute((t) => t.create(data))
           .then(() => db.list())
           .should.become([data]);
       });
@@ -177,23 +169,23 @@ describe("adapter.IDB", () => {
       it("should update a record", () => {
         const data = { id: "1", foo: "bar" };
         return db
-          .execute(t => t.create(data))
+          .execute((t) => t.create(data))
           .then(() => {
-            return db.execute(transaction => {
+            return db.execute((transaction) => {
               transaction.update({ ...data, foo: "baz" });
             });
           })
           .then(() => db.get(data.id))
-          .then(res => res!.foo)
+          .then((res) => res!.foo)
           .should.become("baz");
       });
 
       it("should delete a record", () => {
         const data = { id: "1", foo: "bar" };
         return db
-          .execute(t => t.create(data))
+          .execute((t) => t.create(data))
           .then(() => {
-            return db.execute(transaction => {
+            return db.execute((transaction) => {
               transaction.delete(data.id);
             });
           })
@@ -223,7 +215,7 @@ describe("adapter.IDB", () => {
             );
           });
         return db
-          .execute(transaction => transaction.create({ id: "42" }))
+          .execute((transaction) => transaction.create({ id: "42" }))
           .should.be.rejectedWith(Error, "add error");
       });
 
@@ -238,7 +230,7 @@ describe("adapter.IDB", () => {
             } as any);
           });
         return db
-          .execute(transaction => transaction.create({} as any), {
+          .execute((transaction) => transaction.create({} as any), {
             preload: ["1", "2"],
           })
           .should.be.rejectedWith(Error, "transaction error");
@@ -257,16 +249,16 @@ describe("adapter.IDB", () => {
 
       it("should expose preloaded records using get()", () => {
         return db
-          .execute(t => articles.map(a => t.create(a)))
+          .execute((t) => articles.map((a) => t.create(a)))
           .then(() => {
             return db.execute(
-              transaction => {
-                return preload.map(p => transaction.get(p));
+              (transaction) => {
+                return preload.map((p) => transaction.get(p));
               },
               { preload }
             );
           })
-          .then(preloaded => {
+          .then((preloaded) => {
             preloaded.forEach((p, i) => {
               expect(p.title).eql(articles[parseInt(preload[i], 10)].title);
             });
@@ -278,13 +270,13 @@ describe("adapter.IDB", () => {
   /** @test {IDB#get} */
   describe("#get", () => {
     beforeEach(() => {
-      return db.execute(t => t.create({ id: "1", foo: "bar" }));
+      return db.execute((t) => t.create({ id: "1", foo: "bar" }));
     });
 
     it("should retrieve a record from its id", () => {
       return db
         .get("1")
-        .then(res => res!.foo)
+        .then((res) => res!.foo)
         .should.eventually.eql("bar");
     });
 
@@ -309,7 +301,7 @@ describe("adapter.IDB", () => {
   /** @test {IDB#list} */
   describe("#list", () => {
     beforeEach(() => {
-      return db.execute(transaction => {
+      return db.execute((transaction) => {
         for (let id = 1; id <= 10; id++) {
           // id is indexed, name is not
           transaction.create({ id: id.toString(), name: "#" + id });
@@ -356,9 +348,9 @@ describe("adapter.IDB", () => {
 
       await db1.open();
       await db2.open();
-      await db1.execute(t => t.create({ id: "1" }));
-      await db2.execute(t => t.create({ id: "1" }));
-      await db2.execute(t => t.create({ id: "2" }));
+      await db1.execute((t) => t.create({ id: "1" }));
+      await db2.execute((t) => t.create({ id: "1" }));
+      await db2.execute((t) => t.create({ id: "2" }));
       await db1.close();
       await db2.close();
 
@@ -583,9 +575,9 @@ describe("adapter.IDB", () => {
 
       await db1.open();
       await db2.open();
-      await db1.execute(t => t.create({ id: "1" }));
-      await db2.execute(t => t.create({ id: "1" }));
-      await db2.execute(t => t.create({ id: "2" }));
+      await db1.execute((t) => t.create({ id: "1" }));
+      await db2.execute((t) => t.create({ id: "1" }));
+      await db2.execute((t) => t.create({ id: "2" }));
       await db1.close();
       await db2.close();
 
@@ -639,7 +631,7 @@ describe("adapter.IDB", () => {
       await execute(
         oldDb,
         dbName,
-        store => {
+        (store) => {
           store.put({ id: "1" });
           store.put({ id: "2" });
         },
@@ -648,7 +640,7 @@ describe("adapter.IDB", () => {
       await execute(
         oldDb,
         "__meta__",
-        store => {
+        (store) => {
           store.put({ name: "lastModified", value: 43 });
         },
         { mode: "readwrite" }
@@ -696,7 +688,7 @@ describe("adapter.IDB", () => {
     it("should delete the old database", () => {
       return open(cid, {
         version: 1,
-        onupgradeneeded: event =>
+        onupgradeneeded: (event) =>
           (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
       }).should.eventually.be.rejected;
     });
@@ -704,7 +696,7 @@ describe("adapter.IDB", () => {
     it("should not delete other databases", () => {
       return open("another/not-migrated", {
         version: 1,
-        onupgradeneeded: event =>
+        onupgradeneeded: (event) =>
           (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
       }).should.eventually.be.fulfilled;
     });
@@ -717,7 +709,7 @@ describe("adapter.IDB", () => {
     it("should not fail if old database is broken or incomplete", async () => {
       const oldDb = await open("some/db", {
         version: 1,
-        onupgradeneeded: event => {},
+        onupgradeneeded: (event) => {},
       });
       oldDb.close();
       const idb = new IDB("some/db", { migrateOldData: true });

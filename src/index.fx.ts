@@ -80,10 +80,7 @@ export default class Kinto extends KintoBase {
         return typeof id === "string" && RE_RECORD_ID.test(id);
       },
       generate() {
-        return (global as any)
-          .generateUUID()
-          .toString()
-          .replace(/[{}]/g, "");
+        return (global as any).generateUUID().toString().replace(/[{}]/g, "");
       },
     };
     return super.collection(collName, { idSchema, ...options });

@@ -32,12 +32,12 @@ export async function open(
 ): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbname, version);
-    request.onupgradeneeded = event => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
-      db.onerror = event => reject(request.error);
+      db.onerror = (event) => reject(request.error);
       // When an upgrade is needed, a transaction is started.
       const transaction = request.transaction!;
-      transaction.onabort = event => {
+      transaction.onabort = (event) => {
         const error =
           request.error ||
           transaction.error ||
@@ -47,10 +47,10 @@ export async function open(
       // Callback for store creation etc.
       return onupgradeneeded(event);
     };
-    request.onerror = event => {
+    request.onerror = (event) => {
       reject((event.target as IDBRequest).error);
     };
-    request.onsuccess = event => {
+    request.onsuccess = (event) => {
       const db = request.result;
       resolve(db);
     };
@@ -96,10 +96,10 @@ export async function execute(
     } catch (e) {
       abort(e);
     }
-    transaction.onerror = event =>
+    transaction.onerror = (event) =>
       reject((event.target as IDBTransaction).error);
-    transaction.oncomplete = event => resolve(result);
-    transaction.onabort = event => {
+    transaction.oncomplete = (event) => resolve(result);
+    transaction.onabort = (event) => {
       const error =
         (event.target as IDBTransaction).error ||
         transaction.error ||
@@ -118,8 +118,9 @@ export async function execute(
 async function deleteDatabase(dbName: string): Promise<IDBOpenDBRequest> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(dbName);
-    request.onsuccess = event => resolve(event.target as IDBOpenDBRequest);
-    request.onerror = event => reject((event.target as IDBOpenDBRequest).error);
+    request.onsuccess = (event) => resolve(event.target as IDBOpenDBRequest);
+    request.onerror = (event) =>
+      reject((event.target as IDBOpenDBRequest).error);
   });
 }
 
@@ -158,7 +159,7 @@ const cursorHandlers = {
   ) {
     const results: KintoObject[] = [];
     let i = 0;
-    return function(event: Event) {
+    return function (event: Event) {
       const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
       if (!cursor) {
         done(results);
@@ -216,18 +217,18 @@ function createListRequest(
   // If no filters, get all results in one bulk.
   if (filterFields.length === 0) {
     const request = store.index("cid").getAll(IDBKeyRange.only(cid));
-    request.onsuccess = event => done((event.target as IDBRequest).result);
+    request.onsuccess = (event) => done((event.target as IDBRequest).result);
     return request;
   }
 
   // Introspect filters and check if they leverage an indexed field.
-  const indexField = filterFields.find(field => {
+  const indexField = filterFields.find((field) => {
     return INDEXED_FIELDS.includes(field);
   });
 
   if (!indexField) {
     // Iterate on all records for this collection (ie. cid)
-    const isSubQuery = Object.keys(filters).some(key => key.includes(".")); // (ie. filters: {"article.title": "hello"})
+    const isSubQuery = Object.keys(filters).some((key) => key.includes(".")); // (ie. filters: {"article.title": "hello"})
     if (isSubQuery) {
       const newFilter = transformSubObjectFilters(filters);
       const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
@@ -252,7 +253,7 @@ function createListRequest(
     if (value.length === 0) {
       return done([]);
     }
-    const values = value.map(i => [cid, i]).sort();
+    const values = value.map((i) => [cid, i]).sort();
     const range = IDBKeyRange.bound(values[0], values[values.length - 1]);
     const request = indexStore.openCursor(range);
     request.onsuccess = cursorHandlers.in(values, remainingFilters, done);
@@ -439,7 +440,7 @@ export default class IDB<
     try {
       await this.prepare(
         "records",
-        store => {
+        (store) => {
           const range = IDBKeyRange.only(this.cid);
           const request = store.index("cid").openKeyCursor(range);
           request.onsuccess = (event: Event) => {
@@ -532,7 +533,7 @@ export default class IDB<
 
         // Preload specified records using a list request.
         const filters = { id: options.preload };
-        createListRequest(this.cid, store, filters, records => {
+        createListRequest(this.cid, store, filters, (records) => {
           // Store obtained records by id.
           const preloaded: { [key: string]: KintoObject } = {};
           for (const record of records) {
@@ -557,8 +558,8 @@ export default class IDB<
   async get(id: string): Promise<B | undefined> {
     try {
       let record: B;
-      await this.prepare("records", store => {
-        store.get([this.cid, id]).onsuccess = e =>
+      await this.prepare("records", (store) => {
+        store.get([this.cid, id]).onsuccess = (e) =>
           (record = (e.target as IDBRequest<KintoObject>).result as B);
       });
       return record!;
@@ -582,8 +583,8 @@ export default class IDB<
     const { filters } = params;
     try {
       let results: KintoObject[] = [];
-      await this.prepare("records", store => {
-        createListRequest(this.cid, store, filters, _results => {
+      await this.prepare("records", (store) => {
+        createListRequest(this.cid, store, filters, (_results) => {
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
           for (const result of _results) {
@@ -614,7 +615,7 @@ export default class IDB<
     try {
       await this.prepare(
         "timestamps",
-        store => {
+        (store) => {
           if (value === null) {
             store.delete(this.cid);
           } else {
@@ -640,7 +641,7 @@ export default class IDB<
   async getLastModified(): Promise<number | null> {
     try {
       let entry: number | null = null;
-      await this.prepare("timestamps", store => {
+      await this.prepare("timestamps", (store) => {
         store.get(this.cid).onsuccess = (e: Event) =>
           (entry = (e.target as IDBRequest<number>).result);
       });
@@ -677,7 +678,7 @@ export default class IDB<
    */
   async importBulk(records: (B & { last_modified: number })[]): Promise<B[]> {
     try {
-      await this.execute(transaction => {
+      await this.execute((transaction) => {
         // Since the put operations are asynchronous, we chain
         // them together. The last one will be waited for the
         // `transaction.oncomplete` callback. (see #execute())
@@ -695,7 +696,7 @@ export default class IDB<
       });
       const previousLastModified = await this.getLastModified();
       const lastModified = Math.max(
-        ...records.map(record => record.last_modified)
+        ...records.map((record) => record.last_modified)
       );
       if (previousLastModified && lastModified > previousLastModified) {
         await this.saveLastModified(lastModified);
@@ -712,7 +713,7 @@ export default class IDB<
     try {
       await this.prepare(
         "collections",
-        store => store.put({ cid: this.cid, metadata }),
+        (store) => store.put({ cid: this.cid, metadata }),
         { mode: "readwrite" }
       );
       return metadata;
@@ -782,7 +783,7 @@ async function migrationRequired<
   let exists = true;
   const db = await open(dbName, {
     version: 1,
-    onupgradeneeded: event => {
+    onupgradeneeded: (event) => {
       exists = false;
     },
   });
@@ -804,17 +805,17 @@ async function migrationRequired<
   try {
     // Scan all records.
     let records: T[];
-    await execute(db, dbName, store => {
+    await execute(db, dbName, (store) => {
       store.openCursor().onsuccess = cursorHandlers.all(
         {},
-        res => (records = res as T[])
+        (res) => (records = res as T[])
       );
     });
     console.log(`${dbName}: found ${records!.length} records.`);
 
     // Check if there's a entry for this.
     let timestamp: number | null = null;
-    await execute(db, "__meta__", store => {
+    await execute(db, "__meta__", (store) => {
       store.get(`${dbName}-lastModified`).onsuccess = (e: Event) => {
         timestamp = (e.target as IDBRequest).result
           ? (e.target as IDBRequest<{ value: number }>).result.value
@@ -823,7 +824,7 @@ async function migrationRequired<
     });
     // Some previous versions, also used to store the timestamps without prefix.
     if (!timestamp) {
-      await execute(db, "__meta__", store => {
+      await execute(db, "__meta__", (store) => {
         store.get("lastModified").onsuccess = (e: Event) => {
           timestamp = (e.target as IDBRequest).result
             ? (e.target as IDBRequest<{ value: number }>).result.value

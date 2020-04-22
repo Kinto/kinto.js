@@ -48,10 +48,10 @@ export function filterObject<T extends { [key: string]: any }>(
   filters: { [key: string]: any },
   entry: T
 ): boolean {
-  return Object.keys(filters).every(filter => {
+  return Object.keys(filters).every((filter) => {
     const value = filters[filter];
     if (Array.isArray(value)) {
-      return value.some(candidate => candidate === entry[filter]);
+      return value.some((candidate) => candidate === entry[filter]);
     } else if (typeof value === "object") {
       return filterObject(value, entry[filter]);
     } else if (!Object.prototype.hasOwnProperty.call(entry, filter)) {
@@ -73,7 +73,7 @@ export function filterObjects<T>(
   filters: { [key: string]: any },
   list: T[]
 ): T[] {
-  return list.filter(entry => {
+  return list.filter((entry) => {
     return filterObject(filters, entry);
   });
 }

@@ -112,11 +112,11 @@ describe("Utils", () => {
     });
 
     it("should resolve executing a single sync function", () => {
-      return waterfall([x => x + 1], 42).should.become(43);
+      return waterfall([(x) => x + 1], 42).should.become(43);
     });
 
     it("should resolve executing multiple sync functions", () => {
-      return waterfall([x => x + 1, x => x * 2], 42).should.become(86);
+      return waterfall([(x) => x + 1, (x) => x * 2], 42).should.become(86);
     });
 
     it("should resolve using a single promise returning function", () => {
@@ -125,7 +125,7 @@ describe("Utils", () => {
 
     it("should resolve using multiple promise returning functions", () => {
       return waterfall(
-        [x => Promise.resolve(x + 1), x => Promise.resolve(x * 2)],
+        [(x) => Promise.resolve(x + 1), (x) => Promise.resolve(x * 2)],
         42
       ).should.become(86);
     });
