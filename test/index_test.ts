@@ -4,7 +4,7 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http/lib/cjs-es5/base";
+import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
@@ -20,7 +20,7 @@ const TEST_COLLECTION_NAME = "kinto-test";
 
 /** @test {Kinto} */
 describe("Kinto", () => {
-  let sandbox;
+  let sandbox: sinon.SinonSandbox;
 
   function testCollection() {
     const db = new Kinto({ bucket: TEST_BUCKET_NAME });
@@ -96,9 +96,9 @@ describe("Kinto", () => {
 
     it("should propagate the dbName option to child dependencies", () => {
       expect(
-        new Kinto({
+        (new Kinto({
           adapterOptions: { dbName: "app" },
-        }).collection("x").db.dbName
+        }).collection("x").db as IDB<any>).dbName
       ).eql("app");
     });
   });
@@ -123,10 +123,9 @@ describe("Kinto", () => {
     });
 
     it("should reject on missing collection name", () => {
-      expect(() => new Kinto().collection()).to.Throw(
-        Error,
-        /missing collection name/
-      );
+      expect(() =>
+        new Kinto().collection((undefined as unknown) as string)
+      ).to.Throw(Error, /missing collection name/);
     });
 
     it("should setup the Api cient using default server URL", () => {
@@ -150,22 +149,24 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api._headers).eql({ Authorization: "Basic plop" });
+      expect(coll.api["_headers"]).eql({ Authorization: "Basic plop" });
     });
 
     it("should create collection using an optional adapter", () => {
-      const MyAdapter = class extends BaseAdapter {};
-      const db = new Kinto({ adapter: MyAdapter });
+      const MyAdapter = class extends BaseAdapter<any> {};
+      const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
       const coll = db.collection("plop");
 
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
     });
 
     it("should override adapter for collection if specified", () => {
-      const MyAdapter = class extends BaseAdapter {};
-      const MyOtherAdapter = class extends BaseAdapter {};
-      const db = new Kinto({ adapter: MyAdapter });
-      const coll = db.collection("plop", { adapter: MyOtherAdapter });
+      const MyAdapter = class extends BaseAdapter<any> {};
+      const MyOtherAdapter = class extends BaseAdapter<any> {};
+      const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
+      const coll = db.collection("plop", {
+        adapter: (MyOtherAdapter as unknown) as typeof IDB,
+      });
       expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
     });
 

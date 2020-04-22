@@ -4,17 +4,19 @@ import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
-import Api from "kinto-http";
+import { Hooks, IdSchema, RemoteTransformer, KintoError } from "../src/types";
+import Api, { KintoIdObject } from "kinto-http";
 import KintoClient from "kinto-http";
-import KintoClientCollection from "kinto-http/lib/cjs-es5/collection.js";
+import { KintoObject, Collection as KintoClientCollection } from "kinto-http";
 import { recordsEqual } from "../src/collection";
 import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
 import { createKeyValueStoreIdSchema } from "../src/collection";
+import KintoBase from "../src/KintoBase";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -33,28 +35,28 @@ const NULL_SCHEMA = {
 /** @test {Collection} */
 describe("Collection", () => {
   /*eslint-disable */
-  let sandbox, events, api;
+  let sandbox: sinon.SinonSandbox, events: EventEmitter, api: Api;
   /*eslint-enable */
   const article = { title: "foo", url: "http://foo" };
 
   function testCollection(options = {}) {
     events = new EventEmitter();
     const opts = { events, ...options };
-    api = new Api(FAKE_SERVER_URL, events);
+    api = new Api(FAKE_SERVER_URL, { events });
     return new Collection(
       TEST_BUCKET_NAME,
       TEST_COLLECTION_NAME,
-      { api },
+      ({ api } as unknown) as KintoBase,
       opts
     );
   }
 
-  function createEncodeTransformer(char, delay) {
+  function createEncodeTransformer(char: string, delay: number) {
     return {
-      encode(record) {
+      encode(record: any) {
         return updateTitleWithDelay(record, char, delay);
       },
-      decode(record) {},
+      decode(record: any) {},
     };
   }
 
@@ -64,20 +66,20 @@ describe("Collection", () => {
       generate() {
         return _next++;
       },
-      validate(id) {
-        return id == parseInt(id, 10) && id >= 0;
+      validate(id: any) {
+        return id === parseInt(id, 10) && id >= 0;
       },
     };
   }
 
   function createKeyListIdSchema() {
     return {
-      generate(record) {
+      generate(record: any) {
         return Object.keys(record)
           .sort()
           .join(",");
       },
-      validate(id) {
+      validate(id: string) {
         return id !== "";
       },
     };
@@ -124,7 +126,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         { events }
       );
       expect(collection.events).to.eql(events);
@@ -136,7 +138,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         { events }
       );
       expect(collection.api.events).eql(collection.events);
@@ -147,15 +149,15 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         {
           adapterOptions: {
             dbName: "LocalData",
           },
         }
       );
-      expect(collection.db.dbName).eql("LocalData");
-      expect(collection.db.cid).eql(
+      expect((collection.db as IDB<any>).dbName).eql("LocalData");
+      expect((collection.db as IDB<any>).cid).eql(
         `${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`
       );
     });
@@ -167,7 +169,7 @@ describe("Collection", () => {
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         { hooks }
       );
       expect(collection.db).to.be.an.instanceof(IDB);
@@ -180,53 +182,53 @@ describe("Collection", () => {
         new Collection(
           TEST_BUCKET_NAME,
           TEST_COLLECTION_NAME,
-          { api },
+          ({ api } as unknown) as KintoBase,
           {
             adapter: function() {},
-          }
+          } as any
         );
       }).to.Throw(Error, /Unsupported adapter/);
     });
 
     it("should allow providing an adapter option", () => {
-      const MyAdapter = class extends BaseAdapter {};
+      const MyAdapter = class extends BaseAdapter<any> {};
       const collection = new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         {
           adapter: MyAdapter,
-        }
+        } as any
       );
       expect(collection.db).to.be.an.instanceOf(MyAdapter);
     });
 
     it("should pass adapterOptions to adapter", () => {
       let myOptions;
-      const MyAdapter = class extends BaseAdapter {
-        constructor(collectionName, options) {
-          super(collectionName);
+      const MyAdapter = class extends BaseAdapter<any> {
+        constructor(collectionName: string, options: any) {
+          super();
           myOptions = options;
         }
       };
       new Collection(
         TEST_BUCKET_NAME,
         TEST_COLLECTION_NAME,
-        { api },
+        ({ api } as unknown) as KintoBase,
         {
           adapter: MyAdapter,
           adapterOptions: "my options",
-        }
+        } as any
       );
       expect(myOptions).eql("my options");
     });
 
     describe("transformers registration", () => {
-      function registerTransformers(transformers) {
+      function registerTransformers(transformers: RemoteTransformer[]) {
         new Collection(
           TEST_BUCKET_NAME,
           TEST_COLLECTION_NAME,
-          { api },
+          ({ api } as unknown) as KintoBase,
           {
             remoteTransformers: transformers,
           }
@@ -234,40 +236,38 @@ describe("Collection", () => {
       }
 
       it("should throw an error on non-array remoteTransformers", () => {
-        expect(registerTransformers.bind(null, {})).to.Throw(
+        expect(registerTransformers.bind(null, {} as any)).to.Throw(
           Error,
           /remoteTransformers should be an array/
         );
       });
 
       it("should throw an error on non-object transformer", () => {
-        expect(registerTransformers.bind(null, ["invalid"])).to.Throw(
+        expect(registerTransformers.bind(null, ["invalid" as any])).to.Throw(
           Error,
           /transformer must be an object/
         );
       });
 
       it("should throw an error on encode method missing", () => {
-        expect(registerTransformers.bind(null, [{ decode() {} }])).to.Throw(
-          Error,
-          /transformer must provide an encode function/
-        );
+        expect(
+          registerTransformers.bind(null, [{ decode() {} } as any])
+        ).to.Throw(Error, /transformer must provide an encode function/);
       });
 
       it("should throw an error on decode method missing", () => {
-        expect(registerTransformers.bind(null, [{ encode() {} }])).to.Throw(
-          Error,
-          /transformer must provide a decode function/
-        );
+        expect(
+          registerTransformers.bind(null, [{ encode() {} } as any])
+        ).to.Throw(Error, /transformer must provide a decode function/);
       });
     });
 
     describe("hooks registration", () => {
-      function registerHooks(hooks) {
+      function registerHooks(hooks: Hooks) {
         return new Collection(
           TEST_BUCKET_NAME,
           TEST_COLLECTION_NAME,
-          { api },
+          ({ api } as unknown) as KintoBase,
           {
             hooks,
           }
@@ -275,21 +275,21 @@ describe("Collection", () => {
       }
 
       it("should throw an error on non-object hooks", () => {
-        expect(registerHooks.bind(null, function() {})).to.Throw(
+        expect(registerHooks.bind(null, function() {} as any)).to.Throw(
           Error,
           /hooks should be an object/
         );
       });
 
       it("should throw an error on array hooks", () => {
-        expect(registerHooks.bind(null, [])).to.Throw(
+        expect(registerHooks.bind(null, [] as any)).to.Throw(
           Error,
           /hooks should be an object, not an array./
         );
       });
 
       it("should return a empty object if no hook where specified", () => {
-        const collection = registerHooks();
+        const collection = registerHooks({});
         expect(collection.hooks).to.eql({});
       });
 
@@ -297,14 +297,14 @@ describe("Collection", () => {
         expect(
           registerHooks.bind(null, {
             invalid: [],
-          })
+          } as any)
         ).to.Throw(Error, /The hook should be one of/);
       });
 
       it("should throw if the hook isn't a list", () => {
         expect(
           registerHooks.bind(null, {
-            "incoming-changes": {},
+            "incoming-changes": {} as any,
           })
         ).to.Throw(Error, /A hook definition should be an array of functions./);
       });
@@ -312,18 +312,18 @@ describe("Collection", () => {
       it("should throw an error if the hook is not an array of functions", () => {
         expect(
           registerHooks.bind(null, {
-            "incoming-changes": ["invalid"],
+            "incoming-changes": ["invalid"] as any,
           })
         ).to.Throw(Error, /A hook definition should be an array of functions./);
       });
     });
 
     describe("idSchema registration", () => {
-      function registerIdSchema(idSchema) {
+      function registerIdSchema(idSchema: IdSchema) {
         new Collection(
           TEST_BUCKET_NAME,
           TEST_COLLECTION_NAME,
-          { api },
+          ({ api } as unknown) as KintoBase,
           {
             idSchema: idSchema,
           }
@@ -331,7 +331,7 @@ describe("Collection", () => {
       }
 
       it("should throw an error on non-object transformer", () => {
-        expect(registerIdSchema.bind(null, "invalid")).to.Throw(
+        expect(registerIdSchema.bind(null, "invalid" as any)).to.Throw(
           Error,
           /idSchema must be an object/
         );
@@ -341,7 +341,7 @@ describe("Collection", () => {
         expect(
           registerIdSchema.bind(null, {
             validate() {},
-          })
+          } as any)
         ).to.Throw(Error, /idSchema must provide a generate function/);
       });
 
@@ -349,7 +349,7 @@ describe("Collection", () => {
         expect(
           registerIdSchema.bind(null, {
             generate() {},
-          })
+          } as any)
         ).to.Throw(Error, /idSchema must provide a validate function/);
       });
     });
@@ -368,7 +368,7 @@ describe("Collection", () => {
         "published",
         "conflicts",
         "skipped",
-      ].forEach(l => expect(r[l]).to.eql([]));
+      ].forEach(l => expect((r as any)[l]).to.eql([]));
     });
 
     describe("set lastModified", () => {
@@ -429,7 +429,7 @@ describe("Collection", () => {
       it("should update the ok status flag on errors", () => {
         const result = new SyncResultObject();
 
-        result.add("errors", [1]);
+        result.add("errors", [1 as any]);
 
         expect(result.ok).eql(false);
       });
@@ -437,7 +437,7 @@ describe("Collection", () => {
       it("should update the ok status flag on conflicts", () => {
         const result = new SyncResultObject();
 
-        result.add("conflicts", [1]);
+        result.add("conflicts", [1 as any]);
 
         expect(result.ok).eql(false);
       });
@@ -445,7 +445,7 @@ describe("Collection", () => {
       it("should alter non-array properties", () => {
         const result = new SyncResultObject();
 
-        result.add("ok", false);
+        result.add("ok" as any, false);
 
         expect(result.ok).eql(true);
       });
@@ -459,7 +459,7 @@ describe("Collection", () => {
       it("should support adding single objects", () => {
         const result = new SyncResultObject();
 
-        const e = {
+        const e: KintoError = {
           type: "incoming",
           message: "conflict",
         };
@@ -472,7 +472,7 @@ describe("Collection", () => {
     describe("#reset", () => {
       it("should reset to array prop to its default value", () => {
         const result = new SyncResultObject()
-          .add("resolved", [1, 2, 3])
+          .add("resolved", [1, 2, 3])!
           .reset("resolved");
 
         expect(result.resolved).eql([]);
@@ -488,7 +488,7 @@ describe("Collection", () => {
 
   /** @test {Collection#clear} */
   describe("#clear", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => {
       articles = testCollection();
@@ -504,7 +504,7 @@ describe("Collection", () => {
         .clear()
         .then(_ => articles.list())
         .then(res => res.data)
-        .should.eventually.have.length.of(0);
+        .should.eventually.have.lengthOf(0);
     });
 
     it("should clear collection timestamp", () => {
@@ -525,7 +525,7 @@ describe("Collection", () => {
 
   /** @test {Collection#create} */
   describe("#create", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => (articles = testCollection()));
 
@@ -595,7 +595,7 @@ describe("Collection", () => {
 
     it("should reject if passed argument is not an object", () => {
       return articles
-        .create(42)
+        .create(42 as any)
         .should.eventually.be.rejectedWith(Error, /is not an object/);
     });
 
@@ -662,14 +662,14 @@ describe("Collection", () => {
       return articles
         .create({ ...article, id: article.title }, { useRecordId: true })
         .then(result => articles.getAny(result.data.id))
-        .then(result => result.data.id)
+        .then(result => result.data!.id)
         .should.become(article.title);
     });
   });
 
   /** @test {Collection#update} */
   describe("#update", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => (articles = testCollection({ localFields: ["read"] })));
 
@@ -724,19 +724,19 @@ describe("Collection", () => {
 
     it("should reject updates on a non-object record", () => {
       return articles
-        .update("invalid")
+        .update("invalid" as any)
         .should.be.rejectedWith(Error, /Record is not an object/);
     });
 
     it("should reject updates on a record without an id", () => {
       return articles
-        .update({ title: "foo" })
+        .update({ title: "foo" } as any)
         .should.be.rejectedWith(Error, /missing id/);
     });
 
     it("should validate record's id when provided", () => {
       return articles
-        .update({ id: 42 })
+        .update({ id: 42 } as any)
         .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
@@ -828,7 +828,7 @@ describe("Collection", () => {
 
   /** @test {Collection#put} */
   describe("#put", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => (articles = testCollection()));
 
@@ -965,7 +965,7 @@ describe("Collection", () => {
     });
 
     it("should not return the old data for a deleted record", () => {
-      let articleId;
+      let articleId: string;
       return articles
         .create(article)
         .then(res => {
@@ -1011,7 +1011,7 @@ describe("Collection", () => {
 
   /** @test {Collection#resolve} */
   describe("#resolve", () => {
-    let articles, local, remote, conflict;
+    let articles: Collection, local: any, remote: any, conflict: any;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1064,7 +1064,7 @@ describe("Collection", () => {
 
   /** @test {Collection#get} */
   describe("#get", () => {
-    let articles, id;
+    let articles: Collection, id: string;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1072,9 +1072,9 @@ describe("Collection", () => {
     });
 
     it("should isolate records by bucket", () => {
-      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, {
+      const otherbucket = new Collection("other", TEST_COLLECTION_NAME, ({
         api,
-      });
+      } as unknown) as KintoBase);
       return otherbucket
         .get(id)
         .then(res => res.data)
@@ -1101,7 +1101,9 @@ describe("Collection", () => {
     });
 
     it("should validate passed id", () => {
-      return articles.get(42).should.be.rejectedWith(Error, /Invalid Id/);
+      return articles
+        .get(42 as any)
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
     it("should validate passed id (custom IdSchema)", () => {
@@ -1148,7 +1150,7 @@ describe("Collection", () => {
 
   /** @test {Collection#getAny} */
   describe("#getAny", () => {
-    let articles, id;
+    let articles: Collection, id: string;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1158,7 +1160,7 @@ describe("Collection", () => {
     it("should retrieve a record from its id", () => {
       return articles
         .getAny(id)
-        .then(res => res.data.title)
+        .then(res => res.data!.title)
         .should.eventually.eql(article.title);
     });
 
@@ -1185,7 +1187,7 @@ describe("Collection", () => {
 
   /** @test {Collection#delete} */
   describe("#delete", () => {
-    let articles, id;
+    let articles: Collection, id: string;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1193,7 +1195,9 @@ describe("Collection", () => {
     });
 
     it("should validate passed id", () => {
-      return articles.delete(42).should.be.rejectedWith(Error, /Invalid Id/);
+      return articles
+        .delete(42 as any)
+        .should.be.rejectedWith(Error, /Invalid Id/);
     });
 
     it("should validate passed id (custom IdSchema)", () => {
@@ -1278,7 +1282,7 @@ describe("Collection", () => {
 
   /** @test {Collection#deleteAll} */
   describe("#deleteAll", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => {
       //Create 5 Records
@@ -1296,10 +1300,10 @@ describe("Collection", () => {
         .deleteAll()
         .then(res => articles.list())
         .then(res => res.data)
-        .should.eventually.have.length.of(0)
+        .should.eventually.have.lengthOf(0)
         .then(() => articles.list({}, { includeDeleted: true }))
-        .then(res => res.data)
-        .should.eventually.have.length.of(5);
+        .then((res: any) => res.data)
+        .should.eventually.have.lengthOf(5);
     });
 
     it("should not delete anything when there are no records", () => {
@@ -1307,13 +1311,13 @@ describe("Collection", () => {
         .clear()
         .then(res => articles.deleteAll())
         .then(res => res.data)
-        .should.eventually.have.length.of(0);
+        .should.eventually.have.lengthOf(0);
     });
   });
 
   /** @test {Collection#deleteAny} */
   describe("#deleteAny", () => {
-    let articles, id;
+    let articles: Collection, id: string;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1324,7 +1328,7 @@ describe("Collection", () => {
       return articles
         .deleteAny(id)
         .then(res => articles.getAny(res.data.id))
-        .then(res => res.data._status)
+        .then(res => res.data!._status)
         .should.eventually.eql("deleted");
     });
 
@@ -1362,7 +1366,7 @@ describe("Collection", () => {
 
   /** @test {Collection#list} */
   describe("#list", () => {
-    let articles;
+    let articles: Collection;
 
     describe("Basic", () => {
       beforeEach(() => {
@@ -1377,7 +1381,7 @@ describe("Collection", () => {
         return articles
           .list()
           .then(res => res.data)
-          .should.eventually.have.length.of(2);
+          .should.eventually.have.lengthOf(2);
       });
 
       it("shouldn't list virtually deleted records", () => {
@@ -1386,7 +1390,7 @@ describe("Collection", () => {
           .then(res => articles.delete(res.data.id))
           .then(_ => articles.list())
           .then(res => res.data)
-          .should.eventually.have.length.of(2);
+          .should.eventually.have.lengthOf(2);
       });
 
       it("should support the includeDeleted option", () => {
@@ -1395,7 +1399,7 @@ describe("Collection", () => {
           .then(res => articles.delete(res.data.id))
           .then(_ => articles.list({}, { includeDeleted: true }))
           .then(res => res.data)
-          .should.eventually.have.length.of(3);
+          .should.eventually.have.lengthOf(3);
       });
     });
 
@@ -1590,8 +1594,8 @@ describe("Collection", () => {
       it("should order and filter records", () => {
         return articles
           .list({ order: "-title", filters: { unread: true, complete: true } })
-          .then(res =>
-            res.data.map(r => {
+          .then((res: any) =>
+            res.data.map((r: any) => {
               return { title: r.title, unread: r.unread, complete: r.complete };
             })
           )
@@ -1608,23 +1612,25 @@ describe("Collection", () => {
    * @test {Collection#loadDump}
    */
   describe("Deprecated #loadDump", () => {
-    let articles;
+    let articles: Collection;
 
     it("should call importBulk", () => {
       articles = testCollection();
-      sandbox.stub(articles, "importBulk").returns(Promise.resolve());
+      const importBulkStub = sandbox
+        .stub(articles, "importBulk")
+        .returns(Promise.resolve([]));
       articles
         .loadDump([
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
           { id: uuid4(), title: "bar", last_modified: 1452347985 },
         ])
-        .then(_ => sinon.assert.calledOnce(articles.importBulk));
+        .then(_ => sinon.assert.calledOnce(importBulkStub));
     });
   });
 
   /** @test {Collection#importBulk} */
   describe("#importBulk", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => (articles = testCollection()));
 
@@ -1639,25 +1645,25 @@ describe("Collection", () => {
 
     it("should fail if records is not an array", () => {
       return articles
-        .importBulk({ id: "abc", title: "foo" })
+        .importBulk({ id: "abc", title: "foo" } as any)
         .should.be.rejectedWith(Error, /^Records is not an array./);
     });
 
     it("should fail if id is invalid", () => {
       return articles
-        .importBulk([{ id: "a.b.c", title: "foo" }])
+        .importBulk([{ id: "a.b.c", title: "foo", last_modified: 0 }])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if id is missing", () => {
       return articles
-        .importBulk([{ title: "foo" }])
+        .importBulk([{ title: "foo" } as any])
         .should.be.rejectedWith(Error, /^Record has invalid ID./);
     });
 
     it("should fail if last_modified is missing", () => {
       return articles
-        .importBulk([{ id: uuid4(), title: "foo" }])
+        .importBulk([{ id: uuid4(), title: "foo" } as any])
         .should.be.rejectedWith(Error, /^Record has no last_modified value./);
     });
 
@@ -1726,7 +1732,7 @@ describe("Collection", () => {
 
   /** @test {Collection#gatherLocalChanges} */
   describe("#gatherLocalChanges", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1747,14 +1753,14 @@ describe("Collection", () => {
 
         return articles
           .gatherLocalChanges()
-          .then(res => res.map(r => r.title).sort())
+          .then(res => res.map(r => (r as any).title).sort())
           .should.become(["abcdef?!", "ghijkl?!"]);
       });
 
       it("should encode even deleted records", () => {
         const transformer = {
           called: false,
-          encode(record) {
+          encode(record: any) {
             this.called = true;
             return { ...record, id: "remote-" + record.id };
           },
@@ -1774,7 +1780,7 @@ describe("Collection", () => {
           .then(changes => {
             expect(transformer.called).equal(true);
             expect(
-              changes.filter(change => change._status == "deleted")[0]
+              changes.filter((change: any) => change._status === "deleted")[0]
             ).property("id", "remote-" + id);
           });
       });
@@ -1783,7 +1789,10 @@ describe("Collection", () => {
 
   /** @test {Collection#pullChanges} */
   describe("#pullChanges", () => {
-    let client, articles, listRecords, result;
+    let client: KintoClientCollection,
+      articles: Collection,
+      listRecords: sinon.SinonStub,
+      result: SyncResultObject;
 
     beforeEach(() => {
       articles = testCollection();
@@ -1809,14 +1818,14 @@ describe("Collection", () => {
         { id: id_7, title: "art7-a" },
         { id: id_9, title: "art9" }, // will be deleted in beforeEach().
       ];
-      const serverChanges = [
-        { id: id_2, title: "art2" }, // existing & untouched, skipped
-        { id: id_3, title: "art3" }, // to be created
-        { id: id_4, deleted: true }, // to be deleted
-        { id: id_6, deleted: true }, // remotely deleted & missing locally, skipped
-        { id: id_7, title: "art7-b" }, // remotely conflicting
-        { id: id_8, title: "art8" }, // to be created
-        { id: id_9, deleted: true }, // remotely deleted & deleted locally, skipped
+      const serverChanges: KintoObject[] = [
+        { id: id_2, title: "art2", last_modified: 0 }, // existing & untouched, skipped
+        { id: id_3, title: "art3", last_modified: 0 }, // to be created
+        { id: id_4, deleted: true, last_modified: 0 }, // to be deleted
+        { id: id_6, deleted: true, last_modified: 0 }, // remotely deleted & missing locally, skipped
+        { id: id_7, title: "art7-b", last_modified: 0 }, // remotely conflicting
+        { id: id_8, title: "art8", last_modified: 0 }, // to be created
+        { id: id_9, deleted: true, last_modified: 0 }, // remotely deleted & deleted locally, skipped
       ];
 
       beforeEach(() => {
@@ -1825,10 +1834,12 @@ describe("Collection", () => {
           .returns(
             Promise.resolve({
               data: serverChanges,
-              next: () => {},
+              next: (() => {}) as any,
               last_modified: "42",
+              hasNextPage: false,
+              totalRecords: 0,
             })
-          );
+          ) as any;
         client = new KintoClient("http://server.com/v1")
           .bucket("bucket")
           .collection("collection");
@@ -1847,7 +1858,7 @@ describe("Collection", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(payload) {
+                function(payload: any) {
                   hookCalled = true;
                   return payload;
                 },
@@ -1864,7 +1875,7 @@ describe("Collection", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(changes) {
+                function(changes: any) {
                   throw new Error("Invalid collection data");
                 },
               ],
@@ -1883,8 +1894,8 @@ describe("Collection", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(incoming) {
-                  const newChanges = incoming.changes.map(r => ({
+                function(incoming: any) {
+                  const newChanges = incoming.changes.map((r: any) => ({
                     ...r,
                     foo: "bar",
                   }));
@@ -1907,8 +1918,8 @@ describe("Collection", () => {
         });
 
         it("should be able to chain hooks", () => {
-          function hookFactory(fn) {
-            return function(incoming) {
+          function hookFactory(fn: Function) {
+            return function(incoming: any) {
               const returnedChanges = incoming;
               const newChanges = returnedChanges.changes.map(fn);
               return { ...incoming, newChanges };
@@ -1918,11 +1929,11 @@ describe("Collection", () => {
             hooks: {
               // N.B. This only works because it's mutating serverChanges
               "incoming-changes": [
-                hookFactory(r => {
+                hookFactory((r: any) => {
                   r.foo = "bar";
                   return r;
                 }),
-                hookFactory(r => {
+                hookFactory((r: any) => {
                   r.bar = "baz";
                   return r;
                 }),
@@ -1945,11 +1956,11 @@ describe("Collection", () => {
         });
 
         it("should pass the collection as the second argument", () => {
-          let passedCollection = null;
+          let passedCollection: Collection | null = null;
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                function(payload, collection) {
+                function(payload: any, collection: Collection) {
                   passedCollection = collection;
                   return payload;
                 },
@@ -1980,8 +1991,8 @@ describe("Collection", () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
-                payload => {
-                  const newChanges = payload.changes.map(r => ({
+                (payload: any) => {
+                  const newChanges = payload.changes.map((r: any) => ({
                     ...r,
                     foo: "bar",
                   }));
@@ -2000,10 +2011,10 @@ describe("Collection", () => {
       });
 
       describe("With transformers", () => {
-        function createDecodeTransformer(char) {
+        function createDecodeTransformer(char: string) {
           return {
             encode() {},
-            decode(record) {
+            decode(record: any) {
               return { ...record, title: record.title + char };
             },
           };
@@ -2048,7 +2059,7 @@ describe("Collection", () => {
           const transformer = {
             called: false,
             encode() {},
-            decode(record) {
+            decode(record: any) {
               this.called = true;
               return { ...record, id: "local-" + record.id };
             },
@@ -2081,7 +2092,7 @@ describe("Collection", () => {
 
       it("should not fetch remote records if result status isn't ok", () => {
         const withConflicts = new SyncResultObject();
-        withConflicts.add("conflicts", [1]);
+        withConflicts.add("conflicts", [1 as any]);
         return articles
           .pullChanges(client, withConflicts)
           .then(_ => sinon.assert.notCalled(listRecords));
@@ -2151,8 +2162,8 @@ describe("Collection", () => {
           .pullChanges(client, result)
           .then(res => res.created)
           .should.eventually.become([
-            { id: id_3, title: "art3", _status: "synced" },
-            { id: id_8, title: "art8", _status: "synced" },
+            { id: id_3, title: "art3", last_modified: 0, _status: "synced" },
+            { id: id_8, title: "art8", last_modified: 0, _status: "synced" },
           ]);
       });
 
@@ -2162,8 +2173,17 @@ describe("Collection", () => {
           .then(res => res.updated)
           .should.eventually.become([
             {
-              old: { id: id_7, title: "art7-a", _status: "synced" },
-              new: { id: id_7, title: "art7-b", _status: "synced" },
+              new: {
+                id: id_7,
+                title: "art7-b",
+                last_modified: 0,
+                _status: "synced",
+              },
+              old: {
+                id: id_7,
+                title: "art7-a",
+                _status: "synced",
+              },
             },
           ]);
       });
@@ -2191,18 +2211,18 @@ describe("Collection", () => {
           .then(res => res.data)
           .should.eventually.become([
             { id: id_1, title: "art1", _status: "synced" },
-            { id: id_2, title: "art2", _status: "synced" },
-            { id: id_3, title: "art3", _status: "synced" },
+            { id: id_2, title: "art2", last_modified: 0, _status: "synced" },
+            { id: id_3, title: "art3", last_modified: 0, _status: "synced" },
             { id: id_5, title: "art5", _status: "synced" },
-            { id: id_7, title: "art7-b", _status: "synced" },
-            { id: id_8, title: "art8", _status: "synced" },
+            { id: id_7, title: "art7-b", last_modified: 0, _status: "synced" },
+            { id: id_8, title: "art8", last_modified: 0, _status: "synced" },
           ]);
       });
 
       it("should skip deleted data missing locally", () => {
         return articles.pullChanges(client, result).then(res => {
           expect(res.skipped).eql([
-            { id: id_6, deleted: true },
+            { id: id_6, last_modified: 0, deleted: true },
             { id: id_9, title: "art9", _status: "deleted" },
           ]);
         });
@@ -2239,7 +2259,7 @@ describe("Collection", () => {
     });
 
     describe("When a conflict occured", () => {
-      let createdId, local;
+      let createdId: string, local: KintoIdObject;
 
       beforeEach(() => {
         return articles.create({ title: "art2" }).then(res => {
@@ -2254,14 +2274,16 @@ describe("Collection", () => {
             data: [
               { id: createdId, title: "art2mod", last_modified: 42 }, // will conflict with unsynced local record
             ],
-            next: () => {},
+            next: (() => {}) as any,
             last_modified: "42",
+            hasNextPage: false,
+            totalRecords: 1,
           })
         );
 
         return articles
           .pullChanges(client, result)
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: false,
             lastModified: 42,
@@ -2292,20 +2314,26 @@ describe("Collection", () => {
 
       it("should ignore resolved conflicts during sync", () => {
         const remote = { ...local, title: "blah", last_modified: 42 };
-        const conflict = { type: "incoming", local: local, remote: remote };
+        const conflict = {
+          type: "incoming" as const,
+          local: local,
+          remote: remote,
+        };
         const resolution = { ...local, title: "resolved" };
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
             data: [remote],
-            next: () => {},
+            next: (() => {}) as any,
             last_modified: "42",
+            hasNextPage: false,
+            totalRecords: 1,
           })
         );
         const syncResult = new SyncResultObject();
         return articles
           .resolve(conflict, resolution)
           .then(() => articles.pullChanges(client, syncResult))
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -2322,7 +2350,7 @@ describe("Collection", () => {
     });
 
     describe("When a resolvable conflict occured", () => {
-      let createdId;
+      let createdId: string;
 
       beforeEach(() => {
         return articles.create({ title: "art2" }).then(res => {
@@ -2330,10 +2358,12 @@ describe("Collection", () => {
           sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
             Promise.resolve({
               data: [
-                { id: createdId, title: "art2" }, // resolvable conflict
+                { id: createdId, title: "art2", last_modified: 0 }, // resolvable conflict
               ],
-              next: () => {},
+              next: (() => {}) as any,
               last_modified: "42",
+              hasNextPage: false,
+              totalRecords: 1,
             })
           );
         });
@@ -2342,7 +2372,7 @@ describe("Collection", () => {
       it("should resolve with solved changes", () => {
         return articles
           .pullChanges(client, result)
-          .then(result => result.toObject())
+          .then(result => result["toObject"]())
           .should.eventually.become({
             ok: true,
             lastModified: 42,
@@ -2352,7 +2382,12 @@ describe("Collection", () => {
             updated: [
               {
                 old: { id: createdId, title: "art2", _status: "created" },
-                new: { id: createdId, title: "art2", _status: "synced" },
+                new: {
+                  id: createdId,
+                  title: "art2",
+                  last_modified: 0,
+                  _status: "synced",
+                },
               },
             ],
             skipped: [],
@@ -2366,7 +2401,7 @@ describe("Collection", () => {
 
   /** @test {Collection#importChanges} */
   describe("#importChanges", () => {
-    let articles, result;
+    let articles: Collection, result: SyncResultObject;
 
     beforeEach(() => {
       articles = testCollection();
@@ -2402,7 +2437,7 @@ describe("Collection", () => {
           { id: id2, title: "bar" },
         ])
         .then(() => {
-          const preload = execute.lastCall.args[1].preload;
+          const preload = execute.lastCall.args[1]!.preload;
           expect(preload).eql([id1, id2]);
         });
     });
@@ -2481,7 +2516,9 @@ describe("Collection", () => {
 
   /** @test {Collection#pushChanges} */
   describe("#pushChanges", () => {
-    let client, articles, result;
+    let client: KintoClientCollection,
+      articles: Collection,
+      result: SyncResultObject;
     const records = [{ id: uuid4(), title: "foo", _status: "created" }];
 
     beforeEach(() => {
@@ -2494,13 +2531,13 @@ describe("Collection", () => {
 
     it("should publish local changes to the server", () => {
       const batchRequests = sandbox
-        .stub(KintoClient.prototype, "_batchRequests")
+        .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([{}]));
 
       return articles.pushChanges(client, records, result).then(_ => {
         const requests = batchRequests.firstCall.args[0];
         const options = batchRequests.firstCall.args[1];
-        expect(requests).to.have.length.of(1);
+        expect(requests).to.have.lengthOf(1);
         expect(requests[0].body.data.title).eql("foo");
         expect(options.safe).eql(true);
       });
@@ -2508,7 +2545,7 @@ describe("Collection", () => {
 
     it("should not publish local fields to the server", () => {
       const batchRequests = sandbox
-        .stub(KintoClient.prototype, "_batchRequests")
+        .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([{}]));
 
       articles = testCollection({ localFields: ["size"] });
@@ -2543,7 +2580,7 @@ describe("Collection", () => {
 
     it("should not publish records created and deleted locally and never synced", () => {
       const batchRequests = sandbox
-        .stub(KintoClient.prototype, "_batchRequests")
+        .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([]));
 
       const toDelete = [{ id: records[0].id, _status: "deleted" }]; // no timestamp.
@@ -2608,7 +2645,15 @@ describe("Collection", () => {
     });
 
     describe("Batch requests made", () => {
-      let batch, batchSpy, deleteRecord, createRecord, updateRecord;
+      let batch: {
+          deleteRecord: () => void;
+          createRecord: () => void;
+          updateRecord: () => void;
+        },
+        batchSpy: sinon.SinonMock,
+        deleteRecord: sinon.SinonExpectation,
+        createRecord: sinon.SinonExpectation,
+        updateRecord: sinon.SinonExpectation;
       beforeEach(() => {
         batch = {
           deleteRecord: function() {},
@@ -2620,7 +2665,7 @@ describe("Collection", () => {
         createRecord = batchSpy.expects("createRecord");
         updateRecord = batchSpy.expects("updateRecord");
         sandbox.stub(KintoClientCollection.prototype, "batch").callsFake(f => {
-          f(batch);
+          f((batch as unknown) as KintoClientCollection);
           return Promise.resolve({
             published: [],
             errors: [],
@@ -2680,7 +2725,10 @@ describe("Collection", () => {
     describe("Error handling", () => {
       const error = {
         path: "/buckets/default/collections/test/records/123",
-        sent: { data: { id: "123" } },
+        sent: {
+          path: "/buckets/default/collections/test/records/123",
+          headers: {},
+        },
         error: { errno: 999, message: "Internal error" },
       };
 
@@ -2719,7 +2767,7 @@ describe("Collection", () => {
       { id: uuid4(), last_modified: 42, title: "art2" },
       { id: uuid4(), last_modified: 42, title: "art3" },
     ];
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => {
       articles = testCollection();
@@ -2776,7 +2824,7 @@ describe("Collection", () => {
   /** @test {Collection#sync} */
   describe("#sync", () => {
     const fixtures = [{ title: "art1" }, { title: "art2" }, { title: "art3" }];
-    let articles, ids;
+    let articles: Collection, ids: string[];
 
     beforeEach(() => {
       articles = testCollection();
@@ -2799,22 +2847,30 @@ describe("Collection", () => {
 
     it("should use a custom remote option", () => {
       sandbox.stub(articles, "importChanges");
-      sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
+      sandbox
+        .stub(articles, "pushChanges")
+        .returns(Promise.resolve(new SyncResultObject()));
       const fetch = sandbox
-        .stub(global, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).then(res => {
-        sinon.assert.calledWith(fetch, sinon.match(/http:\/\/test\/v1/));
+        sinon.assert.calledWith(
+          fetch,
+          sinon.match(/http:\/\/test\/v1/),
+          sinon.match.any
+        );
       });
     });
 
     it("should revert the custom remote option on success", () => {
       sandbox.stub(articles, "importChanges");
-      sandbox.stub(articles, "pushChanges").returns(new SyncResultObject());
       sandbox
-        .stub(global, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles, "pushChanges")
+        .returns(Promise.resolve(new SyncResultObject()));
+      sandbox
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).then(_ => {
         expect(api.remote).eql(FAKE_SERVER_URL);
@@ -2825,8 +2881,8 @@ describe("Collection", () => {
       sandbox.stub(articles, "importChanges");
       sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
       sandbox
-        .stub(global, "fetch")
-        .returns(fakeServerResponse(200, { data: [] }, {}));
+        .stub(articles.api.http, "timedFetch")
+        .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
       return articles.sync({ remote: "http://test/v1" }).catch(_ => {
         expect(api.remote).eql(FAKE_SERVER_URL);
@@ -2837,7 +2893,7 @@ describe("Collection", () => {
       return articles
         .list()
         .then(res => res.data)
-        .should.eventually.have.length.of(3);
+        .should.eventually.have.lengthOf(3);
     });
 
     it("should pullMetadata with options", () => {
@@ -2845,8 +2901,10 @@ describe("Collection", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "42",
-          next: () => {},
+          next: (() => {}) as any,
           data: [],
+          hasNextPage: false,
+          totalRecords: 0,
         })
       );
       const options = {
@@ -2869,8 +2927,10 @@ describe("Collection", () => {
         .returns(
           Promise.resolve({
             last_modified: "42",
-            next: () => {},
+            next: (() => {}) as any,
             data: [],
+            hasNextPage: false,
+            totalRecords: 0,
           })
         );
       return articles.sync().then(res => {
@@ -2884,8 +2944,10 @@ describe("Collection", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "42",
-          next: () => {},
+          next: (() => {}) as any,
           data: [],
+          hasNextPage: false,
+          totalRecords: 0,
         })
       );
       return articles.sync().then(res => {
@@ -2898,7 +2960,7 @@ describe("Collection", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "43",
-          next: () => {},
+          next: (() => {}) as any,
           data: [
             {
               id: ids[0],
@@ -2906,6 +2968,8 @@ describe("Collection", () => {
               last_modified: 43,
             },
           ],
+          hasNextPage: false,
+          totalRecords: 1,
         })
       );
       return articles.sync().then(res => {
@@ -2918,13 +2982,16 @@ describe("Collection", () => {
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
           last_modified: "43",
-          next: () => {},
+          next: (() => {}) as any,
           data: [
             {
               id: ids[0],
               title: "art1mod",
+              last_modified: 0,
             },
           ],
+          hasNextPage: false,
+          totalRecords: 0,
         })
       );
       sandbox
@@ -2941,7 +3008,8 @@ describe("Collection", () => {
       sandbox
         .stub(articles, "pushChanges")
         .callsFake((client, changes, result) => {
-          result.add("conflicts", [1]);
+          result.add("conflicts", [1 as any]);
+          return Promise.resolve(result);
         });
       return articles.sync().then(() => sinon.assert.calledOnce(pullChanges));
     });
@@ -2961,16 +3029,17 @@ describe("Collection", () => {
       const record1 = { id: uuid4(), title: "blog" };
       const record2 = { id: uuid4(), title: "post" };
       sandbox.stub(articles, "pullMetadata");
-      sandbox.stub(articles, "pullChanges");
+      const pullChangesStub = sandbox.stub(articles, "pullChanges");
       sandbox
         .stub(articles, "pushChanges")
         .callsFake((client, changes, result) => {
           result.add("published", record1);
           result.add("published", record2);
+          return Promise.resolve(result);
         });
       return articles.sync().then(res => {
         expect(res.published).to.have.length(2);
-        expect(articles.pullChanges.lastCall.args[2].exclude).eql([
+        expect(pullChangesStub.lastCall.args[2]!.exclude).eql([
           record1,
           record2,
         ]);
@@ -2985,18 +3054,18 @@ describe("Collection", () => {
         .returns(Promise.resolve(metadata));
       return articles.sync().then(async () => {
         const stored = await articles.metadata();
-        expect(stored, metadata);
+        expect(stored).to.deep.equal(metadata);
       });
     });
 
     describe("Options", () => {
-      let pullChanges;
+      let pullChanges: sinon.SinonStub;
 
       beforeEach(() => {
         sandbox.stub(articles, "pullMetadata");
         pullChanges = sandbox
           .stub(articles, "pullChanges")
-          .returns(Promise.resolve(new SyncResultObject()));
+          .returns(Promise.resolve(new SyncResultObject())) as any;
       });
 
       it("should transfer the headers option", () => {
@@ -3036,7 +3105,7 @@ describe("Collection", () => {
 
     describe("Server backoff", () => {
       it("should reject on server backoff by default", () => {
-        articles.kinto = { api: { backoff: 30000 } };
+        articles.kinto = ({ api: { backoff: 30000 } } as unknown) as KintoBase;
         return articles
           .sync()
           .should.be.rejectedWith(Error, /back off; retry in 30s/);
@@ -3045,11 +3114,11 @@ describe("Collection", () => {
       it("should perform sync on server backoff when ignoreBackoff is true", () => {
         sandbox
           .stub(articles.db, "getLastModified")
-          .returns(Promise.resolve({}));
+          .returns(Promise.resolve(0));
         sandbox.stub(articles, "pullMetadata");
         const pullChanges = sandbox.stub(articles, "pullChanges");
         sandbox.stub(articles, "pushChanges");
-        articles.api.events.emit("backoff", new Date().getTime() + 30000);
+        articles.api.events!.emit("backoff", new Date().getTime() + 30000);
 
         return articles
           .sync({ ignoreBackoff: true })
@@ -3064,16 +3133,22 @@ describe("Collection", () => {
         // Disable stubbing of kinto-http of upper tests.
         sandbox.restore();
         // Stub low-level fetch instead.
-        fetch = sandbox.stub(global, "fetch");
+        fetch = sandbox.stub(articles.api.http, "timedFetch");
         // Pull metadata
-        fetch.onCall(0).returns(fakeServerResponse(200, { data: {} }, {}));
+        fetch
+          .onCall(0)
+          .returns(fakeServerResponse(200, { data: {} }, {}) as any);
         // Pull records
-        fetch.onCall(1).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch
+          .onCall(1)
+          .returns(fakeServerResponse(200, { data: [] }, {}) as any);
         // Push
-        fetch.onCall(2).returns(fakeServerResponse(200, { settings: {} }, {}));
+        fetch
+          .onCall(2)
+          .returns(fakeServerResponse(200, { settings: {} }, {}) as any);
         fetch
           .onCall(3)
-          .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }));
+          .returns(fakeServerResponse(503, {}, { "Retry-After": "1" }) as any);
         fetch.onCall(4).returns(
           fakeServerResponse(
             200,
@@ -3085,12 +3160,16 @@ describe("Collection", () => {
               ],
             },
             { ETag: '"123"' }
-          )
+          ) as any
         );
         // Last pull
-        fetch.onCall(5).returns(fakeServerResponse(200, { data: [] }, {}));
+        fetch
+          .onCall(5)
+          .returns(fakeServerResponse(200, { data: [] }, {}) as any);
         // Avoid actually waiting real time between retries in test suites.
-        sandbox.stub(global, "setTimeout").callsFake(fn => setImmediate(fn));
+        sandbox
+          .stub(global as any, "setTimeout")
+          .callsFake(fn => setImmediate(fn));
       });
 
       it("should retry if specified", () => {
@@ -3102,8 +3181,9 @@ describe("Collection", () => {
     });
 
     describe("Events", () => {
-      let onsuccess;
-      let onerror;
+      let onsuccess: sinon.SinonSpy;
+      let onerror: sinon.SinonSpy;
+      let pushChangesStub: sinon.SinonStub;
 
       beforeEach(() => {
         onsuccess = sinon.spy();
@@ -3113,10 +3193,10 @@ describe("Collection", () => {
 
         sandbox
           .stub(articles.db, "getLastModified")
-          .returns(Promise.resolve({}));
+          .returns(Promise.resolve(0));
         sandbox.stub(articles, "pullMetadata");
         sandbox.stub(articles, "pullChanges");
-        sandbox.stub(articles, "pushChanges");
+        pushChangesStub = sandbox.stub(articles, "pushChanges") as any;
       });
 
       it("should send a success event", () => {
@@ -3127,7 +3207,7 @@ describe("Collection", () => {
       });
 
       it("should send an error event", () => {
-        articles.pushChanges.throws(new Error("boom"));
+        pushChangesStub.throws(new Error("boom"));
         return articles.sync().catch(() => {
           expect(onsuccess.called).eql(false);
           expect(onerror.called).eql(true);
@@ -3135,7 +3215,7 @@ describe("Collection", () => {
       });
 
       it("should send an error event", () => {
-        articles.pushChanges.throws(new Error("boom"));
+        pushChangesStub.throws(new Error("boom"));
         return articles.sync().catch(() => {
           expect(onsuccess.called).eql(false);
           expect(onerror.called).eql(true);
@@ -3154,7 +3234,7 @@ describe("Collection", () => {
       });
 
       it("should provide error details about sync", () => {
-        articles.pushChanges.throws(new Error("boom"));
+        pushChangesStub.throws(new Error("boom"));
         return articles.sync().catch(() => {
           const data = onerror.firstCall.args[0];
           expect(data).to.have.property("error");
@@ -3169,7 +3249,7 @@ describe("Collection", () => {
 
   /** @test {Collection#execute} */
   describe("#execute", () => {
-    let articles;
+    let articles: Collection;
     beforeEach(() => {
       articles = testCollection();
     });
@@ -3195,7 +3275,7 @@ describe("Collection", () => {
     });
 
     it("should support delete", () => {
-      let id;
+      let id: string;
       return articles
         .create(article)
         .then(result => {
@@ -3203,11 +3283,11 @@ describe("Collection", () => {
           return articles.execute(txn => txn.delete(id), { preloadIds: [id] });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support deleteAll", () => {
-      let id;
+      let id: string;
       return articles
         .create(article)
         .then(result => {
@@ -3217,11 +3297,11 @@ describe("Collection", () => {
           });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support deleteAny", () => {
-      let id;
+      let id: string;
       return articles
         .create(article)
         .then(result => {
@@ -3231,7 +3311,7 @@ describe("Collection", () => {
           });
         })
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should support create", () => {
@@ -3242,7 +3322,7 @@ describe("Collection", () => {
     });
 
     it("should support update", () => {
-      let id;
+      let id: string;
       return articles
         .create(article)
         .then(result => {
@@ -3266,7 +3346,7 @@ describe("Collection", () => {
     });
 
     it("should roll back operations if there's a failure", () => {
-      let id;
+      let id: string;
       return articles
         .create(article)
         .then(result => {
@@ -3281,11 +3361,11 @@ describe("Collection", () => {
         })
         .catch(() => null)
         .then(result => articles.getAny(id))
-        .then(result => expect(result.data._status).eql("created"));
+        .then(result => expect(result.data!._status).eql("created"));
     });
 
     it("should perform all operations if there's no failure", () => {
-      let id1, id2;
+      let id1: string, id2: string;
       return articles
         .create(article)
         .then(result => {
@@ -3303,9 +3383,9 @@ describe("Collection", () => {
           );
         })
         .then(result => articles.getAny(id1))
-        .then(result => expect(result.data._status).eql("deleted"))
+        .then(result => expect(result.data!._status).eql("deleted"))
         .then(result => articles.getAny(id2))
-        .then(result => expect(result.data._status).eql("deleted"));
+        .then(result => expect(result.data!._status).eql("deleted"));
     });
 
     it("should resolve to the return value of the transaction", () => {
@@ -3320,13 +3400,14 @@ describe("Collection", () => {
     });
 
     it("has operations that are synchronous", () => {
-      let createdArticle;
+      let createdArticle: typeof article & KintoObject;
       return articles
         .create(article)
         .then(result => {
           return articles.execute(
             txn => {
-              createdArticle = txn.get(result.data.id).data;
+              createdArticle = txn.get(result.data.id).data as typeof article &
+                KintoObject;
             },
             { preloadIds: [result.data.id] }
           );
@@ -3337,7 +3418,7 @@ describe("Collection", () => {
 
   /** @test {Collection#pullMetadata} */
   describe("#pullMetadata", () => {
-    let articles;
+    let articles: Collection;
 
     beforeEach(() => (articles = testCollection()));
 
@@ -3346,11 +3427,11 @@ describe("Collection", () => {
         Authorization: "Basic 123",
       };
 
-      const client = {
+      const client = ({
         getData: sandbox.stub(),
-      };
+      } as unknown) as KintoClientCollection;
       return articles.pullMetadata(client, { headers }).then(_ => {
-        sinon.assert.calledWithExactly(client.getData, {
+        sinon.assert.calledWithExactly(client.getData as any, {
           headers,
         });
       });
@@ -3358,7 +3439,7 @@ describe("Collection", () => {
   });
 
   describe("Events", () => {
-    let articles, article;
+    let articles: Collection, article: any;
 
     beforeEach(() => {
       articles = testCollection();
@@ -3466,7 +3547,7 @@ describe("Collection", () => {
             txn.create({ id: uuid4(), title: "foo" });
             txn.create({ id: uuid4(), title: "bar" });
           })
-          .then(() => expect(callback.callCount, 2));
+          .then(() => expect(callback.callCount).to.equal(2));
       });
 
       it("should not send any event if the transaction fails", () => {
@@ -3488,7 +3569,7 @@ describe("Collection", () => {
 
         return articles
           .execute(txn => {
-            txn.deleteAny({ id: uuid4() });
+            txn.deleteAny(uuid4());
           })
           .then(() => expect(callback.callCount).eql(0));
       });

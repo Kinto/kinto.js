@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
-"use strict";
+declare const ChromeUtils: any;
+declare const Cc: any;
+declare const Ci: any;
 
 ChromeUtils.import("resource://gre/modules/Timer.jsm", global);
 const { XPCOMUtils } = ChromeUtils.import(
@@ -40,10 +42,12 @@ XPCOMUtils.defineLazyGetter(global, "generateUUID", () => {
   return generateUUID;
 });
 
-import KintoBase from "./KintoBase";
+import Api from "kinto-http";
+import KintoBase, { KintoBaseOptions } from "./KintoBase";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { RE_RECORD_ID } from "./utils";
+import { IdSchema } from "./types";
 
 export default class Kinto extends KintoBase {
   static get adapters() {
@@ -54,27 +58,30 @@ export default class Kinto extends KintoBase {
   }
 
   get ApiClass() {
-    return KintoHttpClient;
+    return (global as any).KintoHttpClient as typeof Api;
   }
 
-  constructor(options = {}) {
+  constructor(options: KintoBaseOptions = {}) {
     const events = {};
-    EventEmitter.decorate(events);
+    ((global as unknown) as { EventEmitter: any }).EventEmitter.decorate(
+      events
+    );
 
     const defaults = {
       adapter: IDB,
       events,
     };
-    super({ ...defaults, ...options });
+    super({ ...defaults, ...options } as any);
   }
 
-  collection(collName, options = {}) {
-    const idSchema = {
+  collection(collName: string, options = {}) {
+    const idSchema: IdSchema = {
       validate(id) {
-        return typeof id == "string" && RE_RECORD_ID.test(id);
+        return typeof id === "string" && RE_RECORD_ID.test(id);
       },
       generate() {
-        return generateUUID()
+        return (global as any)
+          .generateUUID()
           .toString()
           .replace(/[{}]/g, "");
       },

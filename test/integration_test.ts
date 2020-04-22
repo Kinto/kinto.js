@@ -1,13 +1,19 @@
 "use strict";
 
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 import btoa from "btoa";
 import chai, { expect } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
+import { Collection as KintoClientCollection } from "kinto-http";
 import Kinto from "../src";
-import { recordsEqual, ServerWasFlushedError } from "../src/collection";
+import Collection, {
+  recordsEqual,
+  ServerWasFlushedError,
+  SyncResultObject,
+} from "../src/collection";
+import { IdSchema } from "../src/types";
 
 chai.use(chaiAsPromised);
 chai.should();
@@ -15,12 +21,12 @@ chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
-const appendTransformer = function(s) {
+const appendTransformer = function(s: string) {
   return {
-    encode(record) {
+    encode(record: any) {
       return Promise.resolve({ ...record, title: (record.title || "") + s });
     },
-    decode(record) {
+    decode(record: any) {
       if (record.title) {
         let newTitle = record.title;
         if (record.title.slice(-s.length) === s) {
@@ -36,9 +42,12 @@ const appendTransformer = function(s) {
 /**
  * Verify that syncing again is a no-op.
  */
-function futureSyncsOK(getCollection, getLastSyncResult) {
+function futureSyncsOK(
+  getCollection: () => Collection,
+  getLastSyncResult: () => SyncResultObject
+) {
   describe("On next MANUAL sync", () => {
-    let nextSyncResult;
+    let nextSyncResult: SyncResultObject;
 
     beforeEach(() => {
       return getCollection()
@@ -53,7 +62,7 @@ function futureSyncsOK(getCollection, getLastSyncResult) {
     });
 
     it("should contain no errors", () => {
-      expect(nextSyncResult.errors).to.have.length.of(0);
+      expect(nextSyncResult.errors).to.have.lengthOf(0);
     });
 
     it("should have the same lastModified value", () => {
@@ -61,29 +70,33 @@ function futureSyncsOK(getCollection, getLastSyncResult) {
     });
 
     it("should not contain conflicts anymore", () => {
-      expect(nextSyncResult.conflicts).to.have.length.of(0);
+      expect(nextSyncResult.conflicts).to.have.lengthOf(0);
     });
 
     it("should not skip anything", () => {
-      expect(nextSyncResult.skipped).to.have.length.of(0);
+      expect(nextSyncResult.skipped).to.have.lengthOf(0);
     });
 
     it("should not import anything", () => {
-      expect(nextSyncResult.created).to.have.length.of(0);
+      expect(nextSyncResult.created).to.have.lengthOf(0);
     });
 
     it("should not publish anything", () => {
-      expect(nextSyncResult.published).to.have.length.of(0);
+      expect(nextSyncResult.published).to.have.lengthOf(0);
     });
 
     it("should not update anything", () => {
-      expect(nextSyncResult.updated).to.have.length.of(0);
+      expect(nextSyncResult.updated).to.have.lengthOf(0);
     });
   });
 }
 
 describe("Integration tests", function() {
-  let sandbox, server, kinto, tasks, tasksTransformed;
+  let sandbox: sinon.SinonSandbox,
+    server: KintoServer,
+    kinto: Kinto,
+    tasks: Collection,
+    tasksTransformed: Collection;
 
   // Disabling test timeouts until pserve gets decent startup time.
   this.timeout(0);
@@ -132,55 +145,59 @@ describe("Integration tests", function() {
   afterEach(() => sandbox.restore());
 
   describe("Default server configuration", () => {
-    before(() => server.start());
+    before(() => server.start({}));
 
     after(() => server.stop());
 
     beforeEach(() => {
       return tasks
         .clear()
-        .then(_ => tasksTransformed.clear())
-        .then(_ => server.flush());
+        .then(() => tasksTransformed.clear())
+        .then(() => server.flush());
     });
 
     describe("Synchronization", () => {
-      function testSync(data, options = {}) {
+      function testSync(data: any, options: any = {}) {
         return collectionTestSync(tasks, data, options);
       }
 
-      function collectionTestSync(collection, data, options) {
+      function collectionTestSync(
+        collection: Collection,
+        data: any,
+        options?: Parameters<typeof collection.sync>[0]
+      ) {
         // Create remote records
         return collection.api
           .bucket("default")
-          .collection(collection._name)
+          .collection(collection["_name"])
           .batch(
             batch => {
-              data.localSynced.forEach(r => batch.createRecord(r));
+              data.localSynced.forEach((r: any) => batch.createRecord(r));
             },
             { safe: true }
           )
-          .then(_ => collection.sync(options))
-          .then(_ => {
+          .then(() => collection.sync(options))
+          .then(() => {
             return Promise.all(
-              [].concat(
+              ([] as Promise<any>[]).concat(
                 // Create local unsynced records
-                data.localUnsynced.map(record =>
+                data.localUnsynced.map((record: any) =>
                   collection.create(record, { useRecordId: true })
                 ),
                 // Create remote records
                 collection.api
                   .bucket("default")
-                  .collection(collection._name)
+                  .collection(collection["_name"])
                   .batch(
                     batch => {
-                      data.server.forEach(r => batch.createRecord(r));
+                      data.server.forEach((r: any) => batch.createRecord(r));
                     },
                     { safe: true }
                   )
               )
             );
           })
-          .then(_ => {
+          .then(() => {
             return collection.sync(options);
           });
       }
@@ -194,7 +211,7 @@ describe("Integration tests", function() {
         )
           .then(res => res.json())
           .then(json =>
-            json.data.map(record => ({
+            json.data.map((record: any) => ({
               title: record.title,
               done: record.done,
             }))
@@ -207,8 +224,8 @@ describe("Integration tests", function() {
           localUnsynced: [],
           server: [{ id: uuid4(), title: "task1", done: true }],
         };
-        let syncResult1;
-        let syncResult2;
+        let syncResult1: SyncResultObject;
+        let syncResult2: SyncResultObject;
 
         beforeEach(() => {
           // Sync twice.
@@ -225,7 +242,7 @@ describe("Integration tests", function() {
         });
 
         it("should not contain conflicts", () => {
-          expect(syncResult2.conflicts).to.have.length.of(0);
+          expect(syncResult2.conflicts).to.have.lengthOf(0);
         });
 
         it("should have same lastModified value", () => {
@@ -242,7 +259,7 @@ describe("Integration tests", function() {
           localUnsynced: [{ id: uuid4(), title: "task4", done: false }],
           server: [{ id: uuid4(), title: "task1", done: true }],
         };
-        let syncResult;
+        let syncResult: SyncResultObject;
 
         beforeEach(() => {
           return testSync(testData).then(res => (syncResult = res));
@@ -253,7 +270,7 @@ describe("Integration tests", function() {
         });
 
         it("should contain no errors", () => {
-          expect(syncResult.errors).to.have.length.of(0);
+          expect(syncResult.errors).to.have.lengthOf(0);
         });
 
         it("should have a valid lastModified value", () => {
@@ -261,15 +278,15 @@ describe("Integration tests", function() {
         });
 
         it("should not contain conflicts", () => {
-          expect(syncResult.conflicts).to.have.length.of(0);
+          expect(syncResult.conflicts).to.have.lengthOf(0);
         });
 
         it("should not skip records", () => {
-          expect(syncResult.skipped).to.have.length.of(0);
+          expect(syncResult.skipped).to.have.lengthOf(0);
         });
 
         it("should import server data", () => {
-          expect(syncResult.created).to.have.length.of(1);
+          expect(syncResult.created).to.have.lengthOf(1);
           expect(syncResult.created[0])
             .to.have.property("title")
             .eql(testData.server[0].title);
@@ -280,7 +297,7 @@ describe("Integration tests", function() {
         });
 
         it("should publish local unsynced records", () => {
-          expect(syncResult.published).to.have.length.of(1);
+          expect(syncResult.published).to.have.lengthOf(1);
           expect(
             recordsEqual(syncResult.published[0], testData.localUnsynced[0])
           ).eql(true);
@@ -290,8 +307,8 @@ describe("Integration tests", function() {
           const locallyDeletedId = testData.localSynced[0].id;
           return tasks
             .delete(locallyDeletedId)
-            .then(_ => tasks.sync())
-            .then(_ => getRemoteList())
+            .then(() => tasks.sync())
+            .then(() => getRemoteList())
             .should.eventually.become([
               { title: "task1", done: true },
               { title: "task3", done: true },
@@ -300,7 +317,7 @@ describe("Integration tests", function() {
         });
 
         it("should not update anything", () => {
-          expect(syncResult.updated).to.have.length.of(0);
+          expect(syncResult.updated).to.have.lengthOf(0);
         });
 
         it("should put local database in the expected state", () => {
@@ -336,7 +353,7 @@ describe("Integration tests", function() {
             localUnsynced: [],
             localSynced: [],
             server: Array(10)
-              .fill()
+              .fill(undefined)
               .map((e, i) => ({ id: uuid4(), title: `task${i}`, done: true })),
           })
             .then(() => tasks.list())
@@ -363,7 +380,7 @@ describe("Integration tests", function() {
           ],
           server: [{ id: conflictingId, title: "task4-remote", done: true }],
         };
-        let syncResult;
+        let syncResult: SyncResultObject;
 
         describe("PULL_ONLY strategy (default)", () => {
           beforeEach(() => {
@@ -377,7 +394,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -385,10 +402,10 @@ describe("Integration tests", function() {
           });
 
           it("should have no conflicts", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
-            expect(syncResult.resolved).to.have.length.of(0);
-            expect(syncResult.published).to.have.length.of(0);
-            expect(syncResult.updated).to.have.length.of(1);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
+            expect(syncResult.resolved).to.have.lengthOf(0);
+            expect(syncResult.published).to.have.lengthOf(0);
+            expect(syncResult.updated).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.updated[0].old, {
                 id: conflictingId,
@@ -416,7 +433,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -424,7 +441,7 @@ describe("Integration tests", function() {
           });
 
           it("should have the incoming conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(1);
+            expect(syncResult.conflicts).to.have.lengthOf(1);
             expect(syncResult.conflicts[0].type).eql("incoming");
             expect(
               recordsEqual(syncResult.conflicts[0].local, {
@@ -443,23 +460,23 @@ describe("Integration tests", function() {
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should not merge anything", () => {
-            expect(syncResult.resolved).to.have.length.of(0);
+            expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
           it("should put local database in the expected state", () => {
@@ -493,7 +510,7 @@ describe("Integration tests", function() {
           });
 
           describe("On next MANUAL sync", () => {
-            let nextSyncResult;
+            let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -506,7 +523,7 @@ describe("Integration tests", function() {
             });
 
             it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
+              expect(nextSyncResult.errors).to.have.lengthOf(0);
             });
 
             it("should not have bumped the lastModified value", () => {
@@ -514,23 +531,23 @@ describe("Integration tests", function() {
             });
 
             it("should preserve unresolved conflicts", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(1);
+              expect(nextSyncResult.conflicts).to.have.lengthOf(1);
             });
 
             it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
+              expect(nextSyncResult.skipped).to.have.lengthOf(0);
             });
 
             it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
+              expect(nextSyncResult.created).to.have.lengthOf(0);
             });
 
             it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
+              expect(nextSyncResult.published).to.have.lengthOf(0);
             });
 
             it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
+              expect(nextSyncResult.updated).to.have.lengthOf(0);
             });
           });
         });
@@ -547,7 +564,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -562,19 +579,19 @@ describe("Integration tests", function() {
           });
 
           it("should have no incoming conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should publish resolved conflict using local version", () => {
-            expect(syncResult.published).to.have.length.of(1);
+            expect(syncResult.published).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.published[0], {
                 id: conflictingId,
@@ -585,11 +602,11 @@ describe("Integration tests", function() {
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
@@ -642,7 +659,7 @@ describe("Integration tests", function() {
           });
 
           it("should publish resolved conflict using local version", () => {
-            expect(syncResult.published).to.have.length.of(1);
+            expect(syncResult.published).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.published[0], {
                 id: conflictingId,
@@ -653,11 +670,11 @@ describe("Integration tests", function() {
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
@@ -687,7 +704,7 @@ describe("Integration tests", function() {
           });
 
           it("should put remote test server data in the expected state", () => {
-            return getRemoteList(tasksTransformed._name).should.become([
+            return getRemoteList(tasksTransformed["_name"]).should.become([
               // local task4 should have been published to the server.
               { title: "task1", done: true },
               { title: "task2", done: false },
@@ -709,7 +726,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -724,27 +741,27 @@ describe("Integration tests", function() {
           });
 
           it("should have no incoming conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish resolved conflict using remote version", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(
               recordsEqual(syncResult.resolved[0].accepted, {
                 id: conflictingId,
@@ -798,7 +815,7 @@ describe("Integration tests", function() {
             localUnsynced: [],
             server: [],
           };
-          let rawCollection;
+          let rawCollection: KintoClientCollection;
 
           beforeEach(() => {
             rawCollection = tasks.api.bucket("default").collection("tasks");
@@ -822,7 +839,7 @@ describe("Integration tests", function() {
               .then(() => tasks.sync())
               .then(syncResult => {
                 expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.length.of(1);
+                expect(syncResult.conflicts).to.have.lengthOf(1);
                 // Always pick our version.
                 // #resolve will copy the remote last_modified.
                 return tasks.resolve(
@@ -833,9 +850,9 @@ describe("Integration tests", function() {
               .then(() => tasks.sync())
               .then(syncResult => {
                 expect(syncResult.ok).eql(true);
-                expect(syncResult.conflicts).to.have.length.of(0);
-                expect(syncResult.updated).to.have.length.of(0);
-                expect(syncResult.published).to.have.length.of(1);
+                expect(syncResult.conflicts).to.have.lengthOf(0);
+                expect(syncResult.updated).to.have.lengthOf(0);
+                expect(syncResult.published).to.have.lengthOf(1);
               })
               .then(() => tasks.get(conflictingId))
               .then(({ data: record }) => {
@@ -879,7 +896,7 @@ describe("Integration tests", function() {
               .then(() => tasks.sync())
               .then(syncResult => {
                 expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.length.of(2);
+                expect(syncResult.conflicts).to.have.lengthOf(2);
                 // resolve just one conflict and ensure that the other
                 // one continues preventing the sync, even though it
                 // happened "after" the first conflict
@@ -891,8 +908,8 @@ describe("Integration tests", function() {
               .then(() => tasks.sync())
               .then(syncResult => {
                 expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.length.of(1);
-                expect(syncResult.updated).to.have.length.of(0);
+                expect(syncResult.conflicts).to.have.lengthOf(1);
+                expect(syncResult.updated).to.have.lengthOf(0);
               });
           });
         });
@@ -900,7 +917,7 @@ describe("Integration tests", function() {
 
       describe("Outgoing conflicting local deletion", () => {
         describe("With remote update", () => {
-          let id, conflicts;
+          let id: string, conflicts: any[];
 
           beforeEach(() => {
             return tasks
@@ -927,7 +944,7 @@ describe("Integration tests", function() {
           });
 
           it("should properly list the encountered conflict", () => {
-            expect(conflicts).to.have.length.of(1);
+            expect(conflicts).to.have.lengthOf(1);
           });
 
           it("should list the proper type of conflict", () => {
@@ -949,7 +966,7 @@ describe("Integration tests", function() {
         });
 
         describe("With remote deletion", () => {
-          let id, result;
+          let id: string, result: SyncResultObject;
 
           beforeEach(() => {
             return tasks
@@ -974,7 +991,7 @@ describe("Integration tests", function() {
           });
 
           it("should properly list the encountered conflict", () => {
-            expect(result.skipped).to.have.length.of(1);
+            expect(result.skipped).to.have.lengthOf(1);
           });
 
           it("should provide the record", () => {
@@ -986,27 +1003,26 @@ describe("Integration tests", function() {
       });
 
       describe("Outgoing conflict", () => {
-        let syncResult;
+        let syncResult: SyncResultObject;
 
-        function setupConflict(collection) {
-          let recordId;
+        function setupConflict(collection: Collection) {
+          let recordId: string;
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          return collection
-            ._encodeRecord("remote", record)
+          return collection["_encodeRecord"]("remote", record)
             .then(record => {
               return collection.api
                 .bucket("default")
-                .collection(collection._name)
-                .createRecord(record);
+                .collection(collection["_name"])
+                .createRecord(record as any);
             })
-            .then(_ => collection.sync())
+            .then(() => collection.sync())
             .then(res => {
               recordId = res.created[0].id;
               return collection.delete(recordId, { virtual: false });
             })
-            .then(_ =>
+            .then(() =>
               collection.create(
                 {
                   id: recordId,
@@ -1025,9 +1041,9 @@ describe("Integration tests", function() {
         });
 
         describe("MANUAL strategy (default)", () => {
-          let oldLastModified;
+          let oldLastModified: number;
           beforeEach(() => {
-            oldLastModified = tasks.lastModified;
+            oldLastModified = tasks.lastModified!;
             return tasks.sync().then(res => {
               syncResult = res;
             });
@@ -1038,7 +1054,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1056,30 +1072,30 @@ describe("Integration tests", function() {
           });
 
           it("should have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(1);
+            expect(syncResult.conflicts).to.have.lengthOf(1);
             expect(syncResult.conflicts[0].type).eql("outgoing");
             expect(syncResult.conflicts[0].local.title).eql("task1-local");
             expect(syncResult.conflicts[0].remote.title).eql("task1-remote");
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should not merge anything", () => {
-            expect(syncResult.resolved).to.have.length.of(0);
+            expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
           it("should put local database in the expected state", () => {
@@ -1105,7 +1121,7 @@ describe("Integration tests", function() {
           });
 
           describe("On next MANUAL sync", () => {
-            let nextSyncResult;
+            let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -1118,7 +1134,7 @@ describe("Integration tests", function() {
             });
 
             it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
+              expect(nextSyncResult.errors).to.have.lengthOf(0);
             });
 
             it("should not have bumped the lastModified value", () => {
@@ -1126,31 +1142,31 @@ describe("Integration tests", function() {
             });
 
             it("should preserve unresolved conflicts", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(1);
+              expect(nextSyncResult.conflicts).to.have.lengthOf(1);
             });
 
             it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
+              expect(nextSyncResult.skipped).to.have.lengthOf(0);
             });
 
             it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
+              expect(nextSyncResult.created).to.have.lengthOf(0);
             });
 
             it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
+              expect(nextSyncResult.published).to.have.lengthOf(0);
             });
 
             it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
+              expect(nextSyncResult.updated).to.have.lengthOf(0);
             });
           });
         });
 
         describe("CLIENT_WINS strategy", () => {
-          let oldLastModified;
+          let oldLastModified: number;
           beforeEach(() => {
-            oldLastModified = tasks.lastModified;
+            oldLastModified = tasks.lastModified!;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
               .then(res => {
@@ -1163,7 +1179,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1183,29 +1199,29 @@ describe("Integration tests", function() {
           });
 
           it("should have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should publish resolved conflicts to the server", () => {
-            expect(syncResult.published).to.have.length.of(1);
+            expect(syncResult.published).to.have.lengthOf(1);
             expect(syncResult.published[0].title).eql("task1-local");
             expect(syncResult.published[0].done).eql(false);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
@@ -1261,7 +1277,7 @@ describe("Integration tests", function() {
           });
 
           it("should put the remote database in the expected state", () => {
-            return getRemoteList(tasksTransformed._name).should.become([
+            return getRemoteList(tasksTransformed["_name"]).should.become([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
             ]);
@@ -1269,9 +1285,9 @@ describe("Integration tests", function() {
         });
 
         describe("SERVER_WINS strategy", () => {
-          let oldLastModified;
+          let oldLastModified: number;
           beforeEach(() => {
-            oldLastModified = tasks.lastModified;
+            oldLastModified = tasks.lastModified!;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
               .then(res => {
@@ -1284,7 +1300,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1305,27 +1321,27 @@ describe("Integration tests", function() {
           });
 
           it("should not have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
@@ -1366,15 +1382,15 @@ describe("Integration tests", function() {
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
@@ -1396,49 +1412,45 @@ describe("Integration tests", function() {
       });
 
       describe("Outgoing conflict (remote deleted)", () => {
-        let syncResult;
+        let syncResult: SyncResultObject;
 
-        function setupConflict(collection) {
-          let recordId;
+        function setupConflict(collection: Collection) {
+          let recordId: string;
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          return collection
-            ._encodeRecord("remote", record)
+          return collection["_encodeRecord"]("remote", record)
             .then(record => {
               return collection.api
                 .bucket("default")
-                .collection(collection._name)
-                .createRecord(record);
+                .collection(collection["_name"])
+                .createRecord(record as any);
             })
-            .then(_ => collection.sync())
+            .then(() => collection.sync())
             .then(res => {
               recordId = res.created[0].id;
               return collection.api.deleteBucket("default");
             })
-            .then(_ => {
+            .then(() => {
               // Hack to make it seem like the delete happened "at the
               // same time" as our sync (pull won't see records, but
               // push will fail with conflict)
               return collection.api
                 .bucket("default")
-                .collection(collection._name)
+                .collection(collection["_name"])
                 .listRecords();
             })
             .then(res => {
-              const lastModified = parseInt(res.last_modified, 10);
-              collection._lastModified = lastModified;
+              const lastModified = parseInt(res.last_modified!, 10);
+              collection["_lastModified"] = lastModified;
               return collection.db.saveLastModified(lastModified);
             })
-            .then(_ =>
-              collection.update(
-                {
-                  id: recordId,
-                  title: "task1-local",
-                  done: false,
-                },
-                { useRecordId: true }
-              )
+            .then(() =>
+              collection.update({
+                id: recordId,
+                title: "task1-local",
+                done: false,
+              })
             );
         }
 
@@ -1449,10 +1461,10 @@ describe("Integration tests", function() {
         });
 
         describe("MANUAL strategy (default)", () => {
-          let oldLastModified;
+          let oldLastModified: number;
 
           beforeEach(() => {
-            oldLastModified = tasks.lastModified;
+            oldLastModified = tasks.lastModified!;
             return tasks.sync().then(res => {
               syncResult = res;
             });
@@ -1463,7 +1475,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1481,30 +1493,30 @@ describe("Integration tests", function() {
           });
 
           it("should have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(1);
+            expect(syncResult.conflicts).to.have.lengthOf(1);
             expect(syncResult.conflicts[0].type).eql("outgoing");
             expect(syncResult.conflicts[0].local.title).eql("task1-local");
             expect(syncResult.conflicts[0].remote).eql(null);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should not merge anything", () => {
-            expect(syncResult.resolved).to.have.length.of(0);
+            expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
           it("should put local database in the expected state", () => {
@@ -1527,7 +1539,7 @@ describe("Integration tests", function() {
           });
 
           describe("On next MANUAL sync", () => {
-            let nextSyncResult;
+            let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
               return tasks.sync().then(result => {
@@ -1540,7 +1552,7 @@ describe("Integration tests", function() {
             });
 
             it("should contain no errors", () => {
-              expect(nextSyncResult.errors).to.have.length.of(0);
+              expect(nextSyncResult.errors).to.have.lengthOf(0);
             });
 
             it("should not have bumped the lastModified value", () => {
@@ -1548,23 +1560,23 @@ describe("Integration tests", function() {
             });
 
             it("should preserve unresolved conflicts", () => {
-              expect(nextSyncResult.conflicts).to.have.length.of(1);
+              expect(nextSyncResult.conflicts).to.have.lengthOf(1);
             });
 
             it("should not skip anything", () => {
-              expect(nextSyncResult.skipped).to.have.length.of(0);
+              expect(nextSyncResult.skipped).to.have.lengthOf(0);
             });
 
             it("should not import anything", () => {
-              expect(nextSyncResult.created).to.have.length.of(0);
+              expect(nextSyncResult.created).to.have.lengthOf(0);
             });
 
             it("should not publish anything", () => {
-              expect(nextSyncResult.published).to.have.length.of(0);
+              expect(nextSyncResult.published).to.have.lengthOf(0);
             });
 
             it("should not update anything", () => {
-              expect(nextSyncResult.updated).to.have.length.of(0);
+              expect(nextSyncResult.updated).to.have.lengthOf(0);
             });
           });
         });
@@ -1583,7 +1595,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1591,29 +1603,29 @@ describe("Integration tests", function() {
           });
 
           it("should not have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should publish resolved conflicts to the server", () => {
-            expect(syncResult.published).to.have.length.of(1);
+            expect(syncResult.published).to.have.lengthOf(1);
             expect(syncResult.published[0].title).eql("task1-local");
             expect(syncResult.published[0].done).eql(false);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].rejected).eql(null);
             expect(syncResult.resolved[0].id).eql(
               syncResult.resolved[0].accepted.id
@@ -1673,7 +1685,7 @@ describe("Integration tests", function() {
           });
 
           it("should put the remote database in the expected state", () => {
-            return getRemoteList(tasksTransformed._name).should.become([
+            return getRemoteList(tasksTransformed["_name"]).should.become([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
             ]);
@@ -1694,7 +1706,7 @@ describe("Integration tests", function() {
           });
 
           it("should contain no errors", () => {
-            expect(syncResult.errors).to.have.length.of(0);
+            expect(syncResult.errors).to.have.lengthOf(0);
           });
 
           it("should have a valid lastModified value", () => {
@@ -1702,27 +1714,27 @@ describe("Integration tests", function() {
           });
 
           it("should have the outgoing conflict listed", () => {
-            expect(syncResult.conflicts).to.have.length.of(0);
+            expect(syncResult.conflicts).to.have.lengthOf(0);
           });
 
           it("should not skip records", () => {
-            expect(syncResult.skipped).to.have.length.of(0);
+            expect(syncResult.skipped).to.have.lengthOf(0);
           });
 
           it("should not import anything", () => {
-            expect(syncResult.created).to.have.length.of(0);
+            expect(syncResult.created).to.have.lengthOf(0);
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].accepted).eql(null);
             expect(syncResult.resolved[0]).property("_status", "synced");
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
@@ -1758,15 +1770,15 @@ describe("Integration tests", function() {
           });
 
           it("should not publish anything", () => {
-            expect(syncResult.published).to.have.length.of(0);
+            expect(syncResult.published).to.have.lengthOf(0);
           });
 
           it("should not update anything", () => {
-            expect(syncResult.updated).to.have.length.of(0);
+            expect(syncResult.updated).to.have.lengthOf(0);
           });
 
           it("should list resolved records", () => {
-            expect(syncResult.resolved).to.have.length.of(1);
+            expect(syncResult.resolved).to.have.lengthOf(1);
             expect(syncResult.resolved[0].id).eql(
               syncResult.resolved[0].rejected.id
             );
@@ -1815,7 +1827,7 @@ describe("Integration tests", function() {
       });
 
       describe("Batch request chunking", () => {
-        let nbFixtures;
+        let nbFixtures: number;
 
         function loadFixtures() {
           return tasks.api.fetchServerSettings().then(serverSettings => {
@@ -1829,7 +1841,7 @@ describe("Integration tests", function() {
         }
 
         beforeEach(() => {
-          return loadFixtures().then(_ => tasks.sync());
+          return loadFixtures().then(() => tasks.sync());
         });
 
         it("should create the expected number of records", () => {
@@ -1842,14 +1854,17 @@ describe("Integration tests", function() {
     });
 
     describe("Schemas", () => {
-      function createIntegerIdSchema() {
+      function createIntegerIdSchema(): IdSchema {
         let _next = 0;
         return {
           generate() {
-            return _next++;
+            const id = _next;
+            _next++;
+            return id.toString();
           },
           validate(id) {
-            return id == parseInt(id, 10) && id >= 0;
+            const parsedId = parseInt(id, 10);
+            return +id === +id && parsedId >= 0;
           },
         };
       }
@@ -1867,18 +1882,18 @@ describe("Integration tests", function() {
             .then(record => {
               return record.data.id;
             })
-            .should.become(0);
+            .should.become("0");
         });
       });
     });
 
     describe("Transformers", () => {
-      function createTransformer(char) {
+      function createTransformer(char: string) {
         return {
-          encode(record) {
+          encode(record: any) {
             return { ...record, title: record.title + char };
           },
-          decode(record) {
+          decode(record: any) {
             return { ...record, title: record.title.slice(0, -1) };
           },
         };
@@ -1898,14 +1913,14 @@ describe("Integration tests", function() {
       it("should list published records unencoded", () => {
         return tasks
           .sync()
-          .then(res => res.published.map(x => x.title).sort())
+          .then(res => res.published.map((x: any) => x.title).sort())
           .should.become(["abc", "def"]);
       });
 
       it("should store encoded data remotely", () => {
         return tasks
           .sync()
-          .then(_ => {
+          .then(() => {
             return fetch(
               `${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`,
               {
@@ -1914,15 +1929,15 @@ describe("Integration tests", function() {
             );
           })
           .then(res => res.json())
-          .then(res => res.data.map(x => x.title).sort())
+          .then(res => res.data.map((x: any) => x.title).sort())
           .should.become(["abc!?", "def!?"]);
       });
 
       it("should keep local data decoded", () => {
         return tasks
           .sync()
-          .then(_ => tasks.list())
-          .then(res => res.data.map(x => x.title).sort())
+          .then(() => tasks.list())
+          .then(res => res.data.map((x: any) => x.title).sort())
           .should.become(["abc", "def"]);
       });
     });
@@ -1934,8 +1949,8 @@ describe("Integration tests", function() {
         // Local records with "preserve-on-send" but weren't deleted
         // don't need to be "preserved", so ignore them.
         return {
-          encode(record) {
-            if (record._status == "deleted") {
+          encode(record: any) {
+            if (record._status === "deleted") {
               if (record.title.includes("preserve-on-send")) {
                 if (record.last_modified) {
                   return { ...record, _status: "updated", wasDeleted: true };
@@ -1945,7 +1960,7 @@ describe("Integration tests", function() {
             }
             return record;
           },
-          decode(record) {
+          decode(record: any) {
             // Records that were deleted locally get pushed to the
             // server with `wasDeleted` so that we know they're
             // supposed to be deleted on the client.
@@ -1957,7 +1972,7 @@ describe("Integration tests", function() {
         };
       }
 
-      let tasksRemote;
+      let tasksRemote: KintoClientCollection;
       const preserveOnSendNew = { id: uuid4(), title: "preserve-on-send new" };
       const preserveOnSendOld = {
         id: uuid4(),
@@ -2048,21 +2063,21 @@ describe("Integration tests", function() {
   });
 
   describe("Flushed server", function() {
-    before(() => server.start());
+    before(() => server.start({}));
 
     after(() => server.stop());
 
     beforeEach(() => {
       return tasks
         .clear()
-        .then(_ => {
+        .then(() => {
           return Promise.all([
             tasks.create({ name: "foo" }),
             tasks.create({ name: "bar" }),
           ]);
         })
-        .then(_ => tasks.sync())
-        .then(_ => server.flush());
+        .then(() => tasks.sync())
+        .then(() => server.flush());
     });
 
     it("should reject a call to sync() with appropriate message", () => {
@@ -2077,27 +2092,27 @@ describe("Integration tests", function() {
     it("should allow republishing local collection to flushed server", () => {
       return tasks
         .sync()
-        .catch(_ => tasks.resetSyncStatus())
-        .then(_ => tasks.sync())
+        .catch(() => tasks.resetSyncStatus())
+        .then(() => tasks.sync())
         .should.eventually.have.property("published")
-        .to.have.length.of(2);
+        .to.have.lengthOf(2);
     });
   });
 
   describe("Backed off server", () => {
-    before(() => server.start({ KINTO_BACKOFF: 10 }));
+    before(() => server.start({ KINTO_BACKOFF: "10" }));
 
     after(() => server.stop());
 
     beforeEach(() => {
-      return tasks.clear().then(_ => server.flush());
+      return tasks.clear().then(() => server.flush());
     });
 
     it("should reject sync when the server sends a Backoff header", () => {
       // Note: first call receive the Backoff header, second actually rejects.
       return tasks
         .sync()
-        .then(_ => tasks.sync())
+        .then(() => tasks.sync())
         .should.be.rejectedWith(
           Error,
           /Server is asking clients to back off; retry in 10s/
@@ -2107,10 +2122,12 @@ describe("Integration tests", function() {
 
   describe("Deprecated protocol version", () => {
     beforeEach(() => {
-      return tasks.clear().then(_ => server.flush());
+      return tasks.clear().then(() => server.flush());
     });
 
     describe("Soft EOL", () => {
+      let consoleWarnStub: sinon.SinonStub;
+
       before(() => {
         const tomorrow = new Date(new Date().getTime() + 86400000)
           .toJSON()
@@ -2124,12 +2141,14 @@ describe("Integration tests", function() {
 
       after(() => server.stop());
 
-      beforeEach(() => sandbox.stub(console, "warn"));
+      beforeEach(() => {
+        consoleWarnStub = sandbox.stub(console, "warn") as any;
+      });
 
       it("should warn when the server sends a deprecation Alert header", () => {
-        return tasks.sync().then(_ => {
+        return tasks.sync().then(() => {
           sinon.assert.calledWithExactly(
-            console.warn,
+            consoleWarnStub,
             "Boom",
             "http://www.perdu.com"
           );

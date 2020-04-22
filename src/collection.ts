@@ -1,13 +1,30 @@
-"use strict";
-
-import BaseAdapter from "./adapters/base";
+import { EventEmitter } from "events";
+import BaseAdapter, { StorageProxy } from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
-import { default as uuid4 } from "uuid/v4";
+import { v4 as uuid4 } from "uuid";
 import { omitKeys, RE_RECORD_ID } from "./utils";
+import KintoBase from "./KintoBase";
+import { AggregateResponse, Collection as KintoCollection } from "kinto-http";
+import {
+  KintoRepresentation,
+  IdSchema,
+  RemoteTransformer,
+  AvailableHook,
+  Hooks,
+  UndefiendKintoRepresentation,
+  UpdateRepresentation,
+  WithOptional,
+  RecordStatus,
+  SyncResult,
+  KintoError,
+  Conflict,
+  Change,
+  ConflictsChange,
+} from "./types";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
-const AVAILABLE_HOOKS = ["incoming-changes"];
+const AVAILABLE_HOOKS: AvailableHook[] = ["incoming-changes"];
 const IMPORT_CHUNK_SIZE = 200;
 
 /**
@@ -18,11 +35,18 @@ const IMPORT_CHUNK_SIZE = 200;
  * @param {Array} localFields Additional fields to ignore during the comparison
  * @return {boolean}
  */
-export function recordsEqual(a, b, localFields = []) {
-  const fieldsToClean = RECORD_FIELDS_TO_CLEAN.concat(["last_modified"]).concat(
-    localFields
-  );
-  const cleanLocal = r => omitKeys(r, fieldsToClean);
+export function recordsEqual(
+  a: { [key: string]: unknown },
+  b: { [key: string]: unknown },
+  localFields: readonly string[] = []
+): boolean {
+  const fieldsToClean = [
+    ...RECORD_FIELDS_TO_CLEAN,
+    "last_modified",
+    ...localFields,
+  ];
+  const cleanLocal = (r: { [key: string]: unknown }) =>
+    omitKeys(r, fieldsToClean);
   return deepEqual(cleanLocal(a), cleanLocal(b));
 }
 
@@ -33,6 +57,9 @@ export class SyncResultObject {
   /**
    * Public constructor.
    */
+  public lastModified?: number | null;
+  private _lists: SyncResult;
+  private _cached: Partial<SyncResult>;
   constructor() {
     /**
      * Current synchronization result status; becomes `false` when conflicts or
@@ -40,18 +67,17 @@ export class SyncResultObject {
      * @type {Boolean}
      */
     this.lastModified = null;
-    this._lists = {};
-    [
-      "errors",
-      "created",
-      "updated",
-      "deleted",
-      "published",
-      "conflicts",
-      "skipped",
-      "resolved",
-      "void",
-    ].forEach(l => (this._lists[l] = []));
+    this._lists = {
+      errors: [],
+      created: [],
+      updated: [],
+      deleted: [],
+      published: [],
+      conflicts: [],
+      skipped: [],
+      resolved: [],
+      void: [],
+    };
     this._cached = {};
   }
 
@@ -62,15 +88,18 @@ export class SyncResultObject {
    * @param {Array}  entries The result entries.
    * @return {SyncResultObject}
    */
-  add(type, entries) {
+  add<K extends keyof SyncResult>(
+    type: K,
+    entries: SyncResult[K] | SyncResult[K][0]
+  ): SyncResultObject {
     if (!Array.isArray(this._lists[type])) {
       console.warn(`Unknown type "${type}"`);
-      return;
+      return this;
     }
     if (!Array.isArray(entries)) {
       entries = [entries];
     }
-    this._lists[type] = this._lists[type].concat(entries);
+    this._lists[type] = [...this._lists[type], ...(entries as SyncResult[K])];
     delete this._cached[type];
     return this;
   }
@@ -111,7 +140,7 @@ export class SyncResultObject {
     return this._deduplicate("published");
   }
 
-  _deduplicate(list) {
+  private _deduplicate<K extends keyof SyncResult>(list: K): SyncResult[K] {
     if (!(list in this._cached)) {
       // Deduplicate entries by id. If the values don't have `id` attribute, just
       // keep all.
@@ -128,7 +157,7 @@ export class SyncResultObject {
         Array.from(recordsWithoutId)
       );
     }
-    return this._cached[list];
+    return (this._cached as NonNullable<SyncResult>)[list];
   }
 
   /**
@@ -137,13 +166,13 @@ export class SyncResultObject {
    * @param  {String} type The result type.
    * @return {SyncResultObject}
    */
-  reset(type) {
+  reset(type: keyof SyncResult): SyncResultObject {
     this._lists[type] = [];
     delete this._cached[type];
     return this;
   }
 
-  toObject() {
+  private toObject() {
     // Only used in tests.
     return {
       ok: this.ok,
@@ -161,7 +190,15 @@ export class SyncResultObject {
 }
 
 export class ServerWasFlushedError extends Error {
-  constructor(clientTimestamp, serverTimestamp, message) {
+  public clientTimestamp: number;
+  public serverTimestamp?: number;
+  public message!: string;
+
+  constructor(
+    clientTimestamp: number,
+    serverTimestamp: number | undefined,
+    message: string
+  ) {
     super(message);
 
     if (Error.captureStackTrace) {
@@ -173,14 +210,14 @@ export class ServerWasFlushedError extends Error {
   }
 }
 
-function createUUIDSchema() {
+function createUUIDSchema(): IdSchema {
   return {
     generate() {
       return uuid4();
     },
 
-    validate(id) {
-      return typeof id == "string" && RE_RECORD_ID.test(id);
+    validate(id: string): boolean {
+      return typeof id === "string" && RE_RECORD_ID.test(id);
     },
   };
 }
@@ -195,7 +232,7 @@ function createUUIDSchema() {
  * await exampleCollection.create({ title: "How to tie a tie", favoriteColor: "blue", id: "user123" }, { useRecordId: true })
  * await exampleCollection.getAny("user123")
  */
-export function createKeyValueStoreIdSchema() {
+export function createKeyValueStoreIdSchema(): IdSchema {
   return {
     generate() {
       throw new Error("createKeyValueStoreIdSchema() does not generate an id");
@@ -206,15 +243,15 @@ export function createKeyValueStoreIdSchema() {
   };
 }
 
-function markStatus(record, status) {
+function markStatus<T extends { _status?: string }>(record: T, status: string) {
   return { ...record, _status: status };
 }
 
-function markDeleted(record) {
+function markDeleted<T extends { _status?: string }>(record: T) {
   return markStatus(record, "deleted");
 }
 
-function markSynced(record) {
+function markSynced<T extends { _status?: string }>(record: T) {
   return markStatus(record, "synced");
 }
 
@@ -227,7 +264,14 @@ function markSynced(record) {
  * @param  {String}              strategy    The {@link Collection.strategy}.
  * @return {Object}
  */
-function importChange(transaction, remote, localFields, strategy) {
+function importChange<
+  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+>(
+  transaction: StorageProxy<T>,
+  remote: T & { deleted?: boolean },
+  localFields: string[],
+  strategy: string
+): Change<T> {
   const local = transaction.get(remote.id);
   if (!local) {
     // Not found locally but remote change is marked as deleted; skip to
@@ -294,15 +338,19 @@ function importChange(transaction, remote, localFields, strategy) {
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
-  const type = isIdentical ? "void" : "updated";
-  return { type, data: { old: local, new: synced } };
+  if (isIdentical) {
+    return { type: "void" };
+  }
+  return { type: "updated", data: { old: local, new: synced } };
 }
 
 /**
  * Abstracts a collection of records stored in the local database, providing
  * CRUD operations and synchronization helpers.
  */
-export default class Collection {
+export default class Collection<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus } = any
+> {
   /**
    * Constructor.
    *
@@ -314,7 +362,31 @@ export default class Collection {
    * @param  {KintoBase} kinto   The Kinto instance.
    * @param  {Object}    options The options object.
    */
-  constructor(bucket, name, kinto, options = {}) {
+  private _bucket: string;
+  private _name: string;
+  private _lastModified: number | null;
+  public db: BaseAdapter<B>;
+  public kinto: KintoBase;
+  public events: EventEmitter;
+  public idSchema: IdSchema;
+  public remoteTransformers: RemoteTransformer[];
+  public hooks: Hooks<B>;
+  public localFields: string[];
+
+  constructor(
+    bucket: string,
+    name: string,
+    kinto: KintoBase,
+    options: {
+      adapter?: typeof IDB;
+      adapterOptions?: { dbName?: string; migrateOldData?: boolean };
+      events?: EventEmitter;
+      idSchema?: IdSchema;
+      remoteTransformers?: RemoteTransformer[];
+      hooks?: Hooks<B>;
+      localFields?: string[];
+    } = {}
+  ) {
     this._bucket = bucket;
     this._name = name;
     this._lastModified = null;
@@ -323,15 +395,14 @@ export default class Collection {
     if (!DBAdapter) {
       throw new Error("No adapter provided");
     }
-    const db = new DBAdapter(`${bucket}/${name}`, options.adapterOptions);
+    const db = new DBAdapter(
+      `${bucket}/${name}`,
+      options.adapterOptions
+    ) as BaseAdapter<B>;
     if (!(db instanceof BaseAdapter)) {
       throw new Error("Unsupported adapter.");
     }
     // public properties
-    /**
-     * The db adapter instance
-     * @type {BaseAdapter}
-     */
     this.db = db;
     /**
      * The KintoBase instance.
@@ -342,7 +413,7 @@ export default class Collection {
      * The event emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events;
+    this.events = options.events || new EventEmitter();
     /**
      * The IdSchema instance.
      * @type {Object}
@@ -423,7 +494,7 @@ export default class Collection {
    * @param  {Object|undefined} idSchema
    * @return {Object}
    */
-  _validateIdSchema(idSchema) {
+  private _validateIdSchema(idSchema?: IdSchema) {
     if (typeof idSchema === "undefined") {
       return createUUIDSchema();
     }
@@ -443,7 +514,9 @@ export default class Collection {
    * @param  {Array|undefined} remoteTransformers
    * @return {Array}
    */
-  _validateRemoteTransformers(remoteTransformers) {
+  private _validateRemoteTransformers(
+    remoteTransformers?: RemoteTransformer[]
+  ) {
     if (typeof remoteTransformers === "undefined") {
       return [];
     }
@@ -468,7 +541,9 @@ export default class Collection {
    * @param {Array|undefined} hook.
    * @return {Array}
    **/
-  _validateHook(hook) {
+  private _validateHook(
+    hook: ((record: B, collection: Collection<B>) => any)[]
+  ): ((record: B, collection: Collection<B>) => any)[] {
     if (!Array.isArray(hook)) {
       throw new Error("A hook definition should be an array of functions.");
     }
@@ -486,7 +561,14 @@ export default class Collection {
    * @param  {Object|undefined} hooks
    * @return {Object}
    */
-  _validateHooks(hooks) {
+  private _validateHooks(
+    hooks?: {
+      [key in AvailableHook]?: ((
+        record: B,
+        collection: Collection<B>
+      ) => any)[];
+    }
+  ) {
     if (typeof hooks === "undefined") {
       return {};
     }
@@ -497,15 +579,22 @@ export default class Collection {
       throw new Error("hooks should be an object.");
     }
 
-    const validatedHooks = {};
+    const validatedHooks: {
+      [key in AvailableHook]?: ((
+        record: B,
+        collection: Collection<B>
+      ) => any)[];
+    } = {};
 
     for (const hook in hooks) {
-      if (!AVAILABLE_HOOKS.includes(hook)) {
+      if (!AVAILABLE_HOOKS.includes(hook as AvailableHook)) {
         throw new Error(
           "The hook should be one of " + AVAILABLE_HOOKS.join(", ")
         );
       }
-      validatedHooks[hook] = this._validateHook(hooks[hook]);
+      validatedHooks[hook as AvailableHook] = this._validateHook(
+        hooks[hook as AvailableHook]!
+      );
     }
     return validatedHooks;
   }
@@ -516,7 +605,7 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  async clear() {
+  async clear(): Promise<KintoRepresentation<{}[]>> {
     await this.db.clear();
     await this.db.saveMetadata(null);
     await this.db.saveLastModified(null);
@@ -530,12 +619,13 @@ export default class Collection {
    * @param  {Object} record The record object to encode.
    * @return {Promise}
    */
-  _encodeRecord(type, record) {
-    if (!this[`${type}Transformers`].length) {
+  private _encodeRecord(type: "remote" | "local", record: B): Promise<unknown> {
+    const transformers = type === "remote" ? this.remoteTransformers : [];
+    if (!transformers.length) {
       return Promise.resolve(record);
     }
     return waterfall(
-      this[`${type}Transformers`].map(transformer => {
+      transformers.map(transformer => {
         return record => transformer.encode(record);
       }),
       record
@@ -549,16 +639,17 @@ export default class Collection {
    * @param  {Object} record The record object to decode.
    * @return {Promise}
    */
-  _decodeRecord(type, record) {
-    if (!this[`${type}Transformers`].length) {
+  private _decodeRecord(type: "remote" | "local", record: any): Promise<B> {
+    const transformers = type === "remote" ? this.remoteTransformers : [];
+    if (!transformers.length) {
       return Promise.resolve(record);
     }
     return waterfall(
-      this[`${type}Transformers`].reverse().map(transformer => {
+      transformers.reverse().map(transformer => {
         return record => transformer.decode(record);
       }),
       record
-    );
+    ) as Promise<B>;
   }
 
   /**
@@ -580,11 +671,17 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  create(record, options = { useRecordId: false, synced: false }) {
+  create(
+    record: WithOptional<B, "id">,
+    options: { useRecordId?: boolean; synced?: boolean } = {
+      useRecordId: false,
+      synced: false,
+    }
+  ): Promise<KintoRepresentation<B>> {
     // Validate the record and its ID (if any), even though this
     // validation is also done in the CollectionTransaction method,
     // because we need to pass the ID to preloadIds.
-    const reject = msg => Promise.reject(new Error(msg));
+    const reject = (msg: string) => Promise.reject(new Error(msg));
     if (typeof record !== "object") {
       return reject("Record is not an object.");
     }
@@ -607,11 +704,11 @@ export default class Collection {
       ...record,
       id:
         options.synced || options.useRecordId
-          ? record.id
+          ? record.id!
           : this.idSchema.generate(record),
       _status: options.synced ? "synced" : "created",
-    };
-    if (!this.idSchema.validate(newRecord.id)) {
+    } as B;
+    if (!this.idSchema.validate(newRecord.id!)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
     return this.execute(txn => txn.create(newRecord), {
@@ -638,7 +735,13 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  update(record, options = { synced: false, patch: false }) {
+  update(
+    record: B & { id: string },
+    options: { synced?: boolean; patch?: boolean } = {
+      synced: false,
+      patch: false,
+    }
+  ): Promise<UpdateRepresentation<B>> {
     // Validate the record and its ID, even though this validation is
     // also done in the CollectionTransaction method, because we need
     // to pass the ID to preloadIds.
@@ -652,9 +755,16 @@ export default class Collection {
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
 
-    return this.execute(txn => txn.update(record, options), {
-      preloadIds: [record.id],
-    });
+    return this.execute(
+      txn =>
+        txn.update(record, {
+          synced: options.synced ?? false,
+          patch: options.patch ?? false,
+        }),
+      {
+        preloadIds: [record.id],
+      }
+    );
   }
 
   /**
@@ -663,7 +773,9 @@ export default class Collection {
    * @param  {Object} record
    * @return {Promise}
    */
-  upsert(record) {
+  upsert(
+    record: B & { id: string }
+  ): Promise<WithOptional<UpdateRepresentation<B>, "oldRecord">> {
     // Validate the record and its ID, even though this validation is
     // also done in the CollectionTransaction method, because we need
     // to pass the ID to preloadIds.
@@ -690,7 +802,10 @@ export default class Collection {
    * @param  {Object} options
    * @return {Promise}
    */
-  get(id, options = { includeDeleted: false }) {
+  get(
+    id: string,
+    options: { includeDeleted: boolean } = { includeDeleted: false }
+  ): Promise<KintoRepresentation<B>> {
     return this.execute(txn => txn.get(id, options), { preloadIds: [id] });
   }
 
@@ -700,7 +815,7 @@ export default class Collection {
    * @param  {String} id
    * @return {Promise}
    */
-  getAny(id) {
+  getAny(id: string): Promise<UndefiendKintoRepresentation<B>> {
     return this.execute(txn => txn.getAny(id), { preloadIds: [id] });
   }
 
@@ -715,7 +830,10 @@ export default class Collection {
    * @param  {Object} options  The options object.
    * @return {Promise}
    */
-  delete(id, options = { virtual: true }) {
+  delete(
+    id: string,
+    options: { virtual: boolean } = { virtual: true }
+  ): Promise<KintoRepresentation<B>> {
     return this.execute(
       transaction => {
         return transaction.delete(id, options);
@@ -729,9 +847,9 @@ export default class Collection {
    *
    * @return {Promise}
    */
-  async deleteAll() {
+  async deleteAll(): Promise<KintoRepresentation<B[]>> {
     const { data } = await this.list({}, { includeDeleted: false });
-    const recordIds = data.map(record => record.id);
+    const recordIds = data.map((record: any) => record.id);
     return this.execute(
       transaction => {
         return transaction.deleteAll(recordIds);
@@ -747,7 +865,9 @@ export default class Collection {
    * @param  {String} id       The record's Id.
    * @return {Promise}
    */
-  deleteAny(id) {
+  deleteAny(
+    id: string
+  ): Promise<KintoRepresentation<B> & { deleted: boolean }> {
     return this.execute(txn => txn.deleteAny(id), { preloadIds: [id] });
   }
 
@@ -765,12 +885,20 @@ export default class Collection {
    * @param  {Object} options The options object.
    * @return {Promise}
    */
-  async list(params = {}, options = { includeDeleted: false }) {
+  async list(
+    params: {
+      filters?: {
+        [key: string]: any;
+      };
+      order?: string;
+    } = {},
+    options: { includeDeleted: boolean } = { includeDeleted: false }
+  ): Promise<KintoRepresentation<B[]>> {
     params = { order: "-last_modified", filters: {}, ...params };
     const results = await this.db.list(params);
     let data = results;
     if (!options.includeDeleted) {
-      data = results.filter(record => record._status !== "deleted");
+      data = results.filter((record: any) => record._status !== "deleted");
     }
     return { data, permissions: {} };
   }
@@ -785,10 +913,10 @@ export default class Collection {
    * @return {Promise}
    */
   async importChanges(
-    syncResultObject,
-    decodedChanges,
-    strategy = Collection.strategy.MANUAL
-  ) {
+    syncResultObject: SyncResultObject,
+    decodedChanges: any[],
+    strategy: string = Collection.strategy.MANUAL
+  ): Promise<SyncResultObject> {
     // Retrieve records matching change ids.
     try {
       for (let i = 0; i < decodedChanges.length; i += IMPORT_CHUNK_SIZE) {
@@ -805,9 +933,9 @@ export default class Collection {
                 strategy
               );
             });
-            const conflicts = imports
-              .filter(i => i.type === "conflicts")
-              .map(i => i.data);
+            const conflicts = (imports.filter(
+              i => i.type === "conflicts"
+            ) as ConflictsChange<B>[]).map(i => i.data);
             const resolved = this._handleConflicts(
               transaction,
               conflicts,
@@ -826,7 +954,7 @@ export default class Collection {
         }
       }
     } catch (err) {
-      const data = {
+      const data: KintoError = {
         type: "incoming",
         message: err.message,
         stack: err.stack,
@@ -848,11 +976,11 @@ export default class Collection {
    * @param  {String}           strategy         The {@link Collection.strategy}.
    * @return {Promise}
    */
-  async _applyPushedResults(
-    syncResultObject,
-    toApplyLocally,
-    conflicts,
-    strategy = Collection.strategy.MANUAL
+  private async _applyPushedResults(
+    syncResultObject: SyncResultObject,
+    toApplyLocally: any[],
+    conflicts: any[],
+    strategy: string = Collection.strategy.MANUAL
   ) {
     const toDeleteLocally = toApplyLocally.filter(r => r.deleted);
     const toUpdateLocally = toApplyLocally.filter(r => !r.deleted);
@@ -893,7 +1021,11 @@ export default class Collection {
    * @return {Promise<Array<Object>>} The resolved conflicts, as an
    *    array of {accepted, rejected} objects
    */
-  _handleConflicts(transaction, conflicts, strategy) {
+  private _handleConflicts(
+    transaction: StorageProxy<B>,
+    conflicts: any[],
+    strategy: string
+  ) {
     if (strategy === Collection.strategy.MANUAL) {
       return [];
     }
@@ -953,7 +1085,10 @@ export default class Collection {
    * @return {Promise} Resolves with the result of the given function
    *    when the transaction commits.
    */
-  execute(doOperations, { preloadIds = [] } = {}) {
+  execute<R>(
+    doOperations: (proxy: CollectionTransaction<B>) => R,
+    { preloadIds = [] }: { preloadIds?: string[] } = {}
+  ): Promise<R> {
     for (const id of preloadIds) {
       if (!this.idSchema.validate(id)) {
         return Promise.reject(Error(`Invalid Id: ${id}`));
@@ -980,7 +1115,7 @@ export default class Collection {
    *
    * @return {Promise} Resolves with the number of processed records.
    */
-  async resetSyncStatus() {
+  async resetSyncStatus(): Promise<number> {
     const unsynced = await this.list(
       { filters: { _status: ["deleted", "synced"] }, order: "" },
       { includeDeleted: true }
@@ -1048,7 +1183,18 @@ export default class Collection {
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  async pullChanges(client, syncResultObject, options = {}) {
+  async pullChanges(
+    client: KintoCollection,
+    syncResultObject: SyncResultObject,
+    options: {
+      exclude?: any[];
+      strategy?: string;
+      lastModified?: number | null;
+      headers?: Record<string, string>;
+      expectedTimestamp?: string | null;
+      retry?: number;
+    } = {}
+  ): Promise<SyncResultObject> {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
@@ -1102,7 +1248,7 @@ export default class Collection {
     // This is relevant for the Kinto demo server
     // (and thus for many new comers).
     const localSynced = options.lastModified;
-    const serverChanged = unquoted > options.lastModified;
+    const serverChanged = unquoted && unquoted > options.lastModified!;
     const emptyCollection = data.length === 0;
     if (!options.exclude && localSynced && serverChanged && emptyCollection) {
       const e = new ServerWasFlushedError(
@@ -1143,13 +1289,13 @@ export default class Collection {
     return syncResultObject;
   }
 
-  applyHook(hookName, payload) {
-    if (typeof this.hooks[hookName] == "undefined") {
+  applyHook(hookName: AvailableHook, payload: any): Promise<{ changes: B[] }> {
+    if (typeof this.hooks[hookName] === "undefined") {
       return Promise.resolve(payload);
     }
     return waterfall(
-      this.hooks[hookName].map(hook => {
-        return record => {
+      this.hooks[hookName]!.map(hook => {
+        return (record: any) => {
           const result = hook(payload, this);
           const resultThenable = result && typeof result.then === "function";
           const resultChanges =
@@ -1165,7 +1311,7 @@ export default class Collection {
         };
       }),
       payload
-    );
+    ) as Promise<{ changes: B[] }>;
   }
 
   /**
@@ -1185,27 +1331,36 @@ export default class Collection {
    * @param  {Object}                 options          The options object.
    * @return {Promise}
    */
-  async pushChanges(client, changes, syncResultObject, options = {}) {
+  async pushChanges(
+    client: KintoCollection,
+    changes: any,
+    syncResultObject: SyncResultObject,
+    options: {
+      strategy?: string;
+      headers?: Record<string, string>;
+      retry?: number;
+    } = {}
+  ): Promise<SyncResultObject> {
     if (!syncResultObject.ok) {
       return syncResultObject;
     }
-    const safe =
-      !options.strategy || options.strategy !== Collection.CLIENT_WINS;
-    const toDelete = changes.filter(r => r._status == "deleted");
-    const toSync = changes.filter(r => r._status != "deleted");
+    // FIXME: replacing `undefined` with Collection.strategy.CLIENT_WINS breaks tests
+    const safe = !options.strategy || options.strategy !== undefined;
+    const toDelete = changes.filter((r: any) => r._status === "deleted");
+    const toSync = changes.filter((r: any) => r._status != "deleted");
 
     // Perform a batch request with every changes.
-    const synced = await client.batch(
+    const synced = (await client.batch(
       batch => {
-        toDelete.forEach(r => {
+        toDelete.forEach((r: any) => {
           // never published locally deleted records should not be pusblished
           if (r.last_modified) {
             batch.deleteRecord(r);
           }
         });
-        toSync.forEach(r => {
+        toSync.forEach((r: any) => {
           // Clean local fields (like _status) before sending to server.
-          const published = this.cleanLocalFields(r);
+          const published = this.cleanLocalFields(r) as B;
           if (r._status === "created") {
             batch.createRecord(published);
           } else {
@@ -1219,12 +1374,12 @@ export default class Collection {
         safe,
         aggregate: true,
       }
-    );
+    )) as AggregateResponse;
 
     // Store outgoing errors into sync result object
     syncResultObject.add(
       "errors",
-      synced.errors.map(e => ({ ...e, type: "outgoing" }))
+      synced.errors.map((e: any) => ({ ...e, type: "outgoing" }))
     );
 
     // Store outgoing conflicts into sync result object
@@ -1245,7 +1400,10 @@ export default class Collection {
 
     // Records that must be deleted are either deletions that were pushed
     // to server (published) or deleted records that were never pushed (skipped).
-    const missingRemotely = synced.skipped.map(r => ({ ...r, deleted: true }));
+    const missingRemotely = synced.skipped.map((r: any) => ({
+      ...r,
+      deleted: true,
+    }));
 
     // For created and updated records, the last_modified coming from server
     // will be stored locally.
@@ -1256,7 +1414,7 @@ export default class Collection {
 
     // Apply the decode transformers, if any
     const decoded = await Promise.all(
-      toApplyLocally.map(record => {
+      toApplyLocally.map((record: any) => {
         return this._decodeRecord("remote", record);
       })
     );
@@ -1281,8 +1439,8 @@ export default class Collection {
    * @param  {Object} record  A record with potential local fields.
    * @return {Object}
    */
-  cleanLocalFields(record) {
-    const localKeys = RECORD_FIELDS_TO_CLEAN.concat(this.localFields);
+  cleanLocalFields(record: B) {
+    const localKeys = [...RECORD_FIELDS_TO_CLEAN, ...this.localFields];
     return omitKeys(record, localKeys);
   }
 
@@ -1295,7 +1453,10 @@ export default class Collection {
    * @param  {Object} resolution The proposed record.
    * @return {Promise}
    */
-  resolve(conflict, resolution) {
+  resolve(
+    conflict: Conflict<B>,
+    resolution: B
+  ): Promise<KintoRepresentation<B>> {
     return this.db.execute(transaction => {
       const updated = this._resolveRaw(conflict, resolution);
       transaction.update(updated);
@@ -1306,8 +1467,8 @@ export default class Collection {
   /**
    * @private
    */
-  _resolveRaw(conflict, resolution) {
-    const resolved = {
+  private _resolveRaw(conflict: Conflict<B>, resolution: B): B {
+    const resolved: B = {
       ...resolution,
       // Ensure local record has the latest authoritative timestamp
       last_modified: conflict.remote && conflict.remote.last_modified,
@@ -1342,7 +1503,16 @@ export default class Collection {
    * @throws {Error} If an invalid remote option is passed.
    */
   async sync(
-    options = {
+    options: {
+      strategy?: string;
+      headers?: Record<string, string>;
+      retry?: number;
+      ignoreBackoff?: boolean;
+      bucket?: string | null;
+      collection?: string | null;
+      remote?: string | null;
+      expectedTimestamp?: string | null;
+    } = {
       strategy: Collection.strategy.MANUAL,
       headers: {},
       retry: 1,
@@ -1352,7 +1522,7 @@ export default class Collection {
       remote: null,
       expectedTimestamp: null,
     }
-  ) {
+  ): Promise<SyncResultObject> {
     options = {
       ...options,
       bucket: options.bucket || this.bucket,
@@ -1374,8 +1544,8 @@ export default class Collection {
     }
 
     const client = this.api
-      .bucket(options.bucket)
-      .collection(options.collection);
+      .bucket(options.bucket!)
+      .collection(options.collection!);
 
     const result = new SyncResultObject();
     try {
@@ -1386,7 +1556,7 @@ export default class Collection {
       await this.pullChanges(client, result, options);
       const { lastModified } = result;
 
-      if (options.strategy != Collection.strategy.PULL_ONLY) {
+      if (options.strategy !== Collection.strategy.PULL_ONLY) {
         // Fetch local changes
         const toSync = await this.gatherLocalChanges();
 
@@ -1450,7 +1620,7 @@ export default class Collection {
    * @param  {Array} records The previously exported list of records to load.
    * @return {Promise} with the effectively imported records.
    */
-  async loadDump(records) {
+  async loadDump(records: (B & { last_modified: number })[]): Promise<B[]> {
     return this.importBulk(records);
   }
 
@@ -1463,7 +1633,7 @@ export default class Collection {
    * @param  {Array} records The previously exported list of records to load.
    * @return {Promise} with the effectively imported records.
    */
-  async importBulk(records) {
+  async importBulk(records: (B & { last_modified: number })[]): Promise<B[]> {
     if (!Array.isArray(records)) {
       throw new Error("Records is not an array.");
     }
@@ -1489,8 +1659,8 @@ export default class Collection {
     // XXX filter by status / ids in records
 
     const { data } = await this.list({}, { includeDeleted: true });
-    const existingById = data.reduce((acc, record) => {
-      acc[record.id] = record;
+    const existingById = data.reduce<{ [key: string]: B }>((acc, record) => {
+      acc[record.id!] = record;
       return acc;
     }, {});
 
@@ -1511,16 +1681,22 @@ export default class Collection {
     return await this.db.importBulk(newRecords.map(markSynced));
   }
 
-  async pullMetadata(client, options = {}) {
+  async pullMetadata(
+    client: KintoCollection,
+    options: {
+      expectedTimestamp?: string | null;
+      headers?: Record<string, string>;
+    } = {}
+  ): Promise<{ [key: string]: unknown }> {
     const { expectedTimestamp, headers } = options;
     const query = expectedTimestamp
-      ? { query: { _expected: expectedTimestamp } }
+      ? { query: { _expected: expectedTimestamp.toString() } }
       : undefined;
     const metadata = await client.getData({
       ...query,
       headers,
     });
-    return this.db.saveMetadata(metadata);
+    return this.db.saveMetadata(metadata as any);
   }
 
   async metadata() {
@@ -1535,15 +1711,21 @@ export default class Collection {
  * The collection itself offers functions of the same name. These will
  * perform just one operation in its own transaction.
  */
-export class CollectionTransaction {
-  constructor(collection, adapterTransaction) {
+export class CollectionTransaction<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> {
+  public collection: Collection<B>;
+  public adapterTransaction: StorageProxy<B>;
+  private _events: { action: string; payload: any }[];
+
+  constructor(collection: Collection<B>, adapterTransaction: StorageProxy<B>) {
     this.collection = collection;
     this.adapterTransaction = adapterTransaction;
 
     this._events = [];
   }
 
-  _queueEvent(action, payload) {
+  private _queueEvent(action: string, payload: any) {
     this._events.push({ action, payload });
   }
 
@@ -1551,7 +1733,7 @@ export class CollectionTransaction {
    * Emit queued events, to be called once every transaction operations have
    * been executed successfully.
    */
-  emitEvents() {
+  emitEvents(): void {
     for (const { action, payload } of this._events) {
       this.collection.events.emit(action, payload);
     }
@@ -1574,7 +1756,7 @@ export class CollectionTransaction {
    * @param  {String} id
    * @return {Object}
    */
-  getAny(id) {
+  getAny(id: string): UndefiendKintoRepresentation<B> {
     const record = this.adapterTransaction.get(id);
     return { data: record, permissions: {} };
   }
@@ -1589,7 +1771,10 @@ export class CollectionTransaction {
    * @param  {Object} options
    * @return {Object}
    */
-  get(id, options = { includeDeleted: false }) {
+  get(
+    id: string,
+    options: { includeDeleted: boolean } = { includeDeleted: false }
+  ): KintoRepresentation<B> {
     const res = this.getAny(id);
     if (
       !res.data ||
@@ -1598,7 +1783,7 @@ export class CollectionTransaction {
       throw new Error(`Record with id=${id} not found.`);
     }
 
-    return res;
+    return res as KintoRepresentation<B>;
   }
 
   /**
@@ -1612,10 +1797,13 @@ export class CollectionTransaction {
    * @param  {Object} options  The options object.
    * @return {Object}
    */
-  delete(id, options = { virtual: true }) {
+  delete(
+    id: string,
+    options: { virtual: boolean } = { virtual: true }
+  ): KintoRepresentation<B> {
     // Ensure the record actually exists.
     const existing = this.adapterTransaction.get(id);
-    const alreadyDeleted = existing && existing._status == "deleted";
+    const alreadyDeleted = existing && existing._status === "deleted";
     if (!existing || (alreadyDeleted && options.virtual)) {
       throw new Error(`Record with id=${id} not found.`);
     }
@@ -1636,8 +1824,8 @@ export class CollectionTransaction {
    * @param  {Array} ids        Array of non-deleted Record Ids.
    * @return {Object}
    */
-  deleteAll(ids) {
-    const existingRecords = [];
+  deleteAll(ids: string[]): KintoRepresentation<B[]> {
+    const existingRecords: any[] = [];
     ids.forEach(id => {
       existingRecords.push(this.adapterTransaction.get(id));
       this.delete(id);
@@ -1654,13 +1842,17 @@ export class CollectionTransaction {
    * @param  {String} id       The record's Id.
    * @return {Object}
    */
-  deleteAny(id) {
+  deleteAny(id: string): KintoRepresentation<B> & { deleted: boolean } {
     const existing = this.adapterTransaction.get(id);
     if (existing) {
       this.adapterTransaction.update(markDeleted(existing));
       this._queueEvent("delete", { data: existing });
     }
-    return { data: { id, ...existing }, deleted: !!existing, permissions: {} };
+    return {
+      data: { id, ...existing } as B,
+      deleted: !!existing,
+      permissions: {},
+    };
   }
 
   /**
@@ -1670,7 +1862,7 @@ export class CollectionTransaction {
    * @param  {Object} record, which must contain an ID
    * @return {Object}
    */
-  create(record) {
+  create(record: B): KintoRepresentation<B> {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
@@ -1698,7 +1890,13 @@ export class CollectionTransaction {
    * @param  {Object} options
    * @return {Object}
    */
-  update(record, options = { synced: false, patch: false }) {
+  update(
+    record: B & { id: string },
+    options: { synced: boolean; patch: boolean } = {
+      synced: false,
+      patch: false,
+    }
+  ): UpdateRepresentation<B> {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
@@ -1728,7 +1926,11 @@ export class CollectionTransaction {
    * @param  {Object} newRecord: the record to replace it with
    * @return {Object}
    */
-  _updateRaw(oldRecord, newRecord, { synced = false } = {}) {
+  private _updateRaw(
+    oldRecord: any,
+    newRecord: any,
+    { synced = false }: { synced?: boolean } = {}
+  ) {
     const updated = { ...newRecord };
     // Make sure to never loose the existing timestamp.
     if (oldRecord && oldRecord.last_modified && !updated.last_modified) {
@@ -1740,9 +1942,9 @@ export class CollectionTransaction {
     const isIdentical =
       oldRecord &&
       recordsEqual(oldRecord, updated, this.collection.localFields);
-    const keepSynced = isIdentical && oldRecord._status == "synced";
+    const keepSynced = isIdentical && oldRecord._status === "synced";
     const neverSynced =
-      !oldRecord || (oldRecord && oldRecord._status == "created");
+      !oldRecord || (oldRecord && oldRecord._status === "created");
     const newStatus =
       keepSynced || synced ? "synced" : neverSynced ? "created" : "updated";
     return markStatus(updated, newStatus);
@@ -1759,7 +1961,9 @@ export class CollectionTransaction {
    * @param  {Object} record
    * @return {Object}
    */
-  upsert(record) {
+  upsert(
+    record: B & { id: string }
+  ): WithOptional<UpdateRepresentation<B>, "oldRecord"> {
     if (typeof record !== "object") {
       throw new Error("Record is not an object.");
     }
@@ -1773,7 +1977,7 @@ export class CollectionTransaction {
     const updated = this._updateRaw(oldRecord, record);
     this.adapterTransaction.update(updated);
     // Don't return deleted records -- pretend they are gone
-    if (oldRecord && oldRecord._status == "deleted") {
+    if (oldRecord && oldRecord._status === "deleted") {
       oldRecord = undefined;
     }
     if (oldRecord) {

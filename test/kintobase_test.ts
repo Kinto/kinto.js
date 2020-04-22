@@ -3,8 +3,8 @@
 import { expect } from "chai";
 import { EventEmitter } from "events";
 
-import KintoBase from "../src/KintoBase.js";
-import BaseAdapter from "../src/adapters/base.js";
+import KintoBase from "../src/KintoBase";
+import BaseAdapter from "../src/adapters/base";
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {
@@ -29,11 +29,11 @@ describe("KintoBase", () => {
   });
 
   describe("collection options", () => {
-    let kinto;
+    let kinto: KintoBase;
 
     beforeEach(() => {
       kinto = new KintoBase({
-        adapter: KintoBase.adapters.BaseAdapter,
+        adapter: KintoBase.adapters.BaseAdapter as any,
         events: new EventEmitter(),
       });
     });

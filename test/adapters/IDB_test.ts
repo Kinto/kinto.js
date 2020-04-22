@@ -1,14 +1,14 @@
-"use strict";
-
 import sinon from "sinon";
 import { expect } from "chai";
 
-import IDB, { open, execute } from "../../src/adapters/IDB.js";
-import { default as uuid4 } from "uuid/v4";
+import IDB, { open, execute } from "../../src/adapters/IDB";
+import { v4 as uuid4 } from "uuid";
+import { StorageProxy } from "../../src/adapters/base";
+import { KintoIdObject } from "kinto-http";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
-  let sandbox, db;
+  let sandbox: sinon.SinonSandbox, db: IDB<any>;
 
   beforeEach(() => {
     sandbox = sinon.createSandbox();
@@ -25,12 +25,12 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on open request error", () => {
-      const fakeOpenRequest = {};
+      const fakeOpenRequest = {} as IDBOpenDBRequest;
       sandbox.stub(indexedDB, "open").returns(fakeOpenRequest);
       const db = new IDB("another/db");
-      const prom = db.open(indexedDB);
+      const prom = db.open();
 
-      fakeOpenRequest.onerror({ target: { error: "fail" } });
+      fakeOpenRequest.onerror!({ target: { error: "fail" } } as any);
 
       return prom.should.be.rejectedWith("fail");
     });
@@ -43,14 +43,14 @@ describe("adapter.IDB", () => {
     });
 
     it("should be fullfilled when no connection has been opened", () => {
-      db._db = null;
+      db["_db"] = null;
       return db.close().should.be.fulfilled;
     });
 
     it("should close an opened connection to the database", () => {
       return db
         .close()
-        .then(_ => db._db)
+        .then(() => db["_db"])
         .should.become(null);
     });
   });
@@ -60,12 +60,12 @@ describe("adapter.IDB", () => {
     it("should clear the database", () => {
       return db
         .execute(transaction => {
-          transaction.create({ id: 1 });
-          transaction.create({ id: 2 });
+          transaction.create({ id: "1" });
+          transaction.create({ id: "2" });
         })
         .then(() => db.clear())
         .then(() => db.list())
-        .should.eventually.have.length.of(0);
+        .should.eventually.have.lengthOf(0);
     });
 
     it("should isolate records by collection", async () => {
@@ -73,22 +73,22 @@ describe("adapter.IDB", () => {
       const db2 = new IDB("main/tippytop-2");
 
       await db1.open();
-      await db1.execute(t => t.create({ id: 1 }));
+      await db1.execute(t => t.create({ id: "1" }));
       await db1.saveLastModified(42);
       await db1.close();
 
       await db2.open();
-      await db2.execute(t => t.create({ id: 1 }));
-      await db2.execute(t => t.create({ id: 2 }));
-      await db1.saveLastModified(43);
+      await db2.execute(t => t.create({ id: "1" }));
+      await db2.execute(t => t.create({ id: "2" }));
+      await db2.saveLastModified(43);
       await db2.close();
 
       await db1.clear();
 
       expect(await db1.list()).to.have.length(0);
-      expect(await db1.getLastModified(), null);
+      expect(await db1.getLastModified()).to.equal(42);
       expect(await db2.list()).to.have.length(2);
-      expect(await db2.getLastModified(), 43);
+      expect(await db2.getLastModified()).to.equal(43);
     });
 
     it("should reject on transaction error", () => {
@@ -101,7 +101,7 @@ describe("adapter.IDB", () => {
               },
             };
           },
-        });
+        } as any);
       });
       return db.clear().should.be.rejectedWith(Error, "transaction error");
     });
@@ -115,9 +115,11 @@ describe("adapter.IDB", () => {
 
     describe("No preloading", () => {
       it("should open a connection to the db", () => {
-        const open = sandbox.stub(db, "open").returns(Promise.resolve());
+        const open = sandbox
+          .stub(db, "open")
+          .returns(Promise.resolve({} as IDB<any>));
 
-        return db.execute(() => {}).then(_ => sinon.assert.calledOnce(open));
+        return db.execute(() => {}).then(() => sinon.assert.calledOnce(open));
       });
 
       it("should execute the specified callback", () => {
@@ -133,8 +135,10 @@ describe("adapter.IDB", () => {
       });
 
       it("should rollback if the callback fails", () => {
-        const callback = transaction => {
-          transaction.execute(t => t.create({ id: 1, foo: "bar" }));
+        const callback = (transaction: any) => {
+          transaction.execute((t: StorageProxy<any>) =>
+            t.create({ id: "1", foo: "bar" })
+          );
           throw new Error("Unexpected");
         };
         return db
@@ -163,7 +167,7 @@ describe("adapter.IDB", () => {
       });
 
       it("should create a record", () => {
-        const data = { id: 1, foo: "bar" };
+        const data = { id: "1", foo: "bar" };
         return db
           .execute(t => t.create(data))
           .then(() => db.list())
@@ -171,29 +175,29 @@ describe("adapter.IDB", () => {
       });
 
       it("should update a record", () => {
-        const data = { id: 1, foo: "bar" };
+        const data = { id: "1", foo: "bar" };
         return db
           .execute(t => t.create(data))
-          .then(_ => {
+          .then(() => {
             return db.execute(transaction => {
               transaction.update({ ...data, foo: "baz" });
             });
           })
-          .then(_ => db.get(data.id))
-          .then(res => res.foo)
+          .then(() => db.get(data.id))
+          .then(res => res!.foo)
           .should.become("baz");
       });
 
       it("should delete a record", () => {
-        const data = { id: 1, foo: "bar" };
+        const data = { id: "1", foo: "bar" };
         return db
           .execute(t => t.create(data))
-          .then(_ => {
+          .then(() => {
             return db.execute(transaction => {
               transaction.delete(data.id);
             });
           })
-          .then(_ => db.get(data.id))
+          .then(() => db.get(data.id))
           .should.become(undefined);
       });
 
@@ -201,25 +205,25 @@ describe("adapter.IDB", () => {
         sandbox
           .stub(db, "prepare")
           .callsFake(async (name, callback, options) => {
-            const abort = e => {
+            const abort = (e: Error) => {
               throw e;
             };
             callback(
               {
                 openCursor: () => ({
-                  set onsuccess(cb) {
+                  set onsuccess(cb: (arg0: { target: {} }) => void) {
                     cb({ target: {} });
                   },
                 }),
                 add() {
                   throw new Error("add error");
                 },
-              },
+              } as any,
               abort
             );
           });
         return db
-          .execute(transaction => transaction.create({ id: 42 }))
+          .execute(transaction => transaction.create({ id: "42" }))
           .should.be.rejectedWith(Error, "add error");
       });
 
@@ -231,20 +235,22 @@ describe("adapter.IDB", () => {
               openCursor() {
                 throw new Error("transaction error");
               },
-            });
+            } as any);
           });
         return db
-          .execute(transaction => transaction.create({}), { preload: [1, 2] })
+          .execute(transaction => transaction.create({} as any), {
+            preload: ["1", "2"],
+          })
           .should.be.rejectedWith(Error, "transaction error");
       });
     });
 
     describe("Preloaded records", () => {
-      const articles = [];
+      const articles: KintoIdObject[] = [];
       for (let i = 0; i < 100; i++) {
         articles.push({ id: `${i}`, title: `title${i}` });
       }
-      const preload = [];
+      const preload: string[] = [];
       for (let i = 0; i < 10; i++) {
         preload.push(articles[Math.floor(Math.random() * articles.length)].id);
       }
@@ -252,7 +258,7 @@ describe("adapter.IDB", () => {
       it("should expose preloaded records using get()", () => {
         return db
           .execute(t => articles.map(a => t.create(a)))
-          .then(_ => {
+          .then(() => {
             return db.execute(
               transaction => {
                 return preload.map(p => transaction.get(p));
@@ -262,7 +268,7 @@ describe("adapter.IDB", () => {
           })
           .then(preloaded => {
             preloaded.forEach((p, i) => {
-              expect(p.title).eql(articles[preload[i]].title);
+              expect(p.title).eql(articles[parseInt(preload[i], 10)].title);
             });
           });
       });
@@ -272,18 +278,18 @@ describe("adapter.IDB", () => {
   /** @test {IDB#get} */
   describe("#get", () => {
     beforeEach(() => {
-      return db.execute(t => t.create({ id: 1, foo: "bar" }));
+      return db.execute(t => t.create({ id: "1", foo: "bar" }));
     });
 
     it("should retrieve a record from its id", () => {
       return db
-        .get(1)
-        .then(res => res.foo)
+        .get("1")
+        .then(res => res!.foo)
         .should.eventually.eql("bar");
     });
 
     it("should return undefined when record is not found", () => {
-      return db.get(999).should.eventually.eql(undefined);
+      return db.get("999").should.eventually.eql(undefined);
     });
 
     it("should reject on transaction error", () => {
@@ -292,9 +298,11 @@ describe("adapter.IDB", () => {
           get() {
             throw new Error("transaction error");
           },
-        });
+        } as any);
       });
-      return db.get().should.be.rejectedWith(Error, "transaction error");
+      return db
+        .get(undefined as any)
+        .should.be.rejectedWith(Error, "transaction error");
     });
   });
 
@@ -304,13 +312,13 @@ describe("adapter.IDB", () => {
       return db.execute(transaction => {
         for (let id = 1; id <= 10; id++) {
           // id is indexed, name is not
-          transaction.create({ id, name: "#" + id });
+          transaction.create({ id: id.toString(), name: "#" + id });
         }
       });
     });
 
     it("should retrieve the list of records", () => {
-      return db.list().should.eventually.have.length.of(10);
+      return db.list().should.eventually.have.lengthOf(10);
     });
 
     it("should prefix error encountered", () => {
@@ -330,7 +338,7 @@ describe("adapter.IDB", () => {
               },
             };
           },
-        });
+        } as any);
       });
       return db
         .list()
@@ -348,9 +356,9 @@ describe("adapter.IDB", () => {
 
       await db1.open();
       await db2.open();
-      await db1.execute(t => t.create({ id: 1 }));
-      await db2.execute(t => t.create({ id: 1 }));
-      await db2.execute(t => t.create({ id: 2 }));
+      await db1.execute(t => t.create({ id: "1" }));
+      await db2.execute(t => t.create({ id: "1" }));
+      await db2.execute(t => t.create({ id: "2" }));
       await db1.close();
       await db2.close();
 
@@ -364,7 +372,7 @@ describe("adapter.IDB", () => {
           it("should filter the list on a single pre-indexed column", () => {
             return db
               .list({ filters: { name: "#4" } })
-              .should.eventually.eql([{ id: 4, name: "#4" }]);
+              .should.eventually.eql([{ id: "4", name: "#4" }]);
           });
         });
 
@@ -373,15 +381,15 @@ describe("adapter.IDB", () => {
             return db
               .list({ filters: { name: ["#4", "#5"] } })
               .should.eventually.eql([
-                { id: 4, name: "#4" },
-                { id: 5, name: "#5" },
+                { id: "4", name: "#4" },
+                { id: "5", name: "#5" },
               ]);
           });
 
           it("should handle non-existent keys", () => {
             return db
               .list({ filters: { name: ["#4", "qux"] } })
-              .should.eventually.eql([{ id: 4, name: "#4" }]);
+              .should.eventually.eql([{ id: "4", name: "#4" }]);
           });
 
           it("should handle empty lists", () => {
@@ -394,29 +402,31 @@ describe("adapter.IDB", () => {
         describe("single value", () => {
           it("should filter the list on a single pre-indexed column", () => {
             return db
-              .list({ filters: { id: 4 } })
-              .should.eventually.eql([{ id: 4, name: "#4" }]);
+              .list({ filters: { id: "4" } })
+              .should.eventually.eql([{ id: "4", name: "#4" }]);
           });
         });
 
         describe("multiple values", () => {
           it("should filter the list on a single pre-indexed column", () => {
-            return db.list({ filters: { id: [5, 4] } }).should.eventually.eql([
-              { id: 4, name: "#4" },
-              { id: 5, name: "#5" },
-            ]);
+            return db
+              .list({ filters: { id: ["5", "4"] } })
+              .should.eventually.eql([
+                { id: "4", name: "#4" },
+                { id: "5", name: "#5" },
+              ]);
           });
 
           it("should filter the list combined with other filters", () => {
             return db
-              .list({ filters: { id: [5, 4], name: "#4" } })
-              .should.eventually.eql([{ id: 4, name: "#4" }]);
+              .list({ filters: { id: ["5", "4"], name: "#4" } })
+              .should.eventually.eql([{ id: "4", name: "#4" }]);
           });
 
           it("should handle non-existent keys", () => {
             return db
-              .list({ filters: { id: [4, 9999] } })
-              .should.eventually.eql([{ id: 4, name: "#4" }]);
+              .list({ filters: { id: ["4", "9999"] } })
+              .should.eventually.eql([{ id: "4", name: "#4" }]);
           });
 
           it("should handle empty lists", () => {
@@ -433,10 +443,12 @@ describe("adapter.IDB", () => {
    */
   describe("Deprecated #loadDump", () => {
     it("should call importBulk", () => {
-      sandbox.stub(db, "importBulk").returns(Promise.resolve());
+      const importBulkStub = sandbox
+        .stub(db, "importBulk")
+        .returns(Promise.resolve([]));
       return db
-        .loadDump([{ foo: "bar" }])
-        .then(_ => sinon.assert.calledOnce(db.importBulk));
+        .loadDump([{ id: "1", last_modified: 0, foo: "bar" }])
+        .then(() => sinon.assert.calledOnce(importBulkStub));
     });
   });
 
@@ -448,10 +460,10 @@ describe("adapter.IDB", () => {
           put() {
             throw new Error("transaction error");
           },
-        });
+        } as any);
       });
       return db
-        .importBulk([{ foo: "bar" }])
+        .importBulk([{ id: "1", last_modified: 0, foo: "bar" }])
         .should.be.rejectedWith(IDB.IDBError, /^IndexedDB importBulk()/);
     });
   });
@@ -464,7 +476,7 @@ describe("adapter.IDB", () => {
           get() {
             throw new Error("transaction error");
           },
-        });
+        } as any);
       });
       return db.getLastModified().should.be.rejectedWith(/transaction error/);
     });
@@ -479,15 +491,15 @@ describe("adapter.IDB", () => {
     it("should save a lastModified value", () => {
       return db
         .saveLastModified(42)
-        .then(_ => db.getLastModified())
+        .then(() => db.getLastModified())
         .should.eventually.become(42);
     });
 
     it("should allow updating previous value", () => {
       return db
         .saveLastModified(42)
-        .then(_ => db.saveLastModified(43))
-        .then(_ => db.getLastModified())
+        .then(() => db.saveLastModified(43))
+        .then(() => db.getLastModified())
         .should.eventually.become(43);
     });
 
@@ -497,9 +509,11 @@ describe("adapter.IDB", () => {
           delete() {
             throw new Error("transaction error");
           },
-        });
+        } as any);
       });
-      return db.saveLastModified().should.be.rejectedWith(/transaction error/);
+      return db
+        .saveLastModified(undefined as any)
+        .should.be.rejectedWith(/transaction error/);
     });
   });
 
@@ -508,8 +522,8 @@ describe("adapter.IDB", () => {
     it("should import a list of records.", () => {
       return db
         .importBulk([
-          { id: 1, foo: "bar" },
-          { id: 2, foo: "baz" },
+          { id: "1", foo: "bar", last_modified: 0 },
+          { id: "2", foo: "baz", last_modified: 1 },
         ])
         .should.eventually.have.length(2);
     });
@@ -517,20 +531,20 @@ describe("adapter.IDB", () => {
     it("should override existing records.", () => {
       return db
         .importBulk([
-          { id: 1, foo: "bar" },
-          { id: 2, foo: "baz" },
+          { id: "1", foo: "bar", last_modified: 0 },
+          { id: "2", foo: "baz", last_modified: 1 },
         ])
         .then(() => {
           return db.importBulk([
-            { id: 1, foo: "baz" },
-            { id: 3, foo: "bab" },
+            { id: "1", foo: "baz", last_modified: 2 },
+            { id: "3", foo: "bab", last_modified: 2 },
           ]);
         })
         .then(() => db.list())
         .should.eventually.eql([
-          { id: 1, foo: "baz" },
-          { id: 2, foo: "baz" },
-          { id: 3, foo: "bab" },
+          { id: "1", foo: "baz", last_modified: 2 },
+          { id: "2", foo: "baz", last_modified: 1 },
+          { id: "3", foo: "bab", last_modified: 2 },
         ]);
     });
 
@@ -569,9 +583,9 @@ describe("adapter.IDB", () => {
 
       await db1.open();
       await db2.open();
-      await db1.execute(t => t.create({ id: 1 }));
-      await db2.execute(t => t.create({ id: 1 }));
-      await db2.execute(t => t.create({ id: 2 }));
+      await db1.execute(t => t.create({ id: "1" }));
+      await db2.execute(t => t.create({ id: "1" }));
+      await db2.execute(t => t.create({ id: "2" }));
       await db1.close();
       await db2.close();
 
@@ -611,13 +625,13 @@ describe("adapter.IDB", () => {
 
   /** @test {IDB#open} */
   describe("#migration", () => {
-    let idb;
-    async function createOldDB(dbName) {
+    let idb: IDB<any>;
+    async function createOldDB(dbName: string) {
       const oldDb = await open(dbName, {
         version: 1,
-        onupgradeneeded: event => {
+        onupgradeneeded: (event: IDBVersionChangeEvent) => {
           // https://github.com/Kinto/kinto.js/blob/v11.2.2/src/adapters/IDB.js#L154-L171
-          const db = event.target.result;
+          const db = (event.target as IDBRequest<IDBDatabase>).result;
           db.createObjectStore(dbName, { keyPath: "id" });
           db.createObjectStore("__meta__", { keyPath: "name" });
         },
@@ -626,8 +640,8 @@ describe("adapter.IDB", () => {
         oldDb,
         dbName,
         store => {
-          store.put({ id: 1 });
-          store.put({ id: 2 });
+          store.put({ id: "1" });
+          store.put({ id: "2" });
         },
         { mode: "readwrite" }
       );
@@ -658,7 +672,7 @@ describe("adapter.IDB", () => {
     });
 
     it("should migrate records", async () => {
-      return idb.list().should.eventually.become([{ id: 1 }, { id: 2 }]);
+      return idb.list().should.eventually.become([{ id: "1" }, { id: "2" }]);
     });
 
     it("should migrate timestamps", () => {
@@ -682,14 +696,16 @@ describe("adapter.IDB", () => {
     it("should delete the old database", () => {
       return open(cid, {
         version: 1,
-        onupgradeneeded: event => event.target.transaction.abort(),
+        onupgradeneeded: event =>
+          (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
       }).should.eventually.be.rejected;
     });
 
     it("should not delete other databases", () => {
       return open("another/not-migrated", {
         version: 1,
-        onupgradeneeded: event => event.target.transaction.abort(),
+        onupgradeneeded: event =>
+          (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
       }).should.eventually.be.fulfilled;
     });
 
