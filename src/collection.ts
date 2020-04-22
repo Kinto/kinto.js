@@ -146,7 +146,7 @@ export class SyncResultObject {
       // keep all.
       const recordsWithoutId = new Set();
       const recordsById = new Map();
-      this._lists[list].forEach(record => {
+      this._lists[list].forEach((record) => {
         if (!record.id) {
           recordsWithoutId.add(record);
         } else {
@@ -523,7 +523,7 @@ export default class Collection<
     if (!Array.isArray(remoteTransformers)) {
       throw new Error("remoteTransformers should be an array.");
     }
-    return remoteTransformers.map(transformer => {
+    return remoteTransformers.map((transformer) => {
       if (typeof transformer !== "object") {
         throw new Error("A transformer must be an object.");
       } else if (typeof transformer.encode !== "function") {
@@ -547,7 +547,7 @@ export default class Collection<
     if (!Array.isArray(hook)) {
       throw new Error("A hook definition should be an array of functions.");
     }
-    return hook.map(fn => {
+    return hook.map((fn) => {
       if (typeof fn !== "function") {
         throw new Error("A hook definition should be an array of functions.");
       }
@@ -625,8 +625,8 @@ export default class Collection<
       return Promise.resolve(record);
     }
     return waterfall(
-      transformers.map(transformer => {
-        return record => transformer.encode(record);
+      transformers.map((transformer) => {
+        return (record) => transformer.encode(record);
       }),
       record
     );
@@ -645,8 +645,8 @@ export default class Collection<
       return Promise.resolve(record);
     }
     return waterfall(
-      transformers.reverse().map(transformer => {
-        return record => transformer.decode(record);
+      transformers.reverse().map((transformer) => {
+        return (record) => transformer.decode(record);
       }),
       record
     ) as Promise<B>;
@@ -711,9 +711,9 @@ export default class Collection<
     if (!this.idSchema.validate(newRecord.id!)) {
       return reject(`Invalid Id: ${newRecord.id}`);
     }
-    return this.execute(txn => txn.create(newRecord), {
+    return this.execute((txn) => txn.create(newRecord), {
       preloadIds: [newRecord.id],
-    }).catch(err => {
+    }).catch((err) => {
       if (options.useRecordId) {
         throw new Error(
           "Couldn't create record. It may have been virtually deleted."
@@ -756,7 +756,7 @@ export default class Collection<
     }
 
     return this.execute(
-      txn =>
+      (txn) =>
         txn.update(record, {
           synced: options.synced ?? false,
           patch: options.patch ?? false,
@@ -789,7 +789,9 @@ export default class Collection<
       return Promise.reject(new Error(`Invalid Id: ${record.id}`));
     }
 
-    return this.execute(txn => txn.upsert(record), { preloadIds: [record.id] });
+    return this.execute((txn) => txn.upsert(record), {
+      preloadIds: [record.id],
+    });
   }
 
   /**
@@ -806,7 +808,7 @@ export default class Collection<
     id: string,
     options: { includeDeleted: boolean } = { includeDeleted: false }
   ): Promise<KintoRepresentation<B>> {
-    return this.execute(txn => txn.get(id, options), { preloadIds: [id] });
+    return this.execute((txn) => txn.get(id, options), { preloadIds: [id] });
   }
 
   /**
@@ -816,7 +818,7 @@ export default class Collection<
    * @return {Promise}
    */
   getAny(id: string): Promise<UndefiendKintoRepresentation<B>> {
-    return this.execute(txn => txn.getAny(id), { preloadIds: [id] });
+    return this.execute((txn) => txn.getAny(id), { preloadIds: [id] });
   }
 
   /**
@@ -835,7 +837,7 @@ export default class Collection<
     options: { virtual: boolean } = { virtual: true }
   ): Promise<KintoRepresentation<B>> {
     return this.execute(
-      transaction => {
+      (transaction) => {
         return transaction.delete(id, options);
       },
       { preloadIds: [id] }
@@ -851,7 +853,7 @@ export default class Collection<
     const { data } = await this.list({}, { includeDeleted: false });
     const recordIds = data.map((record: any) => record.id);
     return this.execute(
-      transaction => {
+      (transaction) => {
         return transaction.deleteAll(recordIds);
       },
       { preloadIds: recordIds }
@@ -868,7 +870,7 @@ export default class Collection<
   deleteAny(
     id: string
   ): Promise<KintoRepresentation<B> & { deleted: boolean }> {
-    return this.execute(txn => txn.deleteAny(id), { preloadIds: [id] });
+    return this.execute((txn) => txn.deleteAny(id), { preloadIds: [id] });
   }
 
   /**
@@ -923,8 +925,8 @@ export default class Collection<
         const slice = decodedChanges.slice(i, i + IMPORT_CHUNK_SIZE);
 
         const { imports, resolved } = await this.db.execute(
-          transaction => {
-            const imports = slice.map(remote => {
+          (transaction) => {
+            const imports = slice.map((remote) => {
               // Store remote change into local database.
               return importChange(
                 transaction,
@@ -934,8 +936,8 @@ export default class Collection<
               );
             });
             const conflicts = (imports.filter(
-              i => i.type === "conflicts"
-            ) as ConflictsChange<B>[]).map(i => i.data);
+              (i) => i.type === "conflicts"
+            ) as ConflictsChange<B>[]).map((i) => i.data);
             const resolved = this._handleConflicts(
               transaction,
               conflicts,
@@ -943,7 +945,7 @@ export default class Collection<
             );
             return { imports, resolved };
           },
-          { preload: slice.map(record => record.id) }
+          { preload: slice.map((record) => record.id) }
         );
 
         // Lists of created/updated/deleted records
@@ -982,16 +984,16 @@ export default class Collection<
     conflicts: any[],
     strategy: string = Collection.strategy.MANUAL
   ) {
-    const toDeleteLocally = toApplyLocally.filter(r => r.deleted);
-    const toUpdateLocally = toApplyLocally.filter(r => !r.deleted);
+    const toDeleteLocally = toApplyLocally.filter((r) => r.deleted);
+    const toUpdateLocally = toApplyLocally.filter((r) => !r.deleted);
 
-    const { published, resolved } = await this.db.execute(transaction => {
-      const updated = toUpdateLocally.map(record => {
+    const { published, resolved } = await this.db.execute((transaction) => {
+      const updated = toUpdateLocally.map((record) => {
         const synced = markSynced(record);
         transaction.update(synced);
         return synced;
       });
-      const deleted = toDeleteLocally.map(record => {
+      const deleted = toDeleteLocally.map((record) => {
         transaction.delete(record.id);
         // Amend result data with the deleted attribute set
         return { id: record.id, deleted: true };
@@ -1029,7 +1031,7 @@ export default class Collection<
     if (strategy === Collection.strategy.MANUAL) {
       return [];
     }
-    return conflicts.map(conflict => {
+    return conflicts.map((conflict) => {
       const resolution =
         strategy === Collection.strategy.CLIENT_WINS
           ? conflict.local
@@ -1096,7 +1098,7 @@ export default class Collection<
     }
 
     return this.db.execute(
-      transaction => {
+      (transaction) => {
         const txn = new CollectionTransaction(this, transaction);
         const result = doOperations(txn);
         txn.emitEvents();
@@ -1120,8 +1122,8 @@ export default class Collection<
       { filters: { _status: ["deleted", "synced"] }, order: "" },
       { includeDeleted: true }
     );
-    await this.db.execute(transaction => {
-      unsynced.data.forEach(record => {
+    await this.db.execute((transaction) => {
+      unsynced.data.forEach((record) => {
         if (record._status === "deleted") {
           // Garbage collect deleted records.
           transaction.delete(record.id);
@@ -1219,7 +1221,7 @@ export default class Collection<
       // http://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers/417184#417184
       const exclude_id = options.exclude
         .slice(0, 50)
-        .map(r => r.id)
+        .map((r) => r.id)
         .join(",");
       filters = { exclude_id };
     }
@@ -1269,7 +1271,7 @@ export default class Collection<
 
     // Decode incoming changes.
     const decodedChanges = await Promise.all(
-      data.map(change => {
+      data.map((change) => {
         return this._decodeRecord("remote", change);
       })
     );
@@ -1294,7 +1296,7 @@ export default class Collection<
       return Promise.resolve(payload);
     }
     return waterfall(
-      this.hooks[hookName]!.map(hook => {
+      this.hooks[hookName]!.map((hook) => {
         return (record: any) => {
           const result = hook(payload, this);
           const resultThenable = result && typeof result.then === "function";
@@ -1351,7 +1353,7 @@ export default class Collection<
 
     // Perform a batch request with every changes.
     const synced = (await client.batch(
-      batch => {
+      (batch) => {
         toDelete.forEach((r: any) => {
           // never published locally deleted records should not be pusblished
           if (r.last_modified) {
@@ -1409,7 +1411,7 @@ export default class Collection<
     // will be stored locally.
     // Reflect publication results locally using the response from
     // the batch request.
-    const published = synced.published.map(c => c.data);
+    const published = synced.published.map((c) => c.data);
     const toApplyLocally = published.concat(missingRemotely);
 
     // Apply the decode transformers, if any
@@ -1457,7 +1459,7 @@ export default class Collection<
     conflict: Conflict<B>,
     resolution: B
   ): Promise<KintoRepresentation<B>> {
-    return this.db.execute(transaction => {
+    return this.db.execute((transaction) => {
       const updated = this._resolveRaw(conflict, resolution);
       transaction.update(updated);
       return { data: updated, permissions: {} };
@@ -1565,11 +1567,11 @@ export default class Collection<
 
         // Publish local resolution of push conflicts to server (on CLIENT_WINS)
         const resolvedUnsynced = result.resolved.filter(
-          r => r._status !== "synced"
+          (r) => r._status !== "synced"
         );
         if (resolvedUnsynced.length > 0) {
           const resolvedEncoded = await Promise.all(
-            resolvedUnsynced.map(resolution => {
+            resolvedUnsynced.map((resolution) => {
               let record = resolution.accepted;
               if (record === null) {
                 record = { id: resolution.id, _status: resolution._status };
@@ -1664,7 +1666,7 @@ export default class Collection<
       return acc;
     }, {});
 
-    const newRecords = records.filter(record => {
+    const newRecords = records.filter((record) => {
       const localRecord = existingById[record.id];
       const shouldKeep =
         // No local record with this id.
@@ -1826,7 +1828,7 @@ export class CollectionTransaction<
    */
   deleteAll(ids: string[]): KintoRepresentation<B[]> {
     const existingRecords: any[] = [];
-    ids.forEach(id => {
+    ids.forEach((id) => {
       existingRecords.push(this.adapterTransaction.get(id));
       this.delete(id);
     });

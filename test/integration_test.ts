@@ -21,7 +21,7 @@ chai.config.includeStack = true;
 
 const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
 
-const appendTransformer = function(s: string) {
+const appendTransformer = function (s: string) {
   return {
     encode(record: any) {
       return Promise.resolve({ ...record, title: (record.title || "") + s });
@@ -52,7 +52,7 @@ function futureSyncsOK(
     beforeEach(() => {
       return getCollection()
         .sync()
-        .then(result => {
+        .then((result) => {
           nextSyncResult = result;
         });
     });
@@ -91,7 +91,7 @@ function futureSyncsOK(
   });
 }
 
-describe("Integration tests", function() {
+describe("Integration tests", function () {
   let sandbox: sinon.SinonSandbox,
     server: KintoServer,
     kinto: Kinto,
@@ -111,7 +111,7 @@ describe("Integration tests", function() {
 
   after(() => {
     const logLines = server.logs.toString().split("\n");
-    const serverDidCrash = logLines.some(l => l.includes("Traceback"));
+    const serverDidCrash = logLines.some((l) => l.includes("Traceback"));
     if (serverDidCrash) {
       // Server errors have been encountered, raise to break the build
       const trace = logLines.join("\n");
@@ -127,7 +127,7 @@ describe("Integration tests", function() {
     return server.killAll();
   });
 
-  beforeEach(function() {
+  beforeEach(function () {
     this.timeout(12500);
 
     sandbox = sinon.createSandbox();
@@ -171,7 +171,7 @@ describe("Integration tests", function() {
           .bucket("default")
           .collection(collection["_name"])
           .batch(
-            batch => {
+            (batch) => {
               data.localSynced.forEach((r: any) => batch.createRecord(r));
             },
             { safe: true }
@@ -189,7 +189,7 @@ describe("Integration tests", function() {
                   .bucket("default")
                   .collection(collection["_name"])
                   .batch(
-                    batch => {
+                    (batch) => {
                       data.server.forEach((r: any) => batch.createRecord(r));
                     },
                     { safe: true }
@@ -209,8 +209,8 @@ describe("Integration tests", function() {
             headers: { Authorization: "Basic " + btoa("user:pass") },
           }
         )
-          .then(res => res.json())
-          .then(json =>
+          .then((res) => res.json())
+          .then((json) =>
             json.data.map((record: any) => ({
               title: record.title,
               done: record.done,
@@ -230,11 +230,11 @@ describe("Integration tests", function() {
         beforeEach(() => {
           // Sync twice.
           return testSync(testData)
-            .then(res => {
+            .then((res) => {
               syncResult1 = res;
               return tasks.sync();
             })
-            .then(res => (syncResult2 = res));
+            .then((res) => (syncResult2 = res));
         });
 
         it("should have an ok status", () => {
@@ -262,7 +262,7 @@ describe("Integration tests", function() {
         let syncResult: SyncResultObject;
 
         beforeEach(() => {
-          return testSync(testData).then(res => (syncResult = res));
+          return testSync(testData).then((res) => (syncResult = res));
         });
 
         it("should have an ok status", () => {
@@ -323,8 +323,8 @@ describe("Integration tests", function() {
         it("should put local database in the expected state", () => {
           return tasks
             .list({ order: "title" })
-            .then(res =>
-              res.data.map(record => ({
+            .then((res) =>
+              res.data.map((record) => ({
                 title: record.title,
                 done: record.done,
                 _status: record._status,
@@ -357,7 +357,7 @@ describe("Integration tests", function() {
               .map((e, i) => ({ id: uuid4(), title: `task${i}`, done: true })),
           })
             .then(() => tasks.list())
-            .then(res => res.data)
+            .then((res) => res.data)
             .should.eventually.have.length(10 + 4);
         });
 
@@ -386,7 +386,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return testSync(testData, {
               strategy: Kinto.syncStrategy.PULL_ONLY,
-            }).then(res => (syncResult = res));
+            }).then((res) => (syncResult = res));
           });
 
           it("should have an ok status", () => {
@@ -425,7 +425,7 @@ describe("Integration tests", function() {
 
         describe("MANUAL strategy (default)", () => {
           beforeEach(() => {
-            return testSync(testData).then(res => (syncResult = res));
+            return testSync(testData).then((res) => (syncResult = res));
           });
 
           it("should not have an ok status", () => {
@@ -482,8 +482,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   done: record.done,
                   _status: record._status,
@@ -513,7 +513,7 @@ describe("Integration tests", function() {
             let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
-              return tasks.sync().then(result => {
+              return tasks.sync().then((result) => {
                 nextSyncResult = result;
               });
             });
@@ -556,7 +556,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return testSync(testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then(res => (syncResult = res));
+            }).then((res) => (syncResult = res));
           });
 
           it("should have an ok status", () => {
@@ -619,8 +619,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   done: record.done,
                   _status: record._status,
@@ -655,7 +655,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return collectionTestSync(tasksTransformed, testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then(res => (syncResult = res));
+            }).then((res) => (syncResult = res));
           });
 
           it("should publish resolved conflict using local version", () => {
@@ -687,8 +687,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasksTransformed
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   done: record.done,
                   _status: record._status,
@@ -718,7 +718,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return testSync(testData, {
               strategy: Kinto.syncStrategy.SERVER_WINS,
-            }).then(res => (syncResult = res));
+            }).then((res) => (syncResult = res));
           });
 
           it("should have an ok status", () => {
@@ -774,8 +774,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   done: record.done,
                   _status: record._status,
@@ -837,7 +837,7 @@ describe("Integration tests", function() {
                 );
               })
               .then(() => tasks.sync())
-              .then(syncResult => {
+              .then((syncResult) => {
                 expect(syncResult.ok).eql(false);
                 expect(syncResult.conflicts).to.have.lengthOf(1);
                 // Always pick our version.
@@ -848,7 +848,7 @@ describe("Integration tests", function() {
                 );
               })
               .then(() => tasks.sync())
-              .then(syncResult => {
+              .then((syncResult) => {
                 expect(syncResult.ok).eql(true);
                 expect(syncResult.conflicts).to.have.lengthOf(0);
                 expect(syncResult.updated).to.have.lengthOf(0);
@@ -894,7 +894,7 @@ describe("Integration tests", function() {
                 )
               )
               .then(() => tasks.sync())
-              .then(syncResult => {
+              .then((syncResult) => {
                 expect(syncResult.ok).eql(false);
                 expect(syncResult.conflicts).to.have.lengthOf(2);
                 // resolve just one conflict and ensure that the other
@@ -906,7 +906,7 @@ describe("Integration tests", function() {
                 );
               })
               .then(() => tasks.sync())
-              .then(syncResult => {
+              .then((syncResult) => {
                 expect(syncResult.ok).eql(false);
                 expect(syncResult.conflicts).to.have.lengthOf(1);
                 expect(syncResult.updated).to.have.lengthOf(0);
@@ -938,7 +938,7 @@ describe("Integration tests", function() {
               .then(() => {
                 return tasks.sync();
               })
-              .then(res => {
+              .then((res) => {
                 conflicts = res.conflicts;
               });
           });
@@ -956,9 +956,7 @@ describe("Integration tests", function() {
           });
 
           it("should have the expected conflicting remote version", () => {
-            expect(conflicts[0].remote)
-              .to.have.property("id")
-              .eql(id);
+            expect(conflicts[0].remote).to.have.property("id").eql(id);
             expect(conflicts[0].remote)
               .to.have.property("title")
               .eql("server-updated");
@@ -987,7 +985,7 @@ describe("Integration tests", function() {
               .then(() => {
                 return tasks.sync();
               })
-              .then(res => (result = res));
+              .then((res) => (result = res));
           });
 
           it("should properly list the encountered conflict", () => {
@@ -995,9 +993,7 @@ describe("Integration tests", function() {
           });
 
           it("should provide the record", () => {
-            expect(result.skipped[0])
-              .to.have.property("id")
-              .eql(id);
+            expect(result.skipped[0]).to.have.property("id").eql(id);
           });
         });
       });
@@ -1011,14 +1007,14 @@ describe("Integration tests", function() {
           // Ensure that the remote record looks like something that's
           // been transformed
           return collection["_encodeRecord"]("remote", record)
-            .then(record => {
+            .then((record) => {
               return collection.api
                 .bucket("default")
                 .collection(collection["_name"])
                 .createRecord(record as any);
             })
             .then(() => collection.sync())
-            .then(res => {
+            .then((res) => {
               recordId = res.created[0].id;
               return collection.delete(recordId, { virtual: false });
             })
@@ -1044,7 +1040,7 @@ describe("Integration tests", function() {
           let oldLastModified: number;
           beforeEach(() => {
             oldLastModified = tasks.lastModified!;
-            return tasks.sync().then(res => {
+            return tasks.sync().then((res) => {
               syncResult = res;
             });
           });
@@ -1101,8 +1097,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1124,7 +1120,7 @@ describe("Integration tests", function() {
             let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
-              return tasks.sync().then(result => {
+              return tasks.sync().then((result) => {
                 nextSyncResult = result;
               });
             });
@@ -1169,7 +1165,7 @@ describe("Integration tests", function() {
             oldLastModified = tasks.lastModified!;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1228,8 +1224,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1256,7 +1252,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasksTransformed
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1264,8 +1260,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasksTransformed
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1290,7 +1286,7 @@ describe("Integration tests", function() {
             oldLastModified = tasks.lastModified!;
             return tasks
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1348,8 +1344,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1376,7 +1372,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasksTransformed
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1397,8 +1393,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasksTransformed
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1420,14 +1416,14 @@ describe("Integration tests", function() {
           // Ensure that the remote record looks like something that's
           // been transformed
           return collection["_encodeRecord"]("remote", record)
-            .then(record => {
+            .then((record) => {
               return collection.api
                 .bucket("default")
                 .collection(collection["_name"])
                 .createRecord(record as any);
             })
             .then(() => collection.sync())
-            .then(res => {
+            .then((res) => {
               recordId = res.created[0].id;
               return collection.api.deleteBucket("default");
             })
@@ -1440,7 +1436,7 @@ describe("Integration tests", function() {
                 .collection(collection["_name"])
                 .listRecords();
             })
-            .then(res => {
+            .then((res) => {
               const lastModified = parseInt(res.last_modified!, 10);
               collection["_lastModified"] = lastModified;
               return collection.db.saveLastModified(lastModified);
@@ -1465,7 +1461,7 @@ describe("Integration tests", function() {
 
           beforeEach(() => {
             oldLastModified = tasks.lastModified!;
-            return tasks.sync().then(res => {
+            return tasks.sync().then((res) => {
               syncResult = res;
             });
           });
@@ -1522,8 +1518,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1542,7 +1538,7 @@ describe("Integration tests", function() {
             let nextSyncResult: SyncResultObject;
 
             beforeEach(() => {
-              return tasks.sync().then(result => {
+              return tasks.sync().then((result) => {
                 nextSyncResult = result;
               });
             });
@@ -1585,7 +1581,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasks
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1636,8 +1632,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasks
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1664,7 +1660,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasksTransformed
               .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1672,8 +1668,8 @@ describe("Integration tests", function() {
           it("should put local database in the expected state", () => {
             return tasksTransformed
               .list({ order: "title" })
-              .then(res =>
-                res.data.map(record => ({
+              .then((res) =>
+                res.data.map((record) => ({
                   title: record.title,
                   _status: record._status,
                 }))
@@ -1696,7 +1692,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasks
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1744,7 +1740,7 @@ describe("Integration tests", function() {
             return (
               tasks
                 .list({ order: "title" })
-                .then(res => res.data)
+                .then((res) => res.data)
                 // For SERVER_WINS strategy, local version is deleted
                 .should.become([])
             );
@@ -1764,7 +1760,7 @@ describe("Integration tests", function() {
           beforeEach(() => {
             return tasksTransformed
               .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then(res => {
+              .then((res) => {
                 syncResult = res;
               });
           });
@@ -1789,7 +1785,7 @@ describe("Integration tests", function() {
             return (
               tasksTransformed
                 .list({ order: "title" })
-                .then(res => res.data)
+                .then((res) => res.data)
                 // For SERVER_WINS strategy, local version is deleted
                 .should.become([])
             );
@@ -1808,7 +1804,7 @@ describe("Integration tests", function() {
             { id: id2, last_modified: 123458, title: "task3", done: false },
             { id: uuid4(), last_modified: 123459, title: "task4", done: false },
           ];
-          return Promise.all(dump.map(r => tasksRemote.createRecord(r)))
+          return Promise.all(dump.map((r) => tasksRemote.createRecord(r)))
             .then(() => tasks.importBulk(dump))
             .then(() =>
               tasksRemote.updateRecord({ id: id1, title: "task22", done: true })
@@ -1819,7 +1815,7 @@ describe("Integration tests", function() {
         });
 
         it("should sync changes on loaded data", () => {
-          return tasks.sync().then(res => {
+          return tasks.sync().then((res) => {
             expect(res.ok).eql(true);
             expect(res.updated.length).eql(2);
           });
@@ -1830,13 +1826,13 @@ describe("Integration tests", function() {
         let nbFixtures: number;
 
         function loadFixtures() {
-          return tasks.api.fetchServerSettings().then(serverSettings => {
+          return tasks.api.fetchServerSettings().then((serverSettings) => {
             nbFixtures = serverSettings["batch_max_requests"] + 10;
             const fixtures = [];
             for (let i = 0; i < nbFixtures; i++) {
               fixtures.push({ title: "title" + i, position: i });
             }
-            return Promise.all(fixtures.map(f => tasks.create(f)));
+            return Promise.all(fixtures.map((f) => tasks.create(f)));
           });
         }
 
@@ -1845,7 +1841,7 @@ describe("Integration tests", function() {
         });
 
         it("should create the expected number of records", () => {
-          return tasks.list({ order: "-position" }).then(res => {
+          return tasks.list({ order: "-position" }).then((res) => {
             expect(res.data.length).eql(nbFixtures);
             expect(res.data[0].position).eql(nbFixtures - 1);
           });
@@ -1879,7 +1875,7 @@ describe("Integration tests", function() {
         it("should generate id's using the IdSchema", () => {
           return tasks
             .create({ foo: "bar" })
-            .then(record => {
+            .then((record) => {
               return record.data.id;
             })
             .should.become("0");
@@ -1913,7 +1909,7 @@ describe("Integration tests", function() {
       it("should list published records unencoded", () => {
         return tasks
           .sync()
-          .then(res => res.published.map((x: any) => x.title).sort())
+          .then((res) => res.published.map((x: any) => x.title).sort())
           .should.become(["abc", "def"]);
       });
 
@@ -1928,8 +1924,8 @@ describe("Integration tests", function() {
               }
             );
           })
-          .then(res => res.json())
-          .then(res => res.data.map((x: any) => x.title).sort())
+          .then((res) => res.json())
+          .then((res) => res.data.map((x: any) => x.title).sort())
           .should.become(["abc!?", "def!?"]);
       });
 
@@ -1937,7 +1933,7 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasks.list())
-          .then(res => res.data.map((x: any) => x.title).sort())
+          .then((res) => res.data.map((x: any) => x.title).sort())
           .should.become(["abc", "def"]);
       });
     });
@@ -2008,7 +2004,7 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasksRemote.getRecord(preserveOnSendNew.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.property("title", "preserve-on-send new");
       });
 
@@ -2016,7 +2012,7 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasksRemote.getRecord(preserveOnSendOld.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.property("title", "preserve-on-send old");
       });
 
@@ -2024,7 +2020,7 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasks.getAny(preserveOnSendNew.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.eql(undefined);
       });
 
@@ -2032,7 +2028,7 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasks.getAny(preserveOnSendOld.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.eql(undefined);
       });
 
@@ -2040,14 +2036,16 @@ describe("Integration tests", function() {
         return tasks
           .sync()
           .then(() => tasks.getAny(deleteOnReceiveRemote.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.eql(undefined);
       });
 
       it("should have deleted deleted-by-other-client", () => {
         return tasks
           .getAny(deletedByOtherClientRemote.id)
-          .then(res => expect(res.data.title).to.eql("deleted-by-other-client"))
+          .then((res) =>
+            expect(res.data.title).to.eql("deleted-by-other-client")
+          )
           .then(() =>
             tasksRemote.createRecord({
               ...deletedByOtherClientRemote,
@@ -2056,13 +2054,13 @@ describe("Integration tests", function() {
           )
           .then(() => tasks.sync())
           .then(() => tasks.getAny(deletedByOtherClientRemote.id))
-          .then(res => res.data)
+          .then((res) => res.data)
           .should.eventually.eql(undefined);
       });
     });
   });
 
-  describe("Flushed server", function() {
+  describe("Flushed server", function () {
     before(() => server.start({}));
 
     after(() => server.stop());

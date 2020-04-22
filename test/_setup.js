@@ -21,7 +21,7 @@ if (typeof root.indexedDB !== "object") {
     "IDBKeyRange",
   ];
 
-  iDBSymbols.forEach(symbol => {
+  iDBSymbols.forEach((symbol) => {
     const fakeSymbol = symbol.replace("IDB", "FDB");
     root[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
   });
