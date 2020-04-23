@@ -145,7 +145,7 @@
     "@types/mocha": "^7.0.2",
     "@types/shelljs": "^0.8.6",
     "@types/sinon": "^9.0.0",
-    "@types/uuid": "^3.4.6",
+    "@types/uuid": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^2.2.0",
     "@typescript-eslint/parser": "^2.2.0",
     "atob": "^2.1.2",
