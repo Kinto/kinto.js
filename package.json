@@ -142,7 +142,7 @@
     "@types/btoa": "^1.2.3",
     "@types/chai": "^4.2.7",
     "@types/chai-as-promised": "^7.1.2",
-    "@types/mocha": "^5.2.7",
+    "@types/mocha": "^7.0.2",
     "@types/shelljs": "^0.8.6",
     "@types/sinon": "^7.5.1",
     "@types/uuid": "^3.4.6",
