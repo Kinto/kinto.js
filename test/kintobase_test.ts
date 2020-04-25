@@ -1,10 +1,10 @@
-"use strict";
-
-import { expect } from "chai";
 import { EventEmitter } from "events";
 
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
+
+const { expect } = intern.getPlugin("chai");
+const { describe, it, beforeEach } = intern.getPlugin("interface.bdd");
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {

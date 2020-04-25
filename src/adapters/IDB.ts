@@ -87,6 +87,7 @@ export async function execute(
     // Let the callback abort this transaction.
     const abort = (e: any) => {
       transaction.abort();
+      console.error(e);
       reject(e);
     };
     // Execute the specified callback **synchronously**.
@@ -640,12 +641,14 @@ export default class IDB<
    */
   async getLastModified(): Promise<number | null> {
     try {
-      let entry: number | null = null;
+      let entry: { value: number } | null = null;
       await this.prepare("timestamps", (store) => {
-        store.get(this.cid).onsuccess = (e: Event) =>
-          (entry = (e.target as IDBRequest<number>).result);
+        store.get(this.cid).onsuccess = (e: Event) => {
+          entry = (e.target as IDBRequest<{ value: number }>).result;
+        };
       });
-      return entry ? (entry as { value: number }).value : null;
+
+      return entry ? entry!.value : null;
     } catch (e) {
       this._handleError("getLastModified", e);
     }

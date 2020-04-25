@@ -1,16 +1,19 @@
-"use strict";
+import fetch, { Headers } from "node-fetch";
 
-/**
- * Test environment setup.
- */
-const root = typeof global === "object" ? global : window;
+// Expose a global fetch polyfill
+(global as any).fetch = fetch;
+(global as any).Headers = Headers;
+
+(global as any).FormData = require("form-data");
+
+(global as any).btoa = require("btoa");
 
 /**
  * In FakeIndexedDB, symbols are exposed using ``FDB`` prefixes in names.
  * This piece of code will register them with the same names as native API,
  * only if indexedDB is not already available.
  */
-if (typeof root.indexedDB !== "object") {
+if (typeof globalThis.indexedDB !== "object") {
   const iDBSymbols = [
     "IDBDatabase",
     "IDBTransaction",
@@ -23,12 +26,8 @@ if (typeof root.indexedDB !== "object") {
 
   iDBSymbols.forEach((symbol) => {
     const fakeSymbol = symbol.replace("IDB", "FDB");
-    root[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
+    (globalThis as any)[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
   });
 
-  root.indexedDB = require("fake-indexeddb");
+  globalThis.indexedDB = require("fake-indexeddb");
 }
-
-root.fetch = require("node-fetch");
-root.FormData = require("form-data");
-root.Headers = root.fetch.Headers;

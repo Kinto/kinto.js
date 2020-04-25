@@ -1,10 +1,14 @@
-import { expect } from "chai";
-
 import BaseAdapter from "../../src/adapters/base";
+
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, beforeEach } = intern.getPlugin("interface.bdd");
 
 describe("adapters.BaseAdapter", () => {
   let adapter: BaseAdapter<any>;
-  beforeEach(() => (adapter = new BaseAdapter()));
+  beforeEach(() => {
+    adapter = new BaseAdapter();
+  });
 
   it("should throw for non-implemented methods", () => {
     expect(() => adapter.clear()).to.Throw(Error, "Not Implemented.");
