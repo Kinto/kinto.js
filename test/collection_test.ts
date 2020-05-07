@@ -2430,20 +2430,19 @@ describe("Collection", () => {
     });
 
     it("should delete unsynced virtually deleted local records", async () => {
-      const locallyDeletedId = records[0].id;
+      const record = await articles.create({ title: "record to be deleted" });
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(
         Promise.resolve({
-          published: [{ data: { id: locallyDeletedId, deleted: true } }],
+          published: [{ data: { id: record.data.id, deleted: true } }],
           errors: [],
           conflicts: [],
           skipped: [],
         })
       );
-      // TODO: Is the following line important?
-      // await articles.delete(locallyDeletedId);
+      await articles.delete(record.data.id);
       await articles.pushChanges(client, records, result);
       await expectAsyncError(
-        () => articles.get(locallyDeletedId, { includeDeleted: true }),
+        () => articles.get(record.data.id, { includeDeleted: true }),
         /not found/
       );
     });
