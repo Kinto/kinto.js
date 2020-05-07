@@ -138,7 +138,7 @@
   "dependencies": {
     "btoa": "^1.1.2",
     "kinto-http": "^5.0.0-alpha.3",
-    "uuid": "^7.0.0"
+    "uuid": "^8.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-multi-entry": "^3.0.0",
