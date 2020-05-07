@@ -1,7 +1,3 @@
-"use strict";
-
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http";
@@ -11,9 +7,11 @@ import BaseAdapter from "../src/adapters/base";
 import IDB from "../src/adapters/IDB";
 import Kinto from "../src";
 
-chai.use(chaiAsPromised);
-chai.should();
-chai.config.includeStack = true;
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, beforeEach, afterEach } = intern.getPlugin(
+  "interface.bdd"
+);
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";

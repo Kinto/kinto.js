@@ -1,12 +1,7 @@
-"use strict";
-
 import { v4 as uuid4 } from "uuid";
-import btoa from "btoa";
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
-import { Collection as KintoClientCollection } from "kinto-http";
+import { Collection as KintoClientCollection, KintoIdObject } from "kinto-http";
 import Kinto from "../src";
 import Collection, {
   recordsEqual,
@@ -14,12 +9,17 @@ import Collection, {
   SyncResultObject,
 } from "../src/collection";
 import { IdSchema } from "../src/types";
+import { expectAsyncError } from "./test_utils";
 
-chai.use(chaiAsPromised);
-chai.should();
-chai.config.includeStack = true;
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, before, beforeEach, after, afterEach } = intern.getPlugin(
+  "interface.bdd"
+);
 
-const TEST_KINTO_SERVER = "http://0.0.0.0:8888/v1";
+const TEST_KINTO_SERVER =
+  process.env.TEST_KINTO_SERVER || "http://0.0.0.0:8888/v1";
+const KINTO_PROXY_SERVER = process.env.KINTO_PROXY_SERVER || TEST_KINTO_SERVER;
 
 const appendTransformer = function (s: string) {
   return {
@@ -49,12 +49,9 @@ function futureSyncsOK(
   describe("On next MANUAL sync", () => {
     let nextSyncResult: SyncResultObject;
 
-    beforeEach(() => {
-      return getCollection()
-        .sync()
-        .then((result) => {
-          nextSyncResult = result;
-        });
+    beforeEach(async () => {
+      const result_1 = await getCollection().sync();
+      nextSyncResult = result_1;
     });
 
     it("should have an ok status", () => {
@@ -91,7 +88,7 @@ function futureSyncsOK(
   });
 }
 
-describe("Integration tests", function () {
+describe("Integration tests", function (__test) {
   let sandbox: sinon.SinonSandbox,
     server: KintoServer,
     kinto: Kinto,
@@ -99,18 +96,19 @@ describe("Integration tests", function () {
     tasksTransformed: Collection;
 
   // Disabling test timeouts until pserve gets decent startup time.
-  this.timeout(0);
+  __test.timeout = 0;
 
-  before(() => {
+  before(async () => {
     let kintoConfigPath = __dirname + "/kinto.ini";
     if (process.env.SERVER && process.env.SERVER !== "master") {
       kintoConfigPath = `${__dirname}/kinto-${process.env.SERVER}.ini`;
     }
-    server = new KintoServer(TEST_KINTO_SERVER, { kintoConfigPath });
+    server = new KintoServer(KINTO_PROXY_SERVER, { kintoConfigPath });
+    await server.loadConfig(kintoConfigPath);
   });
 
-  after(() => {
-    const logLines = server.logs.toString().split("\n");
+  after(async () => {
+    const logLines = (await server.logs()).split("\n");
     const serverDidCrash = logLines.some((l) => l.includes("Traceback"));
     if (serverDidCrash) {
       // Server errors have been encountered, raise to break the build
@@ -127,8 +125,8 @@ describe("Integration tests", function () {
     return server.killAll();
   });
 
-  beforeEach(function () {
-    this.timeout(12500);
+  beforeEach(function (__test) {
+    __test.timeout = 12500;
 
     sandbox = sinon.createSandbox();
 
@@ -149,11 +147,10 @@ describe("Integration tests", function () {
 
     after(() => server.stop());
 
-    beforeEach(() => {
-      return tasks
-        .clear()
-        .then(() => tasksTransformed.clear())
-        .then(() => server.flush());
+    beforeEach(async () => {
+      await tasks.clear();
+      await tasksTransformed.clear();
+      await server.flush();
     });
 
     describe("Synchronization", () => {
@@ -161,13 +158,13 @@ describe("Integration tests", function () {
         return collectionTestSync(tasks, data, options);
       }
 
-      function collectionTestSync(
+      async function collectionTestSync(
         collection: Collection,
         data: any,
         options?: Parameters<typeof collection.sync>[0]
       ) {
         // Create remote records
-        return collection.api
+        await collection.api
           .bucket("default")
           .collection(collection["_name"])
           .batch(
@@ -175,51 +172,47 @@ describe("Integration tests", function () {
               data.localSynced.forEach((r: any) => batch.createRecord(r));
             },
             { safe: true }
-          )
-          .then(() => collection.sync(options))
-          .then(() => {
-            return Promise.all(
-              ([] as Promise<any>[]).concat(
-                // Create local unsynced records
-                data.localUnsynced.map((record: any) =>
-                  collection.create(record, { useRecordId: true })
-                ),
-                // Create remote records
-                collection.api
-                  .bucket("default")
-                  .collection(collection["_name"])
-                  .batch(
-                    (batch) => {
-                      data.server.forEach((r: any) => batch.createRecord(r));
-                    },
-                    { safe: true }
-                  )
+          );
+        await collection.sync(options);
+        await Promise.all(
+          ([] as Promise<any>[]).concat(
+            // Create local unsynced records
+            data.localUnsynced.map((record: any) =>
+              collection.create(record, { useRecordId: true })
+            ),
+            // Create remote records
+            collection.api
+              .bucket("default")
+              .collection(collection["_name"])
+              .batch(
+                (batch_1) => {
+                  data.server.forEach((r: any) => batch_1.createRecord(r));
+                },
+                { safe: true }
               )
-            );
-          })
-          .then(() => {
-            return collection.sync(options);
-          });
+          )
+        );
+        return collection.sync(options);
       }
 
-      function getRemoteList(collection = "tasks") {
-        return fetch(
+      async function getRemoteList(
+        collection = "tasks"
+      ): Promise<{ title: string; done: boolean }[]> {
+        const res = await fetch(
           `${TEST_KINTO_SERVER}/buckets/default/collections/${collection}/records?_sort=title`,
           {
             headers: { Authorization: "Basic " + btoa("user:pass") },
           }
-        )
-          .then((res) => res.json())
-          .then((json) =>
-            json.data.map((record: any) => ({
-              title: record.title,
-              done: record.done,
-            }))
-          );
+        );
+        const json = await res.json();
+        return json.data.map((record: any) => ({
+          title: record.title,
+          done: record.done,
+        }));
       }
 
       describe("No change", () => {
-        const testData = {
+        const testData: { [key: string]: KintoIdObject[] } = {
           localSynced: [],
           localUnsynced: [],
           server: [{ id: uuid4(), title: "task1", done: true }],
@@ -227,14 +220,10 @@ describe("Integration tests", function () {
         let syncResult1: SyncResultObject;
         let syncResult2: SyncResultObject;
 
-        beforeEach(() => {
+        beforeEach(async () => {
           // Sync twice.
-          return testSync(testData)
-            .then((res) => {
-              syncResult1 = res;
-              return tasks.sync();
-            })
-            .then((res) => (syncResult2 = res));
+          syncResult1 = await testSync(testData);
+          syncResult2 = await tasks.sync();
         });
 
         it("should have an ok status", () => {
@@ -251,7 +240,7 @@ describe("Integration tests", function () {
       });
 
       describe("No conflict", () => {
-        const testData = {
+        const testData: { [key: string]: KintoIdObject[] } = {
           localSynced: [
             { id: uuid4(), title: "task2", done: false },
             { id: uuid4(), title: "task3", done: true },
@@ -261,8 +250,9 @@ describe("Integration tests", function () {
         };
         let syncResult: SyncResultObject;
 
-        beforeEach(() => {
-          return testSync(testData).then((res) => (syncResult = res));
+        beforeEach(async () => {
+          const res = await testSync(testData);
+          return (syncResult = res);
         });
 
         it("should have an ok status", () => {
@@ -303,34 +293,31 @@ describe("Integration tests", function () {
           ).eql(true);
         });
 
-        it("should publish deletion of locally deleted records", () => {
+        it("should publish deletion of locally deleted records", async () => {
           const locallyDeletedId = testData.localSynced[0].id;
-          return tasks
-            .delete(locallyDeletedId)
-            .then(() => tasks.sync())
-            .then(() => getRemoteList())
-            .should.eventually.become([
-              { title: "task1", done: true },
-              { title: "task3", done: true },
-              { title: "task4", done: false },
-            ]);
+          await tasks.delete(locallyDeletedId);
+          await tasks.sync();
+          const list = await getRemoteList();
+          list.should.deep.equal([
+            { title: "task1", done: true },
+            { title: "task3", done: true },
+            { title: "task4", done: false },
+          ]);
         });
 
         it("should not update anything", () => {
           expect(syncResult.updated).to.have.lengthOf(0);
         });
 
-        it("should put local database in the expected state", () => {
-          return tasks
-            .list({ order: "title" })
-            .then((res) =>
-              res.data.map((record) => ({
-                title: record.title,
-                done: record.done,
-                _status: record._status,
-              }))
-            )
-            .should.become([
+        it("should put local database in the expected state", async () => {
+          const res = await tasks.list({ order: "title" });
+          res.data
+            .map((record) => ({
+              title: record.title,
+              done: record.done,
+              _status: record._status,
+            }))
+            .should.deep.equal([
               { title: "task1", _status: "synced", done: true },
               { title: "task2", _status: "synced", done: false },
               { title: "task3", _status: "synced", done: true },
@@ -338,8 +325,9 @@ describe("Integration tests", function () {
             ]);
         });
 
-        it("should put remote test server data in the expected state", () => {
-          return getRemoteList().should.become([
+        it("should put remote test server data in the expected state", async () => {
+          const list = await getRemoteList();
+          list.should.deep.equal([
             // task1, task2, task3 were prexisting.
             { title: "task1", done: true },
             { title: "task2", done: false },
@@ -348,17 +336,17 @@ describe("Integration tests", function () {
           ]);
         });
 
-        it("should fetch every server page", () => {
-          return collectionTestSync(tasks, {
+        it("should fetch every server page", async () => {
+          await collectionTestSync(tasks, {
             localUnsynced: [],
             localSynced: [],
             server: Array(10)
               .fill(undefined)
               .map((e, i) => ({ id: uuid4(), title: `task${i}`, done: true })),
-          })
-            .then(() => tasks.list())
-            .then((res) => res.data)
-            .should.eventually.have.length(10 + 4);
+          });
+
+          const list = await tasks.list();
+          list.data.should.have.lengthOf(10 + 4);
         });
 
         futureSyncsOK(
@@ -369,7 +357,7 @@ describe("Integration tests", function () {
 
       describe("Incoming conflict", () => {
         const conflictingId = uuid4();
-        const testData = {
+        const testData: { [key: string]: KintoIdObject[] } = {
           localSynced: [
             { id: uuid4(), title: "task1", done: true },
             { id: uuid4(), title: "task2", done: false },
@@ -383,10 +371,11 @@ describe("Integration tests", function () {
         let syncResult: SyncResultObject;
 
         describe("PULL_ONLY strategy (default)", () => {
-          beforeEach(() => {
-            return testSync(testData, {
+          beforeEach(async () => {
+            const res = await testSync(testData, {
               strategy: Kinto.syncStrategy.PULL_ONLY,
-            }).then((res) => (syncResult = res));
+            });
+            return (syncResult = res);
           });
 
           it("should have an ok status", () => {
@@ -424,8 +413,9 @@ describe("Integration tests", function () {
         });
 
         describe("MANUAL strategy (default)", () => {
-          beforeEach(() => {
-            return testSync(testData).then((res) => (syncResult = res));
+          beforeEach(async () => {
+            const res = await testSync(testData);
+            return (syncResult = res);
           });
 
           it("should not have an ok status", () => {
@@ -479,17 +469,15 @@ describe("Integration tests", function () {
             expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  done: record.done,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
                 { title: "task3", _status: "synced", done: true },
@@ -498,8 +486,9 @@ describe("Integration tests", function () {
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([
               // task1, task2, task3 were prexisting.
               { title: "task1", done: true },
               { title: "task2", done: false },
@@ -512,10 +501,9 @@ describe("Integration tests", function () {
           describe("On next MANUAL sync", () => {
             let nextSyncResult: SyncResultObject;
 
-            beforeEach(() => {
-              return tasks.sync().then((result) => {
-                nextSyncResult = result;
-              });
+            beforeEach(async () => {
+              const result = await tasks.sync();
+              nextSyncResult = result;
             });
 
             it("should not have an ok status", () => {
@@ -553,10 +541,11 @@ describe("Integration tests", function () {
         });
 
         describe("CLIENT_WINS strategy", () => {
-          beforeEach(() => {
-            return testSync(testData, {
+          beforeEach(async () => {
+            const res = await testSync(testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then((res) => (syncResult = res));
+            });
+            return (syncResult = res);
           });
 
           it("should have an ok status", () => {
@@ -571,11 +560,10 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should have updated lastModified", () => {
+          it("should have updated lastModified", async () => {
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              syncResult.lastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(syncResult.lastModified);
           });
 
           it("should have no incoming conflict listed", () => {
@@ -616,17 +604,15 @@ describe("Integration tests", function () {
             ).eql(true);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  done: record.done,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
                 { title: "task3", _status: "synced", done: true },
@@ -635,8 +621,9 @@ describe("Integration tests", function () {
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1", done: true },
               { title: "task2", done: false },
@@ -652,10 +639,11 @@ describe("Integration tests", function () {
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
-          beforeEach(() => {
-            return collectionTestSync(tasksTransformed, testData, {
+          beforeEach(async () => {
+            const res = await collectionTestSync(tasksTransformed, testData, {
               strategy: Kinto.syncStrategy.CLIENT_WINS,
-            }).then((res) => (syncResult = res));
+            });
+            return (syncResult = res);
           });
 
           it("should publish resolved conflict using local version", () => {
@@ -684,17 +672,15 @@ describe("Integration tests", function () {
             ).eql(true);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasksTransformed
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  done: record.done,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasksTransformed.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
                 { title: "task3", _status: "synced", done: true },
@@ -703,8 +689,9 @@ describe("Integration tests", function () {
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList(tasksTransformed["_name"]).should.become([
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList(tasksTransformed["_name"]);
+            list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1", done: true },
               { title: "task2", done: false },
@@ -715,10 +702,11 @@ describe("Integration tests", function () {
         });
 
         describe("SERVER_WINS strategy", () => {
-          beforeEach(() => {
-            return testSync(testData, {
+          beforeEach(async () => {
+            const res = await testSync(testData, {
               strategy: Kinto.syncStrategy.SERVER_WINS,
-            }).then((res) => (syncResult = res));
+            });
+            return (syncResult = res);
           });
 
           it("should have an ok status", () => {
@@ -733,11 +721,10 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should have updated lastModified", () => {
+          it("should have updated lastModified", async () => {
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              syncResult.lastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(syncResult.lastModified);
           });
 
           it("should have no incoming conflict listed", () => {
@@ -771,17 +758,15 @@ describe("Integration tests", function () {
             ).eql(true);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  done: record.done,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                done: record.done,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 { title: "task1", _status: "synced", done: true },
                 { title: "task2", _status: "synced", done: false },
                 { title: "task3", _status: "synced", done: true },
@@ -790,8 +775,9 @@ describe("Integration tests", function () {
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([
               { title: "task1", done: true },
               { title: "task2", done: false },
               { title: "task3", done: true },
@@ -808,7 +794,7 @@ describe("Integration tests", function () {
 
         describe("Resolving conflicts doesn't interfere with sync", () => {
           const conflictingId = uuid4();
-          const testData = {
+          const testData: { [key: string]: KintoIdObject[] } = {
             localSynced: [
               { id: conflictingId, title: "conflicting task", done: false },
             ],
@@ -822,95 +808,67 @@ describe("Integration tests", function () {
             return testSync(testData);
           });
 
-          it("should sync over resolved records", () => {
-            return tasks
-              .update(
-                { id: conflictingId, title: "locally changed title" },
-                { patch: true }
-              )
-              .then(({ data: newRecord }) => {
-                expect(newRecord.last_modified).to.exist;
-                // Change the record remotely to introduce a comment
-                return rawCollection.updateRecord(
-                  { id: conflictingId, title: "remotely changed title" },
-                  { patch: true }
-                );
-              })
-              .then(() => tasks.sync())
-              .then((syncResult) => {
-                expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.lengthOf(1);
-                // Always pick our version.
-                // #resolve will copy the remote last_modified.
-                return tasks.resolve(
-                  syncResult.conflicts[0],
-                  syncResult.conflicts[0].local
-                );
-              })
-              .then(() => tasks.sync())
-              .then((syncResult) => {
-                expect(syncResult.ok).eql(true);
-                expect(syncResult.conflicts).to.have.lengthOf(0);
-                expect(syncResult.updated).to.have.lengthOf(0);
-                expect(syncResult.published).to.have.lengthOf(1);
-              })
-              .then(() => tasks.get(conflictingId))
-              .then(({ data: record }) => {
-                expect(record.title).eql("locally changed title");
-                expect(record._status).eql("synced");
-              });
+          it("should sync over resolved records", async () => {
+            const { data: newRecord } = await tasks.update(
+              { id: conflictingId, title: "locally changed title" },
+              { patch: true }
+            );
+            expect(newRecord.last_modified).to.exist;
+            await rawCollection.updateRecord(
+              { id: conflictingId, title: "remotely changed title" },
+              { patch: true }
+            );
+            const syncResult = await tasks.sync();
+            expect(syncResult.ok).eql(false);
+            expect(syncResult.conflicts).to.have.lengthOf(1);
+            await tasks.resolve(
+              syncResult.conflicts[0],
+              syncResult.conflicts[0].local
+            );
+            const syncResult_1 = await tasks.sync();
+            expect(syncResult_1.ok).eql(true);
+            expect(syncResult_1.conflicts).to.have.lengthOf(0);
+            expect(syncResult_1.updated).to.have.lengthOf(0);
+            expect(syncResult_1.published).to.have.lengthOf(1);
+            const { data: record } = await tasks.get(conflictingId);
+            expect(record.title).eql("locally changed title");
+            expect(record._status).eql("synced");
           });
 
-          it("should not skip other conflicts", () => {
+          it("should not skip other conflicts", async () => {
             const conflictingId2 = uuid4();
-            return tasks
-              .create(
-                { id: conflictingId2, title: "second title" },
-                { useRecordId: true }
-              )
-              .then(() => tasks.sync())
-              .then(() =>
-                rawCollection.updateRecord(
-                  { id: conflictingId, title: "remotely changed title" },
-                  { patch: true }
-                )
-              )
-              .then(() =>
-                rawCollection.updateRecord(
-                  { id: conflictingId2, title: "remotely changed title2" },
-                  { patch: true }
-                )
-              )
-              .then(() =>
-                tasks.update(
-                  { id: conflictingId, title: "locally changed title" },
-                  { patch: true }
-                )
-              )
-              .then(() =>
-                tasks.update(
-                  { id: conflictingId2, title: "local title2" },
-                  { patch: true }
-                )
-              )
-              .then(() => tasks.sync())
-              .then((syncResult) => {
-                expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.lengthOf(2);
-                // resolve just one conflict and ensure that the other
-                // one continues preventing the sync, even though it
-                // happened "after" the first conflict
-                return tasks.resolve(
-                  syncResult.conflicts[1],
-                  syncResult.conflicts[1].local
-                );
-              })
-              .then(() => tasks.sync())
-              .then((syncResult) => {
-                expect(syncResult.ok).eql(false);
-                expect(syncResult.conflicts).to.have.lengthOf(1);
-                expect(syncResult.updated).to.have.lengthOf(0);
-              });
+            await tasks.create(
+              { id: conflictingId2, title: "second title" },
+              { useRecordId: true }
+            );
+            await tasks.sync();
+            await rawCollection.updateRecord(
+              { id: conflictingId, title: "remotely changed title" },
+              { patch: true }
+            );
+            await rawCollection.updateRecord(
+              { id: conflictingId2, title: "remotely changed title2" },
+              { patch: true }
+            );
+            await tasks.update(
+              { id: conflictingId, title: "locally changed title" },
+              { patch: true }
+            );
+            await tasks.update(
+              { id: conflictingId2, title: "local title2" },
+              { patch: true }
+            );
+            const syncResult = await tasks.sync();
+            expect(syncResult.ok).eql(false);
+            expect(syncResult.conflicts).to.have.lengthOf(2);
+            await tasks.resolve(
+              syncResult.conflicts[1],
+              syncResult.conflicts[1].local
+            );
+            const syncResult_1 = await tasks.sync();
+            expect(syncResult_1.ok).eql(false);
+            expect(syncResult_1.conflicts).to.have.lengthOf(1);
+            expect(syncResult_1.updated).to.have.lengthOf(0);
           });
         });
       });
@@ -919,28 +877,17 @@ describe("Integration tests", function () {
         describe("With remote update", () => {
           let id: string, conflicts: any[];
 
-          beforeEach(() => {
-            return tasks
-              .create({ title: "initial" })
-              .then(({ data }) => {
-                id = data.id;
-                return tasks.sync();
-              })
-              .then(() => {
-                return tasks.delete(id);
-              })
-              .then(() => {
-                return tasks.api
-                  .bucket("default")
-                  .collection("tasks")
-                  .updateRecord({ id, title: "server-updated" });
-              })
-              .then(() => {
-                return tasks.sync();
-              })
-              .then((res) => {
-                conflicts = res.conflicts;
-              });
+          beforeEach(async () => {
+            const { data } = await tasks.create({ title: "initial" });
+            id = data.id;
+            await tasks.sync();
+            await tasks.delete(id);
+            await tasks.api
+              .bucket("default")
+              .collection("tasks")
+              .updateRecord({ id, title: "server-updated" });
+            const res = await tasks.sync();
+            conflicts = res.conflicts;
           });
 
           it("should properly list the encountered conflict", () => {
@@ -966,26 +913,17 @@ describe("Integration tests", function () {
         describe("With remote deletion", () => {
           let id: string, result: SyncResultObject;
 
-          beforeEach(() => {
-            return tasks
-              .create({ title: "initial" })
-              .then(({ data }) => {
-                id = data.id;
-                return tasks.sync();
-              })
-              .then(() => {
-                return tasks.delete(id);
-              })
-              .then(() => {
-                return tasks.api
-                  .bucket("default")
-                  .collection("tasks")
-                  .deleteRecord(id);
-              })
-              .then(() => {
-                return tasks.sync();
-              })
-              .then((res) => (result = res));
+          beforeEach(async () => {
+            const { data } = await tasks.create({ title: "initial" });
+            id = data.id;
+            await tasks.sync();
+            await tasks.delete(id);
+            await tasks.api
+              .bucket("default")
+              .collection("tasks")
+              .deleteRecord(id);
+            const res = await tasks.sync();
+            return (result = res);
           });
 
           it("should properly list the encountered conflict", () => {
@@ -1001,48 +939,39 @@ describe("Integration tests", function () {
       describe("Outgoing conflict", () => {
         let syncResult: SyncResultObject;
 
-        function setupConflict(collection: Collection) {
-          let recordId: string;
+        async function setupConflict(collection: Collection) {
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          return collection["_encodeRecord"]("remote", record)
-            .then((record) => {
-              return collection.api
-                .bucket("default")
-                .collection(collection["_name"])
-                .createRecord(record as any);
-            })
-            .then(() => collection.sync())
-            .then((res) => {
-              recordId = res.created[0].id;
-              return collection.delete(recordId, { virtual: false });
-            })
-            .then(() =>
-              collection.create(
-                {
-                  id: recordId,
-                  title: "task1-local",
-                  done: false,
-                },
-                { useRecordId: true }
-              )
-            );
+          const record_1 = await collection["_encodeRecord"]("remote", record);
+          await collection.api
+            .bucket("default")
+            .collection(collection["_name"])
+            .createRecord(record_1 as any);
+          const res = await collection.sync();
+          const recordId = res.created[0].id;
+          await collection.delete(recordId, { virtual: false });
+          return await collection.create(
+            {
+              id: recordId,
+              title: "task1-local",
+              done: false,
+            },
+            { useRecordId: true }
+          );
         }
 
-        beforeEach(() => {
-          return setupConflict(tasks).then(() =>
-            setupConflict(tasksTransformed)
-          );
+        beforeEach(async () => {
+          await setupConflict(tasks);
+          return await setupConflict(tasksTransformed);
         });
 
         describe("MANUAL strategy (default)", () => {
           let oldLastModified: number;
-          beforeEach(() => {
+          beforeEach(async () => {
             oldLastModified = tasks.lastModified!;
-            return tasks.sync().then((res) => {
-              syncResult = res;
-            });
+            const res = await tasks.sync();
+            syncResult = res;
           });
 
           it("should not have an ok status", () => {
@@ -1057,14 +986,13 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should not have updated lastModified", () => {
+          it("should not have updated lastModified", async () => {
             // lastModified hasn't changed because we haven't synced
             // anything since lastModified
             expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              syncResult.lastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(syncResult.lastModified);
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1094,23 +1022,22 @@ describe("Integration tests", function () {
             expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const list = await tasks.list({ order: "title" });
+            list.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For MANUAL strategy, local conficting record is left intact
                 { title: "task1-local", _status: "created" },
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([
               // local version should have been published to the server.
               { title: "task1-remote", done: true },
             ]);
@@ -1119,10 +1046,9 @@ describe("Integration tests", function () {
           describe("On next MANUAL sync", () => {
             let nextSyncResult: SyncResultObject;
 
-            beforeEach(() => {
-              return tasks.sync().then((result) => {
-                nextSyncResult = result;
-              });
+            beforeEach(async () => {
+              const result = await tasks.sync();
+              nextSyncResult = result;
             });
 
             it("should not have an ok status", () => {
@@ -1161,13 +1087,12 @@ describe("Integration tests", function () {
 
         describe("CLIENT_WINS strategy", () => {
           let oldLastModified: number;
-          beforeEach(() => {
+          beforeEach(async () => {
             oldLastModified = tasks.lastModified!;
-            return tasks
-              .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+            const res = await tasks.sync({
+              strategy: Kinto.syncStrategy.CLIENT_WINS,
+            });
+            syncResult = res;
           });
 
           it("should have an ok status", () => {
@@ -1182,16 +1107,15 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should have updated lastModified", () => {
+          it("should have updated lastModified", async () => {
             // At the end of the sync, we will have pushed our record
             // remotely, which won't have caused a conflict, which
             // will update the remote lastModified, and this is the
             // lastModified our collection will have.
             expect(tasks.lastModified).above(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              syncResult.lastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(syncResult.lastModified);
           });
 
           it("should have the outgoing conflict listed", () => {
@@ -1221,25 +1145,22 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
-              { title: "task1-local", done: false },
-            ]);
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([{ title: "task1-local", done: false }]);
           });
 
           futureSyncsOK(
@@ -1249,31 +1170,29 @@ describe("Integration tests", function () {
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
-          beforeEach(() => {
-            return tasksTransformed
-              .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasksTransformed.sync({
+              strategy: Kinto.syncStrategy.CLIENT_WINS,
+            });
+            syncResult = res;
           });
 
-          it("should put local database in the expected state", () => {
-            return tasksTransformed
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasksTransformed.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
               ]);
           });
 
-          it("should put the remote database in the expected state", () => {
-            return getRemoteList(tasksTransformed["_name"]).should.become([
+          it("should put the remote database in the expected state", async () => {
+            const list = await getRemoteList(tasksTransformed["_name"]);
+            list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
             ]);
@@ -1282,13 +1201,12 @@ describe("Integration tests", function () {
 
         describe("SERVER_WINS strategy", () => {
           let oldLastModified: number;
-          beforeEach(() => {
+          beforeEach(async () => {
             oldLastModified = tasks.lastModified!;
-            return tasks
-              .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+            const res = await tasks.sync({
+              strategy: Kinto.syncStrategy.SERVER_WINS,
+            });
+            syncResult = res;
           });
 
           it("should have an ok status", () => {
@@ -1303,7 +1221,7 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should not have updated lastModified", () => {
+          it("should not have updated lastModified", async () => {
             // Although we updated the last modified from the server,
             // the server's lastModified is the same as the one we
             // used to have, since the last modification that took
@@ -1311,9 +1229,8 @@ describe("Integration tests", function () {
             // about it).
             expect(tasks.lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).to.equal(syncResult.lastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              syncResult.lastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(syncResult.lastModified);
           });
 
           it("should not have the outgoing conflict listed", () => {
@@ -1341,25 +1258,22 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For SERVER_WINS strategy, local version is marked as synced
                 { title: "task1-remote", _status: "synced" },
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
-              { title: "task1-remote", done: true },
-            ]);
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([{ title: "task1-remote", done: true }]);
           });
 
           futureSyncsOK(
@@ -1369,12 +1283,11 @@ describe("Integration tests", function () {
         });
 
         describe("SERVER_WINS strategy with transformers", () => {
-          beforeEach(() => {
-            return tasksTransformed
-              .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasksTransformed.sync({
+              strategy: Kinto.syncStrategy.SERVER_WINS,
+            });
+            syncResult = res;
           });
 
           it("should not publish anything", () => {
@@ -1390,16 +1303,14 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].accepted.title).eql("task1-remote");
           });
 
-          it("should put local database in the expected state", () => {
-            return tasksTransformed
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasksTransformed.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For SERVER_WINS strategy, local version is marked as synced
                 { title: "task1-remote", _status: "synced" },
               ]);
@@ -1410,60 +1321,44 @@ describe("Integration tests", function () {
       describe("Outgoing conflict (remote deleted)", () => {
         let syncResult: SyncResultObject;
 
-        function setupConflict(collection: Collection) {
-          let recordId: string;
+        async function setupConflict(collection: Collection) {
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          return collection["_encodeRecord"]("remote", record)
-            .then((record) => {
-              return collection.api
-                .bucket("default")
-                .collection(collection["_name"])
-                .createRecord(record as any);
-            })
-            .then(() => collection.sync())
-            .then((res) => {
-              recordId = res.created[0].id;
-              return collection.api.deleteBucket("default");
-            })
-            .then(() => {
-              // Hack to make it seem like the delete happened "at the
-              // same time" as our sync (pull won't see records, but
-              // push will fail with conflict)
-              return collection.api
-                .bucket("default")
-                .collection(collection["_name"])
-                .listRecords();
-            })
-            .then((res) => {
-              const lastModified = parseInt(res.last_modified!, 10);
-              collection["_lastModified"] = lastModified;
-              return collection.db.saveLastModified(lastModified);
-            })
-            .then(() =>
-              collection.update({
-                id: recordId,
-                title: "task1-local",
-                done: false,
-              })
-            );
+          const record_1 = await collection["_encodeRecord"]("remote", record);
+          await collection.api
+            .bucket("default")
+            .collection(collection["_name"])
+            .createRecord(record_1 as any);
+          const res = await collection.sync();
+          const recordId = res.created[0].id;
+          await collection.api.deleteBucket("default");
+          const res_1 = await collection.api
+            .bucket("default")
+            .collection(collection["_name"])
+            .listRecords();
+          const lastModified = parseInt(res_1.last_modified!, 10);
+          collection["_lastModified"] = lastModified;
+          await collection.db.saveLastModified(lastModified);
+          return await collection.update({
+            id: recordId,
+            title: "task1-local",
+            done: false,
+          });
         }
 
-        beforeEach(() => {
-          return setupConflict(tasks).then(() =>
-            setupConflict(tasksTransformed)
-          );
+        beforeEach(async () => {
+          await setupConflict(tasks);
+          return await setupConflict(tasksTransformed);
         });
 
         describe("MANUAL strategy (default)", () => {
           let oldLastModified: number;
 
-          beforeEach(() => {
+          beforeEach(async () => {
             oldLastModified = tasks.lastModified!;
-            return tasks.sync().then((res) => {
-              syncResult = res;
-            });
+            const res = await tasks.sync();
+            syncResult = res;
           });
 
           it("should not have an ok status", () => {
@@ -1478,13 +1373,12 @@ describe("Integration tests", function () {
             expect(syncResult.lastModified).to.be.a("number");
           });
 
-          it("should not have updated lastModified", () => {
+          it("should not have updated lastModified", async () => {
             // Nothing to update it to; we explicitly copied it from
             // the server before syncing.
             expect(tasks.lastModified).to.equal(oldLastModified);
-            expect(tasks.db.getLastModified()).eventually.equal(
-              oldLastModified
-            );
+            const lastModified = await tasks.db.getLastModified();
+            expect(lastModified).to.equal(oldLastModified);
             expect(tasks.lastModified).equal(syncResult.lastModified);
           });
 
@@ -1515,32 +1409,30 @@ describe("Integration tests", function () {
             expect(syncResult.resolved).to.have.lengthOf(0);
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For MANUAL strategy, local conficting record is left intact
                 { title: "task1-local", _status: "updated" },
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([]);
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([]);
           });
 
           describe("On next MANUAL sync", () => {
             let nextSyncResult: SyncResultObject;
 
-            beforeEach(() => {
-              return tasks.sync().then((result) => {
-                nextSyncResult = result;
-              });
+            beforeEach(async () => {
+              const result = await tasks.sync();
+              nextSyncResult = result;
             });
 
             it("should not have an ok status", () => {
@@ -1578,12 +1470,11 @@ describe("Integration tests", function () {
         });
 
         describe("CLIENT_WINS strategy", () => {
-          beforeEach(() => {
-            return tasks
-              .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasks.sync({
+              strategy: Kinto.syncStrategy.CLIENT_WINS,
+            });
+            syncResult = res;
           });
 
           it("should have an ok status", () => {
@@ -1629,25 +1520,22 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].accepted.title).eql("task1-local");
           });
 
-          it("should put local database in the expected state", () => {
-            return tasks
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasks.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
               ]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([
-              { title: "task1-local", done: false },
-            ]);
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([{ title: "task1-local", done: false }]);
           });
 
           futureSyncsOK(
@@ -1657,31 +1545,29 @@ describe("Integration tests", function () {
         });
 
         describe("CLIENT_WINS strategy with transformers", () => {
-          beforeEach(() => {
-            return tasksTransformed
-              .sync({ strategy: Kinto.syncStrategy.CLIENT_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasksTransformed.sync({
+              strategy: Kinto.syncStrategy.CLIENT_WINS,
+            });
+            syncResult = res;
           });
 
-          it("should put local database in the expected state", () => {
-            return tasksTransformed
-              .list({ order: "title" })
-              .then((res) =>
-                res.data.map((record) => ({
-                  title: record.title,
-                  _status: record._status,
-                }))
-              )
-              .should.become([
+          it("should put local database in the expected state", async () => {
+            const res = await tasksTransformed.list({ order: "title" });
+            res.data
+              .map((record) => ({
+                title: record.title,
+                _status: record._status,
+              }))
+              .should.deep.equal([
                 // For CLIENT_WINS strategy, local version is marked as synced
                 { title: "task1-local", _status: "synced" },
               ]);
           });
 
-          it("should put the remote database in the expected state", () => {
-            return getRemoteList(tasksTransformed["_name"]).should.become([
+          it("should put the remote database in the expected state", async () => {
+            const list = await getRemoteList(tasksTransformed["_name"]);
+            list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
             ]);
@@ -1689,12 +1575,11 @@ describe("Integration tests", function () {
         });
 
         describe("SERVER_WINS strategy", () => {
-          beforeEach(() => {
-            return tasks
-              .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasks.sync({
+              strategy: Kinto.syncStrategy.SERVER_WINS,
+            });
+            syncResult = res;
           });
 
           it("should have an ok status", () => {
@@ -1736,18 +1621,14 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 
-          it("should put local database in the expected state", () => {
-            return (
-              tasks
-                .list({ order: "title" })
-                .then((res) => res.data)
-                // For SERVER_WINS strategy, local version is deleted
-                .should.become([])
-            );
+          it("should put local database in the expected state", async () => {
+            const { data: d } = await tasks.list({ order: "title" });
+            d.should.deep.equal([]);
           });
 
-          it("should put remote test server data in the expected state", () => {
-            return getRemoteList().should.become([]);
+          it("should put remote test server data in the expected state", async () => {
+            const list = await getRemoteList();
+            list.should.deep.equal([]);
           });
 
           futureSyncsOK(
@@ -1757,12 +1638,11 @@ describe("Integration tests", function () {
         });
 
         describe("SERVER_WINS strategy with transformers", () => {
-          beforeEach(() => {
-            return tasksTransformed
-              .sync({ strategy: Kinto.syncStrategy.SERVER_WINS })
-              .then((res) => {
-                syncResult = res;
-              });
+          beforeEach(async () => {
+            const res = await tasksTransformed.sync({
+              strategy: Kinto.syncStrategy.SERVER_WINS,
+            });
+            syncResult = res;
           });
 
           it("should not publish anything", () => {
@@ -1781,20 +1661,15 @@ describe("Integration tests", function () {
             expect(syncResult.resolved[0].rejected.title).eql("task1-local");
           });
 
-          it("should put local database in the expected state", () => {
-            return (
-              tasksTransformed
-                .list({ order: "title" })
-                .then((res) => res.data)
-                // For SERVER_WINS strategy, local version is deleted
-                .should.become([])
-            );
+          it("should put local database in the expected state", async () => {
+            const { data: d } = await tasksTransformed.list({ order: "title" });
+            d.should.deep.equal([]);
           });
         });
       });
 
       describe("Load dump", () => {
-        beforeEach(() => {
+        beforeEach(async () => {
           const id1 = uuid4();
           const id2 = uuid4();
           const tasksRemote = tasks.api.bucket("default").collection("tasks");
@@ -1804,47 +1679,49 @@ describe("Integration tests", function () {
             { id: id2, last_modified: 123458, title: "task3", done: false },
             { id: uuid4(), last_modified: 123459, title: "task4", done: false },
           ];
-          return Promise.all(dump.map((r) => tasksRemote.createRecord(r)))
-            .then(() => tasks.importBulk(dump))
-            .then(() =>
-              tasksRemote.updateRecord({ id: id1, title: "task22", done: true })
-            )
-            .then(() =>
-              tasksRemote.updateRecord({ id: id2, title: "task33", done: true })
-            );
+          await Promise.all(dump.map((r) => tasksRemote.createRecord(r)));
+          await tasks.importBulk(dump);
+          await tasksRemote.updateRecord({
+            id: id1,
+            title: "task22",
+            done: true,
+          });
+          return await tasksRemote.updateRecord({
+            id: id2,
+            title: "task33",
+            done: true,
+          });
         });
 
-        it("should sync changes on loaded data", () => {
-          return tasks.sync().then((res) => {
-            expect(res.ok).eql(true);
-            expect(res.updated.length).eql(2);
-          });
+        it("should sync changes on loaded data", async () => {
+          const res = await tasks.sync();
+          expect(res.ok).eql(true);
+          expect(res.updated.length).eql(2);
         });
       });
 
       describe("Batch request chunking", () => {
         let nbFixtures: number;
 
-        function loadFixtures() {
-          return tasks.api.fetchServerSettings().then((serverSettings) => {
-            nbFixtures = serverSettings["batch_max_requests"] + 10;
-            const fixtures = [];
-            for (let i = 0; i < nbFixtures; i++) {
-              fixtures.push({ title: "title" + i, position: i });
-            }
-            return Promise.all(fixtures.map((f) => tasks.create(f)));
-          });
+        async function loadFixtures() {
+          const serverSettings = await tasks.api.fetchServerSettings();
+          nbFixtures = serverSettings["batch_max_requests"] + 10;
+          const fixtures = [];
+          for (let i = 0; i < nbFixtures; i++) {
+            fixtures.push({ title: "title" + i, position: i });
+          }
+          return Promise.all(fixtures.map((f) => tasks.create(f)));
         }
 
-        beforeEach(() => {
-          return loadFixtures().then(() => tasks.sync());
+        beforeEach(async () => {
+          await loadFixtures();
+          return await tasks.sync();
         });
 
-        it("should create the expected number of records", () => {
-          return tasks.list({ order: "-position" }).then((res) => {
-            expect(res.data.length).eql(nbFixtures);
-            expect(res.data[0].position).eql(nbFixtures - 1);
-          });
+        it("should create the expected number of records", async () => {
+          const res = await tasks.list({ order: "-position" });
+          expect(res.data.length).eql(nbFixtures);
+          expect(res.data[0].position).eql(nbFixtures - 1);
         });
       });
     });
@@ -1872,13 +1749,9 @@ describe("Integration tests", function () {
           });
         });
 
-        it("should generate id's using the IdSchema", () => {
-          return tasks
-            .create({ foo: "bar" })
-            .then((record) => {
-              return record.data.id;
-            })
-            .should.become("0");
+        it("should generate id's using the IdSchema", async () => {
+          const record = await tasks.create({ foo: "bar" });
+          record.data.id.should.equal("0");
         });
       });
     });
@@ -1906,35 +1779,37 @@ describe("Integration tests", function () {
         ]);
       });
 
-      it("should list published records unencoded", () => {
-        return tasks
-          .sync()
-          .then((res) => res.published.map((x: any) => x.title).sort())
-          .should.become(["abc", "def"]);
+      it("should list published records unencoded", async () => {
+        const res = await tasks.sync();
+        res.published
+          .map((x: any) => x.title)
+          .sort()
+          .should.deep.equal(["abc", "def"]);
       });
 
-      it("should store encoded data remotely", () => {
-        return tasks
-          .sync()
-          .then(() => {
-            return fetch(
-              `${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`,
-              {
-                headers: { Authorization: "Basic " + btoa("user:pass") },
-              }
-            );
-          })
-          .then((res) => res.json())
-          .then((res) => res.data.map((x: any) => x.title).sort())
-          .should.become(["abc!?", "def!?"]);
+      it("should store encoded data remotely", async () => {
+        await tasks.sync();
+
+        const res = await fetch(
+          `${TEST_KINTO_SERVER}/buckets/default/collections/tasks/records`,
+          {
+            headers: { Authorization: "Basic " + btoa("user:pass") },
+          }
+        );
+        const { data } = await res.json();
+        data
+          .map((x: any) => x.title)
+          .sort()
+          .should.deep.equal(["abc!?", "def!?"]);
       });
 
-      it("should keep local data decoded", () => {
-        return tasks
-          .sync()
-          .then(() => tasks.list())
-          .then((res) => res.data.map((x: any) => x.title).sort())
-          .should.become(["abc", "def"]);
+      it("should keep local data decoded", async () => {
+        await tasks.sync();
+        const res = await tasks.list();
+        res.data
+          .map((x: any) => x.title)
+          .sort()
+          .should.deep.equal(["abc", "def"]);
       });
     });
 
@@ -1984,78 +1859,62 @@ describe("Integration tests", function () {
         id: uuid4(),
         title: "deleted-by-other-client",
       };
-      beforeEach(() => {
+      beforeEach(async () => {
         tasks = kinto.collection("tasks", {
           remoteTransformers: [localDeleteTransformer()],
         });
         tasksRemote = tasks.api.bucket("default").collection("tasks");
-        return Promise.all([
+        await Promise.all([
           tasks.create(preserveOnSendNew, { useRecordId: true }),
           tasks.create(preserveOnSendOld, { useRecordId: true }),
           tasksRemote.createRecord(deletedByOtherClientRemote),
-        ])
-          .then(() => tasks.sync())
-          .then(() => tasks.delete(preserveOnSendNew.id))
-          .then(() => tasks.delete(preserveOnSendOld.id))
-          .then(() => tasksRemote.createRecord(deleteOnReceiveRemote));
+        ]);
+        await tasks.sync();
+        await tasks.delete(preserveOnSendNew.id);
+        await tasks.delete(preserveOnSendOld.id);
+        return await tasksRemote.createRecord(deleteOnReceiveRemote);
       });
 
-      it("should have sent preserve-on-send new remotely", () => {
-        return tasks
-          .sync()
-          .then(() => tasksRemote.getRecord(preserveOnSendNew.id))
-          .then((res) => res.data)
-          .should.eventually.property("title", "preserve-on-send new");
+      it("should have sent preserve-on-send new remotely", async () => {
+        await tasks.sync();
+        const { data } = await tasksRemote.getRecord(preserveOnSendNew.id);
+        data.should.have.property("title", "preserve-on-send new");
       });
 
-      it("should have sent preserve-on-send old remotely", () => {
-        return tasks
-          .sync()
-          .then(() => tasksRemote.getRecord(preserveOnSendOld.id))
-          .then((res) => res.data)
-          .should.eventually.property("title", "preserve-on-send old");
+      it("should have sent preserve-on-send old remotely", async () => {
+        await tasks.sync();
+        const { data } = await tasksRemote.getRecord(preserveOnSendOld.id);
+        data.should.have.property("title", "preserve-on-send old");
       });
 
-      it("should have locally deleted preserve-on-send new", () => {
-        return tasks
-          .sync()
-          .then(() => tasks.getAny(preserveOnSendNew.id))
-          .then((res) => res.data)
-          .should.eventually.eql(undefined);
+      it("should have locally deleted preserve-on-send new", async () => {
+        await tasks.sync();
+        const { data } = await tasks.getAny(preserveOnSendNew.id);
+        expect(data).to.equal(undefined);
       });
 
-      it("should have locally deleted preserve-on-send old", () => {
-        return tasks
-          .sync()
-          .then(() => tasks.getAny(preserveOnSendOld.id))
-          .then((res) => res.data)
-          .should.eventually.eql(undefined);
+      it("should have locally deleted preserve-on-send old", async () => {
+        await tasks.sync();
+        const { data } = await tasks.getAny(preserveOnSendOld.id);
+        expect(data).to.equal(undefined);
       });
 
-      it("should have deleted delete-on-receive", () => {
-        return tasks
-          .sync()
-          .then(() => tasks.getAny(deleteOnReceiveRemote.id))
-          .then((res) => res.data)
-          .should.eventually.eql(undefined);
+      it("should have deleted delete-on-receive", async () => {
+        await tasks.sync();
+        const { data } = await tasks.getAny(deleteOnReceiveRemote.id);
+        expect(data).to.equal(undefined);
       });
 
-      it("should have deleted deleted-by-other-client", () => {
-        return tasks
-          .getAny(deletedByOtherClientRemote.id)
-          .then((res) =>
-            expect(res.data.title).to.eql("deleted-by-other-client")
-          )
-          .then(() =>
-            tasksRemote.createRecord({
-              ...deletedByOtherClientRemote,
-              wasDeleted: true,
-            })
-          )
-          .then(() => tasks.sync())
-          .then(() => tasks.getAny(deletedByOtherClientRemote.id))
-          .then((res) => res.data)
-          .should.eventually.eql(undefined);
+      it("should have deleted deleted-by-other-client", async () => {
+        const res = await tasks.getAny(deletedByOtherClientRemote.id);
+        expect(res.data.title).to.eql("deleted-by-other-client");
+        await tasksRemote.createRecord({
+          ...deletedByOtherClientRemote,
+          wasDeleted: true,
+        });
+        await tasks.sync();
+        const res_1 = await tasks.getAny(deletedByOtherClientRemote.id);
+        expect(res_1.data).to.equal(undefined);
       });
     });
   });
@@ -2065,35 +1924,33 @@ describe("Integration tests", function () {
 
     after(() => server.stop());
 
-    beforeEach(() => {
-      return tasks
-        .clear()
-        .then(() => {
-          return Promise.all([
-            tasks.create({ name: "foo" }),
-            tasks.create({ name: "bar" }),
-          ]);
-        })
-        .then(() => tasks.sync())
-        .then(() => server.flush());
+    beforeEach(async () => {
+      await tasks.clear();
+      await Promise.all([
+        tasks.create({ name: "foo" }),
+        tasks.create({ name: "bar" }),
+      ]);
+      await tasks.sync();
+      return await server.flush();
     });
 
-    it("should reject a call to sync() with appropriate message", () => {
-      return tasks
-        .sync()
-        .should.be.rejectedWith(
-          ServerWasFlushedError,
-          /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/
-        );
+    it("should reject a call to sync() with appropriate message", async () => {
+      await expectAsyncError(
+        () => tasks.sync(),
+        /^Server has been flushed. Client Side Timestamp: \d+ Server Side Timestamp: \d+$/,
+        ServerWasFlushedError
+      );
     });
 
-    it("should allow republishing local collection to flushed server", () => {
-      return tasks
-        .sync()
-        .catch(() => tasks.resetSyncStatus())
-        .then(() => tasks.sync())
-        .should.eventually.have.property("published")
-        .to.have.lengthOf(2);
+    it("should allow republishing local collection to flushed server", async () => {
+      try {
+        await tasks.sync();
+      } catch (e) {
+        await tasks.resetSyncStatus();
+      }
+
+      const res = await tasks.sync();
+      res.should.have.property("published").to.have.lengthOf(2);
     });
   });
 
@@ -2102,25 +1959,24 @@ describe("Integration tests", function () {
 
     after(() => server.stop());
 
-    beforeEach(() => {
-      return tasks.clear().then(() => server.flush());
+    beforeEach(async () => {
+      await tasks.clear();
+      return await server.flush();
     });
 
-    it("should reject sync when the server sends a Backoff header", () => {
+    it("should reject sync when the server sends a Backoff header", async () => {
       // Note: first call receive the Backoff header, second actually rejects.
-      return tasks
-        .sync()
-        .then(() => tasks.sync())
-        .should.be.rejectedWith(
-          Error,
-          /Server is asking clients to back off; retry in 10s/
-        );
+      await expectAsyncError(async () => {
+        await tasks.sync();
+        await tasks.sync();
+      }, /Server is asking clients to back off; retry in 10s/);
     });
   });
 
   describe("Deprecated protocol version", () => {
-    beforeEach(() => {
-      return tasks.clear().then(() => server.flush());
+    beforeEach(async () => {
+      await tasks.clear();
+      return await server.flush();
     });
 
     describe("Soft EOL", () => {
@@ -2143,14 +1999,13 @@ describe("Integration tests", function () {
         consoleWarnStub = sandbox.stub(console, "warn") as any;
       });
 
-      it("should warn when the server sends a deprecation Alert header", () => {
-        return tasks.sync().then(() => {
-          sinon.assert.calledWithExactly(
-            consoleWarnStub,
-            "Boom",
-            "http://www.perdu.com"
-          );
-        });
+      it("should warn when the server sends a deprecation Alert header", async () => {
+        await tasks.sync();
+        sinon.assert.calledWithExactly(
+          consoleWarnStub,
+          "Boom",
+          "http://www.perdu.com"
+        );
       });
     });
 
@@ -2168,12 +2023,18 @@ describe("Integration tests", function () {
 
       after(() => server.stop());
 
-      beforeEach(() => sandbox.stub(console, "warn"));
+      beforeEach(() => {
+        sandbox.stub(console, "warn");
+      });
 
-      it("should reject with a 410 Gone when hard EOL is received", () => {
-        return tasks
-          .sync()
-          .should.be.rejectedWith(Error, /HTTP 410 Gone: Service deprecated/);
+      it("should reject with a 410 Gone when hard EOL is received", async () => {
+        // As of Kinto 13.6.2, EOL responses don't contain CORS headers, so we
+        // can only assert than an error is throw.
+        await expectAsyncError(
+          () => tasks.sync(),
+          /HTTP 410 Gone: Service deprecated/
+          // ServerResponse
+        );
       });
     });
   });

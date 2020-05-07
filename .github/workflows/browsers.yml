@@ -1,0 +1,33 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+name: Browser Tests
+jobs:
+  chore:
+    name: Browser Tests
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Print environment
+        run: |
+          node --version
+          npm --version
+          python --version
+          pip --version
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Python dependencies
+        run: pip install kinto kinto-attachment
+
+      - name: Run tests
+        run: npm run test:${{ matrix.browser }}

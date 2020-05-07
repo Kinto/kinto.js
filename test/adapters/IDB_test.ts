@@ -1,10 +1,16 @@
 import sinon from "sinon";
-import { expect } from "chai";
 
 import IDB, { open, execute } from "../../src/adapters/IDB";
 import { v4 as uuid4 } from "uuid";
 import { StorageProxy } from "../../src/adapters/base";
 import { KintoIdObject } from "kinto-http";
+import { expectAsyncError } from "../test_utils";
+
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, before, beforeEach, after, afterEach } = intern.getPlugin(
+  "interface.bdd"
+);
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {
@@ -20,52 +26,49 @@ describe("adapter.IDB", () => {
 
   /** @test {IDB#open} */
   describe("#open", () => {
-    it("should be fullfilled when a connection is opened", () => {
-      return db.open().should.be.fulfilled;
+    it("should be fullfilled when a connection is opened", async () => {
+      await db.open();
     });
 
-    it("should reject on open request error", () => {
+    it("should reject on open request error", async () => {
       const fakeOpenRequest = {} as IDBOpenDBRequest;
       sandbox.stub(indexedDB, "open").returns(fakeOpenRequest);
       const db = new IDB("another/db");
       const prom = db.open();
 
-      fakeOpenRequest.onerror!({ target: { error: "fail" } } as any);
+      fakeOpenRequest.onerror!({ target: { error: new Error("fail") } } as any);
 
-      return prom.should.be.rejectedWith("fail");
+      await expectAsyncError(() => prom, "fail");
     });
   });
 
   /** @test {IDB#close} */
   describe("#close", () => {
-    it("should be fullfilled when a connection is closed", () => {
-      return db.close().should.be.fulfilled;
+    it("should be fullfilled when a connection is closed", async () => {
+      await db.close();
     });
 
-    it("should be fullfilled when no connection has been opened", () => {
+    it("should be fullfilled when no connection has been opened", async () => {
       db["_db"] = null;
-      return db.close().should.be.fulfilled;
+      await db.close();
     });
 
-    it("should close an opened connection to the database", () => {
-      return db
-        .close()
-        .then(() => db["_db"])
-        .should.become(null);
+    it("should close an opened connection to the database", async () => {
+      await db.close();
+      expect(db["_db"]).to.equal(null);
     });
   });
 
   /** @test {IDB#clear} */
   describe("#clear", () => {
-    it("should clear the database", () => {
-      return db
-        .execute((transaction) => {
-          transaction.create({ id: "1" });
-          transaction.create({ id: "2" });
-        })
-        .then(() => db.clear())
-        .then(() => db.list())
-        .should.eventually.have.lengthOf(0);
+    it("should clear the database", async () => {
+      await db.execute((transaction) => {
+        transaction.create({ id: "1" });
+        transaction.create({ id: "2" });
+      });
+      await db.clear();
+      const list = await db.list();
+      list.should.have.lengthOf(0);
     });
 
     it("should isolate records by collection", async () => {
@@ -91,7 +94,7 @@ describe("adapter.IDB", () => {
       expect(await db2.getLastModified()).to.equal(43);
     });
 
-    it("should reject on transaction error", () => {
+    it("should reject on transaction error", async () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         callback({
           index() {
@@ -103,97 +106,91 @@ describe("adapter.IDB", () => {
           },
         } as any);
       });
-      return db.clear().should.be.rejectedWith(Error, "transaction error");
+
+      await expectAsyncError(() => db.clear(), /transaction error/);
     });
   });
 
   /** @test {IDB#execute} */
   describe("#execute", () => {
-    it("should return a promise", () => {
-      return db.execute(() => {}).should.be.fulfilled;
+    it("should return a promise", async () => {
+      await db.execute(() => {});
     });
 
     describe("No preloading", () => {
-      it("should open a connection to the db", () => {
+      it("should open a connection to the db", async () => {
         const open = sandbox
           .stub(db, "open")
           .returns(Promise.resolve({} as IDB<any>));
 
-        return db.execute(() => {}).then(() => sinon.assert.calledOnce(open));
+        await db.execute(() => {});
+        return sinon.assert.calledOnce(open);
       });
 
-      it("should execute the specified callback", () => {
+      it("should execute the specified callback", async () => {
         const callback = sandbox.spy();
-        return db.execute(callback).then(() => sinon.assert.called(callback));
+        await db.execute(callback);
+        return sinon.assert.called(callback);
       });
 
-      it("should fail if the callback returns a promise", () => {
+      it("should fail if the callback returns a promise", async () => {
         const callback = () => Promise.resolve();
-        return db
-          .execute(callback)
-          .should.eventually.be.rejectedWith(Error, /Promise/);
+        await expectAsyncError(() => db.execute(callback), /Promise/);
       });
 
-      it("should rollback if the callback fails", () => {
+      it("should rollback if the callback fails", async () => {
         const callback = (transaction: any) => {
           transaction.execute((t: StorageProxy<any>) =>
             t.create({ id: "1", foo: "bar" })
           );
           throw new Error("Unexpected");
         };
-        return db
-          .execute(callback)
-          .catch(() => db.list())
-          .should.become([]);
+
+        try {
+          await db.execute(callback);
+        } catch (e) {}
+
+        expect(await db.list()).to.deep.equal([]);
       });
 
-      it("should provide a transaction parameter", () => {
+      it("should provide a transaction parameter", async () => {
         const callback = sandbox.spy();
-        return db.execute(callback).then(() => {
-          const handler = callback.getCall(0).args[0];
-          expect(handler).to.have.property("get").to.be.a("function");
-          expect(handler).to.have.property("create").to.be.a("function");
-          expect(handler).to.have.property("update").to.be.a("function");
-          expect(handler).to.have.property("delete").to.be.a("function");
+        await db.execute(callback);
+        const handler = callback.getCall(0).args[0];
+        expect(handler).to.have.property("get").to.be.a("function");
+        expect(handler).to.have.property("create").to.be.a("function");
+        expect(handler).to.have.property("update").to.be.a("function");
+        expect(handler).to.have.property("delete").to.be.a("function");
+      });
+
+      it("should create a record", async () => {
+        const data = { id: "1", foo: "bar" };
+        await db.execute((t) => t.create(data));
+        const list = await db.list();
+        list.should.deep.equal([data]);
+      });
+
+      it("should update a record", async () => {
+        const data = { id: "1", foo: "bar" };
+        await db.execute((t) => t.create(data));
+        await db.execute((t) => {
+          t.update({ ...data, foo: "baz" });
         });
+        const res = await db.get(data.id);
+        res!.foo.should.equal("baz");
       });
 
-      it("should create a record", () => {
+      it("should delete a record", async () => {
         const data = { id: "1", foo: "bar" };
-        return db
-          .execute((t) => t.create(data))
-          .then(() => db.list())
-          .should.become([data]);
+        await db.execute((t) => t.create(data));
+        await db.execute((transaction) => {
+          transaction.delete(data.id);
+        });
+        const id = await db.get(data.id);
+        expect(id).to.equal(undefined);
       });
 
-      it("should update a record", () => {
-        const data = { id: "1", foo: "bar" };
-        return db
-          .execute((t) => t.create(data))
-          .then(() => {
-            return db.execute((transaction) => {
-              transaction.update({ ...data, foo: "baz" });
-            });
-          })
-          .then(() => db.get(data.id))
-          .then((res) => res!.foo)
-          .should.become("baz");
-      });
-
-      it("should delete a record", () => {
-        const data = { id: "1", foo: "bar" };
-        return db
-          .execute((t) => t.create(data))
-          .then(() => {
-            return db.execute((transaction) => {
-              transaction.delete(data.id);
-            });
-          })
-          .then(() => db.get(data.id))
-          .should.become(undefined);
-      });
-
-      it("should reject on store method error", () => {
+      it("should reject on store method error", async () => {
         sandbox
           .stub(db, "prepare")
           .callsFake(async (name, callback, options) => {
@@ -214,12 +211,14 @@ describe("adapter.IDB", () => {
               abort
             );
           });
-        return db
-          .execute((transaction) => transaction.create({ id: "42" }))
-          .should.be.rejectedWith(Error, "add error");
+
+        await expectAsyncError(
+          () => db.execute((transaction) => transaction.create({ id: "42" })),
+          "add error"
+        );
       });
 
-      it("should reject on transaction error", () => {
+      it("should reject on transaction error", async () => {
         sandbox
           .stub(db, "prepare")
           .callsFake(async (name, callback, options) => {
@@ -229,11 +228,14 @@ describe("adapter.IDB", () => {
               },
             } as any);
           });
-        return db
-          .execute((transaction) => transaction.create({} as any), {
-            preload: ["1", "2"],
-          })
-          .should.be.rejectedWith(Error, "transaction error");
+
+        await expectAsyncError(
+          () =>
+            db.execute((transaction) => transaction.create({} as any), {
+              preload: ["1", "2"],
+            }),
+          "transaction error"
+        );
       });
     });
 
@@ -247,22 +249,17 @@ describe("adapter.IDB", () => {
         preload.push(articles[Math.floor(Math.random() * articles.length)].id);
       }
 
-      it("should expose preloaded records using get()", () => {
-        return db
-          .execute((t) => articles.map((a) => t.create(a)))
-          .then(() => {
-            return db.execute(
-              (transaction) => {
-                return preload.map((p) => transaction.get(p));
-              },
-              { preload }
-            );
-          })
-          .then((preloaded) => {
-            preloaded.forEach((p, i) => {
-              expect(p.title).eql(articles[parseInt(preload[i], 10)].title);
-            });
-          });
+      it("should expose preloaded records using get()", async () => {
+        await db.execute((t) => articles.map((a) => t.create(a)));
+        const preloaded = await db.execute(
+          (transaction) => {
+            return preload.map((p) => transaction.get(p));
+          },
+          { preload }
+        );
+        preloaded.forEach((p, i) => {
+          expect(p.title).eql(articles[parseInt(preload[i], 10)].title);
+        });
       });
     });
   });
@@ -273,18 +270,17 @@ describe("adapter.IDB", () => {
       return db.execute((t) => t.create({ id: "1", foo: "bar" }));
     });
 
-    it("should retrieve a record from its id", () => {
-      return db
-        .get("1")
-        .then((res) => res!.foo)
-        .should.eventually.eql("bar");
+    it("should retrieve a record from its id", async () => {
+      const res = await db.get("1");
+      res!.foo.should.equal("bar");
     });
 
-    it("should return undefined when record is not found", () => {
-      return db.get("999").should.eventually.eql(undefined);
+    it("should return undefined when record is not found", async () => {
+      const res = await db.get("999");
+      expect(res).to.equal(undefined);
     });
 
-    it("should reject on transaction error", () => {
+    it("should reject on transaction error", async () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
           get() {
@@ -292,9 +288,11 @@ describe("adapter.IDB", () => {
           },
         } as any);
       });
-      return db
-        .get(undefined as any)
-        .should.be.rejectedWith(Error, "transaction error");
+
+      await expectAsyncError(
+        () => db.get(undefined as any),
+        /transaction error/
+      );
     });
   });
 
@@ -309,18 +307,21 @@ describe("adapter.IDB", () => {
       });
     });
 
-    it("should retrieve the list of records", () => {
-      return db.list().should.eventually.have.lengthOf(10);
+    it("should retrieve the list of records", async () => {
+      const list = await db.list();
+      list.should.have.lengthOf(10);
     });
 
-    it("should prefix error encountered", () => {
+    it("should prefix error encountered", async () => {
       sandbox.stub(db, "open").returns(Promise.reject("error"));
-      return db
-        .list()
-        .should.be.rejectedWith(IDB.IDBError, /^IndexedDB list()/);
+      await expectAsyncError(
+        () => db.list(),
+        /^IndexedDB list()/,
+        IDB.IDBError
+      );
     });
 
-    it("should reject on transaction error", () => {
+    it("should reject on transaction error", async () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
           index() {
@@ -332,12 +333,12 @@ describe("adapter.IDB", () => {
           },
         } as any);
       });
-      return db
-        .list()
-        .should.be.rejectedWith(
-          IDB.IDBError,
-          "IndexedDB list() transaction error"
-        );
+
+      await expectAsyncError(
+        () => db.list(),
+        "IndexedDB list() transaction error",
+        IDB.IDBError
+      );
     });
 
     it("should isolate records by collection", async () => {
@@ -361,68 +362,65 @@ describe("adapter.IDB", () => {
     describe("Filters", () => {
       describe("on non-indexed fields", () => {
         describe("single value", () => {
-          it("should filter the list on a single pre-indexed column", () => {
-            return db
-              .list({ filters: { name: "#4" } })
-              .should.eventually.eql([{ id: "4", name: "#4" }]);
+          it("should filter the list on a single pre-indexed column", async () => {
+            const list = await db.list({ filters: { name: "#4" } });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
           });
         });
 
         describe("multiple values", () => {
-          it("should filter the list on a single pre-indexed column", () => {
-            return db
-              .list({ filters: { name: ["#4", "#5"] } })
-              .should.eventually.eql([
-                { id: "4", name: "#4" },
-                { id: "5", name: "#5" },
-              ]);
+          it("should filter the list on a single pre-indexed column", async () => {
+            const list = await db.list({ filters: { name: ["#4", "#5"] } });
+            list.should.deep.equal([
+              { id: "4", name: "#4" },
+              { id: "5", name: "#5" },
+            ]);
           });
 
-          it("should handle non-existent keys", () => {
-            return db
-              .list({ filters: { name: ["#4", "qux"] } })
-              .should.eventually.eql([{ id: "4", name: "#4" }]);
+          it("should handle non-existent keys", async () => {
+            const list = await db.list({ filters: { name: ["#4", "qux"] } });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
           });
 
-          it("should handle empty lists", () => {
-            return db.list({ filters: { name: [] } }).should.eventually.eql([]);
+          it("should handle empty lists", async () => {
+            const list = await db.list({ filters: { name: [] } });
+            list.should.deep.equal([]);
           });
         });
       });
 
       describe("on indexed fields", () => {
         describe("single value", () => {
-          it("should filter the list on a single pre-indexed column", () => {
-            return db
-              .list({ filters: { id: "4" } })
-              .should.eventually.eql([{ id: "4", name: "#4" }]);
+          it("should filter the list on a single pre-indexed column", async () => {
+            const list = await db.list({ filters: { id: "4" } });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
           });
         });
 
         describe("multiple values", () => {
-          it("should filter the list on a single pre-indexed column", () => {
-            return db
-              .list({ filters: { id: ["5", "4"] } })
-              .should.eventually.eql([
-                { id: "4", name: "#4" },
-                { id: "5", name: "#5" },
-              ]);
+          it("should filter the list on a single pre-indexed column", async () => {
+            const list = await db.list({ filters: { id: ["5", "4"] } });
+            list.should.deep.equal([
+              { id: "4", name: "#4" },
+              { id: "5", name: "#5" },
+            ]);
           });
 
-          it("should filter the list combined with other filters", () => {
-            return db
-              .list({ filters: { id: ["5", "4"], name: "#4" } })
-              .should.eventually.eql([{ id: "4", name: "#4" }]);
+          it("should filter the list combined with other filters", async () => {
+            const list = await db.list({
+              filters: { id: ["5", "4"], name: "#4" },
+            });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
           });
 
-          it("should handle non-existent keys", () => {
-            return db
-              .list({ filters: { id: ["4", "9999"] } })
-              .should.eventually.eql([{ id: "4", name: "#4" }]);
+          it("should handle non-existent keys", async () => {
+            const list = await db.list({ filters: { id: ["4", "9999"] } });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
           });
 
-          it("should handle empty lists", () => {
-            return db.list({ filters: { id: [] } }).should.eventually.eql([]);
+          it("should handle empty lists", async () => {
+            const list = await db.list({ filters: { id: [] } });
+            list.should.deep.equal([]);
           });
         });
       });
@@ -434,35 +432,18 @@ describe("adapter.IDB", () => {
    * @test {IDB#loadDump}
    */
   describe("Deprecated #loadDump", () => {
-    it("should call importBulk", () => {
+    it("should call importBulk", async () => {
       const importBulkStub = sandbox
         .stub(db, "importBulk")
         .returns(Promise.resolve([]));
-      return db
-        .loadDump([{ id: "1", last_modified: 0, foo: "bar" }])
-        .then(() => sinon.assert.calledOnce(importBulkStub));
-    });
-  });
-
-  /** @test {IDB#importBulk} */
-  describe("#importBulk", () => {
-    it("should reject on transaction error", () => {
-      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
-        return callback({
-          put() {
-            throw new Error("transaction error");
-          },
-        } as any);
-      });
-      return db
-        .importBulk([{ id: "1", last_modified: 0, foo: "bar" }])
-        .should.be.rejectedWith(IDB.IDBError, /^IndexedDB importBulk()/);
+      await db.loadDump([{ id: "1", last_modified: 0, foo: "bar" }]);
+      return sinon.assert.calledOnce(importBulkStub);
     });
   });
 
   /** @test {IDB#getLastModified} */
   describe("#getLastModified", () => {
-    it("should reject with any encountered transaction error", () => {
+    it("should reject with any encountered transaction error", async () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
           get() {
@@ -470,32 +451,32 @@ describe("adapter.IDB", () => {
           },
         } as any);
       });
-      return db.getLastModified().should.be.rejectedWith(/transaction error/);
+
+      await expectAsyncError(() => db.getLastModified(), /transaction error/);
     });
   });
 
   /** @test {IDB#saveLastModified} */
   describe("#saveLastModified", () => {
-    it("should resolve with lastModified value", () => {
-      return db.saveLastModified(42).should.eventually.become(42);
+    it("should resolve with lastModified value", async () => {
+      const res = await db.saveLastModified(42);
+      res.should.equal(42);
     });
 
-    it("should save a lastModified value", () => {
-      return db
-        .saveLastModified(42)
-        .then(() => db.getLastModified())
-        .should.eventually.become(42);
+    it("should save a lastModified value", async () => {
+      await db.saveLastModified(42);
+      const res = await db.getLastModified();
+      res.should.equal(42);
     });
 
-    it("should allow updating previous value", () => {
-      return db
-        .saveLastModified(42)
-        .then(() => db.saveLastModified(43))
-        .then(() => db.getLastModified())
-        .should.eventually.become(43);
+    it("should allow updating previous value", async () => {
+      await db.saveLastModified(42);
+      await db.saveLastModified(43);
+      const res = await db.getLastModified();
+      res.should.equal(43);
     });
 
-    it("should reject on transaction error", () => {
+    it("should reject on transaction error", async () => {
       sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
         return callback({
           delete() {
@@ -503,64 +484,74 @@ describe("adapter.IDB", () => {
           },
         } as any);
       });
-      return db
-        .saveLastModified(undefined as any)
-        .should.be.rejectedWith(/transaction error/);
+
+      await expectAsyncError(
+        () => db.saveLastModified(undefined as any),
+        /transaction error/
+      );
     });
   });
 
   /** @test {IDB#importBulk} */
   describe("#importBulk", () => {
-    it("should import a list of records.", () => {
-      return db
-        .importBulk([
-          { id: "1", foo: "bar", last_modified: 0 },
-          { id: "2", foo: "baz", last_modified: 1 },
-        ])
-        .should.eventually.have.length(2);
+    it("should import a list of records.", async () => {
+      const res = await db.importBulk([
+        { id: "1", foo: "bar", last_modified: 0 },
+        { id: "2", foo: "baz", last_modified: 1 },
+      ]);
+      res.should.have.lengthOf(2);
     });
 
-    it("should override existing records.", () => {
-      return db
-        .importBulk([
-          { id: "1", foo: "bar", last_modified: 0 },
-          { id: "2", foo: "baz", last_modified: 1 },
-        ])
-        .then(() => {
-          return db.importBulk([
-            { id: "1", foo: "baz", last_modified: 2 },
-            { id: "3", foo: "bab", last_modified: 2 },
-          ]);
-        })
-        .then(() => db.list())
-        .should.eventually.eql([
-          { id: "1", foo: "baz", last_modified: 2 },
-          { id: "2", foo: "baz", last_modified: 1 },
-          { id: "3", foo: "bab", last_modified: 2 },
-        ]);
+    it("should override existing records.", async () => {
+      await db.importBulk([
+        { id: "1", foo: "bar", last_modified: 0 },
+        { id: "2", foo: "baz", last_modified: 1 },
+      ]);
+      await db.importBulk([
+        { id: "1", foo: "baz", last_modified: 2 },
+        { id: "3", foo: "bab", last_modified: 2 },
+      ]);
+      const list = await db.list();
+      list.should.deep.equal([
+        { id: "1", foo: "baz", last_modified: 2 },
+        { id: "2", foo: "baz", last_modified: 1 },
+        { id: "3", foo: "bab", last_modified: 2 },
+      ]);
     });
 
-    it("should update the collection lastModified value.", () => {
-      return db
-        .importBulk([
-          { id: uuid4(), title: "foo", last_modified: 1457896541 },
-          { id: uuid4(), title: "bar", last_modified: 1458796542 },
-        ])
-        .then(() => db.getLastModified())
-        .should.eventually.become(1458796542);
+    it("should update the collection lastModified value.", async () => {
+      await db.importBulk([
+        { id: uuid4(), title: "foo", last_modified: 1457896541 },
+        { id: uuid4(), title: "bar", last_modified: 1458796542 },
+      ]);
+      const lastModified = await db.getLastModified();
+      lastModified.should.equal(1458796542);
     });
 
-    it("should preserve older collection lastModified value.", () => {
-      return db
-        .saveLastModified(1458796543)
-        .then(() =>
-          db.importBulk([
-            { id: uuid4(), title: "foo", last_modified: 1457896541 },
-            { id: uuid4(), title: "bar", last_modified: 1458796542 },
-          ])
-        )
-        .then(() => db.getLastModified())
-        .should.eventually.become(1458796543);
+    it("should preserve older collection lastModified value.", async () => {
+      await db.saveLastModified(1458796543);
+      await db.importBulk([
+        { id: uuid4(), title: "foo", last_modified: 1457896541 },
+        { id: uuid4(), title: "bar", last_modified: 1458796542 },
+      ]);
+      const lastModified = await db.getLastModified();
+      lastModified.should.equal(1458796543);
+    });
+
+    it("should reject on transaction error", async () => {
+      sandbox.stub(db, "prepare").callsFake(async (name, callback, options) => {
+        return callback({
+          put() {
+            throw new Error("transaction error");
+          },
+        } as any);
+      });
+
+      await expectAsyncError(
+        () => db.importBulk([{ id: "1", last_modified: 0, foo: "bar" }]),
+        /^IndexedDB importBulk()/,
+        IDB.IDBError
+      );
     });
   });
 
@@ -603,8 +594,9 @@ describe("adapter.IDB", () => {
 
   /** @test {IDB#saveMetadata} */
   describe("#saveMetadata", () => {
-    it("should return null when no metadata is found", () => {
-      return db.getMetadata().should.eventually.eql(null);
+    it("should return null when no metadata is found", async () => {
+      const metadata = await db.getMetadata();
+      expect(metadata).to.equal(null);
     });
 
     it("should store metadata in db", async () => {
@@ -664,46 +656,50 @@ describe("adapter.IDB", () => {
     });
 
     it("should migrate records", async () => {
-      return idb.list().should.eventually.become([{ id: "1" }, { id: "2" }]);
+      const list = await idb.list();
+      list.should.deep.equal([{ id: "1" }, { id: "2" }]);
     });
 
-    it("should migrate timestamps", () => {
-      return idb.getLastModified().should.eventually.become(43);
+    it("should migrate timestamps", async () => {
+      const lastModified = await idb.getLastModified();
+      lastModified.should.equal(43);
     });
 
     it("should create the collections store", async () => {
       const metadata = { id: "abc" };
       await idb.saveMetadata(metadata);
-      return idb.getMetadata().should.eventually.become(metadata);
+      (await idb.getMetadata()).should.deep.equal(metadata);
     });
 
-    it("should not fail if already migrated", () => {
-      return idb
-        .close()
-        .then(() => idb.open())
-        .then(() => idb.close())
-        .then(() => idb.open()).should.be.fulfilled;
+    it("should not fail if already migrated", async () => {
+      await idb.close();
+      await idb.open();
+      await idb.close();
+      await idb.open();
     });
 
-    it("should delete the old database", () => {
-      return open(cid, {
+    it("should delete the old database", async () => {
+      await expectAsyncError(() =>
+        open(cid, {
+          version: 1,
+          onupgradeneeded: (event) =>
+            (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
+        })
+      );
+    });
+
+    it("should not delete other databases", async () => {
+      await open("another/not-migrated", {
         version: 1,
         onupgradeneeded: (event) =>
           (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
-      }).should.eventually.be.rejected;
+      });
     });
 
-    it("should not delete other databases", () => {
-      return open("another/not-migrated", {
-        version: 1,
-        onupgradeneeded: (event) =>
-          (event.target as IDBRequest<IDBDatabase>).transaction!.abort(),
-      }).should.eventually.be.fulfilled;
-    });
-
-    it("should not migrate if option is set to false", () => {
+    it("should not migrate if option is set to false", async () => {
       const idb = new IDB("another/not-migrated", { migrateOldData: false });
-      return idb.list().should.eventually.become([]);
+      const list = await idb.list();
+      list.should.deep.equal([]);
     });
 
     it("should not fail if old database is broken or incomplete", async () => {
@@ -713,7 +709,7 @@ describe("adapter.IDB", () => {
       });
       oldDb.close();
       const idb = new IDB("some/db", { migrateOldData: true });
-      return idb.open().should.eventually.be.fulfilled;
+      await idb.open();
     });
   });
 });

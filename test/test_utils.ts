@@ -1,3 +1,5 @@
+const { expect } = intern.getPlugin("chai");
+
 export function fakeServerResponse(
   status: number,
   json: any,
@@ -28,4 +30,30 @@ export function updateTitleWithDelay(record: any, str: string, delay: number) {
       resolve({ ...record, title: record.title + str });
     }, delay);
   });
+}
+
+export async function expectAsyncError<T>(
+  fn: () => Promise<T>,
+  message?: string | RegExp,
+  baseClass: any = Error
+): Promise<Error> {
+  let error: Error;
+
+  try {
+    await fn();
+  } catch (err) {
+    error = err;
+  }
+
+  expect(error!).not.to.be.undefined;
+  expect(error!).to.be.instanceOf(baseClass);
+  if (message) {
+    if (typeof message === "string") {
+      expect(error!).to.have.property("message").equal(message);
+    } else {
+      expect(error!).to.have.property("message").match(message);
+    }
+  }
+
+  return error!;
 }

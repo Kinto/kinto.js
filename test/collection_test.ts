@@ -1,7 +1,3 @@
-"use strict";
-
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
@@ -14,13 +10,19 @@ import Api, { KintoIdObject } from "kinto-http";
 import KintoClient from "kinto-http";
 import { KintoObject, Collection as KintoClientCollection } from "kinto-http";
 import { recordsEqual } from "../src/collection";
-import { updateTitleWithDelay, fakeServerResponse } from "./test_utils";
+import {
+  updateTitleWithDelay,
+  fakeServerResponse,
+  expectAsyncError,
+} from "./test_utils";
 import { createKeyValueStoreIdSchema } from "../src/collection";
 import KintoBase from "../src/KintoBase";
 
-chai.use(chaiAsPromised);
-chai.should();
-chai.config.includeStack = true;
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, beforeEach, afterEach } = intern.getPlugin(
+  "interface.bdd"
+);
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
@@ -101,7 +103,7 @@ describe("Collection", () => {
             { title: "foo", _status: "foo", last_modified: 32 },
             { title: "foo" }
           )
-        ).eql(true);
+        ).equal(true);
       });
 
       it("should compare record data without metadata nor local fields", () => {
@@ -111,7 +113,7 @@ describe("Collection", () => {
             { title: "foo" },
             ["size"]
           )
-        ).eql(true);
+        ).equal(true);
       });
     });
   });
@@ -127,7 +129,7 @@ describe("Collection", () => {
         ({ api } as unknown) as KintoBase,
         { events }
       );
-      expect(collection.events).to.eql(events);
+      expect(collection.events).to.equal(events);
     });
 
     it("should propagate its events property to child dependencies", () => {
@@ -139,8 +141,8 @@ describe("Collection", () => {
         ({ api } as unknown) as KintoBase,
         { events }
       );
-      expect(collection.api.events).eql(collection.events);
-      expect(collection.api.http.events).eql(collection.events);
+      expect(collection.api.events).equal(collection.events);
+      expect(collection.api.http.events).equal(collection.events);
     });
 
     it("should allow providing a prefix for the db name", () => {
@@ -154,8 +156,8 @@ describe("Collection", () => {
           },
         }
       );
-      expect((collection.db as IDB<any>).dbName).eql("LocalData");
-      expect((collection.db as IDB<any>).cid).eql(
+      expect((collection.db as IDB<any>).dbName).equal("LocalData");
+      expect((collection.db as IDB<any>).cid).equal(
         `${TEST_BUCKET_NAME}/${TEST_COLLECTION_NAME}`
       );
     });
@@ -218,7 +220,7 @@ describe("Collection", () => {
           adapterOptions: "my options",
         } as any
       );
-      expect(myOptions).eql("my options");
+      expect(myOptions).equal("my options");
     });
 
     describe("transformers registration", () => {
@@ -288,7 +290,7 @@ describe("Collection", () => {
 
       it("should return a empty object if no hook where specified", () => {
         const collection = registerHooks({});
-        expect(collection.hooks).to.eql({});
+        expect(collection.hooks).to.deep.equal({});
       });
 
       it("should throw an error on unknown hook", () => {
@@ -357,7 +359,7 @@ describe("Collection", () => {
   describe("SyncResultObject", () => {
     it("should create a result object", () => {
       const r = new SyncResultObject();
-      expect(r.lastModified).to.eql(null);
+      expect(r.lastModified).to.equal(null);
       [
         "errors",
         "created",
@@ -366,7 +368,7 @@ describe("Collection", () => {
         "published",
         "conflicts",
         "skipped",
-      ].forEach((l) => expect((r as any)[l]).to.eql([]));
+      ].forEach((l) => expect((r as any)[l]).to.deep.equal([]));
     });
 
     describe("set lastModified", () => {
@@ -375,7 +377,7 @@ describe("Collection", () => {
 
         result.lastModified = 42;
 
-        expect(result.lastModified).eql(42);
+        expect(result.lastModified).equal(42);
       });
     });
 
@@ -429,7 +431,7 @@ describe("Collection", () => {
 
         result.add("errors", [1 as any]);
 
-        expect(result.ok).eql(false);
+        expect(result.ok).equal(false);
       });
 
       it("should update the ok status flag on conflicts", () => {
@@ -437,7 +439,7 @@ describe("Collection", () => {
 
         result.add("conflicts", [1 as any]);
 
-        expect(result.ok).eql(false);
+        expect(result.ok).equal(false);
       });
 
       it("should alter non-array properties", () => {
@@ -445,13 +447,13 @@ describe("Collection", () => {
 
         result.add("ok" as any, false);
 
-        expect(result.ok).eql(true);
+        expect(result.ok).equal(true);
       });
 
       it("should return the current result object", () => {
         const result = new SyncResultObject();
 
-        expect(result.add("resolved", [])).eql(result);
+        expect(result.add("resolved", [])).equal(result);
       });
 
       it("should support adding single objects", () => {
@@ -479,7 +481,7 @@ describe("Collection", () => {
       it("should return the current result object", () => {
         const result = new SyncResultObject();
 
-        expect(result.reset("resolved")).eql(result);
+        expect(result.reset("resolved")).equal(result);
       });
     });
   });
@@ -497,27 +499,23 @@ describe("Collection", () => {
       ]);
     });
 
-    it("should clear collection records", () => {
-      return articles
-        .clear()
-        .then((_) => articles.list())
-        .then((res) => res.data)
-        .should.eventually.have.lengthOf(0);
+    it("should clear collection records", async () => {
+      await articles.clear();
+      const { data } = await articles.list();
+      data.should.have.lengthOf(0);
     });
 
-    it("should clear collection timestamp", () => {
-      return articles.db
-        .saveLastModified(42)
-        .then((_) => articles.clear())
-        .then((_) => articles.db.getLastModified())
-        .should.eventually.eql(null);
+    it("should clear collection timestamp", async () => {
+      await articles.db.saveLastModified(42);
+      await articles.clear();
+      const lastModified = await articles.db.getLastModified();
+      expect(lastModified).to.equal(null);
     });
 
-    it("should clear collection metadata", () => {
-      return articles
-        .clear()
-        .then((_) => articles.metadata())
-        .should.eventually.eql(null);
+    it("should clear collection metadata", async () => {
+      await articles.clear();
+      const metadata = await articles.metadata();
+      expect(metadata).to.equal(null);
     });
   });
 
@@ -525,127 +523,143 @@ describe("Collection", () => {
   describe("#create", () => {
     let articles: Collection;
 
-    beforeEach(() => (articles = testCollection()));
-
-    it("should create a record and return created record data", () => {
-      return articles.create(article).should.eventually.have.property("data");
+    beforeEach(() => {
+      articles = testCollection();
     });
 
-    it("should create a record and return created record perms", () => {
-      return articles
-        .create(article)
-        .should.eventually.have.property("permissions");
+    it("should create a record and return created record data", async () => {
+      const res = await articles.create(article);
+      res.should.have.property("data");
     });
 
-    it("should assign an id to the created record", () => {
-      return articles
-        .create(article)
-        .then((result) => result.data.id)
-        .should.eventually.be.a("string");
+    it("should create a record and return created record perms", async () => {
+      const res = await articles.create(article);
+      res.should.have.property("permissions");
     });
 
-    it("should assign an id to the created record (custom IdSchema)", () => {
+    it("should assign an id to the created record", async () => {
+      const {
+        data: { id },
+      } = await articles.create(article);
+      id.should.be.a("string");
+    });
+
+    it("should assign an id to the created record (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
-      return articles
-        .create(article)
-        .then((result) => result.data.id)
-        .should.eventually.be.a("number");
+      const {
+        data: { id },
+      } = await articles.create(article);
+      id.should.be.a("number");
     });
 
-    it("should accept a record for the 'generate' function", () => {
+    it("should accept a record for the 'generate' function", async () => {
       articles = testCollection({ idSchema: createKeyListIdSchema() });
 
-      return articles
-        .create(article)
-        .then((result) => result.data.id)
-        .should.eventually.eql("title,url");
+      const {
+        data: { id },
+      } = await articles.create(article);
+      id.should.equal("title,url");
     });
 
-    it("should reject when useRecordId is true and record is missing an id", () => {
-      return articles
-        .create({ title: "foo" }, { useRecordId: true })
-        .should.be.rejectedWith(Error, /Missing required Id/);
+    it("should reject when useRecordId is true and record is missing an id", async () => {
+      await expectAsyncError(
+        () => articles.create({ title: "foo" }, { useRecordId: true }),
+        /Missing required Id/
+      );
     });
 
-    it("should reject when synced is true and record is missing an id", () => {
-      return articles
-        .create({ title: "foo" }, { synced: true })
-        .should.be.rejectedWith(Error, /Missing required Id/);
+    it("should reject when synced is true and record is missing an id", async () => {
+      await expectAsyncError(
+        () => articles.create({ title: "foo" }, { synced: true }),
+        /Missing required Id/
+      );
     });
 
-    it("should reject when passed an id and synced and useRecordId are false", () => {
-      return articles
-        .create({ id: "some-id" }, { synced: false, useRecordId: false })
-        .should.be.rejectedWith(Error, /Extraneous Id/);
+    it("should reject when passed an id and synced and useRecordId are false", async () => {
+      await expectAsyncError(
+        () =>
+          articles.create(
+            { id: "some-id" },
+            { synced: false, useRecordId: false }
+          ),
+        /Extraneous Id/
+      );
     });
 
-    it("should not alter original record", () => {
-      return articles.create(article).should.eventually.not.eql(article);
+    it("should not alter original record", async () => {
+      const res = await articles.create(article);
+      res.should.not.deep.equal(article);
     });
 
-    it("should add record status on creation", () => {
-      return articles
-        .create(article)
-        .then((res) => res.data._status)
-        .should.eventually.eql("created");
+    it("should add record status on creation", async () => {
+      const res = await articles.create(article);
+      res.data._status.should.equal("created");
     });
 
-    it("should reject if passed argument is not an object", () => {
-      return articles
-        .create(42 as any)
-        .should.eventually.be.rejectedWith(Error, /is not an object/);
+    it("should reject if passed argument is not an object", async () => {
+      await expectAsyncError(
+        () => articles.create(42 as any),
+        /is not an object/
+      );
     });
 
-    it("should actually persist the record into the collection", () => {
-      return articles
-        .create(article)
-        .then((result) => articles.get(result.data.id))
-        .then((res) => res.data.title)
-        .should.become(article.title);
+    it("should actually persist the record into the collection", async () => {
+      const result = await articles.create(article);
+      const res = await articles.get(result.data.id);
+      res.data.title.should.equal(article.title);
     });
 
-    it("should support the useRecordId option", () => {
+    it("should support the useRecordId option", async () => {
       const testId = uuid4();
-      return articles
-        .create({ id: testId, title: "foo" }, { useRecordId: true })
-        .then((result) => articles.get(result.data.id))
-        .then((res) => res.data.id)
-        .should.become(testId);
+      const result = await articles.create(
+        { id: testId, title: "foo" },
+        { useRecordId: true }
+      );
+      const res = await articles.get(result.data.id);
+      res.data.id.should.equal(testId);
     });
 
-    it("should validate record's Id when provided", () => {
-      return articles
-        .create({ id: "a/b", title: "foo" }, { useRecordId: true })
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should validate record's Id when provided", async () => {
+      await expectAsyncError(
+        () =>
+          articles.create({ id: "a/b", title: "foo" }, { useRecordId: true }),
+        /Invalid Id/
+      );
     });
 
-    it("should validate record's Id when provided (custom IdSchema)", () => {
+    it("should validate record's Id when provided (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
-      return articles
-        .create({ id: "deadbeef", title: "foo" }, { useRecordId: true })
-        .should.be.rejectedWith(Error, /Invalid Id/);
+      await expectAsyncError(
+        () =>
+          articles.create(
+            { id: "deadbeef", title: "foo" },
+            { useRecordId: true }
+          ),
+        /Invalid Id/
+      );
     });
 
-    it("should reject with any encountered transaction error", () => {
+    it("should reject with any encountered transaction error", async () => {
       sandbox
         .stub(articles.db, "execute")
         .returns(Promise.reject(new Error("transaction error")));
 
-      return articles
-        .create({ title: "foo" })
-        .should.be.rejectedWith(Error, /transaction error/);
+      await expectAsyncError(
+        () => articles.create({ title: "foo" }),
+        /transaction error/
+      );
     });
 
-    it("should reject with a hint if useRecordId has been used", () => {
-      return articles
-        .create({ id: uuid4() }, { useRecordId: true })
-        .then((res) => articles.delete(res.data.id))
-        .then((res) =>
-          articles.create({ id: res.data.id }, { useRecordId: true })
-        )
-        .should.be.rejectedWith(Error, /virtually deleted/);
+    it("should reject with a hint if useRecordId has been used", async () => {
+      const res = await articles.create({ id: uuid4() }, { useRecordId: true });
+      await articles.delete(res.data.id);
+
+      await expectAsyncError(
+        () => articles.create({ id: res.data.id }, { useRecordId: true }),
+        /virtually deleted/
+      );
     });
 
     it("should throw error when using createKeyValueStoreIdSchema.generate", () => {
@@ -655,13 +669,15 @@ describe("Collection", () => {
       );
     });
 
-    it("should return true when using createKeyValueStoreIdSchema.validate", () => {
+    it("should return true when using createKeyValueStoreIdSchema.validate", async () => {
       articles = testCollection({ idSchema: createKeyValueStoreIdSchema() });
-      return articles
-        .create({ ...article, id: article.title }, { useRecordId: true })
-        .then((result) => articles.getAny(result.data.id))
-        .then((result) => result.data!.id)
-        .should.become(article.title);
+      const result = await articles.create(
+        { ...article, id: article.title },
+        { useRecordId: true }
+      );
+
+      const res = await articles.getAny(result.data.id);
+      res.data.id.should.equal(article.title);
     });
   });
 
@@ -669,158 +685,141 @@ describe("Collection", () => {
   describe("#update", () => {
     let articles: Collection;
 
-    beforeEach(() => (articles = testCollection({ localFields: ["read"] })));
-
-    it("should update a record", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data)
-        .then((existing) => {
-          return articles.update({ ...existing, title: "new title" });
-        })
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data.title)
-        .should.become("new title");
+    beforeEach(() => {
+      articles = testCollection({ localFields: ["read"] });
     });
 
-    it("should return the old data for the record", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data)
-        .then((existing) => {
-          return articles.update({ ...existing, title: "new title" });
-        })
-        .then((res) => res.oldRecord.title)
-        .should.become("foo");
+    it("should update a record", async () => {
+      const res = await articles.create(article);
+      const { data: existing } = await articles.get(res.data.id);
+      const res_1 = await articles.update({ ...existing, title: "new title" });
+      const res_2 = await articles.get(res_1.data.id);
+      res_2.data.title.should.equal("new title");
     });
 
-    it("should update record status on update", () => {
-      return articles
-        .create({ id: uuid4() }, { synced: true })
-        .then((res) => res.data)
-        .then((data) => articles.update({ ...data, title: "blah" }))
-        .then((res) => res.data._status)
-        .should.eventually.eql("updated");
+    it("should return the old data for the record", async () => {
+      const res = await articles.create(article);
+      const { data: existing } = await articles.get(res.data.id);
+      const updateRes = await articles.update({
+        ...existing,
+        title: "new title",
+      });
+      updateRes.oldRecord.title.should.equal("foo");
     });
 
-    it("should not update record status if only local fields are changed", () => {
-      return articles
-        .create({ id: uuid4() }, { synced: true })
-        .then((res) => res.data)
-        .then((data) => articles.update({ ...data, read: true }))
-        .then((res) => res.data._status)
-        .should.eventually.eql("synced");
+    it("should update record status on update", async () => {
+      const { data } = await articles.create({ id: uuid4() }, { synced: true });
+      const {
+        data: { _status },
+      } = await articles.update({ ...data, title: "blah" });
+      _status.should.equal("updated");
     });
 
-    it("should reject updates on a non-existent record", () => {
-      return articles
-        .update({ id: uuid4() })
-        .should.be.rejectedWith(Error, /not found/);
+    it("should not update record status if only local fields are changed", async () => {
+      const { data } = await articles.create({ id: uuid4() }, { synced: true });
+      const {
+        data: { _status },
+      } = await articles.update({ ...data, read: true });
+      _status.should.equal("synced");
     });
 
-    it("should reject updates on a non-object record", () => {
-      return articles
-        .update("invalid" as any)
-        .should.be.rejectedWith(Error, /Record is not an object/);
+    it("should reject updates on a non-existent record", async () => {
+      await expectAsyncError(
+        () => articles.update({ id: uuid4() }),
+        /not found/
+      );
     });
 
-    it("should reject updates on a record without an id", () => {
-      return articles
-        .update({ title: "foo" } as any)
-        .should.be.rejectedWith(Error, /missing id/);
+    it("should reject updates on a non-object record", async () => {
+      await expectAsyncError(
+        () => articles.update("invalid" as any),
+        /Record is not an object/
+      );
     });
 
-    it("should validate record's id when provided", () => {
-      return articles
-        .update({ id: 42 } as any)
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should reject updates on a record without an id", async () => {
+      await expectAsyncError(
+        () => articles.update({ title: "foo" } as any),
+        /missing id/
+      );
     });
 
-    it("should validate record's id when provided (custom IdSchema)", () => {
+    it("should validate record's id when provided", async () => {
+      await expectAsyncError(
+        () => articles.update({ id: 42 } as any),
+        /Invalid Id/
+      );
+    });
+
+    it("should validate record's id when provided (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
-      return articles
-        .update({ id: "deadbeef" })
-        .should.be.rejectedWith(Error, /Invalid Id/);
+      await expectAsyncError(
+        () => articles.update({ id: "deadbeef" }),
+        /Invalid Id/
+      );
     });
 
-    it("should update a record from its id (custom IdSchema)", () => {
+    it("should update a record from its id (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
-      return articles
-        .create(article)
-        .then((result) => articles.update({ id: result.data.id, title: "foo" }))
-        .then((res) => res.data.title)
-        .should.eventually.eql("foo");
+      const result = await articles.create(article);
+      const res = await articles.update({ id: result.data.id, title: "foo" });
+      res.data.title.should.equal("foo");
     });
 
-    it("should patch existing record when patch option is used", () => {
+    it("should patch existing record when patch option is used", async () => {
       const id = uuid4();
-      return articles
-        .create(
-          { id, title: "foo", last_modified: 42 },
-          { useRecordId: true, synced: true }
-        )
-        .then(() => articles.update({ id, rank: 99 }, { patch: true }))
-        .then((res) => res.data)
-        .should.eventually.become({
-          id,
-          title: "foo",
-          rank: 99,
-          last_modified: 42,
-          _status: "updated",
-        });
+      await articles.create(
+        { id, title: "foo", last_modified: 42 },
+        { useRecordId: true, synced: true }
+      );
+      const res = await articles.update({ id, rank: 99 }, { patch: true });
+      res.data.should.deep.equal({
+        id,
+        title: "foo",
+        rank: 99,
+        last_modified: 42,
+        _status: "updated",
+      });
     });
 
-    it("should remove previous record fields", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => {
-          return articles.update({ id: res.data.id, title: "new title" });
-        })
-        .then((res) => res.data)
-        .should.eventually.not.have.property("url");
+    it("should remove previous record fields", async () => {
+      const {
+        data: { id },
+      } = await articles.create(article);
+      const { data } = await articles.update({ id, title: "new title" });
+      expect(data).not.to.have.property("url");
     });
 
-    it("should preserve record.last_modified", () => {
-      return articles
-        .create({
-          title: "foo",
-          url: "http://foo",
-          last_modified: 123456789012,
-        })
-        .then((res) => articles.get(res.data.id))
-        .then((res) => {
-          return articles.update({ id: res.data.id, title: "new title" });
-        })
-        .then((res) => res.data)
-        .should.eventually.have.property("last_modified")
-        .eql(123456789012);
+    it("should preserve record.last_modified", async () => {
+      const {
+        data: { id },
+      } = await articles.create({
+        title: "foo",
+        url: "http://foo",
+        last_modified: 123456789012,
+      });
+      const { data } = await articles.update({ id, title: "new title" });
+      data.should.have.property("last_modified").equal(123456789012);
     });
 
-    it("should optionally mark a record as synced", () => {
-      return articles
-        .create({ title: "foo" })
-        .then((res) =>
-          articles.update({ ...res.data, title: "bar" }, { synced: true })
-        )
-        .then((res) => res.data)
-        .should.eventually.have.property("_status")
-        .eql("synced");
+    it("should optionally mark a record as synced", async () => {
+      const { data } = await articles.create({ title: "foo" });
+      const { data: updateData } = await articles.update(
+        { ...data, title: "bar" },
+        { synced: true }
+      );
+      updateData.should.have.property("_status").equal("synced");
     });
 
-    it("should preserve created status if record was never synced", () => {
-      return articles
-        .create({ title: "foo" })
-        .then((res) =>
-          articles.update(Object.assign({}, res.data, { title: "bar" }))
-        )
-        .then((res) => res.data)
-        .should.eventually.have.property("_status")
-        .eql("created");
+    it("should preserve created status if record was never synced", async () => {
+      const { data } = await articles.create({ title: "foo" });
+      const { data: updateData } = await articles.update({
+        ...data,
+        title: "bar",
+      });
+      updateData.should.have.property("_status").equal("created");
     });
   });
 
@@ -828,158 +827,140 @@ describe("Collection", () => {
   describe("#put", () => {
     let articles: Collection;
 
-    beforeEach(() => (articles = testCollection()));
-
-    it("should update a record", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data)
-        .then((existing) => {
-          return articles.upsert({ ...existing, title: "new title" });
-        })
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data.title)
-        .should.become("new title");
+    beforeEach(() => {
+      articles = testCollection();
     });
 
-    it("should change record status to updated", () => {
-      return articles
-        .create({ id: uuid4() }, { synced: true })
-        .then((res) => res.data)
-        .then((data) => articles.upsert({ ...data, title: "blah" }))
-        .then((res) => res.data._status)
-        .should.eventually.eql("updated");
+    it("should update a record", async () => {
+      const {
+        data: { id },
+      } = await articles.create(article);
+      const { data: existing } = await articles.get(id);
+      await articles.upsert({ ...existing, title: "new title" });
+      const {
+        data: { title },
+      } = await articles.get(id);
+      title.should.equal("new title");
     });
 
-    it("should preserve created status if record was never synced", () => {
-      return articles
-        .create({ title: "foo" })
-        .then((res) =>
-          articles.upsert(Object.assign({}, res.data, { title: "bar" }))
-        )
-        .then((res) => res.data)
-        .should.eventually.have.property("_status")
-        .eql("created");
+    it("should change record status to updated", async () => {
+      const res = await articles.create({ id: uuid4() }, { synced: true });
+      const data = res.data;
+      const res_1 = await articles.upsert({ ...data, title: "blah" });
+      res_1.data._status.should.equal("updated");
     });
 
-    it("should create a new record if non-existent", () => {
-      return articles
-        .upsert({ id: uuid4(), title: "new title" })
-        .then((res) => res.data.title)
-        .should.eventually.become("new title");
+    it("should preserve created status if record was never synced", async () => {
+      const res = await articles.create({ title: "foo" });
+      const res_1 = await articles.upsert({ ...res.data, title: "bar" });
+      res_1.data.should.have.property("_status").equal("created");
     });
 
-    it("should set status to created if it created a record", () => {
-      return articles
-        .upsert({ id: uuid4() })
-        .then((res) => res.data._status)
-        .should.eventually.become("created");
+    it("should create a new record if non-existent", async () => {
+      const res = await articles.upsert({ id: uuid4(), title: "new title" });
+      res.data.title.should.equal("new title");
     });
 
-    it("should reject updates on a non-object record", () => {
-      return articles
-        .upsert("invalid")
-        .should.be.rejectedWith(Error, /Record is not an object/);
+    it("should set status to created if it created a record", async () => {
+      const res = await articles.upsert({ id: uuid4() });
+      res.data._status.should.equal("created");
     });
 
-    it("should reject updates on a record without an id", () => {
-      return articles
-        .upsert({ title: "foo" })
-        .should.be.rejectedWith(Error, /missing id/);
+    it("should reject updates on a non-object record", async () => {
+      await expectAsyncError(
+        () => articles.upsert("invalid"),
+        /Record is not an object/
+      );
     });
 
-    it("should validate record's id when provided", () => {
-      return articles
-        .upsert({ id: 42 })
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should reject updates on a record without an id", async () => {
+      await expectAsyncError(
+        () => articles.upsert({ title: "foo" }),
+        /missing id/
+      );
     });
 
-    it("should update deleted records", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => articles.delete(res.data.id))
-        .then((res) => articles.upsert({ ...res.data, title: "new title" }))
-        .then((res) => res.data.title)
-        .should.eventually.become("new title");
+    it("should validate record's id when provided", async () => {
+      await expectAsyncError(() => articles.upsert({ id: 42 }), /Invalid Id/);
     });
 
-    it("should set status of deleted records to updated", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => articles.delete(res.data.id))
-        .then((res) => articles.upsert({ ...res.data, title: "new title" }))
-        .then((res) => res.data._status)
-        .should.eventually.become("updated");
+    it("should update deleted records", async () => {
+      const res = await articles.create(article);
+      const res_1 = await articles.get(res.data.id);
+      const res_2 = await articles.delete(res_1.data.id);
+      const res_3 = await articles.upsert({
+        ...res_2.data,
+        title: "new title",
+      });
+      res_3.data.title.should.equal("new title");
     });
 
-    it("should validate record's id when provided (custom IdSchema)", () => {
+    it("should set status of deleted records to updated", async () => {
+      const res = await articles.create(article);
+      const res_1 = await articles.get(res.data.id);
+      const res_2 = await articles.delete(res_1.data.id);
+      const res_3 = await articles.upsert({
+        ...res_2.data,
+        title: "new title",
+      });
+      res_3.data._status.should.equal("updated");
+    });
+
+    it("should validate record's id when provided (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
-      return articles
-        .upsert({ id: "deadbeef" })
-        .should.be.rejectedWith(Error, /Invalid Id/);
+      await expectAsyncError(
+        () => articles.upsert({ id: "deadbeef" }),
+        /Invalid Id/
+      );
     });
 
-    it("should remove previous record fields", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => {
-          return articles.upsert({ id: res.data.id, title: "new title" });
-        })
-        .then((res) => res.data)
-        .should.eventually.not.have.property("url");
+    it("should remove previous record fields", async () => {
+      const res = await articles.create(article);
+      const res_1 = await articles.get(res.data.id);
+      const res_2 = await articles.upsert({
+        id: res_1.data.id,
+        title: "new title",
+      });
+      res_2.data.should.not.have.property("url");
     });
 
-    it("should preserve record.last_modified", () => {
-      return articles
-        .create({
-          title: "foo",
-          url: "http://foo",
-          last_modified: 123456789012,
-        })
-        .then((res) => articles.get(res.data.id))
-        .then((res) => {
-          return articles.upsert({ id: res.data.id, title: "new title" });
-        })
-        .then((res) => res.data)
-        .should.eventually.have.property("last_modified")
-        .eql(123456789012);
+    it("should preserve record.last_modified", async () => {
+      const res = await articles.create({
+        title: "foo",
+        url: "http://foo",
+        last_modified: 123456789012,
+      });
+      const res_1 = await articles.get(res.data.id);
+      const res_2 = await articles.upsert({
+        id: res_1.data.id,
+        title: "new title",
+      });
+      res_2.data.should.have.property("last_modified").equal(123456789012);
     });
 
-    it("should return the old data for the record", () => {
-      return articles
-        .create(article)
-        .then((res) => articles.get(res.data.id))
-        .then((res) => res.data)
-        .then((existing) => {
-          return articles.upsert({ ...existing, title: "new title" });
-        })
-        .then((res) => res.oldRecord.title)
-        .should.become("foo");
+    it("should return the old data for the record", async () => {
+      const res = await articles.create(article);
+      const res_1 = await articles.get(res.data.id);
+      const existing = res_1.data;
+      const res_2 = await articles.upsert({ ...existing, title: "new title" });
+      res_2.oldRecord.title.should.equal("foo");
     });
 
-    it("should not return the old data for a deleted record", () => {
-      let articleId: string;
-      return articles
-        .create(article)
-        .then((res) => {
-          articleId = res.data.id;
-          return articles.delete(articleId);
-        })
-        .then((res) => articles.upsert({ id: articleId, title: "new title" }))
-        .then((res) => res.oldRecord)
-        .should.become(undefined);
+    it("should not return the old data for a deleted record", async () => {
+      const res = await articles.create(article);
+      const articleId = res.data.id;
+      await articles.delete(articleId);
+      const res_2 = await articles.upsert({
+        id: articleId,
+        title: "new title",
+      });
+      expect(res_2.oldRecord).to.equal(undefined);
     });
 
-    it("should signal when a record was created by oldRecord=undefined", () => {
-      return articles
-        .upsert({ id: uuid4() })
-        .then((res) => res.oldRecord)
-        .should.become(undefined);
+    it("should signal when a record was created by oldRecord=undefined", async () => {
+      const res = await articles.upsert({ id: uuid4() });
+      expect(res.oldRecord).to.equal(undefined);
     });
   });
 
@@ -1011,52 +992,45 @@ describe("Collection", () => {
   describe("#resolve", () => {
     let articles: Collection, local: any, remote: any, conflict: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles
-        .create(
-          { id: uuid4(), title: "local title", last_modified: 41 },
-          { synced: true }
-        )
-        .then((res) => {
-          local = res.data;
-          remote = {
-            ...local,
-            title: "blah",
-            last_modified: 42,
-          };
-          conflict = {
-            type: "incoming",
-            local: local,
-            remote: remote,
-          };
-        });
+      const res = await articles.create(
+        { id: uuid4(), title: "local title", last_modified: 41 },
+        { synced: true }
+      );
+      local = res.data;
+      remote = {
+        ...local,
+        title: "blah",
+        last_modified: 42,
+      };
+      conflict = {
+        type: "incoming",
+        local: local,
+        remote: remote,
+      };
     });
 
-    it("should mark a record as updated", () => {
+    it("should mark a record as updated", async () => {
       const resolution = { ...local, title: "resolved" };
-      return articles
-        .resolve(conflict, resolution)
-        .then((res) => res.data)
-        .should.eventually.become({
-          _status: "updated",
-          id: local.id,
-          title: resolution.title,
-          last_modified: remote.last_modified,
-        });
+      const res = await articles.resolve(conflict, resolution);
+      res.data.should.deep.equal({
+        _status: "updated",
+        id: local.id,
+        title: resolution.title,
+        last_modified: remote.last_modified,
+      });
     });
 
-    it("should mark a record as synced if resolved with remote", () => {
+    it("should mark a record as synced if resolved with remote", async () => {
       const resolution = { ...local, title: remote.title };
-      return articles
-        .resolve(conflict, resolution)
-        .then((res) => res.data)
-        .should.eventually.become({
-          _status: "synced",
-          id: local.id,
-          title: resolution.title,
-          last_modified: remote.last_modified,
-        });
+      const res = await articles.resolve(conflict, resolution);
+      res.data.should.deep.equal({
+        _status: "synced",
+        id: local.id,
+        title: resolution.title,
+        last_modified: remote.last_modified,
+      });
     });
   });
 
@@ -1064,85 +1038,66 @@ describe("Collection", () => {
   describe("#get", () => {
     let articles: Collection, id: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles.create(article).then((result) => (id = result.data.id));
+      const result = await articles.create(article);
+      return (id = result.data.id);
     });
 
-    it("should isolate records by bucket", () => {
+    it("should isolate records by bucket", async () => {
       const otherbucket = new Collection("other", TEST_COLLECTION_NAME, ({
         api,
       } as unknown) as KintoBase);
-      return otherbucket
-        .get(id)
-        .then((res) => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+
+      await expectAsyncError(() => otherbucket.get(id), /not found/);
     });
 
-    it("should retrieve a record from its id", () => {
-      return articles
-        .get(id)
-        .then((res) => res.data.title)
-        .should.eventually.eql(article.title);
+    it("should retrieve a record from its id", async () => {
+      const res = await articles.get(id);
+      res.data.title.should.equal(article.title);
     });
 
-    it("should retrieve a record from its id (custom IdSchema)", () => {
+    it("should retrieve a record from its id (custom IdSchema)", async () => {
       articles = testCollection({ idSchema: createIntegerIdSchema() });
 
       // First, get rid of the old record with the ID from the other ID schema
-      return articles
-        .clear()
-        .then(() => articles.create(article))
-        .then((result) => articles.get(result.data.id))
-        .then((res) => res.data.title)
-        .should.eventually.eql(article.title);
+      await articles.clear();
+      const result_1 = await articles.create(article);
+      const res = await articles.get(result_1.data.id);
+      res.data.title.should.equal(article.title);
     });
 
-    it("should validate passed id", () => {
-      return articles
-        .get(42 as any)
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should validate passed id", async () => {
+      await expectAsyncError(() => articles.get(42 as any), /Invalid Id/);
     });
 
-    it("should validate passed id (custom IdSchema)", () => {
-      return articles
-        .get("dead.beef")
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should validate passed id (custom IdSchema)", async () => {
+      await expectAsyncError(() => articles.get("dead.beef"), /Invalid Id/);
     });
 
-    it("should have record status info attached", () => {
-      return articles
-        .get(id)
-        .then((res) => res.data._status)
-        .should.eventually.eql("created");
+    it("should have record status info attached", async () => {
+      const res = await articles.get(id);
+      res.data._status.should.equal("created");
     });
 
-    it("should reject in case of record not found", () => {
-      return articles
-        .get(uuid4())
-        .then((res) => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+    it("should reject in case of record not found", async () => {
+      await expectAsyncError(() => articles.get(uuid4()), /not found/);
     });
 
-    it("should reject on virtually deleted record", () => {
-      return articles
-        .delete(id)
-        .then((res) => articles.get(id))
-        .then((res) => res.data)
-        .should.be.rejectedWith(Error, /not found/);
+    it("should reject on virtually deleted record", async () => {
+      await articles.delete(id);
+      await expectAsyncError(() => articles.get(id), /not found/);
     });
 
-    it("should retrieve deleted record with includeDeleted", () => {
-      return articles
-        .delete(id)
-        .then((res) => articles.get(id, { includeDeleted: true }))
-        .then((res) => res.data)
-        .should.eventually.become({
-          _status: "deleted",
-          id: id,
-          title: "foo",
-          url: "http://foo",
-        });
+    it("should retrieve deleted record with includeDeleted", async () => {
+      await articles.delete(id);
+      const res_1 = await articles.get(id, { includeDeleted: true });
+      res_1.data.should.deep.equal({
+        _status: "deleted",
+        id: id,
+        title: "foo",
+        url: "http://foo",
+      });
     });
   });
 
@@ -1150,36 +1105,31 @@ describe("Collection", () => {
   describe("#getAny", () => {
     let articles: Collection, id: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles.create(article).then((result) => (id = result.data.id));
+      const result = await articles.create(article);
+      id = result.data.id;
     });
 
-    it("should retrieve a record from its id", () => {
-      return articles
-        .getAny(id)
-        .then((res) => res.data!.title)
-        .should.eventually.eql(article.title);
+    it("should retrieve a record from its id", async () => {
+      const res = await articles.getAny(id);
+      res.data!.title.should.equal(article.title);
     });
 
-    it("should resolve to undefined if not present", () => {
-      return articles
-        .getAny(uuid4())
-        .then((res) => res.data)
-        .should.eventually.eql(undefined);
+    it("should resolve to undefined if not present", async () => {
+      const res = await articles.getAny(uuid4());
+      expect(res.data).to.equal(undefined);
     });
 
-    it("should resolve to virtually deleted record", () => {
-      return articles
-        .delete(id)
-        .then((res) => articles.getAny(id))
-        .then((res) => res.data)
-        .should.eventually.become({
-          _status: "deleted",
-          id: id,
-          title: "foo",
-          url: "http://foo",
-        });
+    it("should resolve to virtually deleted record", async () => {
+      await articles.delete(id);
+      const res_1 = await articles.getAny(id);
+      res_1.data.should.deep.equal({
+        _status: "deleted",
+        id: id,
+        title: "foo",
+        url: "http://foo",
+      });
     });
   });
 
@@ -1187,93 +1137,75 @@ describe("Collection", () => {
   describe("#delete", () => {
     let articles: Collection, id: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles.create(article).then((result) => (id = result.data.id));
+      const result = await articles.create(article);
+      return (id = result.data.id);
     });
 
-    it("should validate passed id", () => {
-      return articles
-        .delete(42 as any)
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should validate passed id", async () => {
+      await expectAsyncError(() => articles.delete(42 as any), /Invalid Id/);
     });
 
-    it("should validate passed id (custom IdSchema)", () => {
-      return articles
-        .delete("dead beef")
-        .should.be.rejectedWith(Error, /Invalid Id/);
+    it("should validate passed id (custom IdSchema)", async () => {
+      await expectAsyncError(() => articles.delete("dead beef"), /Invalid Id/);
     });
 
     describe("Virtual", () => {
-      it("should virtually delete a record", () => {
-        return articles
-          .delete(id, { virtual: true })
-          .then((res) => articles.get(res.data.id, { includeDeleted: true }))
-          .then((res) => res.data._status)
-          .should.eventually.eql("deleted");
+      it("should virtually delete a record", async () => {
+        const res = await articles.delete(id, { virtual: true });
+        const res_1 = await articles.get(res.data.id, { includeDeleted: true });
+        res_1.data._status.should.equal("deleted");
       });
 
-      it("should reject on non-existent record", () => {
-        return articles
-          .delete(uuid4(), { virtual: true })
-          .then((res) => res.data)
-          .should.eventually.be.rejectedWith(Error, /not found/);
+      it("should reject on non-existent record", async () => {
+        await expectAsyncError(
+          () => articles.delete(uuid4(), { virtual: true }),
+          /not found/
+        );
       });
 
-      it("should reject on already deleted record", () => {
-        return articles
-          .delete(id, { virtual: true })
-          .then((res) => articles.delete(id, { virtual: true }))
-          .should.eventually.be.rejectedWith(Error, /not found/);
+      it("should reject on already deleted record", async () => {
+        await articles.delete(id, { virtual: true });
+        await expectAsyncError(
+          () => articles.delete(id, { virtual: true }),
+          /not found/
+        );
       });
 
-      it("should return deleted record", () => {
-        return articles
-          .delete(id, { virtual: true })
-          .then((res) => res.data)
-          .should.eventually.have.property("title")
-          .eql("foo");
+      it("should return deleted record", async () => {
+        const res = await articles.delete(id, { virtual: true });
+        res.data.should.have.property("title").equal("foo");
       });
     });
 
     describe("Factual", () => {
-      it("should factually delete a record", () => {
-        return articles
-          .delete(id, { virtual: false })
-          .then((res) => articles.get(res.data.id))
-          .should.eventually.be.rejectedWith(Error, /not found/);
+      it("should factually delete a record", async () => {
+        const res = await articles.delete(id, { virtual: true });
+        await expectAsyncError(() => articles.get(res.data.id), /not found/);
       });
 
-      it("should resolve with deletion information", () => {
-        return articles
-          .delete(id, { virtual: false })
-          .then((res) => res.data)
-          .should.eventually.have.property("id")
-          .eql(id);
+      it("should resolve with deletion information", async () => {
+        const res = await articles.delete(id, { virtual: false });
+        res.data.should.have.property("id").equal(id);
       });
 
-      it("should reject on non-existent record", () => {
-        return articles
-          .delete(uuid4(), { virtual: false })
-          .then((res) => res.data)
-          .should.eventually.be.rejectedWith(Error, /not found/);
+      it("should reject on non-existent record", async () => {
+        await expectAsyncError(
+          () => articles.delete(uuid4(), { virtual: false }),
+          /not found/
+        );
       });
 
-      it("should delete if already virtually deleted", () => {
-        return articles
-          .delete(id)
-          .then((_) => articles.delete(id, { virtual: false }))
-          .then((res) => res.data)
-          .should.eventually.have.property("id")
-          .eql(id);
+      it("should delete if already virtually deleted", async () => {
+        await articles.delete(id);
+        const res = await articles.delete(id, { virtual: false });
+        res.data.should.have.property("id").equal(id);
       });
 
-      it("should return deleted record", () => {
-        return articles
-          .delete(id, { virtual: false })
-          .then((res) => res.data)
-          .should.eventually.have.property("title")
-          .eql("foo");
+      it("should return deleted record", async () => {
+        const res = await articles.delete(id, { virtual: false });
+        res.data.should.have.property("title").equal("foo");
       });
     });
   });
@@ -1282,34 +1214,29 @@ describe("Collection", () => {
   describe("#deleteAll", () => {
     let articles: Collection;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       //Create 5 Records
       articles = testCollection();
-      articles.create(article);
-      articles.create(article);
-      articles.create(article);
-      articles.create(article);
-      articles.create(article);
-      return articles;
+      await articles.create(article);
+      await articles.create(article);
+      await articles.create(article);
+      await articles.create(article);
+      await articles.create(article);
     });
 
-    it("should be able to soft delete all articles", () => {
-      return articles
-        .deleteAll()
-        .then((res) => articles.list())
-        .then((res) => res.data)
-        .should.eventually.have.lengthOf(0)
-        .then(() => articles.list({}, { includeDeleted: true }))
-        .then((res: any) => res.data)
-        .should.eventually.have.lengthOf(5);
+    it("should be able to soft delete all articles", async () => {
+      await articles.deleteAll();
+      const res = await articles.list();
+      res.data.should.have.lengthOf(0);
+
+      const res_1 = await articles.list({}, { includeDeleted: true });
+      res_1.data.should.have.lengthOf(5);
     });
 
-    it("should not delete anything when there are no records", () => {
-      return articles
-        .clear()
-        .then((res) => articles.deleteAll())
-        .then((res) => res.data)
-        .should.eventually.have.lengthOf(0);
+    it("should not delete anything when there are no records", async () => {
+      await articles.clear();
+      const res_1 = await articles.deleteAll();
+      res_1.data.should.have.lengthOf(0);
     });
   });
 
@@ -1317,48 +1244,38 @@ describe("Collection", () => {
   describe("#deleteAny", () => {
     let articles: Collection, id: string;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles.create(article).then((result) => (id = result.data.id));
+      const result = await articles.create(article);
+      return (id = result.data.id);
     });
 
-    it("should delete an existing record", () => {
-      return articles
-        .deleteAny(id)
-        .then((res) => articles.getAny(res.data.id))
-        .then((res) => res.data!._status)
-        .should.eventually.eql("deleted");
+    it("should delete an existing record", async () => {
+      const res = await articles.deleteAny(id);
+      const res_1 = await articles.getAny(res.data.id);
+      res_1.data!._status.should.equal("deleted");
     });
 
-    it("should resolve on non-existant record", () => {
+    it("should resolve on non-existant record", async () => {
       const id = uuid4();
-      return articles
-        .deleteAny(id)
-        .then((res) => res.data.id)
-        .should.eventually.eql(id);
+      const res = await articles.deleteAny(id);
+      res.data.id.should.equal(id);
     });
 
-    it("should indicate that it deleted", () => {
-      return articles
-        .deleteAny(id)
-        .then((res) => res.deleted)
-        .should.eventually.eql(true);
+    it("should indicate that it deleted", async () => {
+      const res = await articles.deleteAny(id);
+      res.deleted.should.equal(true);
     });
 
-    it("should indicate that it didn't delete when record is gone", () => {
+    it("should indicate that it didn't delete when record is gone", async () => {
       const id = uuid4();
-      return articles
-        .deleteAny(id)
-        .then((res) => res.deleted)
-        .should.eventually.eql(false);
+      const res = await articles.deleteAny(id);
+      res.deleted.should.equal(false);
     });
 
-    it("should return deleted record", () => {
-      return articles
-        .deleteAny(id)
-        .then((res) => res.data)
-        .should.eventually.have.property("title")
-        .eql("foo");
+    it("should return deleted record", async () => {
+      const res = await articles.deleteAny(id);
+      res.data.should.have.property("title").equal("foo");
     });
   });
 
@@ -1375,29 +1292,23 @@ describe("Collection", () => {
         ]);
       });
 
-      it("should retrieve the list of records", () => {
-        return articles
-          .list()
-          .then((res) => res.data)
-          .should.eventually.have.lengthOf(2);
+      it("should retrieve the list of records", async () => {
+        const res = await articles.list();
+        res.data.should.have.lengthOf(2);
       });
 
-      it("shouldn't list virtually deleted records", () => {
-        return articles
-          .create({ title: "yay" })
-          .then((res) => articles.delete(res.data.id))
-          .then((_) => articles.list())
-          .then((res) => res.data)
-          .should.eventually.have.lengthOf(2);
+      it("shouldn't list virtually deleted records", async () => {
+        const res = await articles.create({ title: "yay" });
+        await articles.delete(res.data.id);
+        const res_1 = await articles.list();
+        res_1.data.should.have.lengthOf(2);
       });
 
-      it("should support the includeDeleted option", () => {
-        return articles
-          .create({ title: "yay" })
-          .then((res) => articles.delete(res.data.id))
-          .then((_) => articles.list({}, { includeDeleted: true }))
-          .then((res) => res.data)
-          .should.eventually.have.lengthOf(3);
+      it("should support the includeDeleted option", async () => {
+        const res = await articles.create({ title: "yay" });
+        await articles.delete(res.data.id);
+        const res_1 = await articles.list({}, { includeDeleted: true });
+        res_1.data.should.have.lengthOf(3);
       });
     });
 
@@ -1413,39 +1324,35 @@ describe("Collection", () => {
         return Promise.all(fixtures.map((r) => articles.create(r)));
       });
 
-      it("should order records on last_modified DESC by default", () => {
-        return articles
-          .list()
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art2", "art1", "art3"]);
+      it("should order records on last_modified DESC by default", async () => {
+        const res = await articles.list();
+        res.data
+          .map((r) => r.title)
+          .should.deep.equal(["art2", "art1", "art3"]);
       });
 
-      it("should order records on custom field ASC", () => {
-        return articles
-          .list({ order: "title" })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art1", "art2", "art3"]);
+      it("should order records on custom field ASC", async () => {
+        const res = await articles.list({ order: "title" });
+        res.data
+          .map((r) => r.title)
+          .should.deep.equal(["art1", "art2", "art3"]);
       });
 
-      it("should order records on custom field DESC", () => {
-        return articles
-          .list({ order: "-title" })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art3", "art2", "art1"]);
+      it("should order records on custom field DESC", async () => {
+        const res = await articles.list({ order: "-title" });
+        res.data
+          .map((r) => r.title)
+          .should.deep.equal(["art3", "art2", "art1"]);
       });
 
-      it("should order records on boolean values ASC", () => {
-        return articles
-          .list({ order: "unread" })
-          .then((res) => res.data.map((r) => r.unread))
-          .should.eventually.become([false, false, true]);
+      it("should order records on boolean values ASC", async () => {
+        const res = await articles.list({ order: "unread" });
+        res.data.map((r) => r.unread).should.deep.equal([false, false, true]);
       });
 
-      it("should order records on boolean values DESC", () => {
-        return articles
-          .list({ order: "-unread" })
-          .then((res) => res.data.map((r) => r.unread))
-          .should.eventually.become([true, false, false]);
+      it("should order records on boolean values DESC", async () => {
+        const res = await articles.list({ order: "-unread" });
+        res.data.map((r) => r.unread).should.deep.equal([true, false, false]);
       });
     });
 
@@ -1471,32 +1378,26 @@ describe("Collection", () => {
         ]);
       });
 
-      it("should filter records on indexed fields", () => {
-        return articles
-          .list({ filters: { _status: "created" } })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art1", "art2"]);
+      it("should filter records on indexed fields", async () => {
+        const res = await articles.list({ filters: { _status: "created" } });
+        res.data.map((r) => r.title).should.deep.equal(["art1", "art2"]);
       });
 
-      it("should filter records on existing field", () => {
-        return articles
-          .list({ filters: { unread: true } })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art1", "art3"]);
+      it("should filter records on existing field", async () => {
+        const res = await articles.list({ filters: { unread: true } });
+        res.data.map((r) => r.title).should.deep.equal(["art1", "art3"]);
       });
 
-      it("should filter records on missing field", () => {
-        return articles
-          .list({ filters: { missing: true } })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become([]);
+      it("should filter records on missing field", async () => {
+        const res = await articles.list({ filters: { missing: true } });
+        res.data.map((r) => r.title).should.deep.equal([]);
       });
 
-      it("should filter records on multiple fields using 'and'", () => {
-        return articles
-          .list({ filters: { unread: true, complete: true } })
-          .then((res) => res.data.map((r) => r.title))
-          .should.eventually.become(["art1"]);
+      it("should filter records on multiple fields using 'and'", async () => {
+        const res = await articles.list({
+          filters: { unread: true, complete: true },
+        });
+        res.data.map((r) => r.title).should.deep.equal(["art1"]);
       });
     });
 
@@ -1548,32 +1449,28 @@ describe("Collection", () => {
         return Promise.all(fixtures.map((r) => articles.create(r)));
       });
 
-      it("Filters nested objects", () => {
-        return articles
-          .list({
-            filters: {
-              "author.name": "John",
-              "author.otherBook.title": "book3",
-            },
+      it("Filters nested objects", async () => {
+        const res = await articles.list({
+          filters: {
+            "author.name": "John",
+            "author.otherBook.title": "book3",
+          },
+        });
+        res.data
+          .map((r) => {
+            return r.title;
           })
-          .then((res) => {
-            return res.data.map((r) => {
-              return r.title;
-            });
-          })
-          .should.eventually.become(["art3"]);
+          .should.deep.equal(["art3"]);
       });
 
-      it("should return empty array if missing subObject field", () => {
-        return articles
-          .list({
-            filters: {
-              "author.name": "John",
-              "author.unknownField": "blahblahblah",
-            },
-          })
-          .then((res) => res.data)
-          .should.eventually.become([]);
+      it("should return empty array if missing subObject field", async () => {
+        const res = await articles.list({
+          filters: {
+            "author.name": "John",
+            "author.unknownField": "blahblahblah",
+          },
+        });
+        res.data.should.deep.equal([]);
       });
     });
 
@@ -1589,15 +1486,16 @@ describe("Collection", () => {
         return Promise.all(fixtures.map((r) => articles.create(r)));
       });
 
-      it("should order and filter records", () => {
-        return articles
-          .list({ order: "-title", filters: { unread: true, complete: true } })
-          .then((res: any) =>
-            res.data.map((r: any) => {
-              return { title: r.title, unread: r.unread, complete: r.complete };
-            })
-          )
-          .should.eventually.become([
+      it("should order and filter records", async () => {
+        const res = await articles.list({
+          order: "-title",
+          filters: { unread: true, complete: true },
+        });
+        res.data
+          .map((r: any) => {
+            return { title: r.title, unread: r.unread, complete: r.complete };
+          })
+          .should.deep.equal([
             { title: "art3", unread: true, complete: true },
             { title: "art1", unread: true, complete: true },
           ]);
@@ -1622,7 +1520,7 @@ describe("Collection", () => {
           { id: uuid4(), title: "foo", last_modified: 1452347896 },
           { id: uuid4(), title: "bar", last_modified: 1452347985 },
         ])
-        .then((_) => sinon.assert.calledOnce(importBulkStub));
+        .then(() => sinon.assert.calledOnce(importBulkStub));
     });
   });
 
@@ -1630,101 +1528,100 @@ describe("Collection", () => {
   describe("#importBulk", () => {
     let articles: Collection;
 
-    beforeEach(() => (articles = testCollection()));
-
-    it("should import records in the collection", () => {
-      return articles
-        .importBulk([
-          { id: uuid4(), title: "foo", last_modified: 1452347896 },
-          { id: uuid4(), title: "bar", last_modified: 1452347985 },
-        ])
-        .should.eventually.have.length(2);
+    beforeEach(() => {
+      articles = testCollection();
     });
 
-    it("should fail if records is not an array", () => {
-      return articles
-        .importBulk({ id: "abc", title: "foo" } as any)
-        .should.be.rejectedWith(Error, /^Records is not an array./);
+    it("should import records in the collection", async () => {
+      const res = await articles.importBulk([
+        { id: uuid4(), title: "foo", last_modified: 1452347896 },
+        { id: uuid4(), title: "bar", last_modified: 1452347985 },
+      ]);
+      res.should.have.lengthOf(2);
     });
 
-    it("should fail if id is invalid", () => {
-      return articles
-        .importBulk([{ id: "a.b.c", title: "foo", last_modified: 0 }])
-        .should.be.rejectedWith(Error, /^Record has invalid ID./);
+    it("should fail if records is not an array", async () => {
+      await expectAsyncError(
+        () => articles.importBulk({ id: "abc", title: "foo" } as any),
+        /^Records is not an array./
+      );
     });
 
-    it("should fail if id is missing", () => {
-      return articles
-        .importBulk([{ title: "foo" } as any])
-        .should.be.rejectedWith(Error, /^Record has invalid ID./);
+    it("should fail if id is invalid", async () => {
+      await expectAsyncError(
+        () =>
+          articles.importBulk([
+            { id: "a.b.c", title: "foo", last_modified: 0 },
+          ]),
+        /^Record has invalid ID./
+      );
     });
 
-    it("should fail if last_modified is missing", () => {
-      return articles
-        .importBulk([{ id: uuid4(), title: "foo" } as any])
-        .should.be.rejectedWith(Error, /^Record has no last_modified value./);
+    it("should fail if id is missing", async () => {
+      await expectAsyncError(
+        () => articles.importBulk([{ title: "foo" } as any]),
+        /^Record has invalid ID./
+      );
     });
 
-    it("should mark imported records as synced.", () => {
+    it("should fail if last_modified is missing", async () => {
+      await expectAsyncError(
+        () => articles.importBulk([{ id: uuid4(), title: "foo" } as any]),
+        /^Record has no last_modified value./
+      );
+    });
+
+    it("should mark imported records as synced.", async () => {
       const testId = uuid4();
-      return articles
-        .importBulk([{ id: testId, title: "foo", last_modified: 1457896541 }])
-        .then(() => {
-          return articles.get(testId);
-        })
-        .then((res) => res.data._status)
-        .should.eventually.eql("synced");
+      await articles.importBulk([
+        { id: testId, title: "foo", last_modified: 1457896541 },
+      ]);
+      const res = await articles.get(testId);
+      res.data._status.should.equal("synced");
     });
 
-    it("should ignore already imported records.", () => {
+    it("should ignore already imported records.", async () => {
       const record = { id: uuid4(), title: "foo", last_modified: 1457896541 };
-      return articles
-        .importBulk([record])
-        .then(() => articles.importBulk([record]))
-        .should.eventually.have.length(0);
+      await articles.importBulk([record]);
+      const res = await articles.importBulk([record]);
+      res.should.have.lengthOf(0);
     });
 
-    it("should overwrite old records.", () => {
+    it("should overwrite old records.", async () => {
       const record = {
         id: "a-record",
         title: "foo",
         last_modified: 1457896541,
       };
-      return articles
-        .importBulk([record])
-        .then(() => {
-          const updated = { ...record, last_modified: 1457896543 };
-          return articles.importBulk([updated]);
-        })
-        .should.eventually.have.length(1);
+      await articles.importBulk([record]);
+      const updated = { ...record, last_modified: 1457896543 };
+      const res = await articles.importBulk([updated]);
+      res.should.have.lengthOf(1);
     });
 
-    it("should not overwrite unsynced records.", () => {
-      return articles
-        .create({ title: "foo" })
-        .then((result) => {
-          const record = {
-            id: result.data.id,
-            title: "foo",
-            last_modified: 1457896541,
-          };
-          return articles.importBulk([record]);
-        })
-        .should.eventually.have.length(0);
+    it("should not overwrite unsynced records.", async () => {
+      const result = await articles.create({ title: "foo" });
+      const record = {
+        id: result.data.id,
+        title: "foo",
+        last_modified: 1457896541,
+      };
+      const res = await articles.importBulk([record]);
+      res.should.have.lengthOf(0);
     });
 
-    it("should not overwrite records without last modified.", () => {
-      return articles
-        .create({ id: uuid4(), title: "foo" }, { synced: true })
-        .then((result) => {
-          const record = {
-            id: result.data.id,
-            title: "foo",
-            last_modified: 1457896541,
-          };
-          return articles.importBulk([record]);
-        })
-        .should.eventually.have.length(0);
+    it("should not overwrite records without last modified.", async () => {
+      const result = await articles.create(
+        { id: uuid4(), title: "foo" },
+        { synced: true }
+      );
+      const record = {
+        id: result.data.id,
+        title: "foo",
+        last_modified: 1457896541,
+      };
+      const res = await articles.importBulk([record]);
+      res.should.have.lengthOf(0);
     });
   });
 
@@ -1741,7 +1638,7 @@ describe("Collection", () => {
     });
 
     describe("transformers", () => {
-      it("should asynchronously encode records", () => {
+      it("should asynchronously encode records", async () => {
         articles = testCollection({
           remoteTransformers: [
             createEncodeTransformer("?", 10),
@@ -1749,13 +1646,14 @@ describe("Collection", () => {
           ],
         });
 
-        return articles
-          .gatherLocalChanges()
-          .then((res) => res.map((r) => (r as any).title).sort())
-          .should.become(["abcdef?!", "ghijkl?!"]);
+        const res = await articles.gatherLocalChanges();
+        res
+          .map((r) => (r as any).title)
+          .sort()
+          .should.deep.equal(["abcdef?!", "ghijkl?!"]);
       });
 
-      it("should encode even deleted records", () => {
+      it("should encode even deleted records", async () => {
         const transformer = {
           called: false,
           encode(record: any) {
@@ -1769,18 +1667,16 @@ describe("Collection", () => {
           remoteTransformers: [transformer],
         });
         const id = uuid4();
-        return articles
-          .create({ id: id, title: "some title" }, { synced: true })
-          .then(() => {
-            return articles.delete(id);
-          })
-          .then(() => articles.gatherLocalChanges())
-          .then((changes) => {
-            expect(transformer.called).equal(true);
-            expect(
-              changes.filter((change: any) => change._status === "deleted")[0]
-            ).property("id", "remote-" + id);
-          });
+        await articles.create(
+          { id: id, title: "some title" },
+          { synced: true }
+        );
+        await articles.delete(id);
+        const changes = await articles.gatherLocalChanges();
+        expect(transformer.called).equal(true);
+        expect(
+          changes.filter((change: any) => change._status === "deleted")[0]
+        ).property("id", "remote-" + id);
       });
     });
   });
@@ -1826,7 +1722,7 @@ describe("Collection", () => {
         { id: id_9, deleted: true, last_modified: 0 }, // remotely deleted & deleted locally, skipped
       ];
 
-      beforeEach(() => {
+      beforeEach(async () => {
         listRecords = sandbox
           .stub(KintoClientCollection.prototype, "listRecords")
           .returns(
@@ -1841,17 +1737,156 @@ describe("Collection", () => {
         client = new KintoClient("http://server.com/v1")
           .bucket("bucket")
           .collection("collection");
-        return Promise.all(
+        await Promise.all(
           localData.map((fixture) => {
             return articles.create(fixture, { synced: true });
           })
-        ).then((_) => {
-          return articles.delete(id_9);
+        );
+        await articles.delete(id_9);
+      });
+
+      it("should not fetch remote records if result status isn't ok", async () => {
+        const withConflicts = new SyncResultObject();
+        withConflicts.add("conflicts", [1 as any]);
+        await articles.pullChanges(client, withConflicts);
+        return sinon.assert.notCalled(listRecords);
+      });
+
+      it("should fetch remote changes from the server", async () => {
+        await articles.pullChanges(client, result);
+        sinon.assert.calledOnce(listRecords);
+        sinon.assert.calledWithExactly(listRecords, {
+          since: undefined,
+          filters: undefined,
+          retry: undefined,
+          pages: Infinity,
+          headers: {},
+        });
+      });
+
+      it("should use timestamp to fetch remote changes from the server", async () => {
+        await articles.pullChanges(client, result, { lastModified: 42 });
+        sinon.assert.calledOnce(listRecords);
+        sinon.assert.calledWithExactly(listRecords, {
+          since: "42",
+          filters: undefined,
+          retry: undefined,
+          pages: Infinity,
+          headers: {},
+        });
+      });
+
+      it("should pass provided filters when polling changes from server", async () => {
+        const exclude = [{ id: 1 }, { id: 2 }, { id: 3 }];
+        await articles.pullChanges(client, result, {
+          lastModified: 42,
+          exclude,
+        });
+        sinon.assert.calledOnce(listRecords);
+        sinon.assert.calledWithExactly(listRecords, {
+          since: "42",
+          filters: { exclude_id: "1,2,3" },
+          retry: undefined,
+          pages: Infinity,
+          headers: {},
+        });
+      });
+
+      it("should respect expectedTimestamp when requesting changes", async () => {
+        await articles.pullChanges(client, result, {
+          expectedTimestamp: '"123"',
+        });
+        sinon.assert.calledOnce(listRecords);
+        sinon.assert.calledWithExactly(listRecords, {
+          since: undefined,
+          filters: { _expected: '"123"' },
+          retry: undefined,
+          pages: Infinity,
+          headers: {},
+        });
+      });
+
+      it("should resolve with imported creations", async () => {
+        const res = await articles.pullChanges(client, result);
+        res.created.should.deep.equal([
+          {
+            id: id_3,
+            title: "art3",
+            last_modified: 0,
+            _status: "synced",
+          },
+          {
+            id: id_8,
+            title: "art8",
+            last_modified: 0,
+            _status: "synced",
+          },
+        ]);
+      });
+
+      it("should resolve with imported updates", async () => {
+        const res = await articles.pullChanges(client, result);
+        res.updated.should.deep.equal([
+          {
+            new: {
+              id: id_7,
+              title: "art7-b",
+              last_modified: 0,
+              _status: "synced",
+            },
+            old: {
+              id: id_7,
+              title: "art7-a",
+              _status: "synced",
+            },
+          },
+        ]);
+      });
+
+      it("should resolve with imported deletions", async () => {
+        const res = await articles.pullChanges(client, result);
+        res.deleted.should.deep.equal([
+          { id: id_4, title: "art4", _status: "synced" },
+        ]);
+      });
+
+      it("should resolve with no conflicts detected", async () => {
+        const res = await articles.pullChanges(client, result);
+        res.conflicts.should.deep.equal([]);
+      });
+
+      it("should actually import changes into the collection", async () => {
+        await articles.pullChanges(client, result);
+        const res = await articles.list({ order: "title" });
+        res.data.should.deep.equal([
+          { id: id_1, title: "art1", _status: "synced" },
+          { id: id_2, title: "art2", last_modified: 0, _status: "synced" },
+          { id: id_3, title: "art3", last_modified: 0, _status: "synced" },
+          { id: id_5, title: "art5", _status: "synced" },
+          { id: id_7, title: "art7-b", last_modified: 0, _status: "synced" },
+          { id: id_8, title: "art8", last_modified: 0, _status: "synced" },
+        ]);
+      });
+
+      it("should skip deleted data missing locally", async () => {
+        const res = await articles.pullChanges(client, result);
+        expect(res.skipped).eql([
+          { id: id_6, last_modified: 0, deleted: true },
+          { id: id_9, title: "art9", _status: "deleted" },
+        ]);
+      });
+
+      it("should not list identical records as skipped", async () => {
+        const res = await articles.pullChanges(client, result);
+        res.skipped.should.not.contain({
+          id: id_2,
+          title: "art2",
+          _status: "synced",
         });
       });
 
       describe("incoming changes hook", () => {
-        it("should be called", () => {
+        it("should be called", async () => {
           let hookCalled = false;
           articles = testCollection({
             hooks: {
@@ -1864,12 +1899,11 @@ describe("Collection", () => {
             },
           });
 
-          return articles
-            .pullChanges(client, result)
-            .then((_) => expect(hookCalled).to.eql(true));
+          await articles.pullChanges(client, result);
+          expect(hookCalled).to.equal(true);
         });
 
-        it("should reject the promise if the hook throws", () => {
+        it("should reject the promise if the hook throws", async () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
@@ -1880,15 +1914,13 @@ describe("Collection", () => {
             },
           });
 
-          return articles
-            .pullChanges(client, result)
-            .should.eventually.be.rejectedWith(
-              Error,
-              /Invalid collection data/
-            );
+          await expectAsyncError(
+            () => articles.pullChanges(client, result),
+            /Invalid collection data/
+          );
         });
 
-        it("should use the results of the hooks", () => {
+        it("should use the results of the hooks", async () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
@@ -1903,19 +1935,18 @@ describe("Collection", () => {
             },
           });
 
-          return articles.pullChanges(client, result).then((result) => {
-            expect(result.created.length).to.eql(2);
-            result.created.forEach((r) => {
-              expect(r.foo).to.eql("bar");
-            });
-            expect(result.updated.length).to.eql(2);
-            result.updated.forEach((r) => {
-              expect(r.new.foo).to.eql("bar");
-            });
+          const r = await articles.pullChanges(client, result);
+          expect(r.created.length).to.equal(2);
+          r.created.forEach((r) => {
+            expect(r.foo).to.equal("bar");
+          });
+          expect(r.updated.length).to.equal(2);
+          r.updated.forEach((r) => {
+            expect(r.new.foo).to.equal("bar");
           });
         });
 
-        it("should be able to chain hooks", () => {
+        it("should be able to chain hooks", async () => {
           function hookFactory(fn: Function) {
             return function (incoming: any) {
               const returnedChanges = incoming;
@@ -1929,6 +1960,7 @@ describe("Collection", () => {
               "incoming-changes": [
                 hookFactory((r: any) => {
                   r.foo = "bar";
+                  r.debug = "1824";
                   return r;
                 }),
                 hookFactory((r: any) => {
@@ -1939,21 +1971,20 @@ describe("Collection", () => {
             },
           });
 
-          return articles.pullChanges(client, result).then((result) => {
-            expect(result.created.length).to.eql(2);
-            result.created.forEach((r) => {
-              expect(r.foo).to.eql("bar");
-              expect(r.bar).to.eql("baz");
-            });
-            expect(result.updated.length).to.eql(2);
-            result.updated.forEach((r) => {
-              expect(r.new.foo).to.eql("bar");
-              expect(r.new.bar).to.eql("baz");
-            });
+          const r = await articles.pullChanges(client, result);
+          expect(r.created.length).to.equal(2);
+          r.created.forEach((r) => {
+            expect(r.foo).to.equal("bar");
+            expect(r.bar).to.equal("baz");
+          });
+          expect(r.updated.length).to.equal(2);
+          r.updated.forEach((r) => {
+            expect(r.new.foo).to.equal("bar");
+            expect(r.new.bar).to.equal("baz");
           });
         });
 
-        it("should pass the collection as the second argument", () => {
+        it("should pass the collection as the second argument", async () => {
           let passedCollection: Collection | null = null;
           articles = testCollection({
             hooks: {
@@ -1966,26 +1997,24 @@ describe("Collection", () => {
             },
           });
 
-          return articles.pullChanges(client, result).then((_) => {
-            expect(passedCollection).to.eql(articles);
-          });
+          await articles.pullChanges(client, result);
+          expect(passedCollection).to.equal(articles);
         });
 
-        it("should reject if the hook returns something strange", () => {
+        it("should reject if the hook returns something strange", async () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [() => 42],
             },
           });
-          return articles
-            .pullChanges(client, result)
-            .should.eventually.be.rejectedWith(
-              Error,
-              /Invalid return value for hook: 42 has no 'then\(\)' or 'changes' properties/
-            );
+
+          await expectAsyncError(
+            () => articles.pullChanges(client, result),
+            /Invalid return value for hook: 42 has no 'then\(\)' or 'changes' properties/
+          );
         });
 
-        it("should resolve if the hook returns a promise", () => {
+        it("should resolve if the hook returns a promise", async () => {
           articles = testCollection({
             hooks: {
               "incoming-changes": [
@@ -1999,11 +2028,10 @@ describe("Collection", () => {
               ],
             },
           });
-          return articles.pullChanges(client, result).then((result) => {
-            expect(result.created.length).to.eql(2);
-            result.created.forEach((r) => {
-              expect(r.foo).to.eql("bar");
-            });
+          const r = await articles.pullChanges(client, result);
+          expect(r.created.length).to.equal(2);
+          r.created.forEach((r) => {
+            expect(r.foo).to.equal("bar");
           });
         });
       });
@@ -2019,7 +2047,7 @@ describe("Collection", () => {
         }
 
         beforeEach(() => {
-          return listRecords.returns(
+          listRecords.returns(
             Promise.resolve({
               data: [{ id: uuid4(), title: "bar" }],
               next: () => {},
@@ -2028,18 +2056,16 @@ describe("Collection", () => {
           );
         });
 
-        it("should decode incoming encoded records using a single transformer", () => {
+        it("should decode incoming encoded records using a single transformer", async () => {
           articles = testCollection({
             remoteTransformers: [createDecodeTransformer("#")],
           });
 
-          return articles
-            .pullChanges(client, result)
-            .then((res) => res.created[0].title)
-            .should.become("bar#");
+          const res = await articles.pullChanges(client, result);
+          res.created[0].title.should.equal("bar#");
         });
 
-        it("should decode incoming encoded records using multiple transformers", () => {
+        it("should decode incoming encoded records using multiple transformers", async () => {
           articles = testCollection({
             remoteTransformers: [
               createDecodeTransformer("!"),
@@ -2047,13 +2073,11 @@ describe("Collection", () => {
             ],
           });
 
-          return articles
-            .pullChanges(client, result)
-            .then((res) => res.created[0].title)
-            .should.become("bar?!"); // reversed because we decode in the opposite order
+          const res = await articles.pullChanges(client, result);
+          res.created[0].title.should.equal("bar?!"); // reversed because we decode in the opposite order
         });
 
-        it("should decode incoming records even when deleted", () => {
+        it("should decode incoming records even when deleted", async () => {
           const transformer = {
             called: false,
             encode() {},
@@ -2074,184 +2098,31 @@ describe("Collection", () => {
               last_modified: "42",
             })
           );
-          return articles
-            .create(
-              { id: "local-" + id, title: "some title" },
-              { synced: true }
-            )
-            .then(() => articles.pullChanges(client, result))
-            .then((res) => {
-              expect(transformer.called).equal(true);
-              return res.deleted[0];
-            })
-            .should.eventually.property("id", "local-" + id);
+          await articles.create(
+            { id: "local-" + id, title: "some title" },
+            { synced: true }
+          );
+          const res = await articles.pullChanges(client, result);
+          expect(transformer.called).equal(true);
+          res.deleted[0].should.have.property("id").equal("local-" + id);
         });
-      });
-
-      it("should not fetch remote records if result status isn't ok", () => {
-        const withConflicts = new SyncResultObject();
-        withConflicts.add("conflicts", [1 as any]);
-        return articles
-          .pullChanges(client, withConflicts)
-          .then((_) => sinon.assert.notCalled(listRecords));
-      });
-
-      it("should fetch remote changes from the server", () => {
-        return articles.pullChanges(client, result).then((_) => {
-          sinon.assert.calledOnce(listRecords);
-          sinon.assert.calledWithExactly(listRecords, {
-            since: undefined,
-            filters: undefined,
-            retry: undefined,
-            pages: Infinity,
-            headers: {},
-          });
-        });
-      });
-
-      it("should use timestamp to fetch remote changes from the server", () => {
-        return articles
-          .pullChanges(client, result, { lastModified: 42 })
-          .then((_) => {
-            sinon.assert.calledOnce(listRecords);
-            sinon.assert.calledWithExactly(listRecords, {
-              since: "42",
-              filters: undefined,
-              retry: undefined,
-              pages: Infinity,
-              headers: {},
-            });
-          });
-      });
-
-      it("should pass provided filters when polling changes from server", () => {
-        const exclude = [{ id: 1 }, { id: 2 }, { id: 3 }];
-        return articles
-          .pullChanges(client, result, { lastModified: 42, exclude })
-          .then((_) => {
-            sinon.assert.calledOnce(listRecords);
-            sinon.assert.calledWithExactly(listRecords, {
-              since: "42",
-              filters: { exclude_id: "1,2,3" },
-              retry: undefined,
-              pages: Infinity,
-              headers: {},
-            });
-          });
-      });
-
-      it("should respect expectedTimestamp when requesting changes", () => {
-        return articles
-          .pullChanges(client, result, { expectedTimestamp: '"123"' })
-          .then((_) => {
-            sinon.assert.calledOnce(listRecords);
-            sinon.assert.calledWithExactly(listRecords, {
-              since: undefined,
-              filters: { _expected: '"123"' },
-              retry: undefined,
-              pages: Infinity,
-              headers: {},
-            });
-          });
-      });
-
-      it("should resolve with imported creations", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((res) => res.created)
-          .should.eventually.become([
-            { id: id_3, title: "art3", last_modified: 0, _status: "synced" },
-            { id: id_8, title: "art8", last_modified: 0, _status: "synced" },
-          ]);
-      });
-
-      it("should resolve with imported updates", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((res) => res.updated)
-          .should.eventually.become([
-            {
-              new: {
-                id: id_7,
-                title: "art7-b",
-                last_modified: 0,
-                _status: "synced",
-              },
-              old: {
-                id: id_7,
-                title: "art7-a",
-                _status: "synced",
-              },
-            },
-          ]);
-      });
-
-      it("should resolve with imported deletions", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((res) => res.deleted)
-          .should.eventually.become([
-            { id: id_4, title: "art4", _status: "synced" },
-          ]);
-      });
-
-      it("should resolve with no conflicts detected", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((res) => res.conflicts)
-          .should.eventually.become([]);
-      });
-
-      it("should actually import changes into the collection", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((_) => articles.list({ order: "title" }))
-          .then((res) => res.data)
-          .should.eventually.become([
-            { id: id_1, title: "art1", _status: "synced" },
-            { id: id_2, title: "art2", last_modified: 0, _status: "synced" },
-            { id: id_3, title: "art3", last_modified: 0, _status: "synced" },
-            { id: id_5, title: "art5", _status: "synced" },
-            { id: id_7, title: "art7-b", last_modified: 0, _status: "synced" },
-            { id: id_8, title: "art8", last_modified: 0, _status: "synced" },
-          ]);
-      });
-
-      it("should skip deleted data missing locally", () => {
-        return articles.pullChanges(client, result).then((res) => {
-          expect(res.skipped).eql([
-            { id: id_6, last_modified: 0, deleted: true },
-            { id: id_9, title: "art9", _status: "deleted" },
-          ]);
-        });
-      });
-
-      it("should not list identical records as skipped", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((res) => res.skipped)
-          .should.eventually.not.contain({
-            id: id_2,
-            title: "art2",
-            _status: "synced",
-          });
       });
 
       describe("Error handling", () => {
-        it("should expose any import transaction error", () => {
+        it("should expose any import transaction error", async () => {
           const error = new Error("bad");
-          sandbox.stub(articles.db, "execute").returns(Promise.reject(error));
+          const rejection = Promise.reject(error);
+          rejection.catch(() => {});
+          sandbox.stub(articles.db, "execute").returns(rejection);
 
-          return articles
-            .pullChanges(client, result)
-            .then((res) => res.errors)
-            .should.become([
-              {
-                type: "incoming",
-                message: error.message,
-                stack: error.stack,
-              },
-            ]);
+          const res = await articles.pullChanges(client, result);
+          res.errors.should.deep.equal([
+            {
+              type: "incoming",
+              message: error.message,
+              stack: error.stack,
+            },
+          ]);
         });
       });
     });
@@ -2259,14 +2130,13 @@ describe("Collection", () => {
     describe("When a conflict occured", () => {
       let createdId: string, local: KintoIdObject;
 
-      beforeEach(() => {
-        return articles.create({ title: "art2" }).then((res) => {
-          local = res.data;
-          createdId = local.id;
-        });
+      beforeEach(async () => {
+        const res = await articles.create({ title: "art2" });
+        local = res.data;
+        createdId = local.id;
       });
 
-      it("should resolve listing conflicting changes with MANUAL strategy", () => {
+      it("should resolve listing conflicting changes with MANUAL strategy", async () => {
         sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
           Promise.resolve({
             data: [
@@ -2279,38 +2149,36 @@ describe("Collection", () => {
           })
         );
 
-        return articles
-          .pullChanges(client, result)
-          .then((result) => result["toObject"]())
-          .should.eventually.become({
-            ok: false,
-            lastModified: 42,
-            errors: [],
-            created: [],
-            updated: [],
-            deleted: [],
-            skipped: [],
-            published: [],
-            conflicts: [
-              {
-                type: "incoming",
-                local: {
-                  _status: "created",
-                  id: createdId,
-                  title: "art2",
-                },
-                remote: {
-                  id: createdId,
-                  title: "art2mod",
-                  last_modified: 42,
-                },
+        const res = await articles.pullChanges(client, result);
+        res["toObject"]().should.deep.equal({
+          ok: false,
+          lastModified: 42,
+          errors: [],
+          created: [],
+          updated: [],
+          deleted: [],
+          skipped: [],
+          published: [],
+          conflicts: [
+            {
+              type: "incoming",
+              local: {
+                _status: "created",
+                id: createdId,
+                title: "art2",
               },
-            ],
-            resolved: [],
-          });
+              remote: {
+                id: createdId,
+                title: "art2mod",
+                last_modified: 42,
+              },
+            },
+          ],
+          resolved: [],
+        });
       });
 
-      it("should ignore resolved conflicts during sync", () => {
+      it("should ignore resolved conflicts during sync", async () => {
         const remote = { ...local, title: "blah", last_modified: 42 };
         const conflict = {
           type: "incoming" as const,
@@ -2328,71 +2196,64 @@ describe("Collection", () => {
           })
         );
         const syncResult = new SyncResultObject();
-        return articles
-          .resolve(conflict, resolution)
-          .then(() => articles.pullChanges(client, syncResult))
-          .then((result) => result["toObject"]())
-          .should.eventually.become({
-            ok: true,
-            lastModified: 42,
-            errors: [],
-            created: [],
-            published: [],
-            resolved: [],
-            skipped: [],
-            deleted: [],
-            conflicts: [],
-            updated: [],
-          });
+        await articles.resolve(conflict, resolution);
+        const result = await articles.pullChanges(client, syncResult);
+        result["toObject"]().should.deep.equal({
+          ok: true,
+          lastModified: 42,
+          errors: [],
+          created: [],
+          published: [],
+          resolved: [],
+          skipped: [],
+          deleted: [],
+          conflicts: [],
+          updated: [],
+        });
       });
     });
 
     describe("When a resolvable conflict occured", () => {
       let createdId: string;
 
-      beforeEach(() => {
-        return articles.create({ title: "art2" }).then((res) => {
-          createdId = res.data.id;
-          sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
-            Promise.resolve({
-              data: [
-                { id: createdId, title: "art2", last_modified: 0 }, // resolvable conflict
-              ],
-              next: (() => {}) as any,
-              last_modified: "42",
-              hasNextPage: false,
-              totalRecords: 1,
-            })
-          );
-        });
+      beforeEach(async () => {
+        const res = await articles.create({ title: "art2" });
+        createdId = res.data.id;
+        sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
+          Promise.resolve({
+            data: [{ id: createdId, title: "art2", last_modified: 0 }],
+            next: (() => {}) as any,
+            last_modified: "42",
+            hasNextPage: false,
+            totalRecords: 1,
+          })
+        );
       });
 
-      it("should resolve with solved changes", () => {
-        return articles
-          .pullChanges(client, result)
-          .then((result) => result["toObject"]())
-          .should.eventually.become({
-            ok: true,
-            lastModified: 42,
-            errors: [],
-            created: [],
-            published: [],
-            updated: [
-              {
-                old: { id: createdId, title: "art2", _status: "created" },
-                new: {
-                  id: createdId,
-                  title: "art2",
-                  last_modified: 0,
-                  _status: "synced",
-                },
+      it("should resolve with solved changes", async () => {
+        const res = await articles.pullChanges(client, result);
+        res["toObject"]().should.deep.equal({
+          ok: true,
+          lastModified: 42,
+          errors: [],
+          created: [],
+          published: [],
+          updated: [
+            {
+              old: { id: createdId, title: "art2", _status: "created" },
+              new: {
+                id: createdId,
+                title: "art2",
+                last_modified: 0,
+                _status: "synced",
               },
-            ],
-            skipped: [],
-            deleted: [],
-            conflicts: [],
-            resolved: [],
-          });
+            },
+          ],
+          skipped: [],
+          deleted: [],
+          conflicts: [],
+          resolved: [],
+        });
       });
     });
   });
@@ -2406,109 +2267,94 @@ describe("Collection", () => {
       result = new SyncResultObject();
     });
 
-    it("should return errors when encountered", () => {
+    it("should return errors when encountered", async () => {
       const error = new Error("unknown error");
       sandbox.stub(articles.db, "execute").returns(Promise.reject(error));
 
-      return articles
-        .importChanges(result, [{ title: "bar" }])
-        .then((res) => res.errors)
-        .should.eventually.become([
-          {
-            type: "incoming",
-            message: error.message,
-            stack: error.stack,
-          },
-        ]);
+      const res = await articles.importChanges(result, [{ title: "bar" }]);
+      res.errors.should.deep.equal([
+        {
+          type: "incoming",
+          message: error.message,
+          stack: error.stack,
+        },
+      ]);
     });
 
-    it("should only retrieve the changed record", () => {
+    it("should only retrieve the changed record", async () => {
       const id1 = uuid4();
       const id2 = uuid4();
       const execute = sandbox
         .stub(articles.db, "execute")
         .returns(Promise.resolve([]));
 
-      return articles
-        .importChanges(result, [
-          { id: id1, title: "foo" },
-          { id: id2, title: "bar" },
-        ])
-        .then(() => {
-          const preload = execute.lastCall.args[1]!.preload;
-          expect(preload).eql([id1, id2]);
-        });
+      await articles.importChanges(result, [
+        { id: id1, title: "foo" },
+        { id: id2, title: "bar" },
+      ]);
+      const preload = execute.lastCall.args[1]!.preload;
+      expect(preload).eql([id1, id2]);
     });
 
-    it("should merge remote with local fields", () => {
+    it("should merge remote with local fields", async () => {
       const id1 = uuid4();
-      return articles
-        .create({ id: id1, title: "bar", size: 12 }, { synced: true })
-        .then(() => articles.importChanges(result, [{ id: id1, title: "foo" }]))
-        .then((res) => {
-          expect(res.updated[0].new.title).eql("foo");
-          expect(res.updated[0].new.size).eql(12);
-        });
+      await articles.create(
+        { id: id1, title: "bar", size: 12 },
+        { synced: true }
+      );
+      const res = await articles.importChanges(result, [
+        { id: id1, title: "foo" },
+      ]);
+      expect(res.updated[0].new.title).equal("foo");
+      expect(res.updated[0].new.size).equal(12);
     });
 
-    it("should ignore local fields when detecting conflicts", () => {
+    it("should ignore local fields when detecting conflicts", async () => {
       const id1 = uuid4();
       articles = testCollection({ localFields: ["size"] });
       // Create record with status not synced.
-      return articles
-        .create(
-          { id: id1, title: "bar", size: 12, last_modified: 42 },
-          { useRecordId: true }
-        )
-        .then(() =>
-          articles.importChanges(result, [
-            { id: id1, title: "bar", last_modified: 43 },
-          ])
-        )
-        .then((res) => {
-          // No conflict, local.title == remote.title.
-          expect(res.ok).eql(true);
-          expect(res.updated[0].new.title).eql("bar");
-          // Local field is preserved
-          expect(res.updated[0].new.size).eql(12);
-          // Timestamp was taken from remote
-          expect(res.updated[0].new.last_modified).eql(43);
-        });
+      await articles.create(
+        { id: id1, title: "bar", size: 12, last_modified: 42 },
+        { useRecordId: true }
+      );
+      const res = await articles.importChanges(result, [
+        { id: id1, title: "bar", last_modified: 43 },
+      ]);
+      // No conflict, local.title == remote.title.
+      expect(res.ok).equal(true);
+      expect(res.updated[0].new.title).equal("bar");
+      // Local field is preserved
+      expect(res.updated[0].new.size).equal(12);
+      // Timestamp was taken from remote
+      expect(res.updated[0].new.last_modified).equal(43);
     });
 
-    it("should overwrite local records with PULL_ONLY", () => {
+    it("should overwrite local records with PULL_ONLY", async () => {
       const id1 = uuid4();
       const id2 = uuid4();
       const id3 = uuid4();
-      return articles
-        .create({ id: id1, title: "bar" }, { synced: true })
-        .then(() => articles.update({ id: id1, title: "foo" }))
-        .then(() =>
-          articles.create({ id: id3, title: "bam" }, { synced: true })
-        )
-        .then(() =>
-          articles.importChanges(
-            result,
-            [
-              { id: id1, title: "baz", last_modified: 123 },
-              { id: id2, title: "pow", last_modified: 124 },
-              { id: id3, deleted: true, last_modified: 125 },
-            ],
-            Collection.strategy.PULL_ONLY
-          )
-        )
-        .then((res) => {
-          expect(res.ok).eql(true);
-          expect(res.resolved.length).eql(0);
-          expect(res.published.length).eql(0);
-          expect(res.created.length).eql(1);
-          expect(res.updated.length).eql(1);
-          expect(res.deleted.length).eql(1);
-          expect(res.created[0].title).eql("pow");
-          expect(res.updated[0].old.title).eql("foo");
-          expect(res.updated[0].new.title).eql("baz");
-          expect(res.deleted[0].id).eql(id3);
-        });
+      await articles.create({ id: id1, title: "bar" }, { synced: true });
+      await articles.update({ id: id1, title: "foo" });
+      await articles.create({ id: id3, title: "bam" }, { synced: true });
+      const res = await articles.importChanges(
+        result,
+        [
+          { id: id1, title: "baz", last_modified: 123 },
+          { id: id2, title: "pow", last_modified: 124 },
+          { id: id3, deleted: true, last_modified: 125 },
+        ],
+        Collection.strategy.PULL_ONLY
+      );
+      expect(res.ok).equal(true);
+      expect(res.resolved.length).equal(0);
+      expect(res.published.length).equal(0);
+      expect(res.created.length).equal(1);
+      expect(res.updated.length).equal(1);
+      expect(res.deleted.length).equal(1);
+      expect(res.created[0].title).equal("pow");
+      expect(res.updated[0].old.title).equal("foo");
+      expect(res.updated[0].new.title).equal("baz");
+      expect(res.deleted[0].id).equal(id3);
     });
   });
 
@@ -2527,35 +2373,33 @@ describe("Collection", () => {
       result = new SyncResultObject();
     });
 
-    it("should publish local changes to the server", () => {
+    it("should publish local changes to the server", async () => {
       const batchRequests = sandbox
         .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([{}]));
 
-      return articles.pushChanges(client, records, result).then((_) => {
-        const requests = batchRequests.firstCall.args[0];
-        const options = batchRequests.firstCall.args[1];
-        expect(requests).to.have.lengthOf(1);
-        expect(requests[0].body.data.title).eql("foo");
-        expect(options.safe).eql(true);
-      });
+      await articles.pushChanges(client, records, result);
+      const requests = batchRequests.firstCall.args[0];
+      const options = batchRequests.firstCall.args[1];
+      expect(requests).to.have.lengthOf(1);
+      expect(requests[0].body.data.title).equal("foo");
+      expect(options.safe).equal(true);
     });
 
-    it("should not publish local fields to the server", () => {
+    it("should not publish local fields to the server", async () => {
       const batchRequests = sandbox
         .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([{}]));
 
       articles = testCollection({ localFields: ["size"] });
       const toSync = [{ ...records[0], title: "ah", size: 3.14 }];
-      return articles.pushChanges(client, toSync, result).then((_) => {
-        const requests = batchRequests.firstCall.args[0];
-        expect(requests[0].body.data.title).eql("ah");
-        expect(requests[0].body.data.size).to.not.exist;
-      });
+      await articles.pushChanges(client, toSync, result);
+      const requests = batchRequests.firstCall.args[0];
+      expect(requests[0].body.data.title).equal("ah");
+      expect(requests[0].body.data.size).to.not.exist;
     });
 
-    it("should update published records local status", () => {
+    it("should update published records local status", async () => {
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(
         Promise.resolve({
           published: [{ data: records[0] }],
@@ -2564,48 +2408,46 @@ describe("Collection", () => {
           skipped: [],
         })
       );
-      return articles
-        .pushChanges(client, records, result)
-        .then((res) => res.published)
-        .should.eventually.become([
-          {
-            _status: "synced",
-            id: records[0].id,
-            title: "foo",
-          },
-        ]);
+      const res = await articles.pushChanges(client, records, result);
+      res.published.should.deep.equal([
+        {
+          _status: "synced",
+          id: records[0].id,
+          title: "foo",
+        },
+      ]);
     });
 
-    it("should not publish records created and deleted locally and never synced", () => {
+    it("should not publish records created and deleted locally and never synced", async () => {
       const batchRequests = sandbox
         .stub(KintoClient.prototype, "_batchRequests" as any)
         .returns(Promise.resolve([]));
 
       const toDelete = [{ id: records[0].id, _status: "deleted" }]; // no timestamp.
-      return articles.pushChanges(client, toDelete, result).then((_) => {
-        const requests = batchRequests.firstCall.args[0];
-        expect(requests).eql([]);
-      });
+      await articles.pushChanges(client, toDelete, result);
+      const requests = batchRequests.firstCall.args[0];
+      expect(requests).eql([]);
     });
 
-    it("should delete unsynced virtually deleted local records", () => {
-      const locallyDeletedId = records[0].id;
+    it("should delete unsynced virtually deleted local records", async () => {
+      const record = await articles.create({ title: "record to be deleted" });
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(
         Promise.resolve({
-          published: [{ data: { id: locallyDeletedId, deleted: true } }],
+          published: [{ data: { id: record.data.id, deleted: true } }],
           errors: [],
           conflicts: [],
           skipped: [],
         })
       );
-      return articles
-        .delete(locallyDeletedId)
-        .then((_) => articles.pushChanges(client, records, result))
-        .then((_) => articles.get(locallyDeletedId, { includeDeleted: true }))
-        .should.be.eventually.rejectedWith(Error, /not found/);
+      await articles.delete(record.data.id);
+      await articles.pushChanges(client, records, result);
+      await expectAsyncError(
+        () => articles.get(record.data.id, { includeDeleted: true }),
+        /not found/
+      );
     });
 
-    it("should delete locally the records deleted remotely", () => {
+    it("should delete locally the records deleted remotely", async () => {
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(
         Promise.resolve({
           published: [{ data: { id: records[0].id, deleted: true } }],
@@ -2614,13 +2456,11 @@ describe("Collection", () => {
           skipped: [],
         })
       );
-      return articles
-        .pushChanges(client, [], result)
-        .then((res) => res.published)
-        .should.eventually.become([{ id: records[0].id, deleted: true }]);
+      const res = await articles.pushChanges(client, [], result);
+      res.published.should.deep.equal([{ id: records[0].id, deleted: true }]);
     });
 
-    it("should delete locally the records already deleted remotely", () => {
+    it("should delete locally the records already deleted remotely", async () => {
       const id = records[0].id;
       sandbox.stub(KintoClientCollection.prototype, "batch").returns(
         Promise.resolve({
@@ -2635,11 +2475,15 @@ describe("Collection", () => {
           ],
         })
       );
-      return articles
-        .create({ id, title: "bar" }, { useRecordId: true, synced: true })
-        .then(() => articles.pushChanges(client, records, result))
-        .then((_) => articles.get(id, { includeDeleted: true }))
-        .should.be.eventually.rejectedWith(Error, /not found/);
+      await articles.create(
+        { id, title: "bar" },
+        { useRecordId: true, synced: true }
+      );
+      await articles.pushChanges(client, records, result);
+      await expectAsyncError(
+        () => articles.get(id, { includeDeleted: true }),
+        /not found/
+      );
     });
 
     describe("Batch requests made", () => {
@@ -2675,7 +2519,7 @@ describe("Collection", () => {
           });
       });
 
-      it("should call delete() for deleted records", () => {
+      it("should call delete() for deleted records", async () => {
         const myDeletedRecord = {
           id: "deleted-record-id",
           _status: "deleted",
@@ -2684,26 +2528,24 @@ describe("Collection", () => {
         deleteRecord.once();
         createRecord.never();
         updateRecord.never();
-        return articles
-          .pushChanges(client, [myDeletedRecord], result)
-          .then(() => batchSpy.verify())
-          .then(() => deleteRecord.firstCall.args)
-          .should.eventually.eql([myDeletedRecord]);
+        await articles.pushChanges(client, [myDeletedRecord], result);
+        batchSpy.verify();
+        deleteRecord.firstCall.args.should.deep.equal([myDeletedRecord]);
       });
 
-      it("should call create() for created records", () => {
+      it("should call create() for created records", async () => {
         const myCreatedRecord = { id: "created-record-id", _status: "created" };
         deleteRecord.never();
         createRecord.once();
         updateRecord.never();
-        return articles
-          .pushChanges(client, [myCreatedRecord], result)
-          .then(() => batchSpy.verify())
-          .then(() => createRecord.firstCall.args)
-          .should.eventually.eql([{ id: "created-record-id" }]);
+        await articles.pushChanges(client, [myCreatedRecord], result);
+        batchSpy.verify();
+        createRecord.firstCall.args.should.deep.equal([
+          { id: "created-record-id" },
+        ]);
       });
 
-      it("should call update() for updated records", () => {
+      it("should call update() for updated records", async () => {
         const myUpdatedRecord = {
           id: "updated-record-id",
           _status: "updated",
@@ -2712,13 +2554,11 @@ describe("Collection", () => {
         deleteRecord.never();
         createRecord.never();
         updateRecord.once();
-        return articles
-          .pushChanges(client, [myUpdatedRecord], result)
-          .then(() => batchSpy.verify())
-          .then(() => updateRecord.firstCall.args)
-          .should.eventually.eql([
-            { id: "updated-record-id", last_modified: 1234 },
-          ]);
+        await articles.pushChanges(client, [myUpdatedRecord], result);
+        batchSpy.verify();
+        updateRecord.firstCall.args.should.deep.equal([
+          { id: "updated-record-id", last_modified: 1234 },
+        ]);
       });
     });
 
@@ -2743,19 +2583,14 @@ describe("Collection", () => {
         );
       });
 
-      it("should report encountered publication errors", () => {
-        return articles
-          .pushChanges(client, records, result)
-          .then((res) => res.errors)
-          .should.eventually.become([{ ...error, type: "outgoing" }]);
+      it("should report encountered publication errors", async () => {
+        const res = await articles.pushChanges(client, records, result);
+        res.errors.should.deep.equal([{ ...error, type: "outgoing" }]);
       });
 
-      it("should report typed publication errors", () => {
-        return articles
-          .pushChanges(client, records, result)
-          .then((res) => res.errors[0])
-          .should.eventually.have.property("type")
-          .eql("outgoing");
+      it("should report typed publication errors", async () => {
+        const res = await articles.pushChanges(client, records, result);
+        res.errors[0].should.have.property("type").equal("outgoing");
       });
     });
   });
@@ -2769,55 +2604,46 @@ describe("Collection", () => {
     ];
     let articles: Collection;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return Promise.all(
+      await Promise.all(
         fixtures.map((fixture) => {
           return articles.create(fixture, { synced: true });
         })
-      ).then((_) => {
-        return articles.delete(fixtures[1].id);
-      });
+      );
+      return articles.delete(fixtures[1].id);
     });
 
-    it("should reset the synced status of all local records", () => {
-      return articles
-        .resetSyncStatus()
-        .then((_) => articles.list({ filters: { _status: "synced" } }))
-        .should.eventually.have.property("data")
-        .to.have.length(0);
+    it("should reset the synced status of all local records", async () => {
+      await articles.resetSyncStatus();
+      const list = await articles.list({ filters: { _status: "synced" } });
+      list.should.have.property("data").to.have.length(0);
     });
 
-    it("should garbage collect the locally deleted records", () => {
-      return articles
-        .resetSyncStatus()
-        .then((_) => {
-          return articles.list(
-            { filters: { _status: "deleted" } },
-            { includeDeleted: true }
-          );
-        })
-        .should.eventually.have.property("data")
-        .to.have.length(0);
+    it("should garbage collect the locally deleted records", async () => {
+      await articles.resetSyncStatus();
+      const list = await articles.list(
+        { filters: { _status: "deleted" } },
+        { includeDeleted: true }
+      );
+      list.should.have.property("data").to.have.length(0);
     });
 
-    it("should clear last modified value of all records", () => {
-      return articles
-        .resetSyncStatus()
-        .then((_) => articles.list())
-        .then((res) => res.data.some((r) => r.last_modified))
-        .should.eventually.eql(false);
+    it("should clear last modified value of all records", async () => {
+      await articles.resetSyncStatus();
+      const res = await articles.list();
+      expect(res.data.some((r) => r.last_modified)).to.equal(false);
     });
 
-    it("should clear any previously saved lastModified value", () => {
-      return articles
-        .resetSyncStatus()
-        .then((_) => articles.db.getLastModified())
-        .should.become(null);
+    it("should clear any previously saved lastModified value", async () => {
+      await articles.resetSyncStatus();
+      const lastModified = await articles.db.getLastModified();
+      expect(lastModified).to.equal(null);
     });
 
-    it("should resolve with the number of local records processed ", () => {
-      return articles.resetSyncStatus().should.become(3);
+    it("should resolve with the number of local records processed ", async () => {
+      const num = await articles.resetSyncStatus();
+      num.should.equal(3);
     });
   });
 
@@ -2826,26 +2652,28 @@ describe("Collection", () => {
     const fixtures = [{ title: "art1" }, { title: "art2" }, { title: "art3" }];
     let articles: Collection, ids: string[];
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
       sandbox.stub(api, "batch").get(() => () => ({
-        errors: [],
-        published: [],
-        conflicts: [],
-        skipped: [],
+        errors: [] as any[],
+        published: [] as any[],
+        conflicts: [] as any[],
+        skipped: [] as any[],
       }));
-      return Promise.all(
+      const res = await Promise.all(
         fixtures.map((fixture) => articles.create(fixture))
-      ).then((res) => (ids = res.map((r) => r.data.id)));
+      );
+      ids = res.map((r) => r.data.id);
     });
 
-    it("should validate the remote option", () => {
-      return articles
-        .sync({ remote: "http://fake.invalid" })
-        .should.be.rejectedWith(Error, /contain the version/);
+    it("should validate the remote option", async () => {
+      await expectAsyncError(
+        () => articles.sync({ remote: "http://fake.invalid" }),
+        /contain the version/
+      );
     });
 
-    it("should use a custom remote option", () => {
+    it("should use a custom remote option", async () => {
       sandbox.stub(articles, "importChanges");
       sandbox
         .stub(articles, "pushChanges")
@@ -2854,16 +2682,15 @@ describe("Collection", () => {
         .stub(articles.api.http, "timedFetch")
         .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
-      return articles.sync({ remote: "http://test/v1" }).then((res) => {
-        sinon.assert.calledWith(
-          fetch,
-          sinon.match(/http:\/\/test\/v1/),
-          sinon.match.any
-        );
-      });
+      await articles.sync({ remote: "http://test/v1" });
+      sinon.assert.calledWith(
+        fetch,
+        sinon.match(/http:\/\/test\/v1/),
+        sinon.match.any
+      );
     });
 
-    it("should revert the custom remote option on success", () => {
+    it("should revert the custom remote option on success", async () => {
       sandbox.stub(articles, "importChanges");
       sandbox
         .stub(articles, "pushChanges")
@@ -2872,31 +2699,31 @@ describe("Collection", () => {
         .stub(articles.api.http, "timedFetch")
         .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
-      return articles.sync({ remote: "http://test/v1" }).then((_) => {
-        expect(api.remote).eql(FAKE_SERVER_URL);
-      });
+      await articles.sync({ remote: "http://test/v1" });
+      expect(api.remote).equal(FAKE_SERVER_URL);
     });
 
-    it("should revert the custom remote option on failure", () => {
+    it("should revert the custom remote option on failure", async () => {
       sandbox.stub(articles, "importChanges");
-      sandbox.stub(articles, "pushChanges").returns(Promise.reject("boom"));
+      const rejection = Promise.reject("boom");
+      rejection.catch(() => {});
+      sandbox.stub(articles, "pushChanges").returns(rejection);
       sandbox
         .stub(articles.api.http, "timedFetch")
         .returns(fakeServerResponse(200, { data: [] }, {}) as any);
 
-      return articles.sync({ remote: "http://test/v1" }).catch((_) => {
-        expect(api.remote).eql(FAKE_SERVER_URL);
-      });
+      try {
+        await articles.sync({ remote: "http://test/v1" });
+      } catch (e) {}
+      expect(api.remote).equal(FAKE_SERVER_URL);
     });
 
-    it("should load fixtures", () => {
-      return articles
-        .list()
-        .then((res) => res.data)
-        .should.eventually.have.lengthOf(3);
+    it("should load fixtures", async () => {
+      const res = await articles.list();
+      res.data.should.have.lengthOf(3);
     });
 
-    it("should pullMetadata with options", () => {
+    it("should pullMetadata with options", async () => {
       const pullMetadata = sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
@@ -2912,15 +2739,14 @@ describe("Collection", () => {
           Authorization: "Basic 123",
         },
       };
-      return articles.sync(options).then((res) => {
-        expect(pullMetadata.callCount).equal(1);
-        // First argument is the client, which we don't care too much about
-        // Second argument is the options
-        expect(pullMetadata.getCall(0).args[1]).include(options);
-      });
+      await articles.sync(options);
+      expect(pullMetadata.callCount).equal(1);
+      // First argument is the client, which we don't care too much about
+      // Second argument is the options
+      expect(pullMetadata.getCall(0).args[1]).include(options);
     });
 
-    it("should fetch latest changes from the server", () => {
+    it("should fetch latest changes from the server", async () => {
       sandbox.stub(articles, "pullMetadata");
       const listRecords = sandbox
         .stub(KintoClientCollection.prototype, "listRecords")
@@ -2933,13 +2759,12 @@ describe("Collection", () => {
             totalRecords: 0,
           })
         );
-      return articles.sync().then((res) => {
-        // Never synced so we fetch all the records from the server
-        sinon.assert.calledWithMatch(listRecords, { since: undefined });
-      });
+      await articles.sync();
+      // Never synced so we fetch all the records from the server
+      sinon.assert.calledWithMatch(listRecords, { since: undefined });
     });
 
-    it("should store latest lastModified value when no conflicts", () => {
+    it("should store latest lastModified value when no conflicts", async () => {
       sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
@@ -2950,12 +2775,11 @@ describe("Collection", () => {
           totalRecords: 0,
         })
       );
-      return articles.sync().then((res) => {
-        expect(articles.lastModified).eql(42);
-      });
+      await articles.sync();
+      expect(articles.lastModified).equal(42);
     });
 
-    it("shouldn't store latest lastModified on conflicts", () => {
+    it("shouldn't store latest lastModified on conflicts", async () => {
       sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
@@ -2972,12 +2796,11 @@ describe("Collection", () => {
           totalRecords: 1,
         })
       );
-      return articles.sync().then((res) => {
-        expect(articles.lastModified).eql(null);
-      });
+      await articles.sync();
+      expect(articles.lastModified).equal(null);
     });
 
-    it("shouldn't store latest lastModified on errors", () => {
+    it("shouldn't store latest lastModified on errors", async () => {
       sandbox.stub(articles, "pullMetadata");
       sandbox.stub(KintoClientCollection.prototype, "listRecords").returns(
         Promise.resolve({
@@ -2994,15 +2817,14 @@ describe("Collection", () => {
           totalRecords: 0,
         })
       );
-      sandbox
-        .stub(articles.db, "execute")
-        .returns(Promise.reject(new Error("error")));
-      return articles.sync().then((res) => {
-        expect(articles.lastModified).eql(null);
-      });
+      const rejection = Promise.reject(new Error("error"));
+      rejection.catch(() => {});
+      sandbox.stub(articles.db, "execute").returns(rejection);
+      await articles.sync();
+      expect(articles.lastModified).equal(null);
     });
 
-    it("should not execute a last pull on push failure", () => {
+    it("should not execute a last pull on push failure", async () => {
       sandbox.stub(articles, "pullMetadata");
       const pullChanges = sandbox.stub(articles, "pullChanges");
       sandbox
@@ -3011,21 +2833,21 @@ describe("Collection", () => {
           result.add("conflicts", [1 as any]);
           return Promise.resolve(result);
         });
-      return articles.sync().then(() => sinon.assert.calledOnce(pullChanges));
+      await articles.sync();
+      return sinon.assert.calledOnce(pullChanges);
     });
 
-    it("should not execute a last pull if nothing to push", () => {
+    it("should not execute a last pull if nothing to push", async () => {
       sandbox.stub(articles, "pullMetadata");
       sandbox.stub(articles, "gatherLocalChanges").returns(Promise.resolve([]));
       const pullChanges = sandbox
         .stub(articles, "pullChanges")
         .returns(Promise.resolve(new SyncResultObject()));
-      return articles.sync().then((res) => {
-        sinon.assert.calledOnce(pullChanges);
-      });
+      await articles.sync();
+      sinon.assert.calledOnce(pullChanges);
     });
 
-    it("should not redownload pushed changes", () => {
+    it("should not redownload pushed changes", async () => {
       const record1 = { id: uuid4(), title: "blog" };
       const record2 = { id: uuid4(), title: "post" };
       sandbox.stub(articles, "pullMetadata");
@@ -3037,25 +2859,20 @@ describe("Collection", () => {
           result.add("published", record2);
           return Promise.resolve(result);
         });
-      return articles.sync().then((res) => {
-        expect(res.published).to.have.length(2);
-        expect(pullChangesStub.lastCall.args[2]!.exclude).eql([
-          record1,
-          record2,
-        ]);
-      });
+      const res = await articles.sync();
+      expect(res.published).to.have.length(2);
+      expect(pullChangesStub.lastCall.args[2]!.exclude).eql([record1, record2]);
     });
 
-    it("should store collection metadata", () => {
+    it("should store collection metadata", async () => {
       sandbox.stub(articles, "pullChanges");
       const metadata = { id: "articles", last_modified: 42 };
       sandbox
         .stub(KintoClientCollection.prototype, "getData")
         .returns(Promise.resolve(metadata));
-      return articles.sync().then(async () => {
-        const stored = await articles.metadata();
-        expect(stored).to.deep.equal(metadata);
-      });
+      await articles.sync();
+      const stored = await articles.metadata();
+      expect(stored).to.deep.equal(metadata);
     });
 
     describe("Options", () => {
@@ -3068,50 +2885,42 @@ describe("Collection", () => {
           .returns(Promise.resolve(new SyncResultObject())) as any;
       });
 
-      it("should transfer the headers option", () => {
-        return articles.sync({ headers: { Foo: "Bar" } }).then(() => {
-          expect(pullChanges.firstCall.args[2])
-            .to.have.property("headers")
-            .eql({ Foo: "Bar" });
-        });
+      it("should transfer the headers option", async () => {
+        await articles.sync({ headers: { Foo: "Bar" } });
+        expect(pullChanges.firstCall.args[2])
+          .to.have.property("headers")
+          .eql({ Foo: "Bar" });
       });
 
-      it("should transfer the strategy option", () => {
-        return articles
-          .sync({ strategy: Collection.strategy.SERVER_WINS })
-          .then(() => {
-            expect(pullChanges.firstCall.args[2])
-              .to.have.property("strategy")
-              .eql(Collection.strategy.SERVER_WINS);
-          });
+      it("should transfer the strategy option", async () => {
+        await articles.sync({ strategy: Collection.strategy.SERVER_WINS });
+        expect(pullChanges.firstCall.args[2])
+          .to.have.property("strategy")
+          .equal(Collection.strategy.SERVER_WINS);
       });
 
-      it("should transfer the retry option", () => {
-        return articles.sync({ retry: 3 }).then(() => {
-          expect(pullChanges.firstCall.args[2])
-            .to.have.property("retry")
-            .eql(3);
-        });
+      it("should transfer the retry option", async () => {
+        await articles.sync({ retry: 3 });
+        expect(pullChanges.firstCall.args[2])
+          .to.have.property("retry")
+          .equal(3);
       });
 
-      it("should transfer the expectedTimestamp option", () => {
-        return articles.sync({ expectedTimestamp: '"123"' }).then(() => {
-          expect(pullChanges.firstCall.args[2])
-            .to.have.property("expectedTimestamp")
-            .eql('"123"');
-        });
+      it("should transfer the expectedTimestamp option", async () => {
+        await articles.sync({ expectedTimestamp: '"123"' });
+        expect(pullChanges.firstCall.args[2])
+          .to.have.property("expectedTimestamp")
+          .equal('"123"');
       });
     });
 
     describe("Server backoff", () => {
-      it("should reject on server backoff by default", () => {
+      it("should reject on server backoff by default", async () => {
         articles.kinto = ({ api: { backoff: 30000 } } as unknown) as KintoBase;
-        return articles
-          .sync()
-          .should.be.rejectedWith(Error, /back off; retry in 30s/);
+        await expectAsyncError(() => articles.sync(), /back off; retry in 30s/);
       });
 
-      it("should perform sync on server backoff when ignoreBackoff is true", () => {
+      it("should perform sync on server backoff when ignoreBackoff is true", async () => {
         sandbox
           .stub(articles.db, "getLastModified")
           .returns(Promise.resolve(0));
@@ -3120,9 +2929,8 @@ describe("Collection", () => {
         sandbox.stub(articles, "pushChanges");
         articles.api.events!.emit("backoff", new Date().getTime() + 30000);
 
-        return articles
-          .sync({ ignoreBackoff: true })
-          .then((_) => sinon.assert.calledOnce(pullChanges));
+        await articles.sync({ ignoreBackoff: true });
+        return sinon.assert.calledOnce(pullChanges);
       });
     });
 
@@ -3166,17 +2974,12 @@ describe("Collection", () => {
         fetch
           .onCall(5)
           .returns(fakeServerResponse(200, { data: [] }, {}) as any);
-        // Avoid actually waiting real time between retries in test suites.
-        sandbox
-          .stub(global as any, "setTimeout")
-          .callsFake((fn) => setImmediate(fn));
       });
 
-      it("should retry if specified", () => {
-        return articles.sync({ retry: 3 }).then((result) => {
-          //console.log(fetch.getCalls());
-          expect(result.ok).eql(true);
-        });
+      it("should retry if specified", async () => {
+        const result = await articles.sync({ retry: 3 });
+        //console.log(fetch.getCalls());
+        expect(result.ok).equal(true);
       });
     });
 
@@ -3199,50 +3002,44 @@ describe("Collection", () => {
         pushChangesStub = sandbox.stub(articles, "pushChanges") as any;
       });
 
-      it("should send a success event", () => {
-        return articles.sync().then(() => {
-          expect(onsuccess.called).eql(true);
-          expect(onerror.called).eql(false);
-        });
+      it("should send a success event", async () => {
+        await articles.sync();
+        expect(onsuccess.called).equal(true);
+        expect(onerror.called).equal(false);
       });
 
-      it("should send an error event", () => {
+      it("should send an error event", async () => {
         pushChangesStub.throws(new Error("boom"));
-        return articles.sync().catch(() => {
-          expect(onsuccess.called).eql(false);
-          expect(onerror.called).eql(true);
-        });
+        try {
+          await articles.sync();
+        } catch (e) {
+          expect(onsuccess.called).equal(false);
+          expect(onerror.called).equal(true);
+        }
       });
 
-      it("should send an error event", () => {
+      it("should provide success details about sync", async () => {
+        await articles.sync();
+        const data = onsuccess.firstCall.args[0];
+        expect(data).to.have.property("result");
+        expect(data).to.have.property("remote");
+        expect(data).to.have.property("bucket");
+        expect(data).to.have.property("collection");
+        expect(data).to.have.property("headers");
+      });
+
+      it("should provide error details about sync", async () => {
         pushChangesStub.throws(new Error("boom"));
-        return articles.sync().catch(() => {
-          expect(onsuccess.called).eql(false);
-          expect(onerror.called).eql(true);
-        });
-      });
-
-      it("should provide success details about sync", () => {
-        return articles.sync().then(() => {
-          const data = onsuccess.firstCall.args[0];
-          expect(data).to.have.property("result");
-          expect(data).to.have.property("remote");
-          expect(data).to.have.property("bucket");
-          expect(data).to.have.property("collection");
-          expect(data).to.have.property("headers");
-        });
-      });
-
-      it("should provide error details about sync", () => {
-        pushChangesStub.throws(new Error("boom"));
-        return articles.sync().catch(() => {
+        try {
+          await articles.sync();
+        } catch (e) {
           const data = onerror.firstCall.args[0];
           expect(data).to.have.property("error");
           expect(data).to.have.property("remote");
           expect(data).to.have.property("bucket");
           expect(data).to.have.property("collection");
           expect(data).to.have.property("headers");
-        });
+        }
       });
     });
   });
@@ -3254,169 +3051,137 @@ describe("Collection", () => {
       articles = testCollection();
     });
 
-    it("should support get", () => {
-      return articles
-        .create(article)
-        .then((result) => {
-          const id = result.data.id;
-          return articles.execute((txn) => txn.get(id), { preloadIds: [id] });
-        })
-        .then((result) => expect(result.data.title).eql("foo"));
+    it("should support get", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      const result_1 = await articles.execute((txn) => txn.get(id), {
+        preloadIds: [id],
+      });
+      return expect(result_1.data.title).equal("foo");
     });
 
-    it("should support getAny", () => {
-      return articles
-        .create(article)
-        .then((result) => {
-          const id = result.data.id;
-          return articles.execute((txn) => txn.getAny(id), {
-            preloadIds: [id],
-          });
-        })
-        .then((result) => expect(result.data.title).eql("foo"));
+    it("should support getAny", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      const result_1 = await articles.execute((txn) => txn.getAny(id), {
+        preloadIds: [id],
+      });
+      return expect(result_1.data.title).equal("foo");
     });
 
-    it("should support delete", () => {
-      let id: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id = result.data.id;
-          return articles.execute((txn) => txn.delete(id), {
-            preloadIds: [id],
-          });
-        })
-        .then((result) => articles.getAny(id))
-        .then((result) => expect(result.data!._status).eql("deleted"));
+    it("should support delete", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      await articles.execute((txn) => txn.delete(id), {
+        preloadIds: [id],
+      });
+      const result_2 = await articles.getAny(id);
+      return expect(result_2.data!._status).equal("deleted");
     });
 
-    it("should support deleteAll", () => {
-      let id: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id = result.data.id;
-          return articles.execute((txn) => txn.deleteAll([id]), {
-            preloadIds: [id],
-          });
-        })
-        .then((result) => articles.getAny(id))
-        .then((result) => expect(result.data!._status).eql("deleted"));
+    it("should support deleteAll", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      await articles.execute((txn) => txn.deleteAll([id]), {
+        preloadIds: [id],
+      });
+      const result_2 = await articles.getAny(id);
+      return expect(result_2.data!._status).equal("deleted");
     });
 
-    it("should support deleteAny", () => {
-      let id: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id = result.data.id;
-          return articles.execute((txn) => txn.deleteAny(id), {
-            preloadIds: [id],
-          });
-        })
-        .then((result) => articles.getAny(id))
-        .then((result) => expect(result.data!._status).eql("deleted"));
+    it("should support deleteAny", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      await articles.execute((txn) => txn.deleteAny(id), {
+        preloadIds: [id],
+      });
+      const result_2 = await articles.getAny(id);
+      return expect(result_2.data!._status).equal("deleted");
     });
 
-    it("should support create", () => {
+    it("should support create", async () => {
       const id = uuid4();
-      return articles
-        .execute((txn) => txn.create({ id, ...article }), { preloadIds: [id] })
-        .then((result) => expect(result.data.title).eql("foo"));
+      const result = await articles.execute(
+        (txn) => txn.create({ id, ...article }),
+        { preloadIds: [id] }
+      );
+      return expect(result.data.title).equal("foo");
     });
 
-    it("should support update", () => {
-      let id: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id = result.data.id;
-          return articles.execute(
-            (txn) => txn.update({ id, title: "new title" }),
-            { preloadIds: [id] }
-          );
-        })
-        .then((result) => articles.get(id))
-        .then((result) => expect(result.data.title).eql("new title"));
+    it("should support update", async () => {
+      const result = await articles.create(article);
+      const id = result.data.id;
+      await articles.execute((txn) => txn.update({ id, title: "new title" }), {
+        preloadIds: [id],
+      });
+      const result_2 = await articles.get(id);
+      return expect(result_2.data.title).equal("new title");
     });
 
-    it("should support upsert", () => {
+    it("should support upsert", async () => {
       const id = uuid4();
-      return articles
-        .upsert({ id, ...article })
-        .then((result) => result.data.id)
-        .then((result) => articles.get(id))
-        .then((result) => expect(result.data.title).eql("foo"));
+      await articles.upsert({ id, ...article });
+      const result_2 = await articles.get(id);
+      return expect(result_2.data.title).equal("foo");
     });
 
-    it("should roll back operations if there's a failure", () => {
+    it("should roll back operations if there's a failure", async () => {
       let id: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id = result.data.id;
-          return articles.execute(
-            (txn) => {
-              txn.deleteAny(id);
-              txn.delete(uuid4()); // this should fail
-            },
-            { preloadIds: [id] }
-          );
-        })
-        .catch(() => null)
-        .then((result) => articles.getAny(id))
-        .then((result) => expect(result.data!._status).eql("created"));
+      try {
+        const result = await articles.create(article);
+        id = result.data.id;
+        await articles.execute(
+          (txn) => {
+            txn.deleteAny(id);
+            txn.delete(uuid4()); // this should fail
+          },
+          { preloadIds: [id] }
+        );
+      } catch (e) {}
+      const result_2 = await articles.getAny(id);
+      return expect(result_2.data!._status).equal("created");
     });
 
-    it("should perform all operations if there's no failure", () => {
-      let id1: string, id2: string;
-      return articles
-        .create(article)
-        .then((result) => {
-          id1 = result.data.id;
-          return articles.create({ title: "foo2", url: "http://foo2" });
-        })
-        .then((result) => {
-          id2 = result.data.id;
-          return articles.execute(
-            (txn) => {
-              txn.deleteAny(id1);
-              txn.deleteAny(id2);
-            },
-            { preloadIds: [id1, id2] }
-          );
-        })
-        .then((result) => articles.getAny(id1))
-        .then((result) => expect(result.data!._status).eql("deleted"))
-        .then((result) => articles.getAny(id2))
-        .then((result) => expect(result.data!._status).eql("deleted"));
+    it("should perform all operations if there's no failure", async () => {
+      const result = await articles.create(article);
+      const id1 = result.data.id;
+      const result_1 = await articles.create({
+        title: "foo2",
+        url: "http://foo2",
+      });
+      const id2 = result_1.data.id;
+      await articles.execute(
+        (txn) => {
+          txn.deleteAny(id1);
+          txn.deleteAny(id2);
+        },
+        { preloadIds: [id1, id2] }
+      );
+      const result_3 = await articles.getAny(id1);
+      expect(result_3.data!._status).equal("deleted");
+      const result_4 = await articles.getAny(id2);
+      return expect(result_4.data!._status).equal("deleted");
     });
 
-    it("should resolve to the return value of the transaction", () => {
-      return articles
-        .create(article)
-        .then(() => {
-          return articles.execute((txn) => {
-            return "hello";
-          });
-        })
-        .then((result) => expect(result).eql("hello"));
+    it("should resolve to the return value of the transaction", async () => {
+      await articles.create(article);
+      const result = await articles.execute((txn) => {
+        return "hello";
+      });
+      return expect(result).equal("hello");
     });
 
-    it("has operations that are synchronous", () => {
+    it("has operations that are synchronous", async () => {
       let createdArticle: typeof article & KintoObject;
-      return articles
-        .create(article)
-        .then((result) => {
-          return articles.execute(
-            (txn) => {
-              createdArticle = txn.get(result.data.id).data as typeof article &
-                KintoObject;
-            },
-            { preloadIds: [result.data.id] }
-          );
-        })
-        .then((result) => expect(createdArticle.title).eql("foo"));
+      const result = await articles.create(article);
+      await articles.execute(
+        (txn) => {
+          createdArticle = txn.get(result.data.id).data as typeof article &
+            KintoObject;
+        },
+        { preloadIds: [result.data.id] }
+      );
+      return expect(createdArticle.title).equal("foo");
     });
   });
 
@@ -3424,9 +3189,11 @@ describe("Collection", () => {
   describe("#pullMetadata", () => {
     let articles: Collection;
 
-    beforeEach(() => (articles = testCollection()));
+    beforeEach(() => {
+      articles = testCollection();
+    });
 
-    it("passes headers to underlying client", () => {
+    it("passes headers to underlying client", async () => {
       const headers = {
         Authorization: "Basic 123",
       };
@@ -3434,10 +3201,9 @@ describe("Collection", () => {
       const client = ({
         getData: sandbox.stub(),
       } as unknown) as KintoClientCollection;
-      return articles.pullMetadata(client, { headers }).then((_) => {
-        sinon.assert.calledWithExactly(client.getData as any, {
-          headers,
-        });
+      await articles.pullMetadata(client, { headers });
+      sinon.assert.calledWithExactly(client.getData as any, {
+        headers,
       });
     });
   });
@@ -3445,172 +3211,190 @@ describe("Collection", () => {
   describe("Events", () => {
     let articles: Collection, article: any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       articles = testCollection();
-      return articles
-        .create({ title: "foo" })
-        .then(({ data }) => (article = data));
+      const { data } = await articles.create({ title: "foo" });
+      article = data;
     });
 
-    it("should emit an event on create", (done) => {
-      articles.events.on("create", () => done());
-      articles.create({ title: "win" });
-    });
-
-    it("should emit an event on update", (done) => {
-      articles.events.on("update", () => done());
-      articles.update({ ...article, title: "changed" });
-    });
-
-    it("should emit an event on delete", (done) => {
-      articles.events.on("delete", () => done());
-      articles.delete(article.id);
-    });
-
-    it("should emit a 'delete' event when calling deleteAll", (done) => {
-      articles.events.on("delete", () => done());
-      articles.deleteAll();
-    });
-
-    it("should emit a 'deleteAll' event when calling deleteAll", (done) => {
-      articles.events.on("deleteAll", () => done());
-      articles.deleteAll();
-    });
-
-    it("should emit an event on deleteAny", (done) => {
-      articles.events.on("delete", () => done());
-      articles.deleteAny(article.id);
-    });
-
-    it("should not emit if deleteAny fails", (done) => {
-      articles.events.on("delete", () => done(new Error("fail")));
-      articles.deleteAny(uuid4()).then(() => done());
-    });
-
-    it("should emit a create event on upsert", (done) => {
-      articles.events.on("create", () => done());
-      articles.upsert({ id: uuid4(), create: "new" });
-    });
-
-    it("should emit a update event on upsert", (done) => {
-      articles.events.on("update", () => done());
-      articles.upsert({ update: "existing", ...article });
-    });
-
-    it("should provide created record in data", (done) => {
-      articles.events.on("create", (event) => {
-        expect(event)
-          .to.have.property("data")
-          .to.have.property("title")
-          .eql("win");
-        done();
+    it("should emit an event on create", () => {
+      return new Promise((resolve) => {
+        articles.events.on("create", resolve);
+        articles.create({ title: "win" });
       });
-      articles.create({ title: "win" });
     });
 
-    it("should provide new record in data and old record", (done) => {
-      articles.events.on("update", (event) => {
-        const { data, oldRecord } = event;
-        expect(data).to.have.property("title").eql("changed");
-        expect(oldRecord).to.have.property("title").eql("foo");
-        done();
+    it("should emit an event on update", () => {
+      return new Promise((resolve) => {
+        articles.events.on("update", resolve);
+        articles.update({ ...article, title: "changed" });
       });
-      articles.update({ ...article, title: "changed" });
     });
 
-    it("should not provide oldRecord on creation with upsert", (done) => {
-      articles.events.on("create", (event) => {
-        expect(event).not.to.have.property("oldRecord");
-        done();
+    it("should emit an event on delete", () => {
+      return new Promise((resolve) => {
+        articles.events.on("delete", resolve);
+        articles.delete(article.id);
       });
-      articles.upsert({ id: uuid4(), some: "new" });
     });
 
-    it("should provide old record", (done) => {
-      articles.events.on("delete", (event) => {
-        expect(event)
-          .to.have.property("data")
-          .to.have.property("title")
-          .eql("foo");
-        done();
+    it("should emit a 'delete' event when calling deleteAll", () => {
+      return new Promise((resolve) => {
+        articles.events.on("delete", resolve);
+        articles.deleteAll();
       });
-      articles.delete(article.id);
+    });
+
+    it("should emit a 'deleteAll' event when calling deleteAll", () => {
+      return new Promise((resolve) => {
+        articles.events.on("deleteAll", resolve);
+        articles.deleteAll();
+      });
+    });
+
+    it("should emit an event on deleteAny", () => {
+      return new Promise((resolve) => {
+        articles.events.on("delete", resolve);
+        articles.deleteAny(article.id);
+      });
+    });
+
+    it("should not emit if deleteAny fails", () => {
+      return new Promise((resolve, reject) => {
+        articles.events.on("delete", () => reject(new Error("fail")));
+        articles.deleteAny(uuid4()).then(resolve);
+      });
+    });
+
+    it("should emit a create event on upsert", () => {
+      return new Promise((resolve) => {
+        articles.events.on("create", resolve);
+        articles.upsert({ id: uuid4(), create: "new" });
+      });
+    });
+
+    it("should emit a update event on upsert", () => {
+      return new Promise((resolve) => {
+        articles.events.on("update", resolve);
+        articles.upsert({ update: "existing", ...article });
+      });
+    });
+
+    it("should provide created record in data", () => {
+      return new Promise((resolve) => {
+        articles.events.on("create", (event) => {
+          expect(event)
+            .to.have.property("data")
+            .to.have.property("title")
+            .equal("win");
+          resolve();
+        });
+        articles.create({ title: "win" });
+      });
+    });
+
+    it("should provide new record in data and old record", () => {
+      return new Promise((resolve) => {
+        articles.events.on("update", (event) => {
+          const { data, oldRecord } = event;
+          expect(data).to.have.property("title").equal("changed");
+          expect(oldRecord).to.have.property("title").equal("foo");
+          resolve();
+        });
+        articles.update({ ...article, title: "changed" });
+      });
+    });
+
+    it("should not provide oldRecord on creation with upsert", () => {
+      return new Promise((resolve) => {
+        articles.events.on("create", (event) => {
+          expect(event).not.to.have.property("oldRecord");
+          resolve();
+        });
+        articles.upsert({ id: uuid4(), some: "new" });
+      });
+    });
+
+    it("should provide old record", () => {
+      return new Promise((resolve) => {
+        articles.events.on("delete", (event) => {
+          expect(event)
+            .to.have.property("data")
+            .to.have.property("title")
+            .equal("foo");
+          resolve();
+        });
+        articles.delete(article.id);
+      });
     });
 
     describe("Transactions", () => {
-      it("should send every events of a transaction", () => {
+      it("should send every events of a transaction", async () => {
         const callback = sinon.spy();
         articles.events.on("create", callback);
 
-        return articles
-          .execute((txn) => {
-            txn.create({ id: uuid4(), title: "foo" });
-            txn.create({ id: uuid4(), title: "bar" });
-          })
-          .then(() => expect(callback.callCount).to.equal(2));
+        await articles.execute((txn) => {
+          txn.create({ id: uuid4(), title: "foo" });
+          txn.create({ id: uuid4(), title: "bar" });
+        });
+        return expect(callback.callCount).to.equal(2);
       });
 
-      it("should not send any event if the transaction fails", () => {
+      it("should not send any event if the transaction fails", async () => {
         const callback = sinon.spy();
         articles.events.on("create", callback);
 
-        return articles
-          .execute((txn) => {
+        try {
+          await articles.execute((txn) => {
             txn.create({ id: uuid4(), title: "foo" });
             throw new Error("Fail!");
-          })
-          .catch(() => {})
-          .then(() => expect(callback.callCount).eql(0));
+          });
+        } catch (e) {}
+        return expect(callback.callCount).equal(0);
       });
 
-      it("should not send any change event if nothing happens in transaction", () => {
+      it("should not send any change event if nothing happens in transaction", async () => {
         const callback = sinon.spy();
         articles.events.on("change", callback);
 
-        return articles
-          .execute((txn) => {
-            txn.deleteAny(uuid4());
-          })
-          .then(() => expect(callback.callCount).eql(0));
+        await articles.execute((txn) => {
+          txn.deleteAny(uuid4());
+        });
+        return expect(callback.callCount).equal(0);
       });
 
-      it("should send a single changed event for the whole transaction", () => {
+      it("should send a single changed event for the whole transaction", async () => {
         const callback = sinon.spy();
         const id = uuid4();
         const id2 = uuid4();
 
-        return articles
-          .create({ id, title: "foo" }, { useRecordId: true })
-          .then(() => {
-            articles.events.on("change", callback);
-            return articles.execute(
-              (txn) => {
-                txn.create({ id: id2, title: "bar" });
-                txn.update({ id, size: 42 });
-                txn.delete(id);
-              },
-              { preloadIds: [id] }
-            );
-          })
-          .then(() => {
-            expect(callback.callCount).eql(1);
-            const payload = callback.lastCall.args[0];
-            const { targets } = payload;
-            expect(targets.length).eql(3);
-            expect(targets[0]).eql({
-              action: "create",
-              data: { id: id2, title: "bar" },
-            });
-            expect(targets[1]).eql({
-              action: "update",
-              data: { _status: "created", id, size: 42 }, // never synced.
-              oldRecord: { _status: "created", id, title: "foo" },
-            });
-            expect(targets[2]).eql({
-              action: "delete",
-              data: { _status: "created", id, title: "foo" },
-            });
-          });
+        await articles.create({ id, title: "foo" }, { useRecordId: true });
+        articles.events.on("change", callback);
+        await articles.execute(
+          (txn) => {
+            txn.create({ id: id2, title: "bar" });
+            txn.update({ id, size: 42 });
+            txn.delete(id);
+          },
+          { preloadIds: [id] }
+        );
+        expect(callback.callCount).equal(1);
+        const payload = callback.lastCall.args[0];
+        const { targets } = payload;
+        expect(targets.length).equal(3);
+        expect(targets[0]).eql({
+          action: "create",
+          data: { id: id2, title: "bar" },
+        });
+        expect(targets[1]).eql({
+          action: "update",
+          data: { _status: "created", id, size: 42 },
+          oldRecord: { _status: "created", id, title: "foo" },
+        });
+        expect(targets[2]).eql({
+          action: "delete",
+          data: { _status: "created", id, title: "foo" },
+        });
       });
     });
   });

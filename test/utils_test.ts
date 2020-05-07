@@ -1,7 +1,3 @@
-"use strict";
-
-import chai, { expect } from "chai";
-
 import {
   deepEqual,
   sortObjects,
@@ -11,8 +7,9 @@ import {
   transformSubObjectFilters,
 } from "../src/utils";
 
-chai.should();
-chai.config.includeStack = true;
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it } = intern.getPlugin("interface.bdd");
 
 describe("Utils", () => {
   /** @test {sortObjects} */
@@ -107,27 +104,32 @@ describe("Utils", () => {
 
   /** @test {waterfall} */
   describe("#waterfall", () => {
-    it("should resolve with init value when list is empty", () => {
-      return waterfall([], 42).should.become(42);
+    it("should resolve with init value when list is empty", async () => {
+      const result = await waterfall([], 42);
+      result.should.equal(42);
     });
 
-    it("should resolve executing a single sync function", () => {
-      return waterfall([(x) => x + 1], 42).should.become(43);
+    it("should resolve executing a single sync function", async () => {
+      const result = await waterfall([(x) => x + 1], 42);
+      result.should.equal(43);
     });
 
-    it("should resolve executing multiple sync functions", () => {
-      return waterfall([(x) => x + 1, (x) => x * 2], 42).should.become(86);
+    it("should resolve executing multiple sync functions", async () => {
+      const result = await waterfall([(x) => x + 1, (x) => x * 2], 42);
+      result.should.equal(86);
     });
 
-    it("should resolve using a single promise returning function", () => {
-      return waterfall([() => Promise.resolve(42)]).should.become(42);
+    it("should resolve using a single promise returning function", async () => {
+      const result = await waterfall([() => Promise.resolve(42)]);
+      result.should.equal(42);
     });
 
-    it("should resolve using multiple promise returning functions", () => {
-      return waterfall(
+    it("should resolve using multiple promise returning functions", async () => {
+      const result = await waterfall(
         [(x) => Promise.resolve(x + 1), (x) => Promise.resolve(x * 2)],
         42
-      ).should.become(86);
+      );
+      result.should.equal(86);
     });
   });
 
