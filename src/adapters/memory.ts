@@ -309,6 +309,10 @@ export default class Memory<
   // responsible for making modifications to the store as part of the
   // `execute` method.
   //
+  // An important thing to consider is that all of the returned methods must
+  // be synchronous methods. You cannot use Promises, `async`/`await`, or any
+  // other forms of asynchronous methods.
+  //
   // It accepts a map of ID -> record for the `get` method. This is to support
   // getting records as they were at the start of a transaction.
   private proxy(preloaded: { [key: string]: B } = {}): StorageProxy<B> {
