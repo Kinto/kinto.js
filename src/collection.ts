@@ -366,7 +366,7 @@ export default class Collection<
   private _name: string;
   private _lastModified: number | null;
   public db: BaseAdapter<B>;
-  public kinto: KintoBase;
+  public kinto: KintoBase<B>;
   public events: EventEmitter;
   public idSchema: IdSchema;
   public remoteTransformers: RemoteTransformer[];
@@ -376,9 +376,12 @@ export default class Collection<
   constructor(
     bucket: string,
     name: string,
-    kinto: KintoBase,
+    kinto: KintoBase<B>,
     options: {
-      adapter?: typeof IDB;
+      adapter?: (
+        dbName: string,
+        options?: { dbName?: string; migrateOldData?: boolean }
+      ) => BaseAdapter<B>;
       adapterOptions?: { dbName?: string; migrateOldData?: boolean };
       events?: EventEmitter;
       idSchema?: IdSchema;
@@ -391,14 +394,9 @@ export default class Collection<
     this._name = name;
     this._lastModified = null;
 
-    const DBAdapter = options.adapter || IDB;
-    if (!DBAdapter) {
-      throw new Error("No adapter provided");
-    }
-    const db = new DBAdapter(
-      `${bucket}/${name}`,
-      options.adapterOptions
-    ) as BaseAdapter<B>;
+    const db = options.adapter
+      ? options.adapter(`${bucket}/${name}`, options.adapterOptions)
+      : new IDB<B>(`${bucket}/${name}`, options.adapterOptions);
     if (!(db instanceof BaseAdapter)) {
       throw new Error("Unsupported adapter.");
     }
@@ -1689,7 +1687,7 @@ export default class Collection<
       expectedTimestamp?: string | null;
       headers?: Record<string, string>;
     } = {}
-  ): Promise<{ [key: string]: unknown }> {
+  ): Promise<{ [key: string]: unknown } | null> {
     const { expectedTimestamp, headers } = options;
     const query = expectedTimestamp
       ? { query: { _expected: expectedTimestamp.toString() } }

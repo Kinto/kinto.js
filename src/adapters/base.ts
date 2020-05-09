@@ -32,7 +32,7 @@ export abstract class AbstractBaseAdapter<
     metadata: {
       [key: string]: any;
     } | null
-  ): Promise<{ [key: string]: any }>;
+  ): Promise<{ [key: string]: any } | null>;
   abstract getMetadata<T>(): Promise<T>;
 }
 
@@ -144,7 +144,7 @@ export default class BaseAdapter<
     metadata: {
       [key: string]: any;
     } | null
-  ): Promise<{ [key: string]: any }> {
+  ): Promise<{ [key: string]: any } | null> {
     throw new Error("Not Implemented.");
   }
 

@@ -29,11 +29,11 @@ describe("KintoBase", () => {
   });
 
   describe("collection options", () => {
-    let kinto: KintoBase;
+    let kinto: KintoBase<any>;
 
     beforeEach(() => {
       kinto = new KintoBase({
-        adapter: KintoBase.adapters.BaseAdapter as any,
+        adapter: () => new KintoBase.adapters.BaseAdapter(),
         events: new EventEmitter(),
       });
     });

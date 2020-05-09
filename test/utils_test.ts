@@ -5,6 +5,7 @@ import {
   omitKeys,
   waterfall,
   transformSubObjectFilters,
+  getDeepKey,
 } from "../src/utils";
 
 const { expect } = intern.getPlugin("chai");
@@ -231,6 +232,28 @@ describe("Utils", () => {
           },
         },
       });
+    });
+  });
+
+  describe("getDeepKey", () => {
+    const record = {
+      title: "The Lusty Argonian Maid",
+      author: {
+        name: "Crassius Curio",
+      },
+    };
+
+    it("should deeply access dot-notation properties", () => {
+      expect(getDeepKey(record, "author.name")).to.equal("Crassius Curio");
+    });
+
+    it("should access properties", () => {
+      expect(getDeepKey(record, "title")).to.equal("The Lusty Argonian Maid");
+    });
+
+    it("should return undefined for undefined properties", () => {
+      expect(getDeepKey(record, "year")).to.equal(undefined);
+      expect(getDeepKey(record, "publisher.name")).to.equal(undefined);
     });
   });
 });

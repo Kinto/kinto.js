@@ -47,9 +47,11 @@ import KintoBase, { KintoBaseOptions } from "./KintoBase";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { RE_RECORD_ID } from "./utils";
-import { IdSchema } from "./types";
+import { IdSchema, RecordStatus } from "./types";
 
-export default class Kinto extends KintoBase {
+export default class Kinto<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> extends KintoBase<B> {
   static get adapters() {
     return {
       BaseAdapter,
