@@ -2,6 +2,26 @@
 
 This document describes changes between each past release.
 
+## v13.0.0 (2020-05-09)
+
+This release is the culmination of almost ten months of work to migrate [kinto-http.js](https://github.com/Kinto/kinto-http.js) and [kinto.js](https://github.com/Kinto/kinto.js) to TypeScript! In the process, we've modernized the build system for both libraries. For more information on what this means for you, checkout the [migration guide](https://github.com/Kinto/kinto.js/blob/master/docs/upgrading.md#12x-to-13x).
+
+**Breaking changes**
+
+* Full rewrite in TypeScript (Thanks @dstaley!)
+
+**Internal changes**
+
+* Improve error wrapping of IndexedDB errors (#1205)
+* Update build scripts to support Windows (#1120)
+* removed unused variables (#1094)
+* Update documentation examples with arrow functions and const (#1084)
+* Remove timestamp from IDB instead storing null (#1082)
+* Rewrite examples with promises to async/await (#1075)
+* Replace Browserify and Babel with TypeScript and Rollup (#1061)
+* Updates api.md to have more concise code examples (#1073)
+
+
 ## v12.7.0 (2019-08-28)
 
 - Fix #1043: Reject when transaction is aborted (#1044)
