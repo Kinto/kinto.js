@@ -29,23 +29,23 @@ class MyAdapter extends Kinto.adapters.BaseAdapter {
 }
 ```
 
-Then create the Kinto object passing a reference to your adapter class:
+Then create the Kinto object passing a function that returns a reference to your adapter class:
 
 ```
-const kinto = new Kinto({adapter: MyAdapter});
+const kinto = new Kinto({adapter: (storeName, options) => new MyAdapter(storeName, options)});
 ```
 
-Each call to `kinto.collection(...)` will then instantiate a new `MyAdapter`.
+Each call to `kinto.collection(...)` will then call your provided function to instantiate a new `MyAdapter`.
 
-Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.js) to figure out what needs to be implemented exactly. The [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.js) adapter is also worth a read if you need guidance writing your own.
+Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.ts) to figure out what needs to be implemented exactly. For guidance on writing a production-ready implementation, take a look at the [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.ts) adapter. For an easier-to-understand implementation (albeit with its own flaws), you can read the source for the [Memory](https://github.com/Kinto/kinto.js/blob/master/src/adapters/memory.ts) adapter.
 
 The `options` argument to the adapter constructor is taken from the `adapterOptions` given to the Kinto constructor. For example, if your adapter recognizes a `style` option:
 
 ```
-const kinto = new Kinto({adapter: MyAdapter, adapterOptions: {style: "traditional"}});
+const kinto = new Kinto({adapter: (storeName, options) => new MyAdapter(storeName, options), adapterOptions: {style: "traditional"}});
 ```
 
-The given `adapterOptions` will be the second argument to the `MyAdapter` constructor. If you need to share state across the per-collection `MyAdapter`s, you can track it using `adapterOptions`.
+The given `adapterOptions` will be the second argument to the `adapter` function and the `MyAdapter` constructor. If you need to share state across the per-collection `MyAdapter`s, you can track it using `adapterOptions`.
 
 ## Opening and closing
 

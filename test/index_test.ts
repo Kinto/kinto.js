@@ -152,7 +152,9 @@ describe("Kinto", () => {
 
     it("should create collection using an optional adapter", () => {
       const MyAdapter = class extends BaseAdapter<any> {};
-      const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
+      const db = new Kinto({
+        adapter: () => (new MyAdapter() as unknown) as BaseAdapter<any>,
+      });
       const coll = db.collection("plop");
 
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
@@ -161,9 +163,11 @@ describe("Kinto", () => {
     it("should override adapter for collection if specified", () => {
       const MyAdapter = class extends BaseAdapter<any> {};
       const MyOtherAdapter = class extends BaseAdapter<any> {};
-      const db = new Kinto({ adapter: (MyAdapter as unknown) as typeof IDB });
+      const db = new Kinto({
+        adapter: () => (new MyAdapter() as unknown) as BaseAdapter<any>,
+      });
       const coll = db.collection("plop", {
-        adapter: (MyOtherAdapter as unknown) as typeof IDB,
+        adapter: () => (new MyOtherAdapter() as unknown) as BaseAdapter<any>,
       });
       expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
     });

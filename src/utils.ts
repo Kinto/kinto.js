@@ -183,3 +183,17 @@ export function transformSubObjectFilters(filtersObj: { [key: string]: any }) {
   }
   return transformedFilters;
 }
+
+/**
+ * Deeply access an object's properties
+ * @param obj - The object whose property you want to compare
+ * @param key - A dot notation path to the property you want to compare
+ */
+export function getDeepKey(obj: any, key: string): unknown {
+  const segments = key.split(".");
+  let result = obj;
+  for (let p = 0; p < segments.length; p++) {
+    result = result ? result[segments[p]] : undefined;
+  }
+  return result ?? undefined;
+}

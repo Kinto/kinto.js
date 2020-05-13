@@ -13,7 +13,7 @@ const db = new Kinto(options);
 - `remote`: The remote Kinto server endpoint root URL (eg. `"https://server/v1"`). Not that you *must* define a URL matching the version of the protocol the client supports, otherwise you'll get an error;
 - `headers`: The default headers to pass for every HTTP request performed to the Kinto server (eg. `{"Authorization": "Basic bWF0Og=="}`);
 - `retry`: Number of retries when the server fails to process the request (default: `1`)
-- `adapter`: The persistence layer adapter to use for saving data locally (default: `Kinto.adapters.IDB`); if you plan on writing your own adapter, you can read more about how to do so in the [Extending Kinto.js](extending.md) section.
+- `adapter`: A function that returns the persistence layer adapter to use for saving data locally (default: `Kinto.adapters.IDB`); if you plan on writing your own adapter, you can read more about how to do so in the [Extending Kinto.js](extending.md) section.
 - `adapterOptions`: Any options that you would like to pass to your adapter. See the documentation for each adapter to see what options it supports.
 - `requestMode`: The HTTP [CORS](https://fetch.spec.whatwg.org/#concept-request-mode) mode. Default: `cors`.
 - `timeout`: The requests timeout in ms. Default: `5000`.

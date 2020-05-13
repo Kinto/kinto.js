@@ -2,8 +2,7 @@ import { EventEmitter } from "events";
 import Api from "kinto-http";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
-import IDB from "./adapters/IDB";
-import { IdSchema, RemoteTransformer, Hooks } from "./types";
+import { IdSchema, RemoteTransformer, Hooks, RecordStatus } from "./types";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
@@ -13,7 +12,10 @@ export interface KintoBaseOptions {
   remote?: string;
   bucket?: string;
   events?: EventEmitter;
-  adapter?: typeof IDB;
+  adapter?: (
+    dbName: string,
+    options?: { dbName?: string; migrateOldData?: boolean }
+  ) => BaseAdapter<any>;
   adapterOptions?: object;
   headers?: Record<string, string>;
   retry?: number;
@@ -24,7 +26,9 @@ export interface KintoBaseOptions {
 /**
  * KintoBase class.
  */
-export default class KintoBase {
+export default class KintoBase<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> {
   private _options: KintoBaseOptions;
   private _api: Api | null;
   public events?: EventEmitter;
@@ -131,16 +135,25 @@ export default class KintoBase {
    * @param  {Object} [options.localFields]        Array<Field> (default: `[]`])
    * @return {Collection}
    */
-  collection<T extends { id: string } = any>(
+  collection<
+    C extends {
+      id: string;
+      last_modified?: number;
+      _status?: RecordStatus;
+    } = any
+  >(
     collName: string,
     options: {
-      adapter?: typeof IDB;
+      adapter?: (
+        dbName: string,
+        options?: { dbName?: string; migrateOldData?: boolean }
+      ) => BaseAdapter<C>;
       idSchema?: IdSchema;
       remoteTransformers?: RemoteTransformer[];
-      hooks?: Hooks<T>;
+      hooks?: Hooks<C>;
       localFields?: string[];
     } = {}
-  ) {
+  ): Collection<C> {
     if (!collName) {
       throw new Error("missing collection name");
     }
@@ -150,7 +163,7 @@ export default class KintoBase {
     };
     const { idSchema, remoteTransformers, hooks, localFields } = options;
 
-    return new Collection<T>(bucket!, collName, this, {
+    return new Collection<C>(bucket!, collName, this, {
       events,
       adapter,
       adapterOptions,
