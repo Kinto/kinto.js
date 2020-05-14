@@ -187,7 +187,7 @@
     "sinon": "^9.0.0",
     "source-map-support": "^0.5.13",
     "ts-node": "^8.3.0",
-    "tslib": "^1.10.0",
+    "tslib": "^2.0.0",
     "typescript": "^3.5.3",
     "uglifyify": "^5.0.0"
   }
