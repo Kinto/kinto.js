@@ -7,37 +7,6 @@ import { terser } from "rollup-plugin-terser";
 import multi from "@rollup/plugin-multi-entry";
 import replace from "@rollup/plugin-replace";
 
-function ignoreInput(list) {
-  return {
-    resolveId(importee) {
-      return list.indexOf(importee) > -1 ? "\0empty_module" : null;
-    },
-    load(id) {
-      return id === "\0empty_module" ? "export default {}" : null;
-    },
-  };
-}
-
-const geckoBuild = {
-  input: "./src/index.fx.ts",
-  output: [
-    {
-      file: "dist/temp.js",
-      format: "umd",
-      name: "Kinto",
-    },
-  ],
-  plugins: [
-    ignoreInput(["uuid/v4"]),
-    resolve({
-      mainFields: ["module", "main", "browser"],
-      preferBuiltins: true,
-    }),
-    typescript({ include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"] }),
-    commonjs({ ignoreGlobal: true }),
-  ],
-};
-
 const browserBuild = {
   input: "./src/index.ts",
   output: [
@@ -105,6 +74,6 @@ const browserTestBuild = {
 
 const bundles = process.env.BROWSER_TESTING
   ? [browserTestBuild]
-  : [geckoBuild, browserBuild];
+  : [browserBuild];
 
 export default bundles;
