@@ -1,4 +1,3 @@
-import { EventEmitter } from "events";
 import Api from "kinto-http";
 import BaseAdapter from "./adapters/base";
 import IDB from "./adapters/IDB";
@@ -33,7 +32,6 @@ export default class Kinto<
       ) => {
         return new Kinto.adapters.IDB<B>(dbName, options);
       },
-      events: new EventEmitter(),
     };
 
     super({ ...defaults, ...options });

@@ -2,6 +2,7 @@ import { v4 as uuid4 } from "uuid";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
 import { Collection as KintoClientCollection, KintoIdObject } from "kinto-http";
+import { EventEmitter } from "events";
 import Kinto from "../src";
 import Collection, {
   recordsEqual,
@@ -133,6 +134,7 @@ describe("Integration tests", function (__test) {
     kinto = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: { Authorization: "Basic " + btoa("user:pass") },
+      events: new EventEmitter(),
     });
     tasks = kinto.collection("tasks");
     tasksTransformed = kinto.collection("tasks-transformer", {

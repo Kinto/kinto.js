@@ -130,3 +130,9 @@ export type Change<T> =
   | ConflictsChange<T>
   | SkippedChange<T>
   | VoidChange;
+
+export interface Emitter {
+  emit(type: string, event?: any): void;
+  on(type: string, handler: (event?: any) => void): void;
+  off(type: string, handler: (event?: any) => void): void;
+}
