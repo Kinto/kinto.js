@@ -63,12 +63,13 @@ describe("Kinto", () => {
       expect(new Kinto({ events }).events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      expect(new Kinto().events).to.be.an.instanceOf(EventEmitter);
+    it("should not create an events property if none passed", () => {
+      expect(new Kinto().events).to.equal(undefined);
     });
 
     it("should propagate its events property to child dependencies", () => {
-      const kinto = new Kinto();
+      const events = new EventEmitter();
+      const kinto = new Kinto({ events });
       expect(kinto.collection("x").events).eql(kinto.events);
       expect(kinto.collection("x").api.events).eql(kinto.events);
       expect(kinto.collection("x").api.http.events).eql(kinto.events);

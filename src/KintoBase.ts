@@ -1,8 +1,13 @@
-import { EventEmitter } from "events";
 import Api from "kinto-http";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
-import { IdSchema, RemoteTransformer, Hooks, RecordStatus } from "./types";
+import {
+  IdSchema,
+  RemoteTransformer,
+  Hooks,
+  RecordStatus,
+  Emitter,
+} from "./types";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
@@ -11,7 +16,7 @@ const DEFAULT_RETRY = 1;
 export interface KintoBaseOptions {
   remote?: string;
   bucket?: string;
-  events?: EventEmitter;
+  events?: Emitter;
   adapter?: (
     dbName: string,
     options?: { dbName?: string; migrateOldData?: boolean }
@@ -31,7 +36,7 @@ export default class KintoBase<
 > {
   private _options: KintoBaseOptions;
   private _api: Api | null;
-  public events?: EventEmitter;
+  public events?: Emitter;
   /**
    * Provides a public access to the base adapter class. Users can create a
    * custom DB adapter by extending {@link BaseAdapter}.

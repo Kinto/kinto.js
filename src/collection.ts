@@ -1,4 +1,3 @@
-import { EventEmitter } from "events";
 import BaseAdapter, { StorageProxy } from "./adapters/base";
 import IDB from "./adapters/IDB";
 import { waterfall, deepEqual } from "./utils";
@@ -21,6 +20,7 @@ import {
   Conflict,
   Change,
   ConflictsChange,
+  Emitter,
 } from "./types";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -367,7 +367,7 @@ export default class Collection<
   private _lastModified: number | null;
   public db: BaseAdapter<B>;
   public kinto: KintoBase<B>;
-  public events: EventEmitter;
+  public events?: Emitter;
   public idSchema: IdSchema;
   public remoteTransformers: RemoteTransformer[];
   public hooks: Hooks<B>;
@@ -383,7 +383,7 @@ export default class Collection<
         options?: { dbName?: string; migrateOldData?: boolean }
       ) => BaseAdapter<B>;
       adapterOptions?: { dbName?: string; migrateOldData?: boolean };
-      events?: EventEmitter;
+      events?: Emitter;
       idSchema?: IdSchema;
       remoteTransformers?: RemoteTransformer[];
       hooks?: Hooks<B>;
@@ -411,7 +411,7 @@ export default class Collection<
      * The event emitter instance.
      * @type {EventEmitter}
      */
-    this.events = options.events || new EventEmitter();
+    this.events = options.events;
     /**
      * The IdSchema instance.
      * @type {Object}
@@ -1600,13 +1600,13 @@ export default class Collection<
         );
       }
     } catch (e) {
-      this.events.emit("sync:error", { ...options, error: e });
+      this.events?.emit("sync:error", { ...options, error: e });
       throw e;
     } finally {
       // Ensure API default remote is reverted if a custom one's been used
       this.api.remote = previousRemote;
     }
-    this.events.emit("sync:success", { ...options, result });
+    this.events?.emit("sync:success", { ...options, result });
     return result;
   }
 
@@ -1735,14 +1735,14 @@ export class CollectionTransaction<
    */
   emitEvents(): void {
     for (const { action, payload } of this._events) {
-      this.collection.events.emit(action, payload);
+      this.collection.events?.emit(action, payload);
     }
     if (this._events.length > 0) {
       const targets = this._events.map(({ action, payload }) => ({
         action,
         ...payload,
       }));
-      this.collection.events.emit("change", { targets });
+      this.collection.events?.emit("change", { targets });
     }
     this._events = [];
   }
