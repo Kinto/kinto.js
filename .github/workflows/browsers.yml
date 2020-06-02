@@ -29,5 +29,13 @@ jobs:
       - name: Install Python dependencies
         run: pip install kinto kinto-attachment
 
+      - name: Pin ChromeDriver version
+        shell: pwsh
+        run: |
+          $ver = Get-Content "$($env:ChromeWebDriver)\versioninfo.txt" | Out-String
+          $con = Get-Content .\intern.json | Out-String | ConvertFrom-Json
+          $con | Add-Member -MemberType NoteProperty -Name "tunnelOptions" -Value @{drivers=@(@{name="chrome"; version=$ver.trim()})}
+          $con | ConvertTo-Json -Depth 10 | Set-Content -Path .\intern.json
+
       - name: Run tests
         run: npm run test:${{ matrix.browser }}
