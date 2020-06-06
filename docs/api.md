@@ -755,7 +755,7 @@ await articles.sync({ignoreBackoff: true});
 
 ### `Kinto` instance
 
-Using the `events` on a `Kinto` instance property you can subscribe public events from. That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
+Using the `events` property you can subscribe to public events from a `Kinto` instance.   That `events` property implements nodejs' [EventEmitter interface](https://nodejs.org/api/events.html#events_class_events_eventemitter).
 
 
 #### The `sync:success` and `sync:error` events
