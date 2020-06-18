@@ -2,11 +2,18 @@
 
 This document describes changes between each past release.
 
-## v14.0.0 (unreleased)
+## v14.0.0 (2020-06-18)
+
+This version is the first version to ship with our official TypeScript types! If you run into any issues using the library in your TypeScript project, please open an issue.
 
 **Breaking changes**
 
-- We've removed the automatically-included EventEmitter polyfill, making the `events` option for `Kinto` optional. You'll now need to bring your own emitter. We suggest [mitt](https://github.com/developit/mitt), but anything that conforms to the `EventEmitter` interface will do.
+- We've removed the automatically-included EventEmitter polyfill, making the `events` option for `Kinto` optional. You'll now need to bring your own emitter if you want to subscribe to events (which is not necessary for the vast majority of functionality). We suggest [mitt](https://github.com/developit/mitt), but anything that conforms to the `EventEmitter` interface will do.
+- Both our CommonJS and bundled browser versions are now using ES2017 features. If you need to support older browsers, please ensure you're using something like Babel to transpile ES2017 to your desired target.
+
+**Bug fixes**
+
+- Fixed an issue where the emitted browser bundle referenced `global.process`, which only exists in Node environments. (#1352)
 
 ## v13.0.0 (2020-05-09)
 

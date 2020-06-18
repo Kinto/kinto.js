@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "outDir": "./lib/esm/",
+    "outDir": "./lib/",
     "module": "esnext",
     "target": "es2017",
     "allowJs": true,
@@ -13,7 +13,8 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "declaration": true
   },
   "ts-node": {
     "compilerOptions": {
