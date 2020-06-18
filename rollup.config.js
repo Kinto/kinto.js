@@ -15,6 +15,13 @@ const browserBuild = {
       format: "umd",
       name: "Kinto",
       sourcemap: true,
+      plugins: [terser()],
+    },
+    {
+      file: "dist/kinto.js",
+      format: "umd",
+      name: "Kinto",
+      sourcemap: true,
     },
   ],
   plugins: [
@@ -23,12 +30,11 @@ const browserBuild = {
       preferBuiltins: true,
     }),
     typescript({
-      target: "es5",
+      target: "es2017",
       include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
     }),
     builtins(),
     commonjs(),
-    terser(),
   ],
 };
 
