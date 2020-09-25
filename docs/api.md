@@ -24,7 +24,7 @@ const db = new Kinto(options);
 The default adapter (IndexedDB) supports the following options:
 
 - `dbName`: the local database name (Default: `"KintoDB"`)
-- `migrateOldData`: : whether data created with older versions than v12.X should be migrated (Default: `false`)
+- `migrateOldData`: whether data created with older versions than v12.X should be migrated (Default: `false`)
 
 ## Collections
 
@@ -38,7 +38,7 @@ const articles = db.collection("articles");
 
 The collection object has the following (read-only) attribute:
 
-* **lastModified**: last synchronization timestamp, `null` if never sync'ed.
+* **lastModified**: last synchronization timestamp, `null` if never synced.
 
 > #### Notes
 >
@@ -65,9 +65,9 @@ Result is:
 
 > #### Notes
 >
-> - By default, records identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29);
+> - By default, record identifiers are generated locally using [UUID v4](https://en.wikipedia.org/wiki/Universally_unique_identifier#Version_4_.28random.29);
 but you can also define a [custom ID schema](#id-schemas));
-> - Trying to create a record with the ID of a record that already exists is an error;
+> - Trying to create a record with the ID of a record that already exists results in an error;
 > - As deletions are [performed virtually by default](#deleting-records), attempting at creating a record reusing the id of a virtually deleted record will fail;
 > - Detailed API documentation for `Collection#create()` is available [here](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-create).
 
@@ -167,7 +167,7 @@ const updated = {...existing, title: "baz"};
 await articles.upsert(updated);
 ```
 
-Result is:
+Result:
 
 ```js
 {
@@ -242,7 +242,7 @@ Result:
 await articles.list();
 ```
 
-Result is:
+Result:
 
 ```js
 {
