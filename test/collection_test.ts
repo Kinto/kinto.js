@@ -3400,7 +3400,7 @@ describe("Collection", () => {
         });
 
         it("should provide created record in data", () => {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             articles.events.on("create", (event) => {
               expect(event)
                 .to.have.property("data")
@@ -3413,7 +3413,7 @@ describe("Collection", () => {
         });
 
         it("should provide new record in data and old record", () => {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             articles.events.on("update", (event) => {
               const { data, oldRecord } = event;
               expect(data).to.have.property("title").equal("changed");
@@ -3425,7 +3425,7 @@ describe("Collection", () => {
         });
 
         it("should not provide oldRecord on creation with upsert", () => {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             articles.events.on("create", (event) => {
               expect(event).not.to.have.property("oldRecord");
               resolve();
@@ -3435,7 +3435,7 @@ describe("Collection", () => {
         });
 
         it("should provide old record", () => {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             articles.events.on("delete", (event) => {
               expect(event)
                 .to.have.property("data")
