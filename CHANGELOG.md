@@ -2,6 +2,18 @@
 
 This document describes changes between each past release.
 
+## v14.0.1 (2020-12-04)
+
+This version exports some types and useful utilities designed to make the adapter development experience a bit easier. You can now import the following from the module:
+
+- `KintoBase`: The base class from which all Kinto instances are derived
+- `BaseAdapter`: The base class from which all storage adapters are derived
+- `AbstractBaseAdapter`: An abstract class used during development to trigger warnings on unimplemented methods
+- `getDeepKey`: A function to get deeply-nested object properties using dot notation (`key1.key2.key3`)
+- `StorageProxy`: A TypeScript type describing the methods required for storage proxies
+- `RecordStatus`: A TypeScript type representing the various states of the `_status` property on records
+- `KintoBaseOptions`: A TypeScript type representing the configuration options of the `KintoBase` class
+
 ## v14.0.0 (2020-06-18)
 
 This version is the first version to ship with our official TypeScript types! If you run into any issues using the library in your TypeScript project, please open an issue.
