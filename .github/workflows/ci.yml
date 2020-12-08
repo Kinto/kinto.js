@@ -7,8 +7,8 @@ on:
 name: CI
 jobs:
   chore:
-    name: Windows Integration Tests
-    runs-on: windows-latest
+    name: Integration Tests
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Install Python dependencies
-        run: pip install kinto kinto-attachment
+        run: pip install kinto
 
       - name: Run tests
         run: npm test

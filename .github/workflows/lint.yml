@@ -4,11 +4,11 @@ on:
       - master
   pull_request:
 
-name: CI
+name: Lint
 jobs:
   chore:
-    name: Windows Integration Tests
-    runs-on: windows-latest
+    name: Lint and check format
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -31,8 +31,8 @@ jobs:
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Install Python dependencies
-        run: pip install kinto kinto-attachment
+      - name: ESLint
+        run: npm run lint
 
-      - name: Run tests
-        run: npm test
+      - name: Prettier
+        run: npm run cs-check
