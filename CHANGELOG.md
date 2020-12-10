@@ -2,6 +2,14 @@
 
 This document describes changes between each past release.
 
+## v14.0.2 (2020-12-10)
+
+You can now import the following from the module:
+
+- `Collection`: The class representing a Kinto collection
+- `CollectionSyncOptions`: The options provided to the `Collection.sync` method
+- `Conflict`: The API response representing a conflict that occurs during a sync operation
+
 ## v14.0.1 (2020-12-04)
 
 This version exports some types and useful utilities designed to make the adapter development experience a bit easier. You can now import the following from the module:
