@@ -1,12 +1,13 @@
 import Api from "kinto-http";
-import BaseAdapter, {
-  AbstractBaseAdapter,
-  StorageProxy,
-} from "./adapters/base";
+import BaseAdapter, { AbstractBaseAdapter } from "./adapters/base";
 import IDB from "./adapters/IDB";
-import KintoBase, { KintoBaseOptions } from "./KintoBase";
-import { RecordStatus } from "./types";
+import KintoBase from "./KintoBase";
 import { getDeepKey } from "./utils";
+
+import type { KintoBaseOptions } from "./KintoBase";
+import type { StorageProxy } from "./adapters/base";
+import type Collection from "./collection";
+import type { CollectionSyncOptions, Conflict, RecordStatus } from "./types";
 
 export default class Kinto<
   B extends { id: string; last_modified?: number; _status?: RecordStatus } = any
@@ -42,5 +43,12 @@ export default class Kinto<
   }
 }
 
-export type { StorageProxy, RecordStatus, KintoBaseOptions };
+export type {
+  StorageProxy,
+  RecordStatus,
+  KintoBaseOptions,
+  Collection,
+  CollectionSyncOptions,
+  Conflict,
+};
 export { KintoBase, BaseAdapter, AbstractBaseAdapter, getDeepKey };
