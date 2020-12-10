@@ -21,6 +21,7 @@ import {
   Change,
   ConflictsChange,
   Emitter,
+  CollectionSyncOptions,
 } from "./types";
 
 const RECORD_FIELDS_TO_CLEAN = ["_status"];
@@ -1503,16 +1504,7 @@ export default class Collection<
    * @throws {Error} If an invalid remote option is passed.
    */
   async sync(
-    options: {
-      strategy?: string;
-      headers?: Record<string, string>;
-      retry?: number;
-      ignoreBackoff?: boolean;
-      bucket?: string | null;
-      collection?: string | null;
-      remote?: string | null;
-      expectedTimestamp?: string | null;
-    } = {
+    options: CollectionSyncOptions = {
       strategy: Collection.strategy.MANUAL,
       headers: {},
       retry: 1,

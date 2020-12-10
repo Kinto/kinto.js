@@ -136,3 +136,14 @@ export interface Emitter {
   on(type: string, handler: (event?: any) => void): void;
   off(type: string, handler: (event?: any) => void): void;
 }
+
+export interface CollectionSyncOptions {
+  strategy?: string;
+  headers?: Record<string, string>;
+  retry?: number;
+  ignoreBackoff?: boolean;
+  bucket?: string | null;
+  collection?: string | null;
+  remote?: string | null;
+  expectedTimestamp?: string | null;
+}
