@@ -387,6 +387,13 @@ describe("adapter.IDB", () => {
             list.should.deep.equal([]);
           });
         });
+
+        describe("combined with indexed fields", () => {
+          it("should filter list on both indexed and non-indexed columns", async () => {
+            const list = await db.list({ filters: { name: "#4", id: "4" } });
+            list.should.deep.equal([{ id: "4", name: "#4" }]);
+          });
+        });
       });
 
       describe("on indexed fields", () => {
