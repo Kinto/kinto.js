@@ -262,7 +262,7 @@ function createListRequest(
   }
 
   // If no filters on custom attribute, get all results in one bulk.
-  if (remainingFilters.length === 0) {
+  if (Object.keys(remainingFilters).length === 0) {
     const request = indexStore.getAll(IDBKeyRange.only([cid, value]));
     request.onsuccess = (event: Event) =>
       done((event.target as IDBRequest).result);

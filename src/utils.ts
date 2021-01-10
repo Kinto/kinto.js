@@ -134,10 +134,10 @@ export function deepEqual(a: any, b: any): boolean {
  * @param  {Array}  keys       The list of keys to exclude.
  * @return {Object}            A copy without the specified keys.
  */
-export function omitKeys<T extends { [key: string]: any }>(
-  obj: T,
-  keys: string[] = []
-): Partial<T> {
+export function omitKeys<
+  T extends { [key: string]: unknown },
+  K extends string
+>(obj: T, keys: K[] = []): Omit<T, K> {
   const result = { ...obj };
   for (const key of keys) {
     delete result[key];
