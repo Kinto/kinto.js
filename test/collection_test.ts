@@ -21,9 +21,8 @@ import KintoBase from "../src/KintoBase";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();
-const { describe, it, beforeEach, afterEach } = intern.getPlugin(
-  "interface.bdd"
-);
+const { describe, it, beforeEach, afterEach } =
+  intern.getPlugin("interface.bdd");
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
@@ -60,7 +59,7 @@ describe("Collection", () => {
         return new Collection(
           TEST_BUCKET_NAME,
           TEST_COLLECTION_NAME,
-          ({ api } as unknown) as KintoBase<any>,
+          { api } as unknown as KintoBase<any>,
           opts
         );
       }
@@ -138,7 +137,7 @@ describe("Collection", () => {
           const collection = new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             { events }
           );
           expect(collection.events).to.equal(events);
@@ -150,7 +149,7 @@ describe("Collection", () => {
           const collection = new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             { events }
           );
           expect(collection.api.events).equal(collection.events);
@@ -161,7 +160,7 @@ describe("Collection", () => {
           const collection = new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             {
               adapterOptions: {
                 dbName: "LocalData",
@@ -181,7 +180,7 @@ describe("Collection", () => {
           const collection = new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             { hooks }
           );
           expect(collection.db).to.be.an.instanceof(IDB);
@@ -194,7 +193,7 @@ describe("Collection", () => {
             new Collection(
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              ({ api } as unknown) as KintoBase<any>,
+              { api } as unknown as KintoBase<any>,
               {
                 adapter: function () {},
               } as any
@@ -207,7 +206,7 @@ describe("Collection", () => {
           const collection = new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             {
               adapter: () => new MyAdapter(),
             }
@@ -226,7 +225,7 @@ describe("Collection", () => {
           new Collection(
             TEST_BUCKET_NAME,
             TEST_COLLECTION_NAME,
-            ({ api } as unknown) as KintoBase<any>,
+            { api } as unknown as KintoBase<any>,
             {
               adapter: (collectionName: string, options: any) =>
                 new MyAdapter(collectionName, options),
@@ -241,7 +240,7 @@ describe("Collection", () => {
             new Collection(
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              ({ api } as unknown) as KintoBase<any>,
+              { api } as unknown as KintoBase<any>,
               {
                 remoteTransformers: transformers,
               }
@@ -279,7 +278,7 @@ describe("Collection", () => {
             return new Collection(
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              ({ api } as unknown) as KintoBase<any>,
+              { api } as unknown as KintoBase<any>,
               {
                 hooks,
               }
@@ -341,7 +340,7 @@ describe("Collection", () => {
             new Collection(
               TEST_BUCKET_NAME,
               TEST_COLLECTION_NAME,
-              ({ api } as unknown) as KintoBase<any>,
+              { api } as unknown as KintoBase<any>,
               {
                 idSchema: idSchema,
               }
@@ -1094,9 +1093,9 @@ describe("Collection", () => {
         });
 
         it("should isolate records by bucket", async () => {
-          const otherbucket = new Collection("other", TEST_COLLECTION_NAME, ({
+          const otherbucket = new Collection("other", TEST_COLLECTION_NAME, {
             api,
-          } as unknown) as KintoBase<any>);
+          } as unknown as KintoBase<any>);
 
           await expectAsyncError(() => otherbucket.get(id), /not found/);
         });
@@ -2598,7 +2597,7 @@ describe("Collection", () => {
             sandbox
               .stub(KintoClientCollection.prototype, "batch")
               .callsFake((f) => {
-                f((batch as unknown) as KintoClientCollection);
+                f(batch as unknown as KintoClientCollection);
                 return Promise.resolve({
                   published: [],
                   errors: [],
@@ -3017,9 +3016,9 @@ describe("Collection", () => {
 
         describe("Server backoff", () => {
           it("should reject on server backoff by default", async () => {
-            articles.kinto = ({
+            articles.kinto = {
               api: { backoff: 30000 },
-            } as unknown) as KintoBase<any>;
+            } as unknown as KintoBase<any>;
             await expectAsyncError(
               () => articles.sync(),
               /back off; retry in 30s/
@@ -3317,9 +3316,9 @@ describe("Collection", () => {
             Authorization: "Basic 123",
           };
 
-          const client = ({
+          const client = {
             getData: sandbox.stub(),
-          } as unknown) as KintoClientCollection;
+          } as unknown as KintoClientCollection;
           await articles.pullMetadata(client, { headers });
           sinon.assert.calledWithExactly(client.getData as any, {
             headers,

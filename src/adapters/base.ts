@@ -43,7 +43,8 @@ export abstract class AbstractBaseAdapter<
  */
 export default class BaseAdapter<
   B extends { id: string; last_modified?: number; _status?: RecordStatus }
-> implements AbstractBaseAdapter<B> {
+> implements AbstractBaseAdapter<B>
+{
   /**
    * Deletes every records present in the database.
    *

@@ -934,9 +934,11 @@ export default class Collection<
                 strategy
               );
             });
-            const conflicts = (imports.filter(
-              (i) => i.type === "conflicts"
-            ) as ConflictsChange<B>[]).map((i) => i.data);
+            const conflicts = (
+              imports.filter(
+                (i) => i.type === "conflicts"
+              ) as ConflictsChange<B>[]
+            ).map((i) => i.data);
             const resolved = this._handleConflicts(
               transaction,
               conflicts,

@@ -24,7 +24,8 @@ export default class Memory<
     B extends { id: string; last_modified?: number; _status?: RecordStatus }
   >
   extends BaseAdapter<B>
-  implements AbstractBaseAdapter<B> {
+  implements AbstractBaseAdapter<B>
+{
   // This object will store our records. Since we primarily retreive records by
   // ID, we'll use that as the key.
   private _records: { [key: string]: B };
