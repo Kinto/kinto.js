@@ -14,9 +14,8 @@ import { expectAsyncError } from "./test_utils";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();
-const { describe, it, before, beforeEach, after, afterEach } = intern.getPlugin(
-  "interface.bdd"
-);
+const { describe, it, before, beforeEach, after, afterEach } =
+  intern.getPlugin("interface.bdd");
 
 const TEST_KINTO_SERVER =
   process.env.TEST_KINTO_SERVER || "http://0.0.0.0:8888/v1";

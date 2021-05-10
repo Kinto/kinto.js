@@ -106,14 +106,8 @@ export default class KintoBase<
    * @type {KintoClient}
    */
   get api() {
-    const {
-      events,
-      headers,
-      remote,
-      requestMode,
-      retry,
-      timeout,
-    } = this._options;
+    const { events, headers, remote, requestMode, retry, timeout } =
+      this._options;
 
     if (!this._api) {
       this._api = new this.ApiClass(remote!, {

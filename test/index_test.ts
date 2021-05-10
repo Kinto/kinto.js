@@ -9,9 +9,8 @@ import Kinto from "../src";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();
-const { describe, it, beforeEach, afterEach } = intern.getPlugin(
-  "interface.bdd"
-);
+const { describe, it, beforeEach, afterEach } =
+  intern.getPlugin("interface.bdd");
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
@@ -95,9 +94,11 @@ describe("Kinto", () => {
 
     it("should propagate the dbName option to child dependencies", () => {
       expect(
-        (new Kinto({
-          adapterOptions: { dbName: "app" },
-        }).collection("x").db as IDB<any>).dbName
+        (
+          new Kinto({
+            adapterOptions: { dbName: "app" },
+          }).collection("x").db as IDB<any>
+        ).dbName
       ).eql("app");
     });
   });
@@ -123,7 +124,7 @@ describe("Kinto", () => {
 
     it("should reject on missing collection name", () => {
       expect(() =>
-        new Kinto().collection((undefined as unknown) as string)
+        new Kinto().collection(undefined as unknown as string)
       ).to.Throw(Error, /missing collection name/);
     });
 
@@ -154,7 +155,7 @@ describe("Kinto", () => {
     it("should create collection using an optional adapter", () => {
       const MyAdapter = class extends BaseAdapter<any> {};
       const db = new Kinto({
-        adapter: () => (new MyAdapter() as unknown) as BaseAdapter<any>,
+        adapter: () => new MyAdapter() as unknown as BaseAdapter<any>,
       });
       const coll = db.collection("plop");
 
@@ -165,10 +166,10 @@ describe("Kinto", () => {
       const MyAdapter = class extends BaseAdapter<any> {};
       const MyOtherAdapter = class extends BaseAdapter<any> {};
       const db = new Kinto({
-        adapter: () => (new MyAdapter() as unknown) as BaseAdapter<any>,
+        adapter: () => new MyAdapter() as unknown as BaseAdapter<any>,
       });
       const coll = db.collection("plop", {
-        adapter: () => (new MyOtherAdapter() as unknown) as BaseAdapter<any>,
+        adapter: () => new MyOtherAdapter() as unknown as BaseAdapter<any>,
       });
       expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
     });
