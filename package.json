@@ -146,7 +146,9 @@
     "uuid": "^8.0.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^19.0.0",
     "@rollup/plugin-multi-entry": "^4.0.0",
+    "@rollup/plugin-node-resolve": "^13.0.0",
     "@rollup/plugin-replace": "^2.3.2",
     "@types/btoa": "^1.2.3",
     "@types/node-fetch": "^2.5.6",
@@ -182,9 +184,8 @@
     "open-cli": "^6.0.1",
     "prettier": "^2.0.5",
     "rollup": "^2.0.3",
-    "rollup-plugin-commonjs": "^10.0.2",
     "rollup-plugin-node-builtins": "^2.1.2",
-    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "rollup-plugin-terser": "^7.0.0",
     "rollup-plugin-typescript": "^1.0.1",
     "shx": "^0.3.2",
