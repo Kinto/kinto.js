@@ -641,14 +641,14 @@ export default class IDB<
    */
   async getLastModified(): Promise<number | null> {
     try {
-      let entry: { value: number } | null = null;
+      let entry = null as { value: number } | null;
       await this.prepare("timestamps", (store) => {
         store.get(this.cid).onsuccess = (e: Event) => {
           entry = (e.target as IDBRequest<{ value: number }>).result;
         };
       });
 
-      return entry ? entry!.value : null;
+      return entry ? entry.value : null;
     } catch (e) {
       this._handleError("getLastModified", e);
     }
