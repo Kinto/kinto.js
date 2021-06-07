@@ -156,7 +156,7 @@
     "@types/sinon": "^10.0.0",
     "@types/uuid": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^2.2.0",
-    "@typescript-eslint/parser": "^2.2.0",
+    "@typescript-eslint/parser": "^4.26.0",
     "atob": "^2.1.2",
     "co-task": "^1.0.0",
     "coveralls": "^3.0.0",
