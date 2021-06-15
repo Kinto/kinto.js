@@ -27,7 +27,7 @@
     "browser": true,
     "node": true
   },
-  "extends": ["prettier/@typescript-eslint"],
+  "extends": ["prettier"],
   "root": true,
   "plugins": ["@typescript-eslint/eslint-plugin"]
 }
