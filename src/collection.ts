@@ -560,14 +560,9 @@ export default class Collection<
    * @param  {Object|undefined} hooks
    * @return {Object}
    */
-  private _validateHooks(
-    hooks?: {
-      [key in AvailableHook]?: ((
-        record: B,
-        collection: Collection<B>
-      ) => any)[];
-    }
-  ) {
+  private _validateHooks(hooks?: {
+    [key in AvailableHook]?: ((record: B, collection: Collection<B>) => any)[];
+  }) {
     if (typeof hooks === "undefined") {
       return {};
     }
