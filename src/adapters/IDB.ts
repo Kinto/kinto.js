@@ -455,7 +455,7 @@ export default class IDB<
         },
         { mode: "readwrite" }
       );
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("clear", e);
     }
   }
@@ -564,7 +564,7 @@ export default class IDB<
           (record = (e.target as IDBRequest<KintoObject>).result as B);
       });
       return record!;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("get", e);
     }
   }
@@ -597,7 +597,7 @@ export default class IDB<
       // The resulting list of records is sorted.
       // XXX: with some efforts, this could be fully implemented using IDB API.
       return params.order ? sortObjects(params.order, results) : results;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("list", e);
     }
 
@@ -626,7 +626,7 @@ export default class IDB<
         { mode: "readwrite" }
       );
       return value;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("saveLastModified", e);
     }
 
@@ -649,7 +649,7 @@ export default class IDB<
       });
 
       return entry ? entry.value : null;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("getLastModified", e);
     }
 
@@ -705,7 +705,7 @@ export default class IDB<
         await this.saveLastModified(lastModified);
       }
       return records;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("importBulk", e);
     }
 
@@ -720,7 +720,7 @@ export default class IDB<
         { mode: "readwrite" }
       );
       return metadata;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("saveMetadata", e);
     }
   }
@@ -733,7 +733,7 @@ export default class IDB<
           (entry = (e.target as IDBRequest<{ metadata: any }>).result);
       });
       return entry ? (entry as { metadata: any }).metadata : null;
-    } catch (e) {
+    } catch (e: any) {
       this._handleError("getMetadata", e);
     }
   }
