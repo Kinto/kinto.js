@@ -951,7 +951,7 @@ export default class Collection<
           syncResultObject.reset("conflicts").add("resolved", resolved);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       const data: KintoError = {
         type: "incoming",
         message: err.message,

@@ -41,7 +41,7 @@ export async function expectAsyncError<T>(
 
   try {
     await fn();
-  } catch (err) {
+  } catch (err: any) {
     error = err;
   }
 
