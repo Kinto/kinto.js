@@ -189,7 +189,7 @@
     "rollup-plugin-terser": "^7.0.0",
     "rollup-plugin-typescript": "^1.0.1",
     "shx": "^0.3.2",
-    "sinon": "^11.1.1",
+    "sinon": "^12.0.1",
     "source-map-support": "^0.5.13",
     "ts-node": "^10.0.0",
     "tslib": "^2.0.0",
