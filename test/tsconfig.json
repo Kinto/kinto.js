@@ -1,9 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../_test/",
     "module": "commonjs",
-    "target": "ES2019",
     "types": ["intern"],
     "inlineSourceMap": true,
     "strictNullChecks": false

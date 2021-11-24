@@ -1,7 +1,7 @@
 import path from "path";
 import builtins from "rollup-plugin-node-builtins";
 import nodePolyfills from "rollup-plugin-node-polyfills";
-import typescript from "rollup-plugin-typescript";
+import typescript from "@rollup/plugin-typescript";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
@@ -60,10 +60,11 @@ const browserTestBuild = {
       preferBuiltins: true,
     }),
     typescript({
-      target: "es2019",
-      types: ["intern"],
+      tsconfig: "./test/tsconfig.json",
+      module: "esnext",
     }),
     replace({
+      preventAssignment: true,
       __dirname: JSON.stringify(path.join(__dirname, "test")),
       "process.env.TEST_KINTO_SERVER": JSON.stringify(
         process.env.TEST_KINTO_SERVER ? process.env.TEST_KINTO_SERVER : ""
