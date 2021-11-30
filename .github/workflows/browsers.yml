@@ -24,16 +24,6 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Upgrade Google Chrome
-        run: |
-          version=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
-          wget -qP /tmp/ "https://chromedriver.storage.googleapis.com/${version}/chromedriver_linux64.zip"
-          sudo unzip -o /tmp/chromedriver_linux64.zip -d /usr/bin
-          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          echo 'deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main' | sudo tee /etc/apt/sources.list.d/google-chrome.list
-          sudo apt-get update
-          sudo apt-get --only-upgrade install google-chrome-stable
-
       - name: Print environment
         run: |
           node --version
