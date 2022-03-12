@@ -1,4 +1,4 @@
-import Api from "kinto-http";
+import Api from "./http";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
 import {

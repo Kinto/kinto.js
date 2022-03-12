@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/intern/schemas/config.json",
   "bail": true,
-  "coverage": ["src/**/*.ts", "!src/index.browser.ts"],
+  "coverage": ["src/**/*.ts", "!src/http/index.{browser,fx}.ts"],
   "environments": "node",
   "node": {
     "suites": "./test/**/*_test.ts",

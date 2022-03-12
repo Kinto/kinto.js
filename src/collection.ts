@@ -4,7 +4,7 @@ import { waterfall, deepEqual } from "./utils";
 import { v4 as uuid4 } from "uuid";
 import { omitKeys, RE_RECORD_ID } from "./utils";
 import KintoBase from "./KintoBase";
-import { AggregateResponse, Collection as KintoCollection } from "kinto-http";
+import { AggregateResponse, Collection as KintoCollection } from "./http";
 import {
   KintoRepresentation,
   IdSchema,

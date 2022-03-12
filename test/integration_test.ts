@@ -1,7 +1,10 @@
 import { v4 as uuid4 } from "uuid";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
-import { Collection as KintoClientCollection, KintoIdObject } from "kinto-http";
+import {
+  Collection as KintoClientCollection,
+  KintoIdObject,
+} from "../src/http";
 import { EventEmitter } from "events";
 import Kinto from "../src";
 import Collection, {
