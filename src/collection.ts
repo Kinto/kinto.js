@@ -1042,7 +1042,7 @@ export default class Collection<
         // This only happens during SERVER_WINS because the local
         // version of a record can never be null.
         // We can get "null" from the remote side if we got a conflict
-        // and there is no remote version available; see kinto-http.js
+        // and there is no remote version available; see src/http
         // batch.js:aggregate.
         transaction.delete(conflict.local.id);
         accepted = null;
@@ -1388,7 +1388,7 @@ export default class Collection<
       const safeLocal = (local && local.data) || { id: remote.id };
       const realLocal = await this._decodeRecord("remote", safeLocal);
       // We can get "null" from the remote side if we got a conflict
-      // and there is no remote version available; see kinto-http.js
+      // and there is no remote version available; see src/http
       // batch.js:aggregate.
       const realRemote = remote && (await this._decodeRecord("remote", remote));
       const conflict = { type, local: realLocal, remote: realRemote };

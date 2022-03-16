@@ -3045,7 +3045,7 @@ describe("Collection", () => {
           let fetch;
 
           beforeEach(() => {
-            // Disable stubbing of kinto-http of upper tests.
+            // Disable stubbing of HTTP client of upper tests.
             sandbox.restore();
             // Stub low-level fetch instead.
             fetch = sandbox.stub(articles.api.http, "timedFetch");

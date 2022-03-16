@@ -15,7 +15,7 @@
 "use strict";
 
 /*
- * This file is generated from kinto-http.js - do not modify directly.
+ * This file is generated from kinto.js - do not modify directly.
  */
 
 const global = this;
