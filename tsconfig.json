@@ -10,8 +10,9 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "isolatedModules": true,
     "experimentalDecorators": true,
+    "downlevelIteration": true,
+    "isolatedModules": true,
     "typeRoots": ["./node_modules/@types", "./@types"]
   },
   "ts-node": {

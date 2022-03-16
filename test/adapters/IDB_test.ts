@@ -3,7 +3,7 @@ import sinon from "sinon";
 import IDB, { open, execute } from "../../src/adapters/IDB";
 import { v4 as uuid4 } from "uuid";
 import { StorageProxy } from "../../src/adapters/base";
-import { KintoIdObject } from "kinto-http";
+import { KintoIdObject } from "../../src/http";
 import { expectAsyncError } from "../test_utils";
 
 const { expect } = intern.getPlugin("chai");

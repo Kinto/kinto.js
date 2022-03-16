@@ -8,6 +8,27 @@ import { terser } from "rollup-plugin-terser";
 import multi from "@rollup/plugin-multi-entry";
 import replace from "@rollup/plugin-replace";
 
+const geckoBuild = {
+  input: "./src/http/index.fx.ts",
+  output: [
+    {
+      file: "dist/temp.js",
+      format: "umd",
+      name: "KintoHttpClient",
+    },
+  ],
+  plugins: [
+    resolve({
+      mainFields: ["module", "main", "browser"],
+      preferBuiltins: true,
+    }),
+    typescript({
+      include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
+    }),
+    commonjs({ ignoreGlobal: true }),
+  ],
+};
+
 const browserBuild = {
   input: "./src/index.ts",
   output: [
@@ -83,6 +104,6 @@ const browserTestBuild = {
 
 const bundles = process.env.BROWSER_TESTING
   ? [browserTestBuild]
-  : [browserBuild];
+  : [geckoBuild, browserBuild];
 
 export default bundles;

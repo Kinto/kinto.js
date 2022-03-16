@@ -1,6 +1,6 @@
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http";
+import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";

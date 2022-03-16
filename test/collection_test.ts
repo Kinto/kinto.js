@@ -7,9 +7,11 @@ import Memory from "../src/adapters/memory";
 import BaseAdapter from "../src/adapters/base";
 import Collection, { SyncResultObject } from "../src/collection";
 import { Hooks, IdSchema, RemoteTransformer, KintoError } from "../src/types";
-import Api, { KintoIdObject } from "kinto-http";
-import KintoClient from "kinto-http";
-import { KintoObject, Collection as KintoClientCollection } from "kinto-http";
+import Api, {
+  KintoObject,
+  KintoIdObject,
+  Collection as KintoClientCollection,
+} from "../src/http";
 import { recordsEqual } from "../src/collection";
 import {
   updateTitleWithDelay,
@@ -1804,7 +1806,7 @@ describe("Collection", () => {
                   totalRecords: 0,
                 })
               ) as any;
-            client = new KintoClient("http://server.com/v1")
+            client = new Api("http://server.com/v1")
               .bucket("bucket")
               .collection("collection");
             await Promise.all(
@@ -2450,7 +2452,7 @@ describe("Collection", () => {
         const records = [{ id: uuid4(), title: "foo", _status: "created" }];
 
         beforeEach(() => {
-          client = new KintoClient("http://server.com/v1")
+          client = new Api("http://server.com/v1")
             .bucket("bucket")
             .collection("collection");
           articles = testCollection();
@@ -2459,7 +2461,7 @@ describe("Collection", () => {
 
         it("should publish local changes to the server", async () => {
           const batchRequests = sandbox
-            .stub(KintoClient.prototype, "_batchRequests" as any)
+            .stub(Api.prototype, "_batchRequests" as any)
             .returns(Promise.resolve([{}]));
 
           await articles.pushChanges(client, records, result);
@@ -2472,7 +2474,7 @@ describe("Collection", () => {
 
         it("should not publish local fields to the server", async () => {
           const batchRequests = sandbox
-            .stub(KintoClient.prototype, "_batchRequests" as any)
+            .stub(Api.prototype, "_batchRequests" as any)
             .returns(Promise.resolve([{}]));
 
           articles = testCollection({ localFields: ["size"] });
@@ -2504,7 +2506,7 @@ describe("Collection", () => {
 
         it("should not publish records created and deleted locally and never synced", async () => {
           const batchRequests = sandbox
-            .stub(KintoClient.prototype, "_batchRequests" as any)
+            .stub(Api.prototype, "_batchRequests" as any)
             .returns(Promise.resolve([]));
 
           const toDelete = [{ id: records[0].id, _status: "deleted" }]; // no timestamp.
@@ -3043,7 +3045,7 @@ describe("Collection", () => {
           let fetch;
 
           beforeEach(() => {
-            // Disable stubbing of kinto-http of upper tests.
+            // Disable stubbing of HTTP client of upper tests.
             sandbox.restore();
             // Stub low-level fetch instead.
             fetch = sandbox.stub(articles.api.http, "timedFetch");

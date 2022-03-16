@@ -7,7 +7,7 @@ import {
   transformSubObjectFilters,
 } from "../utils";
 import { RecordStatus } from "../types";
-import { KintoObject } from "kinto-http";
+import { KintoObject } from "../http";
 
 const INDEXED_FIELDS = ["id", "_status", "last_modified"];
 

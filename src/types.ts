@@ -1,4 +1,4 @@
-import { KintoIdObject, Permission } from "kinto-http";
+import { KintoIdObject, Permission } from "./http";
 import Collection from "./collection";
 
 export type $TSFixMe = any;

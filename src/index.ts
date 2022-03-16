@@ -1,4 +1,4 @@
-import Api from "kinto-http";
+import KintoClient from "./http";
 import BaseAdapter, { AbstractBaseAdapter } from "./adapters/base";
 import IDB from "./adapters/IDB";
 import KintoBase from "./KintoBase";
@@ -26,7 +26,7 @@ export default class Kinto<
   }
 
   get ApiClass() {
-    return Api;
+    return KintoClient;
   }
 
   constructor(options: KintoBaseOptions = {}) {
@@ -51,4 +51,4 @@ export type {
   CollectionSyncOptions,
   Conflict,
 };
-export { KintoBase, BaseAdapter, AbstractBaseAdapter, getDeepKey };
+export { KintoClient, KintoBase, BaseAdapter, AbstractBaseAdapter, getDeepKey };
