@@ -7,7 +7,7 @@ import {
   Stub,
   expectAsyncError,
   fakeHeaders,
-} from "./test_utils";
+} from "../test_utils";
 import { PaginationResult } from "../../src/http/base";
 
 intern.getPlugin("chai").should();

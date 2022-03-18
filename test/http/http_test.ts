@@ -1,14 +1,14 @@
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import mitt from "mitt";
-import { fakeServerResponse, Stub, expectAsyncError } from "./test_utils";
+import { fakeServerResponse, Stub, expectAsyncError } from "../test_utils";
 import HTTP from "../../src/http/http";
 import {
   NetworkTimeoutError,
   ServerResponse,
   UnparseableResponseError,
 } from "../../src/http/errors";
-import { Emitter } from "../../src/http/types";
+import { Emitter } from "../../src/types";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();

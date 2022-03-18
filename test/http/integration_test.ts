@@ -4,7 +4,7 @@ import Api from "../../src/http";
 import KintoClientBase, { KintoClientOptions } from "../../src/http/base";
 import { EventEmitter } from "events";
 import KintoServer from "kinto-node-test-server";
-import { delayedPromise, Stub, btoa, expectAsyncError } from "./test_utils";
+import { delayedPromise, Stub, btoa, expectAsyncError } from "../test_utils";
 import Bucket from "../../src/http/bucket";
 import Collection from "../../src/http/collection";
 import {
@@ -14,7 +14,7 @@ import {
   Attachment,
   KintoResponse,
   Group,
-} from "../../src/http/types";
+} from "../../src/types";
 import { AggregateResponse } from "../../src/http/batch";
 
 interface TitleRecord extends KintoObject {

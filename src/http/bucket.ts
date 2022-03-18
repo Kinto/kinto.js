@@ -1,4 +1,4 @@
-import { toDataBody, isObject, capable } from "./utils";
+import { toDataBody, isObject, capable } from "../utils";
 import Collection from "./collection";
 import * as requests from "./requests";
 import KintoClientBase, { PaginatedParams, PaginationResult } from "./base";
@@ -12,7 +12,7 @@ import {
   Group,
   OperationResponse,
   MappableObject,
-} from "./types";
+} from "../types";
 import { HttpResponse } from "./http";
 import { AggregateResponse } from "./batch";
 

@@ -1,4 +1,4 @@
-import { FetchResponse } from "./types";
+import { FetchResponse } from "../types";
 
 /**
  * Kinto server error code descriptors.

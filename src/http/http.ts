@@ -1,11 +1,11 @@
-import { delay, obscureAuthorizationHeader } from "./utils";
+import { delay, obscureAuthorizationHeader } from "../utils";
 import {
   NetworkTimeoutError,
   ServerResponse,
   UnparseableResponseError,
   ServerResponseObject,
 } from "./errors";
-import { Emitter, FetchFunction, FetchHeaders, FetchResponse } from "./types";
+import { Emitter, FetchFunction, FetchHeaders, FetchResponse } from "../types";
 
 interface HttpOptions {
   timeout?: number | null;

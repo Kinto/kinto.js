@@ -1,4 +1,4 @@
-import { btoa } from "./test_utils";
+import { btoa } from "../test_utils";
 import * as requests from "../../src/http/requests";
 
 const { expect } = intern.getPlugin("chai");
