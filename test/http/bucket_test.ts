@@ -3,7 +3,7 @@ import KintoClient from "../../src/http";
 import Bucket, { BucketOptions } from "../../src/http/bucket";
 import Collection from "../../src/http/collection";
 import { PaginationResult } from "../../src/http/base";
-import { Stub, expectAsyncError, fakeHeaders } from "./test_utils";
+import { Stub, expectAsyncError, fakeHeaders } from "../test_utils";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();

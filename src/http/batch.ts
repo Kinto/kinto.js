@@ -1,4 +1,4 @@
-import { KintoRequest } from "./types";
+import { KintoRequest } from "../types";
 
 interface ConflictRecord {
   last_modified: number;

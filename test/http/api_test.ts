@@ -1,13 +1,13 @@
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { fakeServerResponse, Stub, expectAsyncError } from "./test_utils";
+import { fakeServerResponse, Stub, expectAsyncError } from "../test_utils";
 import KintoClient from "../../src/http";
 import KintoClientBase, {
   SUPPORTED_PROTOCOL_VERSION as SPV,
   PaginationResult,
 } from "../../src/http/base";
 import Bucket from "../../src/http/bucket";
-import { HelloResponse, OperationResponse } from "../../src/http/types";
+import { HelloResponse, OperationResponse } from "../../src/types";
 import { KintoBatchResponse, AggregateResponse } from "../../src/http/batch";
 
 const { expect } = intern.getPlugin("chai");

@@ -1,6 +1,6 @@
 import { v4 as uuid } from "uuid";
 
-import { capable, toDataBody, isObject } from "./utils";
+import { capable, toDataBody, isObject } from "../utils";
 import * as requests from "./requests";
 import KintoClientBase, { PaginatedParams, PaginationResult } from "./base";
 import Bucket from "./bucket";
@@ -13,7 +13,7 @@ import {
   Attachment,
   OperationResponse,
   MappableObject,
-} from "./types";
+} from "../types";
 import { HttpResponse } from "./http";
 import { AggregateResponse } from "./batch";
 

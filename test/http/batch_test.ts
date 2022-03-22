@@ -4,7 +4,7 @@ import {
   AggregateResponse,
   KintoBatchResponse,
 } from "../../src/http/batch";
-import { KintoRequest } from "../../src/http/types";
+import { KintoRequest } from "../../src/types";
 
 const { expect } = intern.getPlugin("chai");
 intern.getPlugin("chai").should();

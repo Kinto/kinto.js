@@ -10,7 +10,7 @@ import type {
   KintoResponse,
   Permission,
   PermissionData,
-} from "./types";
+} from "../types";
 
 export default class KintoClient extends KintoClientBase {
   constructor(remote: string, options: Partial<KintoClientOptions> = {}) {

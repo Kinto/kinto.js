@@ -5,13 +5,14 @@ import {
   nobatch,
   toDataBody,
   cleanUndefinedProperties,
-} from "./utils";
+  addEndpointOptions,
+  capable,
+} from "../utils";
 import HTTP, { HttpResponse } from "./http";
 import endpoints from "./endpoints";
 import * as requests from "./requests";
 import { aggregate, AggregateResponse } from "./batch";
 import Bucket from "./bucket";
-import { addEndpointOptions, capable } from "./utils";
 import {
   HelloResponse,
   KintoRequest,
@@ -30,7 +31,7 @@ import {
   Emitter,
   HttpMethod,
   FetchFunction,
-} from "./types";
+} from "../types";
 import Collection from "./collection";
 
 /**
