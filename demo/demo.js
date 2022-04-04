@@ -7,7 +7,7 @@ function main() {
   });
   var tasks = db.collection("tasks");
   var syncOptions = {
-    remote: "https://kinto.dev.mozaws.net/v1/",
+    remote: "https://demo.kinto-storage.org/v1/",
     headers: {Authorization: "Basic " + btoa("user:pass")}
   };
   document.getElementById("form")

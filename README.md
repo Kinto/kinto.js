@@ -11,7 +11,7 @@ An [Offline-First](http://offlinefirst.org/) JavaScript client for [Kinto](https
 The idea is to persist data locally in the browser by default, then synchronizing them with the server explicitly when connectivity is guaranteed:
 
 ```js
-const kinto = new Kinto({ remote: "https://kinto.dev.mozaws.net/v1/" });
+const kinto = new Kinto({ remote: "https://demo.kinto-storage.org/v1/" });
 const posts = kinto.collection("posts");
 
 // Create and store a new post in the browser local database

@@ -4,7 +4,7 @@
 
 ```js
 const tasks = new Kinto({
-  remote: "https://kinto.dev.mozaws.net/v1"
+  remote: "https://demo.kinto-storage.org/v1"
 }).collection("tasks");
 
 await tasks.create({label: "First item", done: false});

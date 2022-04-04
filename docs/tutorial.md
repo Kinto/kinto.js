@@ -283,7 +283,7 @@ Then the JavaScript:
 
 Synchronizing local data is done by calling the [`#sync()`](https://doc.esdoc.org/github.com/Kinto/kinto.js/class/src/collection.js~Collection.html#instance-method-sync) method on our collection.
 
-Data synchronization is performed over HTTP and requires a Kinto server; now's probably a good time to tell you about the public mozilla-hosted Kinto server available at `https://kinto.dev.mozaws.net/v1` we'll use for this tutorial:
+Data synchronization is performed over HTTP and requires a Kinto server; now's probably a good time to tell you about the public mozilla-hosted Kinto server available at `https://demo.kinto-storage.org/v1` we'll use for this tutorial:
 
 - **The test server is flushed everyday at 7PM UTC;**
 - You'll need to serve the web page over HTTP so Kinto.js can talk to the server. To do so, you can use node's [http-server](https://github.com/indexzero/http-server), Python's [SimpleHTTPServer](https://docs.python.org/2/library/simplehttpserver.html) or whatever Web server you like.
@@ -316,7 +316,7 @@ Then, update the JavaScript:
 
 ```js
 const syncOptions = {
-  remote: "https://kinto.dev.mozaws.net/v1",
+  remote: "https://demo.kinto-storage.org/v1",
   headers: {Authorization: "Basic " + btoa("user:pass")}
 };
 
@@ -392,7 +392,7 @@ Let's create a conflict by:
 To do that, we are using [HTTPie](https://github.com/jakubroztocil/httpie), an easy to use CLI http client.
 
 ```
-$ echo '{"data": {"title": "eat even more cheese"}}' | http -a user:pass PATCH https://kinto.dev.mozaws.net/v1/buckets/default/collections/tasks/records/81f130ac-334b-4a9b-b53c-ea8c9488bf76
+$ echo '{"data": {"title": "eat even more cheese"}}' | http -a user:pass PATCH https://demo.kinto-storage.org/v1/buckets/default/collections/tasks/records/81f130ac-334b-4a9b-b53c-ea8c9488bf76
 HTTP/1.1 200 OK
 Access-Control-Expose-Headers: Retry-After, Content-Length, Alert, Backoff
 Connection: keep-alive
