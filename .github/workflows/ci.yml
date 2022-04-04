@@ -7,8 +7,8 @@ on:
 name: CI
 jobs:
   chore:
-    name: Windows Integration Tests
-    runs-on: windows-latest
+    name: Integration Tests
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2

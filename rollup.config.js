@@ -1,45 +1,46 @@
+import path from "path";
 import builtins from "rollup-plugin-node-builtins";
-import typescript from "rollup-plugin-typescript";
-import resolve from "rollup-plugin-node-resolve";
-import commonjs from "rollup-plugin-commonjs";
+import nodePolyfills from "rollup-plugin-node-polyfills";
+import typescript from "@rollup/plugin-typescript";
+import resolve from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
-
-function ignoreInput(list) {
-  return {
-    resolveId(importee) {
-      return list.indexOf(importee) > -1 ? "\0empty_module" : null;
-    },
-    load(id) {
-      return id === "\0empty_module" ? "export default {}" : null;
-    },
-  };
-}
+import multi from "@rollup/plugin-multi-entry";
+import replace from "@rollup/plugin-replace";
 
 const geckoBuild = {
-  input: "./src/index.fx.js",
+  input: "./src/http/index.fx.ts",
   output: [
     {
       file: "dist/temp.js",
       format: "umd",
-      name: "Kinto",
+      name: "KintoHttpClient",
     },
   ],
   plugins: [
-    ignoreInput(["uuid/v4"]),
     resolve({
       mainFields: ["module", "main", "browser"],
       preferBuiltins: true,
     }),
-    typescript({ include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"] }),
+    typescript({
+      include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
+    }),
     commonjs({ ignoreGlobal: true }),
   ],
 };
 
 const browserBuild = {
-  input: "./src/index.js",
+  input: "./src/index.ts",
   output: [
     {
       file: "dist/kinto.min.js",
+      format: "umd",
+      name: "Kinto",
+      sourcemap: true,
+      plugins: [terser()],
+    },
+    {
+      file: "dist/kinto.js",
       format: "umd",
       name: "Kinto",
       sourcemap: true,
@@ -51,13 +52,58 @@ const browserBuild = {
       preferBuiltins: true,
     }),
     typescript({
-      target: "es5",
+      target: "es2017",
       include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
     }),
     builtins(),
     commonjs(),
-    terser(),
   ],
 };
 
-export default [geckoBuild, browserBuild];
+const browserTestBuild = {
+  input: "./test/**/*_test.ts",
+  output: [
+    {
+      file: "dist/test-suite.js",
+      format: "iife",
+      sourcemap: true,
+      globals: {
+        intern: "intern",
+      },
+    },
+  ],
+  plugins: [
+    multi(),
+    commonjs(),
+    nodePolyfills(),
+    resolve({
+      mainFields: ["browser", "module", "main"],
+      preferBuiltins: true,
+    }),
+    typescript({
+      tsconfig: "./test/tsconfig.json",
+      module: "esnext",
+    }),
+    replace({
+      preventAssignment: true,
+      __dirname: JSON.stringify(path.join(__dirname, "test")),
+      "process.env.TEST_KINTO_SERVER": JSON.stringify(
+        process.env.TEST_KINTO_SERVER ? process.env.TEST_KINTO_SERVER : ""
+      ),
+      "process.env.SERVER": JSON.stringify(
+        process.env.SERVER ? process.env.SERVER : ""
+      ),
+      "process.env.KINTO_PROXY_SERVER": JSON.stringify(
+        process.env.SERVER ? process.env.SERVER : "http://localhost:8899"
+      ),
+      "http://0.0.0.0": "http://localhost",
+    }),
+    builtins(),
+  ],
+};
+
+const bundles = process.env.BROWSER_TESTING
+  ? [browserTestBuild]
+  : [geckoBuild, browserBuild];
+
+export default bundles;

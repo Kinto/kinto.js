@@ -8,7 +8,7 @@ function getVersionFromPackageJson(): string {
 }
 
 const rollupOutput = "dist/temp.js";
-const destination = "dist/moz-kinto-offline-client.js";
+const destination = "dist/moz-kinto-http-client.js";
 
 mkdir("-p", "dist");
 

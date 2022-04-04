@@ -2,6 +2,10 @@
 
 This page lists the breaking API changes between major versions of Kinto.js, as well as upgrade tips.
 
+## 12.x to 13.x
+
+The v13.0.0 release of `kinto.js` is the first release that's using our new modern build system, which targets modern browsers supporting the latest JavaScript features. As such, if you were relying on polyfills in our previous releases, you'll need to make sure that your build system is updated to account for these changes. In particular, you'll need to ensure that your build system is setup for `async`/`await`. Each build system has a different way of enabling support, so we can't detail them here. That being said, if you're using Babel, you most likely want [@babel/plugin-transform-runtime](https://babeljs.io/docs/en/babel-plugin-transform-runtime).
+
 ## 11.x to 12.x
 
 * The `dbPrefix` option in the `Kinto` and `Collection` constructors was dropped in favor of the `dbName` field in the `adapterOptions`.

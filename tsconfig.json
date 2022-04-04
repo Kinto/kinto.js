@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
-    "outDir": "./lib/esm/",
     "module": "esnext",
-    "target": "es2017",
-    "allowJs": true,
+    "target": "es2021",
     "lib": ["dom", "dom.iterable", "esnext"],
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -12,8 +10,10 @@
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "downlevelIteration": true,
     "isolatedModules": true,
-    "experimentalDecorators": true
+    "typeRoots": ["./node_modules/@types", "./@types"]
   },
   "ts-node": {
     "compilerOptions": {

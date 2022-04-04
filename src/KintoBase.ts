@@ -1,16 +1,44 @@
-"use strict";
-
+import Api from "./http";
 import Collection from "./collection";
 import BaseAdapter from "./adapters/base";
+import {
+  IdSchema,
+  RemoteTransformer,
+  Hooks,
+  RecordStatus,
+  Emitter,
+} from "./types";
 
 const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
 const DEFAULT_RETRY = 1;
 
+export interface KintoBaseOptions {
+  remote?: string;
+  bucket?: string;
+  events?: Emitter;
+  adapter?: (
+    dbName: string,
+    options?: { dbName?: string; migrateOldData?: boolean }
+  ) => BaseAdapter<any>;
+  adapterOptions?: object;
+  headers?: Record<string, string>;
+  retry?: number;
+  requestMode?: RequestMode;
+  timeout?: number;
+}
+
 /**
  * KintoBase class.
  */
-export default class KintoBase {
+/* eslint-disable @typescript-eslint/no-unused-vars */
+export default class KintoBase<
+  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+> {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
+  private _options: KintoBaseOptions;
+  private _api: Api | null;
+  public events?: Emitter;
   /**
    * Provides a public access to the base adapter class. Users can create a
    * custom DB adapter by extending {@link BaseAdapter}.
@@ -52,7 +80,7 @@ export default class KintoBase {
    *
    * @param  {Object} options The options object.
    */
-  constructor(options = {}) {
+  constructor(options: KintoBaseOptions = {}) {
     const defaults = {
       bucket: DEFAULT_BUCKET_NAME,
       remote: DEFAULT_REMOTE,
@@ -71,22 +99,20 @@ export default class KintoBase {
     this.events = this._options.events;
   }
 
+  get ApiClass(): typeof Api {
+    throw new Error("ApiClass() must be implemented by subclasses.");
+  }
+
   /**
    * The kinto HTTP client instance.
    * @type {KintoClient}
    */
   get api() {
-    const {
-      events,
-      headers,
-      remote,
-      requestMode,
-      retry,
-      timeout,
-    } = this._options;
+    const { events, headers, remote, requestMode, retry, timeout } =
+      this._options;
 
     if (!this._api) {
-      this._api = new this.ApiClass(remote, {
+      this._api = new this.ApiClass(remote!, {
         events,
         headers,
         requestMode,
@@ -110,7 +136,25 @@ export default class KintoBase {
    * @param  {Object} [options.localFields]        Array<Field> (default: `[]`])
    * @return {Collection}
    */
-  collection(collName, options = {}) {
+  collection<
+    C extends {
+      id: string;
+      last_modified?: number;
+      _status?: RecordStatus;
+    } = any
+  >(
+    collName: string,
+    options: {
+      adapter?: (
+        dbName: string,
+        options?: { dbName?: string; migrateOldData?: boolean }
+      ) => BaseAdapter<C>;
+      idSchema?: IdSchema;
+      remoteTransformers?: RemoteTransformer[];
+      hooks?: Hooks<C>;
+      localFields?: string[];
+    } = {}
+  ): Collection<C> {
     if (!collName) {
       throw new Error("missing collection name");
     }
@@ -120,7 +164,7 @@ export default class KintoBase {
     };
     const { idSchema, remoteTransformers, hooks, localFields } = options;
 
-    return new Collection(bucket, collName, this, {
+    return new Collection<C>(bucket!, collName, this, {
       events,
       adapter,
       adapterOptions,

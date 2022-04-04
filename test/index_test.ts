@@ -1,26 +1,23 @@
-"use strict";
-
-import chai, { expect } from "chai";
-import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
 import { EventEmitter } from "events";
-import { SUPPORTED_PROTOCOL_VERSION as SPV } from "kinto-http/lib/cjs-es5/base";
+import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
 import IDB from "../src/adapters/IDB";
 import Kinto from "../src";
 
-chai.use(chaiAsPromised);
-chai.should();
-chai.config.includeStack = true;
+const { expect } = intern.getPlugin("chai");
+intern.getPlugin("chai").should();
+const { describe, it, beforeEach, afterEach } =
+  intern.getPlugin("interface.bdd");
 
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
 
 /** @test {Kinto} */
 describe("Kinto", () => {
-  let sandbox;
+  let sandbox: sinon.SinonSandbox;
 
   function testCollection() {
     const db = new Kinto({ bucket: TEST_BUCKET_NAME });
@@ -65,12 +62,13 @@ describe("Kinto", () => {
       expect(new Kinto({ events }).events).to.eql(events);
     });
 
-    it("should create an events property if none passed", () => {
-      expect(new Kinto().events).to.be.an.instanceOf(EventEmitter);
+    it("should not create an events property if none passed", () => {
+      expect(new Kinto().events).to.equal(undefined);
     });
 
     it("should propagate its events property to child dependencies", () => {
-      const kinto = new Kinto();
+      const events = new EventEmitter();
+      const kinto = new Kinto({ events });
       expect(kinto.collection("x").events).eql(kinto.events);
       expect(kinto.collection("x").api.events).eql(kinto.events);
       expect(kinto.collection("x").api.http.events).eql(kinto.events);
@@ -96,9 +94,11 @@ describe("Kinto", () => {
 
     it("should propagate the dbName option to child dependencies", () => {
       expect(
-        new Kinto({
-          adapterOptions: { dbName: "app" },
-        }).collection("x").db.dbName
+        (
+          new Kinto({
+            adapterOptions: { dbName: "app" },
+          }).collection("x").db as IDB<any>
+        ).dbName
       ).eql("app");
     });
   });
@@ -123,10 +123,9 @@ describe("Kinto", () => {
     });
 
     it("should reject on missing collection name", () => {
-      expect(() => new Kinto().collection()).to.Throw(
-        Error,
-        /missing collection name/
-      );
+      expect(() =>
+        new Kinto().collection(undefined as unknown as string)
+      ).to.Throw(Error, /missing collection name/);
     });
 
     it("should setup the Api cient using default server URL", () => {
@@ -150,22 +149,28 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api._headers).eql({ Authorization: "Basic plop" });
+      expect(coll.api["_headers"]).eql({ Authorization: "Basic plop" });
     });
 
     it("should create collection using an optional adapter", () => {
-      const MyAdapter = class extends BaseAdapter {};
-      const db = new Kinto({ adapter: MyAdapter });
+      const MyAdapter = class extends BaseAdapter<any> {};
+      const db = new Kinto({
+        adapter: () => new MyAdapter() as unknown as BaseAdapter<any>,
+      });
       const coll = db.collection("plop");
 
       expect(coll.db).to.be.an.instanceOf(MyAdapter);
     });
 
     it("should override adapter for collection if specified", () => {
-      const MyAdapter = class extends BaseAdapter {};
-      const MyOtherAdapter = class extends BaseAdapter {};
-      const db = new Kinto({ adapter: MyAdapter });
-      const coll = db.collection("plop", { adapter: MyOtherAdapter });
+      const MyAdapter = class extends BaseAdapter<any> {};
+      const MyOtherAdapter = class extends BaseAdapter<any> {};
+      const db = new Kinto({
+        adapter: () => new MyAdapter() as unknown as BaseAdapter<any>,
+      });
+      const coll = db.collection("plop", {
+        adapter: () => new MyOtherAdapter() as unknown as BaseAdapter<any>,
+      });
       expect(coll.db).to.be.an.instanceOf(MyOtherAdapter);
     });
 

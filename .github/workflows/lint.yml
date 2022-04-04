@@ -1,0 +1,30 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+name: Lint
+jobs:
+  chore:
+    name: Lint and check format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Print environment
+        run: |
+          node --version
+          npm --version
+          python --version
+          pip --version
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run cs-check

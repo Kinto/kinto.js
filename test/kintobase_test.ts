@@ -1,10 +1,10 @@
-"use strict";
-
-import { expect } from "chai";
 import { EventEmitter } from "events";
 
-import KintoBase from "../src/KintoBase.js";
-import BaseAdapter from "../src/adapters/base.js";
+import KintoBase from "../src/KintoBase";
+import BaseAdapter from "../src/adapters/base";
+
+const { expect } = intern.getPlugin("chai");
+const { describe, it, beforeEach } = intern.getPlugin("interface.bdd");
 
 /** @test {KintoBase} */
 describe("KintoBase", () => {
@@ -29,11 +29,11 @@ describe("KintoBase", () => {
   });
 
   describe("collection options", () => {
-    let kinto;
+    let kinto: KintoBase<any>;
 
     beforeEach(() => {
       kinto = new KintoBase({
-        adapter: KintoBase.adapters.BaseAdapter,
+        adapter: () => new KintoBase.adapters.BaseAdapter(),
         events: new EventEmitter(),
       });
     });

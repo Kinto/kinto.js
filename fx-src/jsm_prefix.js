@@ -18,16 +18,11 @@
  * This file is generated from kinto.js - do not modify directly.
  */
 
-// This is required because with Babel compiles ES2015 modules into a
-// require() form that tries to keep its modules on "this", but
-// doesn't specify "this", leaving it to default to the global
-// object. However, in strict mode, "this" no longer defaults to the
-// global object, so expose the global object explicitly. Babel's
-// compiled output will use a variable called "global" if one is
-// present.
-//
-// See https://bugzilla.mozilla.org/show_bug.cgi?id=1394556#c3 for
-// more details.
 const global = this;
+const globalThis = this;
 
-var EXPORTED_SYMBOLS = ["Kinto"];
+var EXPORTED_SYMBOLS = ["KintoHttpClient"];
+
+const { setTimeout, clearTimeout } = ChromeUtils.import("resource://gre/modules/Timer.jsm");
+const { XPCOMUtils } = ChromeUtils.import("resource://gre/modules/XPCOMUtils.jsm");
+XPCOMUtils.defineLazyGlobalGetters(global, ["fetch"]);

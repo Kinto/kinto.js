@@ -6,21 +6,20 @@
 
 An [Offline-First](http://offlinefirst.org/) JavaScript client for [Kinto](https://kinto.readthedocs.io/).
 
-> Note: If you're looking for a pure HTTP js client for Kinto, check out [kinto-http.js](https://github.com/Kinto/kinto-http.js).
+> Note: This library also includes a pure JS HTTP client for Kinto. You can learn more in [the docs](https://kintojs.readthedocs.io/en/latest/http/).
 
 The idea is to persist data locally in the browser by default, then synchronizing them with the server explicitly when connectivity is guaranteed:
 
 ```js
-const kinto = new Kinto({remote: "https://demo.kinto-storage.org/v1/"});
+const kinto = new Kinto({ remote: "https://demo.kinto-storage.org/v1/" });
 const posts = kinto.collection("posts");
 
 // Create and store a new post in the browser local database
-await posts.create({title: "first post"});
+await posts.create({ title: "first post" });
 
 // Publish all local data to the server, import remote changes
 await posts.sync();
 ```
-
 
 ## Documentation
 

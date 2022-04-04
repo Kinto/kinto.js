@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "types": ["intern"],
+    "inlineSourceMap": true,
+    "strictNullChecks": false
+  },
+  "include": ["./**/*.ts"]
+}
