@@ -456,7 +456,7 @@ export function parseDataURL(dataURL: string): TypedDataURL {
   const regex = /^data:(.*);base64,(.*)/;
   const match = dataURL.match(regex);
   if (!match) {
-    throw new Error(`Invalid data-url: ${String(dataURL).substr(0, 32)}...`);
+    throw new Error(`Invalid data-url: ${String(dataURL).substring(0, 32)}...`);
   }
   const props = match[1];
   const base64 = match[2];
