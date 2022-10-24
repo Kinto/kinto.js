@@ -154,7 +154,7 @@
     "@rollup/plugin-multi-entry": "^4.1.0",
     "@rollup/plugin-node-resolve": "^13.0.6",
     "@rollup/plugin-replace": "^4.0.0",
-    "@rollup/plugin-typescript": "^8.3.0",
+    "@rollup/plugin-typescript": "^9.0.2",
     "@types/btoa": "^1.2.3",
     "@types/node-fetch": "^2.5.12",
     "@types/shelljs": "^0.8.9",
