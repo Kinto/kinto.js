@@ -153,7 +153,7 @@
     "@rollup/plugin-commonjs": "^22.0.0",
     "@rollup/plugin-multi-entry": "^4.1.0",
     "@rollup/plugin-node-resolve": "^15.0.1",
-    "@rollup/plugin-replace": "^4.0.0",
+    "@rollup/plugin-replace": "^5.0.1",
     "@rollup/plugin-typescript": "^9.0.2",
     "@types/btoa": "^1.2.3",
     "@types/node-fetch": "^2.5.12",
