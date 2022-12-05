@@ -159,7 +159,7 @@
     "@types/node-fetch": "^2.5.12",
     "@types/shelljs": "^0.8.9",
     "@types/sinon": "^10.0.6",
-    "@types/uuid": "^8.3.3",
+    "@types/uuid": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "atob": "^2.1.2",
