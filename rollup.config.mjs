@@ -1,10 +1,10 @@
 import path from "path";
-import builtins from "rollup-plugin-node-builtins";
-import nodePolyfills from "rollup-plugin-node-polyfills";
+import { fileURLToPath } from "url";
+import nodePolyfills from "rollup-plugin-polyfill-node";
 import typescript from "@rollup/plugin-typescript";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
-import { terser } from "rollup-plugin-terser";
+import terser from "@rollup/plugin-terser";
 import multi from "@rollup/plugin-multi-entry";
 import replace from "@rollup/plugin-replace";
 
@@ -55,7 +55,6 @@ const browserBuild = {
       target: "es2017",
       include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
     }),
-    builtins(),
     commonjs(),
   ],
 };
@@ -86,7 +85,9 @@ const browserTestBuild = {
     }),
     replace({
       preventAssignment: true,
-      __dirname: JSON.stringify(path.join(__dirname, "test")),
+      __dirname: JSON.stringify(
+        path.join(path.dirname(fileURLToPath(import.meta.url)), "test")
+      ),
       "process.env.TEST_KINTO_SERVER": JSON.stringify(
         process.env.TEST_KINTO_SERVER ? process.env.TEST_KINTO_SERVER : ""
       ),
@@ -98,7 +99,6 @@ const browserTestBuild = {
       ),
       "http://0.0.0.0": "http://localhost",
     }),
-    builtins(),
   ],
 };
 
