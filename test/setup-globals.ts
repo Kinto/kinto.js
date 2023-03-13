@@ -33,5 +33,5 @@ if (typeof globalThis.indexedDB !== "object") {
     (globalThis as any)[symbol] = require(`fake-indexeddb/lib/${fakeSymbol}`);
   });
 
-  globalThis.indexedDB = require("fake-indexeddb");
+  globalThis.indexedDB = require("fake-indexeddb").default;
 }
