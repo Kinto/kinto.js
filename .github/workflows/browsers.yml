@@ -14,6 +14,9 @@ jobs:
         browser: [chrome, firefox]
 
     steps:
+      - name: Disable IPv6
+        run: sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+
       - uses: actions/checkout@v2
 
       - uses: actions/setup-python@v2
