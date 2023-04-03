@@ -188,6 +188,7 @@ describe("Bucket", () => {
       sinon.assert.calledWithMatch(
         executeStub,
         { method: "HEAD", path: "/buckets/blog/collections", headers: {} },
+        //@ts-ignore Limitation of the Parameters type for overloaded functions
         { raw: true }
       );
     });
@@ -558,6 +559,7 @@ describe("Bucket", () => {
       sinon.assert.calledWithMatch(
         executeStub,
         { method: "HEAD", path: "/buckets/blog/groups", headers: {} },
+        //@ts-ignore Limitation of the Parameters type for overloaded functions
         { raw: true }
       );
     });

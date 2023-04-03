@@ -12,7 +12,7 @@ export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
 export interface KintoRequest {
   method?: HttpMethod;
   path: string;
-  headers: HeadersInit;
+  headers: Record<string, unknown>;
   body?: any;
 }
 

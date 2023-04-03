@@ -69,7 +69,7 @@ export function filterObject<T extends { [key: string]: any }>(
  * @param  {Array}  list     The collection to filter.
  * @return {Array}
  */
-export function filterObjects<T>(
+export function filterObjects<T extends { [key: string]: any }>(
   filters: { [key: string]: any },
   list: T[]
 ): T[] {

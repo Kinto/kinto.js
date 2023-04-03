@@ -51,6 +51,7 @@ describe("HTTP Collection", () => {
           path: "/buckets/blog/collections/posts/records",
           headers: {},
         },
+        //@ts-ignore Limitation of the Parameters type for overloaded functions
         { raw: true }
       );
     });
@@ -705,6 +706,7 @@ describe("HTTP Collection", () => {
           path: "/buckets/blog/collections/posts/records",
           headers: {},
         },
+        //@ts-ignore Limitation of the Parameters type for overloaded functions
         { raw: true }
       );
     });
