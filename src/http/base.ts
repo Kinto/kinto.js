@@ -541,6 +541,26 @@ export default class KintoClientBase {
   async execute<T>(
     request: KintoRequest,
     options: {
+      raw: true;
+      stringify?: boolean;
+      retry?: number;
+      query?: { [key: string]: string };
+      fields?: string[];
+    }
+  ): Promise<HttpResponse<T>>;
+  async execute<T>(
+    request: KintoRequest,
+    options?: {
+      raw?: false;
+      stringify?: boolean;
+      retry?: number;
+      query?: { [key: string]: string };
+      fields?: string[];
+    }
+  ): Promise<T>;
+  async execute<T>(
+    request: KintoRequest,
+    options: {
       raw?: boolean;
       stringify?: boolean;
       retry?: number;
@@ -992,6 +1012,6 @@ export default class KintoClientBase {
         { data: { password } },
         { method: "PUT" }
       )
-    ) as Promise<KintoResponse<{ password: string }>>;
+    );
   }
 }

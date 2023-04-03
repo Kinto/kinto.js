@@ -147,7 +147,7 @@ export default class Collection {
       raw: true,
       retry: this._getRetry(options),
     });
-    return parseInt(headers.get("Total-Records"), 10);
+    return parseInt(headers.get("Total-Records")!, 10);
   }
 
   /**

@@ -755,6 +755,7 @@ describe("KintoClient", () => {
         sinon.assert.calledWithMatch(
           executeStub,
           { path: `${path}?_sort=-last_modified`, headers: {} },
+          //@ts-ignore Limitation of the Parameters type for overloaded functions
           { raw: true }
         );
       });
@@ -765,6 +766,7 @@ describe("KintoClient", () => {
         sinon.assert.calledWithMatch(
           executeStub,
           { path: `${path}?_sort=title`, headers: {} },
+          //@ts-ignore Limitation of the Parameters type for overloaded functions
           { raw: true }
         );
       });
@@ -839,6 +841,7 @@ describe("KintoClient", () => {
         sinon.assert.calledWithMatch(
           executeStub,
           { path: `${path}?${expectedQS}`, headers: {} },
+          //@ts-ignore Limitation of the Parameters type for overloaded functions
           { raw: true }
         );
       });
@@ -850,6 +853,7 @@ describe("KintoClient", () => {
         sinon.assert.calledWithMatch(
           executeStub,
           { path: `${path}?${expectedQS}`, headers: {} },
+          //@ts-ignore Limitation of the Parameters type for overloaded functions
           { raw: true }
         );
       });
@@ -874,6 +878,7 @@ describe("KintoClient", () => {
         sinon.assert.calledWithMatch(
           executeStub,
           { path: `${path}?${expectedQS}`, headers: {} },
+          //@ts-ignore Limitation of the Parameters type for overloaded functions
           { raw: true }
         );
       });
