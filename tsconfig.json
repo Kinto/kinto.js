@@ -12,8 +12,7 @@
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "downlevelIteration": true,
-    "isolatedModules": true,
-    "typeRoots": ["./node_modules/@types", "./@types"]
+    "isolatedModules": true
   },
   "ts-node": {
     "compilerOptions": {
