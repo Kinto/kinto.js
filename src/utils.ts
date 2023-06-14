@@ -374,7 +374,7 @@ export function capable(capabilities: string[]): DecoratorReturn {
             .fetchServerCapabilities()
             .then((available: string[]) => {
               const missing = capabilities.filter((c) => !(c in available));
-              if (missing.length > 0) {
+              if (missing.length) {
                 const missingStr = missing.join(", ");
                 throw new Error(
                   `Required capabilities ${missingStr} not present on server`
