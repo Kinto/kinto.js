@@ -191,6 +191,7 @@ describe("HTTP class", () => {
                     if (name !== "Alert") {
                       return "fake";
                     }
+                    return "";
                   },
                 },
                 text() {
@@ -267,6 +268,7 @@ describe("HTTP class", () => {
                   if (name === "Content-Length") {
                     return 0;
                   }
+                  return "";
                 },
               },
               text() {

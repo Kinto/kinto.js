@@ -743,6 +743,7 @@ describe("KintoClient", () => {
                 if (name === "ETag") {
                   return ETag;
                 }
+                return "";
               },
             },
           })

@@ -23,7 +23,8 @@
     "semi": [2, "always"],
     "no-else-return": "error",
     "object-shorthand": ["error", "always"],
-    "dot-notation": "error"
+    "dot-notation": "error",
+    "consistent-return": "error"
   },
   "env": {
     "es6": true,
