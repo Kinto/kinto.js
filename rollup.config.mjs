@@ -13,7 +13,7 @@ const geckoBuild = {
   output: [
     {
       file: "dist/temp.js",
-      format: "es",
+      format: "module",
       name: "KintoHttpClient",
       generatedCode: {
         objectShorthand: true,
