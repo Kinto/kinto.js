@@ -13,8 +13,11 @@ const geckoBuild = {
   output: [
     {
       file: "dist/temp.js",
-      format: "umd",
+      format: "es",
       name: "KintoHttpClient",
+      generatedCode: {
+        objectShorthand: true,
+      },
     },
   ],
   plugins: [
@@ -25,7 +28,6 @@ const geckoBuild = {
     typescript({
       include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
     }),
-    commonjs({ ignoreGlobal: true }),
   ],
 };
 

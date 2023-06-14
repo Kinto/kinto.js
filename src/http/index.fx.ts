@@ -13,14 +13,11 @@
  * limitations under the License.
  */
 
+import { EventEmitter } from "resource://gre/modules/EventEmitter.sys.mjs";
+
 import KintoClientBase, { KintoClientOptions } from "./base";
 import * as errors from "./errors";
 import { EventEmitter as ee } from "events";
-
-declare const ChromeUtils: any;
-const { EventEmitter } = ChromeUtils.importESModule(
-  "resource://gre/modules/EventEmitter.sys.mjs"
-) as { EventEmitter: any };
 
 export default class KintoHttpClient extends KintoClientBase {
   constructor(remote: string, options: Partial<KintoClientOptions> = {}) {
