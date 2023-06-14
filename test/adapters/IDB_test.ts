@@ -48,13 +48,13 @@ describe("adapter.IDB", () => {
     });
 
     it("should be fullfilled when no connection has been opened", async () => {
-      db["_db"] = null;
+      db._db = null;
       await db.close();
     });
 
     it("should close an opened connection to the database", async () => {
       await db.close();
-      expect(db["_db"]).to.equal(null);
+      expect(db._db).to.equal(null);
     });
   });
 

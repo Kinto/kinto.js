@@ -629,7 +629,7 @@ describe("HTTP Collection", () => {
     });
 
     it("should extend request headers with optional ones", () => {
-      coll["_headers"] = { Foo: "Bar" };
+      coll._headers = { Foo: "Bar" };
       coll.deleteRecords({ headers: { Baz: "Qux" } });
 
       sinon.assert.calledWithMatch(executeStub, {

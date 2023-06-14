@@ -2232,7 +2232,7 @@ describe("Collection", () => {
               );
 
             const res = await articles.pullChanges(client, result);
-            res["toObject"]().should.deep.equal({
+            res.toObject().should.deep.equal({
               ok: false,
               lastModified: 42,
               errors: [],
@@ -2282,7 +2282,7 @@ describe("Collection", () => {
             const syncResult = new SyncResultObject();
             await articles.resolve(conflict, resolution);
             const result = await articles.pullChanges(client, syncResult);
-            result["toObject"]().should.deep.equal({
+            result.toObject().should.deep.equal({
               ok: true,
               lastModified: 42,
               errors: [],
@@ -2318,7 +2318,7 @@ describe("Collection", () => {
 
           it("should resolve with solved changes", async () => {
             const res = await articles.pullChanges(client, result);
-            res["toObject"]().should.deep.equal({
+            res.toObject().should.deep.equal({
               ok: true,
               lastModified: 42,
               errors: [],

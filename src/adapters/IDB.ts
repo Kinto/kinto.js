@@ -538,7 +538,7 @@ export default class IDB<
           // Store obtained records by id.
           const preloaded: { [key: string]: KintoObject } = {};
           for (const record of records) {
-            delete record["_cid"];
+            delete record._cid;
             preloaded[record.id] = record;
           }
           runCallback(preloaded);
@@ -589,7 +589,7 @@ export default class IDB<
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
           for (const result of _results) {
-            delete result["_cid"];
+            delete result._cid;
           }
           results = _results;
         });
