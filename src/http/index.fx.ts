@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+/* @ts-ignore */
 import { EventEmitter } from "resource://gre/modules/EventEmitter.sys.mjs";
 
 import KintoClientBase, { KintoClientOptions } from "./base";
