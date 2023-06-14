@@ -737,12 +737,11 @@ export default class Collection {
     const path = this._endpoints.record(this.bucket.name, this.name);
     if (options.at) {
       return this.getSnapshot<T>(options.at);
-    } else {
-      return this.client.paginatedList<T>(path, options, {
-        headers: this._getHeaders(options),
-        retry: this._getRetry(options),
-      });
     }
+    return this.client.paginatedList<T>(path, options, {
+      headers: this._getHeaders(options),
+      retry: this._getRetry(options),
+    });
   }
 
   /**

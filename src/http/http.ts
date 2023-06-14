@@ -209,9 +209,8 @@ export default class HTTP {
     // If number of allowed of retries is not exhausted, retry the same request.
     if (retryAfter && options.retry > 0) {
       return this.retry<T>(url, retryAfter, request, options);
-    } else {
-      return this.processResponse<T>(response);
     }
+    return this.processResponse<T>(response);
   }
 
   _checkForDeprecationHeader(headers: FetchHeaders): void {

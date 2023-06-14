@@ -515,9 +515,8 @@ export default class KintoClientBase {
     const responses = await this._batchRequests(rootBatch._requests, options);
     if (options.aggregate) {
       return aggregate(responses, rootBatch._requests);
-    } else {
-      return responses;
     }
+    return responses;
   }
 
   /**
