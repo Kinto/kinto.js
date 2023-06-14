@@ -328,7 +328,7 @@ function importChange<
     }
     return {
       type: "conflicts",
-      data: { type: "incoming", local: local, remote: remote },
+      data: { type: "incoming", local, remote },
     };
   }
   // Local record was synced.

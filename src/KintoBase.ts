@@ -47,7 +47,7 @@ export default class KintoBase<
    */
   static get adapters() {
     return {
-      BaseAdapter: BaseAdapter,
+      BaseAdapter,
     };
   }
 

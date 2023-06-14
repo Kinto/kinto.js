@@ -52,7 +52,7 @@ export function fakeServerResponse(
     respHeaders.set("Content-Length", JSON.stringify(json).length.toString());
   }
   return Promise.resolve({
-    status: status,
+    status,
     statusText: status === 200 ? "OK" : "Error",
     headers: respHeaders,
     text() {
