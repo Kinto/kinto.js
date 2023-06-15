@@ -20,7 +20,7 @@ import KintoClientBase, { KintoClientOptions } from "./base";
 import * as errors from "./errors";
 import { EventEmitter as ee } from "events";
 
-export default class KintoHttpClient extends KintoClientBase {
+export class KintoHttpClient extends KintoClientBase {
   constructor(remote: string, options: Partial<KintoClientOptions> = {}) {
     const events = {};
     EventEmitter.decorate(events);
