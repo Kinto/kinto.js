@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import { v4 as uuid4 } from "uuid";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
@@ -170,7 +171,7 @@ describe("Integration tests", function (__test) {
         // Create remote records
         await collection.api
           .bucket("default")
-          .collection(collection._name)
+          .collection(collection["_name"])
           .batch(
             (batch) => {
               data.localSynced.forEach((r: any) => batch.createRecord(r));
@@ -187,7 +188,7 @@ describe("Integration tests", function (__test) {
             // Create remote records
             collection.api
               .bucket("default")
-              .collection(collection._name)
+              .collection(collection["_name"])
               .batch(
                 (batch_1) => {
                   data.server.forEach((r: any) => batch_1.createRecord(r));
@@ -694,7 +695,7 @@ describe("Integration tests", function (__test) {
           });
 
           it("should put remote test server data in the expected state", async () => {
-            const list = await getRemoteList(tasksTransformed._name);
+            const list = await getRemoteList(tasksTransformed["_name"]);
             list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1", done: true },
@@ -947,10 +948,10 @@ describe("Integration tests", function (__test) {
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          const record_1 = await collection._encodeRecord("remote", record);
+          const record_1 = await collection["_encodeRecord"]("remote", record);
           await collection.api
             .bucket("default")
-            .collection(collection._name)
+            .collection(collection["_name"])
             .createRecord(record_1 as any);
           const res = await collection.sync();
           const recordId = res.created[0].id;
@@ -1195,7 +1196,7 @@ describe("Integration tests", function (__test) {
           });
 
           it("should put the remote database in the expected state", async () => {
-            const list = await getRemoteList(tasksTransformed._name);
+            const list = await getRemoteList(tasksTransformed["_name"]);
             list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
@@ -1329,20 +1330,20 @@ describe("Integration tests", function (__test) {
           const record = { title: "task1-remote", done: true };
           // Ensure that the remote record looks like something that's
           // been transformed
-          const record_1 = await collection._encodeRecord("remote", record);
+          const record_1 = await collection["_encodeRecord"]("remote", record);
           await collection.api
             .bucket("default")
-            .collection(collection._name)
+            .collection(collection["_name"])
             .createRecord(record_1 as any);
           const res = await collection.sync();
           const recordId = res.created[0].id;
           await collection.api.deleteBucket("default");
           const res_1 = await collection.api
             .bucket("default")
-            .collection(collection._name)
+            .collection(collection["_name"])
             .listRecords();
           const lastModified = parseInt(res_1.last_modified!, 10);
-          collection._lastModified = lastModified;
+          collection["_lastModified"] = lastModified;
           await collection.db.saveLastModified(lastModified);
           return await collection.update({
             id: recordId,
@@ -1570,7 +1571,7 @@ describe("Integration tests", function (__test) {
           });
 
           it("should put the remote database in the expected state", async () => {
-            const list = await getRemoteList(tasksTransformed._name);
+            const list = await getRemoteList(tasksTransformed["_name"]);
             list.should.deep.equal([
               // local task4 should have been published to the server.
               { title: "task1-local!", done: false },
@@ -1709,7 +1710,7 @@ describe("Integration tests", function (__test) {
 
         async function loadFixtures() {
           const serverSettings = await tasks.api.fetchServerSettings();
-          nbFixtures = serverSettings.batch_max_requests + 10;
+          nbFixtures = serverSettings["batch_max_requests"] + 10;
           const fixtures = [];
           for (let i = 0; i < nbFixtures; i++) {
             fixtures.push({ title: "title" + i, position: i });

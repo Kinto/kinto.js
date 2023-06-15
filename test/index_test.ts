@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
@@ -149,7 +150,7 @@ describe("Kinto", () => {
       });
       const coll = db.collection("plop");
 
-      expect(coll.api._headers).eql({ Authorization: "Basic plop" });
+      expect(coll.api["_headers"]).eql({ Authorization: "Basic plop" });
     });
 
     it("should create collection using an optional adapter", () => {

@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { fakeServerResponse, Stub, expectAsyncError } from "../test_utils";
@@ -73,7 +74,7 @@ describe("KintoClient", () => {
       expect(
         new KintoClient(sampleRemote, {
           headers: { Foo: "Bar" },
-        })._headers
+        })["_headers"]
       ).eql({ Foo: "Bar" });
     });
 
@@ -117,7 +118,7 @@ describe("KintoClient", () => {
 
     it("should accept a safe option", () => {
       const api = new KintoClient(sampleRemote, { safe: true });
-      expect(api._safe).eql(true);
+      expect(api["_safe"]).eql(true);
     });
 
     it("should use fetchFunc option", async () => {
@@ -148,7 +149,7 @@ describe("KintoClient", () => {
       client.setHeaders({
         Authorization: "Baz",
       });
-      expect(client._headers).eql({ Foo: "Bar", Authorization: "Baz" });
+      expect(client["_headers"]).eql({ Foo: "Bar", Authorization: "Baz" });
     });
   });
 
@@ -359,7 +360,7 @@ describe("KintoClient", () => {
         ];
 
         beforeEach(async () => {
-          api._headers = { Authorization: "Basic plop" };
+          api["_headers"] = { Authorization: "Basic plop" };
           await api
             .bucket("default")
             .collection("blog")
@@ -1012,7 +1013,7 @@ describe("KintoClient", () => {
       });
 
       it("should support passing custom headers", async () => {
-        api._headers = { Foo: "Bar" };
+        api["_headers"] = { Foo: "Bar" };
         await api.listPermissions({ headers: { Baz: "Qux" } });
         sinon.assert.calledWithMatch(executeStub, {
           path: "/permissions?_sort=id",
@@ -1083,7 +1084,7 @@ describe("KintoClient", () => {
     });
 
     it("should support passing custom headers", () => {
-      api._headers = { Foo: "Bar" };
+      api["_headers"] = { Foo: "Bar" };
       api.listBuckets({ headers: { Baz: "Qux" } });
 
       sinon.assert.calledWithMatch(
@@ -1171,7 +1172,7 @@ describe("KintoClient", () => {
     });
 
     it("should extend request headers with optional ones", () => {
-      api._headers = { Foo: "Bar" };
+      api["_headers"] = { Foo: "Bar" };
 
       api.createBucket("foo", { headers: { Baz: "Qux" } });
 
@@ -1251,7 +1252,7 @@ describe("KintoClient", () => {
     });
 
     it("should extend request headers with optional ones", () => {
-      api._headers = { Foo: "Bar" };
+      api["_headers"] = { Foo: "Bar" };
 
       api.deleteBucket("plop", { headers: { Baz: "Qux" } });
 
@@ -1325,7 +1326,7 @@ describe("KintoClient", () => {
     });
 
     it("should extend request headers with optional ones", async () => {
-      api._headers = { Foo: "Bar" };
+      api["_headers"] = { Foo: "Bar" };
 
       await api.deleteBuckets({ headers: { Baz: "Qux" } });
       sinon.assert.calledWithMatch(
