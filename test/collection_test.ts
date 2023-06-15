@@ -197,7 +197,7 @@ describe("Collection", () => {
               TEST_COLLECTION_NAME,
               { api } as unknown as KintoBase<any>,
               {
-                adapter () {},
+                adapter() {},
               } as any
             );
           }).to.Throw(Error, /Unsupported adapter/);
@@ -2588,9 +2588,9 @@ describe("Collection", () => {
             updateRecord: sinon.SinonExpectation;
           beforeEach(() => {
             batch = {
-              deleteRecord () {},
-              createRecord () {},
-              updateRecord () {},
+              deleteRecord() {},
+              createRecord() {},
+              updateRecord() {},
             };
             batchSpy = sandbox.mock(batch);
             deleteRecord = batchSpy.expects("deleteRecord");
