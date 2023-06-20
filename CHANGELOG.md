@@ -2,6 +2,30 @@
 
 This document describes changes between each past release.
 
+## v15.0.0 (2023-06-20)
+
+**Breaking Changes**
+
+- Merge kinto-http into kinto.js (#1726, #1735)
+- Generate ES6/ES2015 Javascript for Gecko mozilla-central (#2050)
+
+**Internal Changes**
+
+- Fix some eslint checks present in mozilla-central (#2051)
+- fix: remove unused typeRoots config
+- update dependabot monthly (#2014)
+- ci: disable ipv6 for browser tests (#2001)
+- upgrade to fake-indexeddb v4 (#1995)
+- upgrade to rollup v3 (#1994)
+- update dependencies to latest in current semver range (#1993)
+- Pin Node version used in browser tests (#1990)
+- Update `ChromeUtils` module imports
+- Replace deprecated substr method with substring method (#1822)
+- Use the official demo URL (#1629)
+- Upgrade to GitHub-native Dependabot (#1495)
+- run browser tests on Linux (#1467)
+- Make omitKeys more type-safe (#1456)
+
 ## v14.0.2 (2020-12-10)
 
 You can now import the following from the module:
