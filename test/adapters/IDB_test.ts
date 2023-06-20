@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 
 import IDB, { open, execute } from "../../src/adapters/IDB";

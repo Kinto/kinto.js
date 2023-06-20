@@ -442,7 +442,7 @@ export default class KintoClientBase {
     const serverSettings = await this.fetchServerSettings({
       retry: this._getRetry(options),
     });
-    const maxRequests = serverSettings["batch_max_requests"];
+    const maxRequests = serverSettings.batch_max_requests;
     if (maxRequests && requests.length > maxRequests) {
       const chunks = partition(requests, maxRequests);
       const results = [];
@@ -515,9 +515,8 @@ export default class KintoClientBase {
     const responses = await this._batchRequests(rootBatch._requests, options);
     if (options.aggregate) {
       return aggregate(responses, rootBatch._requests);
-    } else {
-      return responses;
     }
+    return responses;
   }
 
   /**

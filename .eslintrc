@@ -20,7 +20,11 @@
     ],
     "no-var": 2,
     "prefer-const": 1,
-    "semi": [2, "always"]
+    "semi": [2, "always"],
+    "no-else-return": "error",
+    "object-shorthand": ["error", "always"],
+    "dot-notation": "error",
+    "consistent-return": "error"
   },
   "env": {
     "es6": true,

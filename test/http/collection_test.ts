@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import KintoClient from "../../src/http";
 import Bucket from "../../src/http/bucket";

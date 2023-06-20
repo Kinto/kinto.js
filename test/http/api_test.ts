@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { fakeServerResponse, Stub, expectAsyncError } from "../test_utils";
@@ -743,6 +744,7 @@ describe("KintoClient", () => {
                 if (name === "ETag") {
                   return ETag;
                 }
+                return "";
               },
             },
           })

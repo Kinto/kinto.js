@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import { v4 as uuid4 } from "uuid";
 import sinon from "sinon";
 import KintoServer from "kinto-node-test-server";
