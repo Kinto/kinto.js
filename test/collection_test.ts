@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { v4 as uuid4 } from "uuid";
@@ -197,7 +198,7 @@ describe("Collection", () => {
               TEST_COLLECTION_NAME,
               { api } as unknown as KintoBase<any>,
               {
-                adapter: function () {},
+                adapter() {},
               } as any
             );
           }).to.Throw(Error, /Unsupported adapter/);
@@ -344,7 +345,7 @@ describe("Collection", () => {
               TEST_COLLECTION_NAME,
               { api } as unknown as KintoBase<any>,
               {
-                idSchema: idSchema,
+                idSchema,
               }
             );
           }
@@ -1056,8 +1057,8 @@ describe("Collection", () => {
           };
           conflict = {
             type: "incoming",
-            local: local,
-            remote: remote,
+            local,
+            remote,
           };
         });
 
@@ -1144,7 +1145,7 @@ describe("Collection", () => {
           const res_1 = await articles.get(id, { includeDeleted: true });
           res_1.data.should.deep.equal({
             _status: "deleted",
-            id: id,
+            id,
             title: "foo",
             url: "http://foo",
           });
@@ -1176,7 +1177,7 @@ describe("Collection", () => {
           const res_1 = await articles.getAny(id);
           res_1.data.should.deep.equal({
             _status: "deleted",
-            id: id,
+            id,
             title: "foo",
             url: "http://foo",
           });
@@ -1740,7 +1741,7 @@ describe("Collection", () => {
             });
             const id = uuid4();
             await articles.create(
-              { id: id, title: "some title" },
+              { id, title: "some title" },
               { synced: true }
             );
             await articles.delete(id);
@@ -2173,7 +2174,7 @@ describe("Collection", () => {
               const id = uuid4();
               listRecords.returns(
                 Promise.resolve({
-                  data: [{ id: id, deleted: true }],
+                  data: [{ id, deleted: true }],
                   next: () => {},
                   last_modified: "42",
                 })
@@ -2264,8 +2265,8 @@ describe("Collection", () => {
             const remote = { ...local, title: "blah", last_modified: 42 };
             const conflict = {
               type: "incoming" as const,
-              local: local,
-              remote: remote,
+              local,
+              remote,
             };
             const resolution = { ...local, title: "resolved" };
             sandbox
@@ -2588,9 +2589,9 @@ describe("Collection", () => {
             updateRecord: sinon.SinonExpectation;
           beforeEach(() => {
             batch = {
-              deleteRecord: function () {},
-              createRecord: function () {},
-              updateRecord: function () {},
+              deleteRecord() {},
+              createRecord() {},
+              updateRecord() {},
             };
             batchSpy = sandbox.mock(batch);
             deleteRecord = batchSpy.expects("deleteRecord");

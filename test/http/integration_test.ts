@@ -69,7 +69,7 @@ describe("HTTP Integration tests", function (__test) {
 
   after(() => {
     if (skipLocalServer) {
-      return;
+      return Promise.resolve();
     }
     const logLines = server.logs.toString().split("\n");
     const serverDidCrash = logLines.some((l) => l.startsWith("Traceback"));

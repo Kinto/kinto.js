@@ -110,11 +110,11 @@ export class SyncResultObject {
   }
 
   get errors() {
-    return this._lists["errors"];
+    return this._lists.errors;
   }
 
   get conflicts() {
-    return this._lists["conflicts"];
+    return this._lists.conflicts;
   }
 
   get skipped() {
@@ -328,7 +328,7 @@ function importChange<
     }
     return {
       type: "conflicts",
-      data: { type: "incoming", local: local, remote: remote },
+      data: { type: "incoming", local, remote },
     };
   }
   // Local record was synced.

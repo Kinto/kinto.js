@@ -529,7 +529,8 @@ export default class IDB<
 
         // No option to preload records, go straight to `callback`.
         if (!options.preload) {
-          return runCallback();
+          runCallback();
+          return;
         }
 
         // Preload specified records using a list request.
@@ -538,7 +539,7 @@ export default class IDB<
           // Store obtained records by id.
           const preloaded: { [key: string]: KintoObject } = {};
           for (const record of records) {
-            delete record["_cid"];
+            delete record._cid;
             preloaded[record.id] = record;
           }
           runCallback(preloaded);
@@ -556,7 +557,7 @@ export default class IDB<
    * @param  {String} id The record id.
    * @return {Promise}
    */
-  async get(id: string): Promise<B | undefined> {
+  async get(id: string): Promise<B | null> {
     try {
       let record: B;
       await this.prepare("records", (store) => {
@@ -567,6 +568,7 @@ export default class IDB<
     } catch (e: any) {
       this._handleError("get", e);
     }
+    return null;
   }
 
   /**
@@ -589,7 +591,7 @@ export default class IDB<
           // we have received all requested records that match the filters,
           // we now park them within current scope and hide the `_cid` attribute.
           for (const result of _results) {
-            delete result["_cid"];
+            delete result._cid;
           }
           results = _results;
         });
@@ -722,6 +724,7 @@ export default class IDB<
       return metadata;
     } catch (e: any) {
       this._handleError("saveMetadata", e);
+      return null;
     }
   }
 
@@ -735,6 +738,7 @@ export default class IDB<
       return entry ? (entry as { metadata: any }).metadata : null;
     } catch (e: any) {
       this._handleError("getMetadata", e);
+      return null;
     }
   }
 }

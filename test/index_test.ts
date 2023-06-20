@@ -1,3 +1,4 @@
+/* eslint dot-notation: off */
 import sinon from "sinon";
 import { EventEmitter } from "events";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";

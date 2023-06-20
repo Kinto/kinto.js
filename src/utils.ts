@@ -168,9 +168,8 @@ function makeNestedObjectFromArr(
       return (acc[cv] = val);
     } else if (Object.prototype.hasOwnProperty.call(acc, cv)) {
       return acc[cv];
-    } else {
-      return (acc[cv] = {});
     }
+    return (acc[cv] = {});
   }, nestedFiltersObj);
 }
 
@@ -266,9 +265,8 @@ export function qsify(obj: { [key: string]: any }): string {
       const ks = encode(k) + "=";
       if (Array.isArray(stripped[k])) {
         return ks + stripped[k].map((v: any) => encode(v)).join(",");
-      } else {
-        return ks + encode(stripped[k]);
       }
+      return ks + encode(stripped[k]);
     })
     .join("&");
 }
@@ -376,7 +374,7 @@ export function capable(capabilities: string[]): DecoratorReturn {
             .fetchServerCapabilities()
             .then((available: string[]) => {
               const missing = capabilities.filter((c) => !(c in available));
-              if (missing.length > 0) {
+              if (missing.length) {
                 const missingStr = missing.join(", ");
                 throw new Error(
                   `Required capabilities ${missingStr} not present on server`
