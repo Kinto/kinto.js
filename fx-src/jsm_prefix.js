@@ -11,18 +11,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-"use strict";
-
-/*
+ *
  * This file is generated from kinto.js - do not modify directly.
  */
 
-const global = this;
-const globalThis = this;
-
-var EXPORTED_SYMBOLS = ["KintoHttpClient"];
-
-const { setTimeout, clearTimeout } = ChromeUtils.importESModule("resource://gre/modules/Timer.sys.mjs");
-const { XPCOMUtils } = ChromeUtils.importESModule("resource://gre/modules/XPCOMUtils.sys.mjs");
-XPCOMUtils.defineLazyGlobalGetters(global, ["fetch"]);
+import { setTimeout, clearTimeout } from "resource://gre/modules/Timer.sys.mjs";

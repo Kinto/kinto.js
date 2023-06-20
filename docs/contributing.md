@@ -71,7 +71,7 @@ This should have created the following assets, with the current version in the f
 -  `dist/kinto.js`: Development version, unminified, embedding source maps;
 -  `dist/kinto.min.js`: Production version, minified, no source maps;
 -  `dist/kinto.noshim.js`: Production version, minified, no polyfills;
--  `dist/moz-kinto-offline-client.js`: Firefox internal component bundle (for Mozilla specific use).
+-  `dist/moz-kinto-http-client.sys.mjs`: Firefox internal component bundle (for Mozilla specific use).
 
 Once a new version is packaged and [published to npm](#publishing-to-npm), the [unpkg](https://unpkg.com/ service) makes ready-to-use kinto.js assets available from the following urls:
 
