@@ -47,7 +47,7 @@ jobs:
         run: |
           $ver = chromedriver --version | Out-String | Select-String -Pattern "ChromeDriver (\d+(\.\d+)+)" | % { $_.Matches.Groups[1].Value }
           $con = Get-Content (Join-Path -Path '.' -ChildPath 'intern.json') | Out-String | ConvertFrom-Json
-          $con | Add-Member -MemberType NoteProperty -Name "tunnelOptions" -Value @{drivers=@(@{name="chrome"; version=$ver.trim()})}
+          $con | Add-Member -MemberType NoteProperty -Name "tunnelOptions" -Value @{drivers=@(@{name="chrome"; executable="/usr/local/share/chromedriver-linux64"})}
           $con | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path -Path '.' -ChildPath 'intern.json')
 
       - name: Run tests
