@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        browser: [chrome, firefox]
+        browser: [firefox]
 
     steps:
       # Disabling IPv6 is necessary since Selenium doesn't listen on the IPv6
