@@ -157,7 +157,7 @@ export interface RemoteTransformer {
 export type AvailableHook = "incoming-changes";
 
 export type Hooks<
-  T extends { id: string; [key: string]: unknown } = { id: string }
+  T extends { id: string; [key: string]: unknown } = { id: string },
 > = {
   [key in AvailableHook]?: ((
     record: any,

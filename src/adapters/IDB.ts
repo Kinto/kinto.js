@@ -289,7 +289,7 @@ class IDBError extends Error {
  * This adapter doesn't support any options.
  */
 export default class IDB<
-  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+  B extends { id: string; last_modified?: number; _status?: RecordStatus },
 > extends BaseAdapter<B> {
   private _db: IDBDatabase | null;
   public cid: string;
@@ -753,7 +753,7 @@ export default class IDB<
  * @return {Object}
  */
 function transactionProxy<
-  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+  T extends { id: string; last_modified?: number; _status?: RecordStatus },
 >(
   adapter: IDB<T>,
   store: IDBObjectStore,
@@ -785,7 +785,7 @@ function transactionProxy<
  * and contained only one store with the same name.
  */
 async function migrationRequired<
-  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+  T extends { id: string; last_modified?: number; _status?: RecordStatus },
 >(dbName: string): Promise<{ records: T[]; timestamp: number | null } | null> {
   let exists = true;
   const db = await open(dbName, {
