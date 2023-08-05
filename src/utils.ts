@@ -136,7 +136,7 @@ export function deepEqual(a: any, b: any): boolean {
  */
 export function omitKeys<
   T extends { [key: string]: unknown },
-  K extends string
+  K extends string,
 >(obj: T, keys: K[] = []): Omit<T, K> {
   const result = { ...obj };
   for (const key of keys) {

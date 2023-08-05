@@ -10,7 +10,11 @@ import type Collection from "./collection";
 import type { CollectionSyncOptions, Conflict, RecordStatus } from "./types";
 
 export default class Kinto<
-  B extends { id: string; last_modified?: number; _status?: RecordStatus } = any
+  B extends {
+    id: string;
+    last_modified?: number;
+    _status?: RecordStatus;
+  } = any,
 > extends KintoBase<B> {
   /**
    * Provides a public access to the base adapter classes. Users can create

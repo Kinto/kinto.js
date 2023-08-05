@@ -266,7 +266,7 @@ function markSynced<T extends { _status?: string }>(record: T) {
  * @return {Object}
  */
 function importChange<
-  T extends { id: string; last_modified?: number; _status?: RecordStatus }
+  T extends { id: string; last_modified?: number; _status?: RecordStatus },
 >(
   transaction: StorageProxy<T>,
   remote: T & { deleted?: boolean },
@@ -350,7 +350,11 @@ function importChange<
  * CRUD operations and synchronization helpers.
  */
 export default class Collection<
-  B extends { id: string; last_modified?: number; _status?: RecordStatus } = any
+  B extends {
+    id: string;
+    last_modified?: number;
+    _status?: RecordStatus;
+  } = any,
 > {
   /**
    * Constructor.
@@ -1701,7 +1705,7 @@ export default class Collection<
  * perform just one operation in its own transaction.
  */
 export class CollectionTransaction<
-  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+  B extends { id: string; last_modified?: number; _status?: RecordStatus },
 > {
   public collection: Collection<B>;
   public adapterTransaction: StorageProxy<B>;

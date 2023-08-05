@@ -33,7 +33,7 @@ export interface KintoBaseOptions {
  */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 export default class KintoBase<
-  B extends { id: string; last_modified?: number; _status?: RecordStatus }
+  B extends { id: string; last_modified?: number; _status?: RecordStatus },
 > {
   /* eslint-enable @typescript-eslint/no-unused-vars */
   private _options: KintoBaseOptions;
@@ -141,7 +141,7 @@ export default class KintoBase<
       id: string;
       last_modified?: number;
       _status?: RecordStatus;
-    } = any
+    } = any,
   >(
     collName: string,
     options: {
