@@ -5,3 +5,7 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 99
+    groups:
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/*"
