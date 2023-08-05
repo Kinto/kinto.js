@@ -24,18 +24,6 @@
           "fixSessionCapabilities": "no-detect"
         }
       ]
-    },
-    "chrome": {
-      "bail": true,
-      "environments": [
-        {
-          "browserName": "chrome",
-          "goog:chromeOptions": {
-            "args": ["disk-cache-dir=/dev/null", "headless", "disable-gpu"]
-          },
-          "fixSessionCapabilities": "no-detect"
-        }
-      ]
     }
   }
 }

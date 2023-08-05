@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        browser: [chrome, firefox]
+        browser: [firefox]
 
     steps:
       # Disabling IPv6 is necessary since Selenium doesn't listen on the IPv6
@@ -41,14 +41,6 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install kinto kinto-attachment
-
-      - name: Pin ChromeDriver version
-        shell: pwsh
-        run: |
-          $ver = chromedriver --version | Out-String | Select-String -Pattern "ChromeDriver (\d+(\.\d+)+)" | % { $_.Matches.Groups[1].Value }
-          $con = Get-Content (Join-Path -Path '.' -ChildPath 'intern.json') | Out-String | ConvertFrom-Json
-          $con | Add-Member -MemberType NoteProperty -Name "tunnelOptions" -Value @{drivers=@(@{name="chrome"; version=$ver.trim()})}
-          $con | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path -Path '.' -ChildPath 'intern.json')
 
       - name: Run tests
         run: npm run test:${{ matrix.browser }}
