@@ -189,7 +189,7 @@
     "mitt": "^3.0.0",
     "node-fetch": "^2.6.6",
     "nyc": "^15.1.0",
-    "open-cli": "^7.0.1",
+    "open-cli": "^8.0.0",
     "prettier": "^3.0.1",
     "rollup": "^3.19.1",
     "rollup-plugin-polyfill-node": "^0.12.0",
