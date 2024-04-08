@@ -9,3 +9,9 @@ updates:
       typescript-eslint:
         patterns:
           - "@typescript-eslint/*"
+      rollup-plugins:
+        patterns:
+          - "@rollup/*"
+      groups:
+        minor-patch:
+          update-types: ["minor", "patch"]
