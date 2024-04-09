@@ -191,7 +191,7 @@
     "nyc": "^15.1.0",
     "open-cli": "^8.0.0",
     "prettier": "^3.0.1",
-    "rollup": "^3.19.1",
+    "rollup": "^4.14.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
     "shx": "^0.3.3",
     "sinon": "^17.0.1",
