@@ -12,6 +12,5 @@ updates:
       rollup-plugins:
         patterns:
           - "@rollup/*"
-      groups:
-        minor-patch:
-          update-types: ["minor", "patch"]
+      minor-patch:
+        update-types: ["minor", "patch"]
