@@ -1,0 +1,2 @@
+from pyramid.config import Configurator
+from .authentication import GroupAwareAuthenticationPolicy
