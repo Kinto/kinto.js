@@ -1,4 +1,5 @@
 import jwt
+from jwt.exceptions import ExpiredSignatureError, DecodeError
 from pyramid.authentication import CallbackAuthenticationPolicy
 from pyramid.security import Everyone, Authenticated
 
@@ -8,12 +9,19 @@ class GroupAwareAuthenticationPolicy(CallbackAuthenticationPolicy):
     super().__init__(*args, **kwargs)
 
   def unauthenticated_userid(self, request):
-    token = request.headers.get('Authorization', '').split(None, 1)[-1]
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header:
+      return None
+
     try:
+      scheme, token = auth_header.split(None, 1)
+      if scheme.lower() != 'bearer':
+        return None  # Ensure you're dealing with a bearer token
+
       claims = jwt.decode(token, self.secret, algorithms=['HS256'])
       request.jwt_claims = claims
       return claims.get('sub')
-    except jwt.ExpiredSignatureError:
+    except (ExpiredSignatureError, DecodeError) as e:
       request.jwt_claims = {}
       return None
 
@@ -21,9 +29,7 @@ class GroupAwareAuthenticationPolicy(CallbackAuthenticationPolicy):
     principals = [Everyone]
     userid = self.unauthenticated_userid(request)
     if userid:
-      principals.append(Authenticated)
-      principals.append(f'user:{userid}')
+      principals.extend([Authenticated, f'user:{userid}'])
       groups = request.jwt_claims.get('groups', [])
-      for group in groups:
-        principals.append(f'group:{group}')
+      principals.extend(f'group:{group}' for group in groups)
     return principals
