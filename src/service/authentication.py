@@ -1,35 +1,40 @@
+import pytest
+from pyramid import testing
+from myproject.authentication import GroupAwareAuthenticationPolicy
+from jwt import ExpiredSignatureError, DecodeError
 import jwt
-from jwt.exceptions import ExpiredSignatureError, DecodeError
-from pyramid.authentication import CallbackAuthenticationPolicy
-from pyramid.security import Everyone, Authenticated
 
-class GroupAwareAuthenticationPolicy(CallbackAuthenticationPolicy):
-  def __init__(self, secret, *args, **kwargs):
-    self.secret = secret
-    super().__init__(*args, **kwargs)
+@pytest.fixture
+def request_with_auth_header():
+  request = testing.DummyRequest()
+  request.headers['Authorization'] = 'Bearer validtoken123'
+  return request
 
-  def unauthenticated_userid(self, request):
-    auth_header = request.headers.get('Authorization', '')
-    if not auth_header:
-      return None
+@pytest.fixture
+def policy():
+  return GroupAwareAuthenticationPolicy('secretkey')
 
-    try:
-      scheme, token = auth_header.split(None, 1)
-      if scheme.lower() != 'bearer':
-        return None  # Ensure you're dealing with a bearer token
+def test_valid_token(request_with_auth_header, policy):
+  with pytest.mock.patch('jwt.decode') as mock_decode:
+    mock_decode.return_value = {'sub': 'user123', 'groups': ['group1', 'group2']}
+    userid = policy.unauthenticated_userid(request_with_auth_header)
+    assert userid == 'user123'
+    principals = policy.effective_principals(request_with_auth_header)
+    assert 'group:group1' in principals
+    assert 'group:group2' in principals
 
-      claims = jwt.decode(token, self.secret, algorithms=['HS256'])
-      request.jwt_claims = claims
-      return claims.get('sub')
-    except (ExpiredSignatureError, DecodeError) as e:
-      request.jwt_claims = {}
-      return None
+def test_expired_token(policy):
+  request = testing.DummyRequest()
+  request.headers['Authorization'] = 'Bearer expiredtoken123'
+  with pytest.mock.patch('jwt.decode', side_effect=ExpiredSignatureError):
+    userid = policy.unauthenticated_userid(request)
+    assert userid is None
 
-  def effective_principals(self, request):
-    principals = [Everyone]
-    userid = self.unauthenticated_userid(request)
-    if userid:
-      principals.extend([Authenticated, f'user:{userid}'])
-      groups = request.jwt_claims.get('groups', [])
-      principals.extend(f'group:{group}' for group in groups)
-    return principals
+def test_malformed_token(policy):
+  request = testing.DummyRequest()
+  request.headers['Authorization'] = 'Bearer notatoken'
+  with pytest.mock.patch('jwt.decode', side_effect=DecodeError):
+    userid = policy.unauthenticated_userid(request)
+    assert userid is None
+    assert not policy.effective_principals(request)  # Only default principal should be present
+
