@@ -148,6 +148,7 @@
   },
   "dependencies": {
     "btoa": "^1.2.1",
+    "kinto": "^15.0.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
