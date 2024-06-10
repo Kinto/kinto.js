@@ -13,6 +13,15 @@ const DEFAULT_BUCKET_NAME = "default";
 const DEFAULT_REMOTE = "http://localhost:8888/v1";
 const DEFAULT_RETRY = 1;
 
+let kintoBaseCoverageData = {
+  apiAccessed: 0,
+  apiDoesntExist: 0,
+  apiAccessedDontCreateNew: 0,
+  apiDoesntExistCreateNew: 0,
+  collectionNameMissing: 0,
+  collectionNameProvided: 0,
+};
+
 export interface KintoBaseOptions {
   remote?: string;
   bucket?: string;
@@ -88,8 +97,10 @@ export default class KintoBase<
     };
     this._options = { ...defaults, ...options };
     if (!this._options.adapter) {
+      kintoBaseCoverageData.apiDoesntExist += 1;
       throw new Error("No adapter provided");
     }
+    kintoBaseCoverageData.apiAccessed += 1;
     this._api = null;
 
     /**
@@ -112,6 +123,7 @@ export default class KintoBase<
       this._options;
 
     if (!this._api) {
+      kintoBaseCoverageData.apiDoesntExistCreateNew += 1;
       this._api = new this.ApiClass(remote!, {
         events,
         headers,
@@ -119,6 +131,9 @@ export default class KintoBase<
         retry,
         timeout,
       });
+    }
+    else {
+      kintoBaseCoverageData.apiAccessedDontCreateNew += 1;
     }
 
     return this._api;
@@ -156,8 +171,10 @@ export default class KintoBase<
     } = {}
   ): Collection<C> {
     if (!collName) {
+      kintoBaseCoverageData.collectionNameMissing += 1;
       throw new Error("missing collection name");
     }
+    kintoBaseCoverageData.collectionNameProvided += 1;
     const { bucket, events, adapter, adapterOptions } = {
       ...this._options,
       ...options,
@@ -175,3 +192,7 @@ export default class KintoBase<
     });
   }
 }
+
+
+
+console.log(kintoBaseCoverageData);

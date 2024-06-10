@@ -28,6 +28,54 @@ const RECORD_FIELDS_TO_CLEAN = ["_status"];
 const AVAILABLE_HOOKS: AvailableHook[] = ["incoming-changes"];
 const IMPORT_CHUNK_SIZE = 200;
 
+
+let collectinCoverageData = {
+  unKnownType: 0,
+  knownType: 0,
+  arrayHasEntires: 0,
+  arrayHasNoEntires: 0,
+  isCached: 0,
+  isNotCached: 0,
+  noRecordId: 0,
+  recordId: 0,
+  captureStackTrace: 0,
+  noCaptureStackTrace: 0,
+  baseAdapter: 0,
+  notBaseAdapter: 0,
+  idSchemaUndefined: 0,
+  idSchemaDefined: 0,
+  idSchemaNotObject: 0,
+  idSchemaGenerateUndefined: 0,
+  idSchemaValidateUndefined: 0,
+  idSchemaValidated: 0,
+  remoteTransformersUndefined: 0,
+  remoteTransformersNotArray: 0,
+  remoteTransformersArray: 0,
+  remoteTransformersNotObject: 0,
+  remoteTransformersEncodeUndefined: 0,
+  remoteTransformersDecodeUndefined: 0,
+  remoteTransformersValidated: 0,
+  hookNotArray: 0,
+  hookArray: 0,
+  notDeletedIdenticalOrLastModified: 0,	
+  deletedUnsynced: 0,
+  notSynced: 0,
+  identical: 0,
+  lastModified: 0,
+  deleted: 0,
+  notDeleted: 0,
+  synced: 0,
+  syncedIdentical: 0,
+  syncedNotIdentical: 0,
+  importChange: 0,
+  notLocal: 0,
+  remoteDeleted: 0,
+  notRemoteDeleted: 0,
+  pullOnly: 0,
+  notPullOnly: 0,
+  isLocal: 0,
+};
+
 /**
  * Compare two records omitting local fields and synchronization
  * attributes (like _status and last_modified)
@@ -95,10 +143,16 @@ export class SyncResultObject {
   ): SyncResultObject {
     if (!Array.isArray(this._lists[type])) {
       console.warn(`Unknown type "${type}"`);
+      collectinCoverageData.unKnownType += 1;
       return this;
     }
+    collectinCoverageData.knownType += 1;
     if (!Array.isArray(entries)) {
       entries = [entries];
+      collectinCoverageData.arrayHasEntires += 1;
+    }
+    else {
+      collectinCoverageData.arrayHasNoEntires += 1;
     }
     this._lists[type] = [...this._lists[type], ...(entries as SyncResult[K])];
     delete this._cached[type];
@@ -145,18 +199,24 @@ export class SyncResultObject {
     if (!(list in this._cached)) {
       // Deduplicate entries by id. If the values don't have `id` attribute, just
       // keep all.
+      collectinCoverageData.isNotCached += 1;
       const recordsWithoutId = new Set();
       const recordsById = new Map();
       this._lists[list].forEach((record) => {
         if (!record.id) {
+          collectinCoverageData.noRecordId += 1;
           recordsWithoutId.add(record);
         } else {
+          collectinCoverageData.recordId += 1;
           recordsById.set(record.id, record);
         }
       });
       this._cached[list] = Array.from(recordsById.values()).concat(
         Array.from(recordsWithoutId)
       );
+    }
+    else {
+      collectinCoverageData.isCached += 1;
     }
     return (this._cached as NonNullable<SyncResult>)[list];
   }
@@ -203,7 +263,11 @@ export class ServerWasFlushedError extends Error {
     super(message);
 
     if (Error.captureStackTrace) {
+      collectinCoverageData.captureStackTrace += 1;
       Error.captureStackTrace(this, ServerWasFlushedError);
+    }
+    else {
+      collectinCoverageData.noCaptureStackTrace += 1;
     }
 
     this.clientTimestamp = clientTimestamp;
@@ -275,26 +339,38 @@ function importChange<
 ): Change<T> {
   const local = transaction.get(remote.id);
   if (!local) {
+    collectinCoverageData.notLocal += 1;
     // Not found locally but remote change is marked as deleted; skip to
     // avoid recreation.
     if (remote.deleted) {
+      collectinCoverageData.remoteDeleted += 1;
       return { type: "skipped", data: remote };
     }
+    collectinCoverageData.notRemoteDeleted += 1;
     const synced = markSynced(remote);
     transaction.create(synced);
     return { type: "created", data: synced };
+  }
+  else {
+    collectinCoverageData.isLocal += 1;
   }
   // Apply remote changes on local record.
   const synced = { ...local, ...markSynced(remote) };
 
   // With pull only, we don't need to compare records since we override them.
   if (strategy === Collection.strategy.PULL_ONLY) {
+    collectinCoverageData.pullOnly += 1;
     if (remote.deleted) {
+      collectinCoverageData.deleted += 1;
       transaction.delete(remote.id);
       return { type: "deleted", data: local };
     }
+    collectinCoverageData.notDeleted += 1;
     transaction.update(synced);
     return { type: "updated", data: { old: local, new: synced } };
+  }
+  else {
+    collectinCoverageData.notPullOnly += 1;
   }
 
   // With other sync strategies, we detect conflicts,
@@ -302,11 +378,14 @@ function importChange<
   const isIdentical = recordsEqual(local, remote, localFields);
   // Detect or ignore conflicts if record has also been modified locally.
   if (local._status !== "synced") {
+    collectinCoverageData.notSynced += 1;
     // Locally deleted, unsynced: scheduled for remote deletion.
     if (local._status === "deleted") {
+      collectinCoverageData.deletedUnsynced += 1;
       return { type: "skipped", data: local };
     }
     if (isIdentical) {
+      collectinCoverageData.identical += 1;
       // If records are identical, import anyway, so we bump the
       // local last_modified value from the server and set record
       // status to "synced".
@@ -317,6 +396,7 @@ function importChange<
       local.last_modified !== undefined &&
       local.last_modified === remote.last_modified
     ) {
+      collectinCoverageData.lastModified += 1;
       // If our local version has the same last_modified as the remote
       // one, this represents an object that corresponds to a resolved
       // conflict. Our local version represents the final output, so
@@ -326,22 +406,33 @@ function importChange<
       // the server, which *must* be a conflict.
       return { type: "void" };
     }
+    collectinCoverageData.notDeletedIdenticalOrLastModified += 1;
     return {
       type: "conflicts",
       data: { type: "incoming", local, remote },
     };
   }
+  else {
+    collectinCoverageData.synced += 1;
+  }
   // Local record was synced.
   if (remote.deleted) {
+    collectinCoverageData.remoteDeleted += 1;
     transaction.delete(remote.id);
     return { type: "deleted", data: local };
   }
+  collectinCoverageData.notRemoteDeleted += 1;
   // Import locally.
   transaction.update(synced);
   // if identical, simply exclude it from all SyncResultObject lists
   if (isIdentical) {
+    collectinCoverageData.syncedIdentical += 1;
     return { type: "void" };
   }
+  else {
+    collectinCoverageData.syncedNotIdentical += 1;
+  }
+  collectinCoverageData.importChange += 1;
   return { type: "updated", data: { old: local, new: synced } };
 }
 
@@ -403,8 +494,10 @@ export default class Collection<
       ? options.adapter(`${bucket}/${name}`, options.adapterOptions)
       : new IDB<B>(`${bucket}/${name}`, options.adapterOptions);
     if (!(db instanceof BaseAdapter)) {
+      collectinCoverageData.notBaseAdapter += 1;
       throw new Error("Unsupported adapter.");
     }
+    collectinCoverageData.baseAdapter += 1;
     // public properties
     this.db = db;
     /**
@@ -499,15 +592,21 @@ export default class Collection<
    */
   private _validateIdSchema(idSchema?: IdSchema) {
     if (typeof idSchema === "undefined") {
+      collectinCoverageData.idSchemaUndefined += 1;
       return createUUIDSchema();
     }
+    collectinCoverageData.idSchemaDefined += 1;
     if (typeof idSchema !== "object") {
+      collectinCoverageData.idSchemaNotObject += 1;
       throw new Error("idSchema must be an object.");
     } else if (typeof idSchema.generate !== "function") {
+      collectinCoverageData.idSchemaGenerateUndefined += 1;
       throw new Error("idSchema must provide a generate function.");
     } else if (typeof idSchema.validate !== "function") {
+      collectinCoverageData.idSchemaValidateUndefined += 1;
       throw new Error("idSchema must provide a validate function.");
     }
+    collectinCoverageData.idSchemaValidated += 1;
     return idSchema;
   }
 
@@ -521,19 +620,26 @@ export default class Collection<
     remoteTransformers?: RemoteTransformer[]
   ) {
     if (typeof remoteTransformers === "undefined") {
+      collectinCoverageData.remoteTransformersUndefined += 1;
       return [];
     }
     if (!Array.isArray(remoteTransformers)) {
+      collectinCoverageData.remoteTransformersNotArray += 1;
       throw new Error("remoteTransformers should be an array.");
     }
+    collectinCoverageData.remoteTransformersArray += 1;
     return remoteTransformers.map((transformer) => {
       if (typeof transformer !== "object") {
+        collectinCoverageData.remoteTransformersNotObject += 1;
         throw new Error("A transformer must be an object.");
       } else if (typeof transformer.encode !== "function") {
+        collectinCoverageData.remoteTransformersEncodeUndefined += 1;
         throw new Error("A transformer must provide an encode function.");
       } else if (typeof transformer.decode !== "function") {
+        collectinCoverageData.remoteTransformersDecodeUndefined += 1;
         throw new Error("A transformer must provide a decode function.");
       }
+      collectinCoverageData.remoteTransformersValidated += 1;
       return transformer;
     });
   }
@@ -548,8 +654,10 @@ export default class Collection<
     hook: ((record: B, collection: Collection<B>) => any)[]
   ): ((record: B, collection: Collection<B>) => any)[] {
     if (!Array.isArray(hook)) {
+      collectinCoverageData.hookNotArray += 1;
       throw new Error("A hook definition should be an array of functions.");
     }
+    collectinCoverageData.hookArray += 1;
     return hook.map((fn) => {
       if (typeof fn !== "function") {
         throw new Error("A hook definition should be an array of functions.");
@@ -1981,3 +2089,6 @@ export class CollectionTransaction<
     return { data: updated, oldRecord, permissions: {} };
   }
 }
+
+
+console.log("Collection.ts Coverage data: ", collectinCoverageData);
