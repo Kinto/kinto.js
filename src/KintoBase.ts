@@ -98,9 +98,13 @@ export default class KintoBase<
     this._options = { ...defaults, ...options };
     if (!this._options.adapter) {
       kintoBaseCoverageData.apiDoesntExist += 1;
+      console.log("No adapter provided");
+      console.log(kintoBaseCoverageData);
       throw new Error("No adapter provided");
     }
     kintoBaseCoverageData.apiAccessed += 1;
+    console.log("KintoBase constructor called");
+    console.log(kintoBaseCoverageData);
     this._api = null;
 
     /**
@@ -124,6 +128,9 @@ export default class KintoBase<
 
     if (!this._api) {
       kintoBaseCoverageData.apiDoesntExistCreateNew += 1;
+      console.log("Creating new Api");
+      console.log(kintoBaseCoverageData);
+
       this._api = new this.ApiClass(remote!, {
         events,
         headers,
@@ -134,6 +141,8 @@ export default class KintoBase<
     }
     else {
       kintoBaseCoverageData.apiAccessedDontCreateNew += 1;
+      console.log("Api already exists");
+      console.log(kintoBaseCoverageData);
     }
 
     return this._api;
@@ -172,9 +181,15 @@ export default class KintoBase<
   ): Collection<C> {
     if (!collName) {
       kintoBaseCoverageData.collectionNameMissing += 1;
+      console.log("missing collection name");
+      console.log(kintoBaseCoverageData);
+
       throw new Error("missing collection name");
     }
     kintoBaseCoverageData.collectionNameProvided += 1;
+    console.log("collection name provided");
+    console.log(kintoBaseCoverageData);
+    
     const { bucket, events, adapter, adapterOptions } = {
       ...this._options,
       ...options,

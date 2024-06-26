@@ -35,6 +35,9 @@ export default class Kinto<
     // access the adapters or not depending on whether this property is used.
     // Instrumentation to track branch coverage
     coverageData.adaptersAccessed += 1;
+    console.log("Adapters accessed.");
+    console.log(coverageData);
+
     return {
       BaseAdapter,
       IDB,
@@ -46,6 +49,9 @@ export default class Kinto<
     // access the ApiClass or not depending on whether this getter is used.
     // Instrumentation to track branch coverage
     coverageData.apiClassAccessed += 1;
+    console.log("ApiClass accessed.");
+    console.log(coverageData);
+    
     return KintoClient;
   }
 
@@ -55,8 +61,13 @@ export default class Kinto<
     // Instrumentation to track branch coverage
     if (Object.keys(options).length === 0) {
       coverageData.constructorDefaults += 1;
+      console.log("No options provided, using defaults.");
+      console.log(coverageData);
+
     } else {
       coverageData.constructorOptions += 1;
+      console.log("Options provided, overriding defaults.");
+      console.log(coverageData);
     }
 
     // The defaults object is defined here, which is another point of execution flow.
