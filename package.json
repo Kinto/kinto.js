@@ -188,7 +188,7 @@
     "kinto-node-test-server": "^2.0.0",
     "mitt": "^3.0.0",
     "node-fetch": "^2.6.6",
-    "nyc": "^15.1.0",
+    "nyc": "^17.0.0",
     "open-cli": "^8.0.0",
     "prettier": "^3.0.1",
     "rollup": "^4.14.1",
