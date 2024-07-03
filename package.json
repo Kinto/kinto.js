@@ -148,7 +148,7 @@
   },
   "dependencies": {
     "btoa": "^1.2.1",
-    "uuid": "^9.0.0"
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.1",
@@ -161,7 +161,7 @@
     "@types/node-fetch": "^2.5.12",
     "@types/shelljs": "^0.8.9",
     "@types/sinon": "^17.0.3",
-    "@types/uuid": "^9.0.1",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
     "atob": "^2.1.2",
