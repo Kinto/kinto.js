@@ -1,7 +1,3 @@
-import sinon from "sinon";
-
-const { expect } = intern.getPlugin("chai");
-
 export function updateTitleWithDelay(record: any, str: string, delay: number) {
   return new Promise((resolve) => {
     setTimeout(() => {
@@ -23,13 +19,13 @@ export async function expectAsyncError<T>(
     error = err;
   }
 
-  expect(error!).not.to.be.undefined;
-  expect(error!).to.be.instanceOf(baseClass);
+  expect(error!).toBeDefined();
+  expect(error!).toBeInstanceOf(baseClass);
   if (message) {
     if (typeof message === "string") {
-      expect(error!).to.have.property("message").equal(message);
+      expect(error!).toHaveProperty("message", message);
     } else {
-      expect(error!).to.have.property("message").match(message);
+      expect(error!).toHaveProperty("message", expect.stringMatching(message));
     }
   }
 
@@ -66,16 +62,6 @@ export function delayedPromise(ms: number) {
     setTimeout(() => resolve(), ms);
   });
 }
-
-export type Stub<T extends (...args: any[]) => any> = sinon.SinonStub<
-  Parameters<T>,
-  ReturnType<T>
->;
-
-export type Spy<T extends (...args: any[]) => any> = sinon.SinonSpy<
-  Parameters<T>,
-  ReturnType<T>
->;
 
 export function btoa(str: string): string {
   if (globalThis.btoa) {

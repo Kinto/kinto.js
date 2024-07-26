@@ -5,7 +5,6 @@ import Bucket from "../../src/http/bucket";
 import Collection, { CollectionOptions } from "../../src/http/collection";
 import {
   fakeServerResponse,
-  Stub,
   expectAsyncError,
   fakeHeaders,
 } from "../test_utils";
