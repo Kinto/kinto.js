@@ -8,11 +8,6 @@ import BaseAdapter from "../src/adapters/base";
 import IDB from "../src/adapters/IDB";
 import Kinto from "../src";
 
-const { expect } = intern.getPlugin("chai");
-intern.getPlugin("chai").should();
-const { describe, it, beforeEach, afterEach } =
-  intern.getPlugin("interface.bdd");
-
 const TEST_BUCKET_NAME = "kinto-test";
 const TEST_COLLECTION_NAME = "kinto-test";
 
@@ -26,12 +21,7 @@ describe("Kinto", () => {
   }
 
   beforeEach(() => {
-    sandbox = sinon.createSandbox();
     return testCollection().clear();
-  });
-
-  afterEach(() => {
-    sandbox.restore();
   });
 
   describe("static properties", () => {
