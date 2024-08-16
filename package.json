@@ -30,11 +30,9 @@
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "test": "npm run test-nocover",
-    "test-cover": "intern",
-    "test-cover-html": "intern reporters=htmlcoverage && open-cli coverage/index.html",
-    "test-nocover": "intern coverage=false",
-    "test:chrome": "npm run build:test-browser && intern config=@chrome coverage=false",
-    "test:firefox": "npm run build:test-browser && intern config=@firefox coverage=false"
+    "test-cover": "vitest --coverage",
+    "test-cover-html": "vitest --watch=false --coverage --reporter=html --outputFile=coverage/index.html",
+    "test-nocover": "vitest --watch=false"
   },
   "repository": {
     "type": "git",
@@ -184,9 +182,9 @@
     "form-data": "^4.0.0",
     "gh-pages": "^6.0.0",
     "http-server": "^14.0.0",
-    "intern": "^4.10.0",
     "kinto-node-test-server": "^2.0.0",
     "mitt": "^3.0.0",
+    "msw": "^2.3.4",
     "node-fetch": "^2.6.6",
     "nyc": "^17.0.0",
     "open-cli": "^8.0.0",
@@ -194,12 +192,12 @@
     "rollup": "^4.14.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
     "shx": "^0.3.3",
-    "sinon": "^18.0.0",
     "source-map-support": "^0.5.21",
     "ts-node": "^10.4.0",
     "tslib": "^2.3.1",
     "typescript": "^5.0.3",
-    "uglifyify": "^5.0.2"
+    "uglifyify": "^5.0.2",
+    "vitest": "^2.0.4"
   },
   "overrides": {
     "ts-node": "$ts-node"
