@@ -445,7 +445,6 @@ export default class Collection {
    * @param  {Number}  [options.last_modified] The last_modified option.
    * @param  {Object}  [options.permissions]   The permissions option.
    * @param  {String}  [options.filename]      Force the attachment filename.
-   * @param  {String}  [options.gzipped]       Force the attachment to be gzipped or not.
    * @return {Promise<Object, Error>}
    */
   @capable(["attachments"])
@@ -459,7 +458,6 @@ export default class Collection {
       last_modified?: number;
       permissions?: { [key in Permission]?: string[] };
       filename?: string;
-      gzipped?: boolean;
     } = {}
   ): Promise<
     KintoResponse<{
@@ -477,7 +475,6 @@ export default class Collection {
       {
         last_modified,
         filename: options.filename,
-        gzipped: options.gzipped,
         headers: this._getHeaders(options),
         safe: this._getSafe(options),
       }

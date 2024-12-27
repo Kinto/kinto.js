@@ -228,21 +228,5 @@ describe("requests module", () => {
         .to.have.property("If-Match")
         .eql('"42"');
     });
-
-    it("should support a gzipped option passed with true", () => {
-      expect(
-        requests.addAttachmentRequest("/foo", dataURL, {}, { gzipped: true })
-      )
-        .to.have.property("path")
-        .eql("/foo?gzipped=true");
-    });
-
-    it("should support a gzipped option passed with false", () => {
-      expect(
-        requests.addAttachmentRequest("/foo", dataURL, {}, { gzipped: false })
-      )
-        .to.have.property("path")
-        .eql("/foo?gzipped=false");
-    });
   });
 });

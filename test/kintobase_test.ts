@@ -3,7 +3,6 @@ import { EventEmitter } from "events";
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
 
-
 /** @test {KintoBase} */
 describe("KintoBase", () => {
   describe("static properties", () => {

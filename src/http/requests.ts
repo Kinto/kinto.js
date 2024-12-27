@@ -5,7 +5,6 @@ interface RequestOptions {
   safe?: boolean;
   headers?: Headers | Record<string, string> | string[][];
   method?: HttpMethod;
-  gzipped?: boolean | null;
   last_modified?: number;
   patch?: boolean;
 }
@@ -159,19 +158,15 @@ export function addAttachmentRequest(
   { data, permissions }: RecordRequestBody = {},
   options: AddAttachmentRequestOptions = {}
 ): KintoRequest {
-  const { headers, safe, gzipped } = { ...requestDefaults, ...options };
+  const { headers, safe } = { ...requestDefaults, ...options };
   const { last_modified } = { ...data, ...options };
 
   const body = { data, permissions };
   const formData = createFormData(dataURI, body, options);
 
-  const customPath = `${path}${
-    gzipped !== null ? "?gzipped=" + (gzipped ? "true" : "false") : ""
-  }`;
-
   return {
     method: "POST",
-    path: customPath,
+    path,
     headers: { ...headers, ...safeHeader(safe, last_modified) },
     body: formData,
   };

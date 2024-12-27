@@ -17,7 +17,7 @@ describe("adapter.IDB", () => {
 
   afterEach(() => {
     vitest.restoreAllMocks();
-  })
+  });
 
   /** @test {IDB#open} */
   describe("#open", () => {
@@ -90,17 +90,19 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        callback({
-          index() {
-            return {
-              openKeyCursor() {
-                throw new Error("transaction error");
-              },
-            };
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          callback({
+            index() {
+              return {
+                openKeyCursor() {
+                  throw new Error("transaction error");
+                },
+              };
+            },
+          } as any);
+        });
 
       await expectAsyncError(() => db.clear(), /transaction error/);
     });
@@ -276,13 +278,15 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        return callback({
-          get() {
-            throw new Error("transaction error");
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          return callback({
+            get() {
+              throw new Error("transaction error");
+            },
+          } as any);
+        });
 
       await expectAsyncError(
         () => db.get(undefined as any),
@@ -317,17 +321,19 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        return callback({
-          index() {
-            return {
-              getAll() {
-                throw new Error("transaction error");
-              },
-            };
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          return callback({
+            index() {
+              return {
+                getAll() {
+                  throw new Error("transaction error");
+                },
+              };
+            },
+          } as any);
+        });
 
       await expectAsyncError(
         () => db.list(),
@@ -435,7 +441,6 @@ describe("adapter.IDB", () => {
    */
   describe("Deprecated #loadDump", () => {
     it("should call importBulk", async () => {
-      
       const importBulkStub = vitest
         .spyOn(db, "importBulk")
         .mockReturnValue(Promise.resolve([]));
@@ -447,13 +452,15 @@ describe("adapter.IDB", () => {
   /** @test {IDB#getLastModified} */
   describe("#getLastModified", () => {
     it("should reject with any encountered transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        return callback({
-          get() {
-            throw new Error("transaction error");
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          return callback({
+            get() {
+              throw new Error("transaction error");
+            },
+          } as any);
+        });
 
       await expectAsyncError(() => db.getLastModified(), /transaction error/);
     });
@@ -480,13 +487,15 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        return callback({
-          delete() {
-            throw new Error("transaction error");
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          return callback({
+            delete() {
+              throw new Error("transaction error");
+            },
+          } as any);
+        });
 
       await expectAsyncError(
         () => db.saveLastModified(undefined as any),
@@ -542,13 +551,15 @@ describe("adapter.IDB", () => {
     });
 
     it("should reject on transaction error", async () => {
-      vitest.spyOn(db, "prepare").mockImplementation(async (name, callback, options) => {
-        return callback({
-          put() {
-            throw new Error("transaction error");
-          },
-        } as any);
-      });
+      vitest
+        .spyOn(db, "prepare")
+        .mockImplementation(async (name, callback, options) => {
+          return callback({
+            put() {
+              throw new Error("transaction error");
+            },
+          } as any);
+        });
 
       await expectAsyncError(
         () => db.importBulk([{ id: "1", last_modified: 0, foo: "bar" }]),

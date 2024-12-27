@@ -24,7 +24,7 @@ const handlers = [
   http.all("http://fake-server/v1/batch", async (props) => {
     const req = await props.request.json();
     const resp = req.requests.map({
-      foo: "bar"
+      foo: "bar",
     });
     return HttpResponse.json({
       responses: resp,
