@@ -23,9 +23,9 @@ export async function expectAsyncError<T>(
   expect(error!).toBeInstanceOf(baseClass);
   if (message) {
     if (typeof message === "string") {
-      expect(error!).toHaveProperty("message", message);
+      expect(error).toHaveProperty("message", message);
     } else {
-      expect(error!).toHaveProperty("message", expect.stringMatching(message));
+      expect(error).toHaveProperty("message", expect.stringMatching(message));
     }
   }
 
