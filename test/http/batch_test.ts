@@ -5,16 +5,7 @@ import {
   KintoBatchResponse,
 } from "../../src/http/batch";
 import { KintoRequest } from "../../src/types";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  Mock,
-  vitest,
-} from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 
 describe("batch module", () => {
   describe("aggregate()", () => {
