@@ -4,7 +4,6 @@ import { v4 as uuid4 } from "uuid";
 import { StorageProxy } from "../../src/adapters/base";
 import { KintoIdObject } from "../../src/http";
 import { expectAsyncError } from "../test_utils";
-import { Mock } from "vitest";
 
 /** @test {IDB} */
 describe("adapter.IDB", () => {

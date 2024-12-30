@@ -299,8 +299,6 @@ describe("KintoClient", () => {
     });
   });
 
-  let fetchServerSettings = null;
-
   /** @test {KintoClient#batch} */
   describe("#batch", () => {
     beforeEach(() => {
@@ -625,7 +623,7 @@ describe("KintoClient", () => {
       });
 
       it("should chunk batch requests concurrently", async () => {
-        let fetchMock = vitest
+        const fetchMock = vitest
           .spyOn(api.http, "fetchFunc")
           .mockResolvedValueOnce(
             await fakeServerResponse(200, {

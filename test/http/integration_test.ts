@@ -81,9 +81,9 @@ describe("HTTP Integration tests", () => {
     (global as any).Headers = Headers;
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     if (skipLocalServer) {
-      return Promise.resolve();
+      return;
     }
     const logLines = server.logs.toString().split("\n");
     const serverDidCrash = logLines.some((l) => l.startsWith("Traceback"));
