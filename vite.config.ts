@@ -31,7 +31,6 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ["**/*_{test,spec}.?(c|m)[jt]s?(x)"],
     setupFiles: ["test/setup-globals.ts", "test/server.ts"]
   }
 })

@@ -1,5 +1,4 @@
 /* eslint dot-notation: off */
-import sinon from "sinon";
 import { EventEmitter } from "events";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
@@ -13,8 +12,6 @@ const TEST_COLLECTION_NAME = "kinto-test";
 
 /** @test {Kinto} */
 describe("Kinto", () => {
-  let sandbox: sinon.SinonSandbox;
-
   function testCollection() {
     const db = new Kinto({ bucket: TEST_BUCKET_NAME });
     return db.collection(TEST_COLLECTION_NAME);
@@ -31,11 +28,11 @@ describe("Kinto", () => {
       });
 
       it("should provide an adapters.BaseAdapter getter", () => {
-        expect(Kinto.adapters.BaseAdapter).to.eql(BaseAdapter);
+        expect(Kinto.adapters.BaseAdapter).toBe(BaseAdapter);
       });
 
       it("should provide an adapters.IDB getter", () => {
-        expect(Kinto.adapters.IDB).to.eql(IDB);
+        expect(Kinto.adapters.IDB).toBe(IDB);
       });
     });
 
@@ -50,7 +47,7 @@ describe("Kinto", () => {
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
       const events = new EventEmitter();
-      expect(new Kinto({ events }).events).to.eql(events);
+      expect(new Kinto({ events }).events).toBe(events);
     });
 
     it("should not create an events property if none passed", () => {
