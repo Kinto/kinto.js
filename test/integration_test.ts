@@ -142,11 +142,11 @@ describe("Integration tests", () => {
   });
 
   describe("Default server configuration", () => {
-    beforeAll(async() => {
+    beforeAll(async () => {
       await server.start({});
     });
 
-    afterAll(async() => {
+    afterAll(async () => {
       await server.stop();
     });
 
@@ -279,11 +279,15 @@ describe("Integration tests", () => {
 
         it("should import server data", () => {
           expect(syncResult.created).toHaveLength(1);
-          expect(syncResult.created[0])
-            .toHaveProperty("title", testData.server[0].title);
+          expect(syncResult.created[0]).toHaveProperty(
+            "title",
+            testData.server[0].title
+          );
 
-          expect(syncResult.created[0])
-            .toHaveProperty("done", testData.server[0].done);
+          expect(syncResult.created[0]).toHaveProperty(
+            "done",
+            testData.server[0].done
+          );
         });
 
         it("should publish local unsynced records", () => {
@@ -311,17 +315,18 @@ describe("Integration tests", () => {
 
         it("should put local database in the expected state", async () => {
           const res = await tasks.list({ order: "title" });
-          expect(res.data
-            .map((record) => ({
+          expect(
+            res.data.map((record) => ({
               title: record.title,
               done: record.done,
               _status: record._status,
-            }))).toStrictEqual([
-              { title: "task1", _status: "synced", done: true },
-              { title: "task2", _status: "synced", done: false },
-              { title: "task3", _status: "synced", done: true },
-              { title: "task4", _status: "synced", done: false },
-            ]);
+            }))
+          ).toStrictEqual([
+            { title: "task1", _status: "synced", done: true },
+            { title: "task2", _status: "synced", done: false },
+            { title: "task3", _status: "synced", done: true },
+            { title: "task4", _status: "synced", done: false },
+          ]);
         });
 
         it("should put remote test server data in the expected state", async () => {
@@ -468,18 +473,19 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 done: record.done,
                 _status: record._status,
-              }))).toStrictEqual([
-                { title: "task1", _status: "synced", done: true },
-                { title: "task2", _status: "synced", done: false },
-                { title: "task3", _status: "synced", done: true },
-                // For MANUAL strategy, local conficting record is left intact
-                { title: "task4-local", _status: "created", done: false },
-              ]);
+              }))
+            ).toStrictEqual([
+              { title: "task1", _status: "synced", done: true },
+              { title: "task2", _status: "synced", done: false },
+              { title: "task3", _status: "synced", done: true },
+              // For MANUAL strategy, local conficting record is left intact
+              { title: "task4-local", _status: "created", done: false },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -601,18 +607,19 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 done: record.done,
                 _status: record._status,
-              }))).toStrictEqual([
-                { title: "task1", _status: "synced", done: true },
-                { title: "task2", _status: "synced", done: false },
-                { title: "task3", _status: "synced", done: true },
-                // For CLIENT_WINS strategy, local record is marked as synced
-                { title: "task4-local", _status: "synced", done: false },
-              ]);
+              }))
+            ).toStrictEqual([
+              { title: "task1", _status: "synced", done: true },
+              { title: "task2", _status: "synced", done: false },
+              { title: "task3", _status: "synced", done: true },
+              // For CLIENT_WINS strategy, local record is marked as synced
+              { title: "task4-local", _status: "synced", done: false },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -667,18 +674,19 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasksTransformed.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 done: record.done,
                 _status: record._status,
-              }))).toStrictEqual([
-                { title: "task1", _status: "synced", done: true },
-                { title: "task2", _status: "synced", done: false },
-                { title: "task3", _status: "synced", done: true },
-                // For CLIENT_WINS strategy, local record is marked as synced
-                { title: "task4-local", _status: "synced", done: false },
-              ]);
+              }))
+            ).toStrictEqual([
+              { title: "task1", _status: "synced", done: true },
+              { title: "task2", _status: "synced", done: false },
+              { title: "task3", _status: "synced", done: true },
+              // For CLIENT_WINS strategy, local record is marked as synced
+              { title: "task4-local", _status: "synced", done: false },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -751,18 +759,19 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 done: record.done,
                 _status: record._status,
-              }))).toStrictEqual([
-                { title: "task1", _status: "synced", done: true },
-                { title: "task2", _status: "synced", done: false },
-                { title: "task3", _status: "synced", done: true },
-                // For SERVER_WINS strategy, remote record is marked as synced
-                { title: "task4-remote", _status: "synced", done: true },
-              ]);
+              }))
+            ).toStrictEqual([
+              { title: "task1", _status: "synced", done: true },
+              { title: "task2", _status: "synced", done: false },
+              { title: "task3", _status: "synced", done: true },
+              // For SERVER_WINS strategy, remote record is marked as synced
+              { title: "task4-remote", _status: "synced", done: true },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -793,7 +802,7 @@ describe("Integration tests", () => {
           };
           let rawCollection: KintoClientCollection;
 
-          beforeEach(async() => {
+          beforeEach(async () => {
             rawCollection = tasks.api.bucket("default").collection("tasks");
             await testSync(testData);
           });
@@ -894,7 +903,10 @@ describe("Integration tests", () => {
 
           it("should have the expected conflicting remote version", () => {
             expect(conflicts[0].remote).toHaveProperty("id", id);
-            expect(conflicts[0].remote).toHaveProperty("title", "server-updated");
+            expect(conflicts[0].remote).toHaveProperty(
+              "title",
+              "server-updated"
+            );
           });
         });
 
@@ -1011,14 +1023,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const list = await tasks.list({ order: "title" });
-            expect(list.data
-              .map((record) => ({
+            expect(
+              list.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For MANUAL strategy, local conficting record is left intact
-                { title: "task1-local", _status: "created" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For MANUAL strategy, local conficting record is left intact
+              { title: "task1-local", _status: "created" },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -1132,14 +1145,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For CLIENT_WINS strategy, local version is marked as synced
-                { title: "task1-local", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For CLIENT_WINS strategy, local version is marked as synced
+              { title: "task1-local", _status: "synced" },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -1163,14 +1177,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasksTransformed.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For CLIENT_WINS strategy, local version is marked as synced
-                { title: "task1-local", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For CLIENT_WINS strategy, local version is marked as synced
+              { title: "task1-local", _status: "synced" },
+            ]);
           });
 
           it("should put the remote database in the expected state", async () => {
@@ -1242,14 +1257,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For SERVER_WINS strategy, local version is marked as synced
-                { title: "task1-remote", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For SERVER_WINS strategy, local version is marked as synced
+              { title: "task1-remote", _status: "synced" },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -1286,14 +1302,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasksTransformed.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For SERVER_WINS strategy, local version is marked as synced
-                { title: "task1-remote", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For SERVER_WINS strategy, local version is marked as synced
+              { title: "task1-remote", _status: "synced" },
+            ]);
           });
         });
       });
@@ -1391,14 +1408,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For MANUAL strategy, local conficting record is left intact
-                { title: "task1-local", _status: "updated" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For MANUAL strategy, local conficting record is left intact
+              { title: "task1-local", _status: "updated" },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -1501,14 +1519,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasks.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For CLIENT_WINS strategy, local version is marked as synced
-                { title: "task1-local", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For CLIENT_WINS strategy, local version is marked as synced
+              { title: "task1-local", _status: "synced" },
+            ]);
           });
 
           it("should put remote test server data in the expected state", async () => {
@@ -1532,14 +1551,15 @@ describe("Integration tests", () => {
 
           it("should put local database in the expected state", async () => {
             const res = await tasksTransformed.list({ order: "title" });
-            expect(res.data
-              .map((record) => ({
+            expect(
+              res.data.map((record) => ({
                 title: record.title,
                 _status: record._status,
-              }))).toStrictEqual([
-                // For CLIENT_WINS strategy, local version is marked as synced
-                { title: "task1-local", _status: "synced" },
-              ]);
+              }))
+            ).toStrictEqual([
+              // For CLIENT_WINS strategy, local version is marked as synced
+              { title: "task1-local", _status: "synced" },
+            ]);
           });
 
           it("should put the remote database in the expected state", async () => {
@@ -1758,9 +1778,10 @@ describe("Integration tests", () => {
 
       it("should list published records unencoded", async () => {
         const res = await tasks.sync();
-        expect(res.published
-          .map((x: any) => x.title)
-          .sort()).toStrictEqual(["abc", "def"]);
+        expect(res.published.map((x: any) => x.title).sort()).toStrictEqual([
+          "abc",
+          "def",
+        ]);
       });
 
       it("should store encoded data remotely", async () => {
@@ -1773,17 +1794,19 @@ describe("Integration tests", () => {
           }
         );
         const { data } = await res.json();
-        expect(data
-          .map((x: any) => x.title)
-          .sort()).toStrictEqual(["abc!?", "def!?"]);
+        expect(data.map((x: any) => x.title).sort()).toStrictEqual([
+          "abc!?",
+          "def!?",
+        ]);
       });
 
       it("should keep local data decoded", async () => {
         await tasks.sync();
         const res = await tasks.list();
-        expect(res.data
-          .map((x: any) => x.title)
-          .sort()).toStrictEqual(["abc", "def"]);
+        expect(res.data.map((x: any) => x.title).sort()).toStrictEqual([
+          "abc",
+          "def",
+        ]);
       });
     });
 
@@ -1894,12 +1917,12 @@ describe("Integration tests", () => {
   });
 
   describe("Flushed server", function () {
-    beforeAll(async() => {
-      await server.start({})
+    beforeAll(async () => {
+      await server.start({});
     });
 
-    afterAll(async() => {
-      await server.stop()
+    afterAll(async () => {
+      await server.stop();
     });
 
     beforeEach(async () => {
@@ -1933,12 +1956,12 @@ describe("Integration tests", () => {
   });
 
   describe("Backed off server", () => {
-    beforeAll(async() => {
-      await server.start({ KINTO_BACKOFF: "10" })
+    beforeAll(async () => {
+      await server.start({ KINTO_BACKOFF: "10" });
     });
 
-    afterAll(async() => {
-      await server.stop()
+    afterAll(async () => {
+      await server.stop();
     });
 
     beforeEach(async () => {
@@ -1964,7 +1987,7 @@ describe("Integration tests", () => {
     describe("Soft EOL", () => {
       let consoleWarnStub: Mock;
 
-      beforeAll(async() => {
+      beforeAll(async () => {
         const tomorrow = new Date(new Date().getTime() + 86400000)
           .toJSON()
           .slice(0, 10);
@@ -1975,8 +1998,8 @@ describe("Integration tests", () => {
         });
       });
 
-      afterAll(async() => {
-        await server.stop()
+      afterAll(async () => {
+        await server.stop();
       });
 
       beforeEach(() => {
@@ -2004,8 +2027,8 @@ describe("Integration tests", () => {
         });
       });
 
-      afterAll(async() => {
-        await server.stop()
+      afterAll(async () => {
+        await server.stop();
       });
 
       beforeEach(() => {
