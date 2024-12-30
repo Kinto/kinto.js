@@ -92,15 +92,12 @@ function futureSyncsOK(
   });
 }
 
-describe("Integration tests", function (__test) {
+describe("Integration tests", () => {
   let sandbox: sinon.SinonSandbox,
     server: KintoServer,
     kinto: Kinto,
     tasks: Collection,
     tasksTransformed: Collection;
-
-  // Disabling test timeouts until pserve gets decent startup time.
-  __test.timeout = 0;
 
   before(async () => {
     let kintoConfigPath = __dirname + "/kinto.ini";
@@ -129,9 +126,7 @@ describe("Integration tests", function (__test) {
     return server.killAll();
   });
 
-  beforeEach(function (__test) {
-    __test.timeout = 12500;
-
+  beforeEach(() => {
     sandbox = sinon.createSandbox();
 
     kinto = new Kinto({

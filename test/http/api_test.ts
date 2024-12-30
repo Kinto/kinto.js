@@ -426,7 +426,7 @@ describe("KintoClient", () => {
         });
       });
 
-      describe("Retry", (__test) => {
+      describe("Retry", () => {
         const response = {
           status: 201,
           path: `/${SPV}/buckets/blog/collections/articles/records`,

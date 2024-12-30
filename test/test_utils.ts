@@ -70,3 +70,9 @@ export function btoa(str: string): string {
 
   return Buffer.from(str, "binary").toString("base64");
 }
+
+export function fakeBlob(
+  dataArray: WithImplicitCoercion<ArrayBuffer | SharedArrayBuffer>[]
+) {
+  return Buffer.from(dataArray[0]);
+}

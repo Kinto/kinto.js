@@ -1,15 +1,9 @@
-import { btoa } from "../test_utils";
+import { btoa, fakeBlob } from "../test_utils";
 import * as requests from "../../src/http/requests";
 import { afterAll, beforeAll, describe, expect, it, vitest } from "vitest";
 
 describe("requests module", () => {
   beforeAll(() => {
-    function fakeBlob(
-      dataArray: WithImplicitCoercion<ArrayBuffer | SharedArrayBuffer>[]
-    ) {
-      return Buffer.from(dataArray[0]);
-    }
-
     vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
   });
 

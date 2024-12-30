@@ -1,10 +1,4 @@
-// import fetch, { Headers } from "node-fetch";
-// Expose a global fetch polyfill
-// (global as any).fetch = fetch;
-// (global as any).Headers = Headers;
-
 (global as any).FormData = require("form-data");
-
 (global as any).atob = require("atob");
 (global as any).btoa = require("btoa");
 
