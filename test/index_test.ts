@@ -1,5 +1,5 @@
 /* eslint dot-notation: off */
-import mitt from 'mitt';
+import mitt from "mitt";
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
 import Collection from "../src/collection";

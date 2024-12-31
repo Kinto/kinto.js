@@ -74,11 +74,13 @@ describe("HTTP Integration tests", () => {
     });
     await server.loadConfig(kintoConfigPath);
 
-    // need some polyfilling for integration tests to work properly
-    global.realFetch = global.fetch;
-    global.realHeaders = global.Headers;
-    (global as any).fetch = fetch;
-    (global as any).Headers = Headers;
+    if (typeof window == "undefined") {
+      // need some polyfilling for integration tests to work properly
+      global.realFetch = global.fetch;
+      global.realHeaders = global.Headers;
+      (global as any).fetch = fetch;
+      (global as any).Headers = Headers;
+    }
   });
 
   afterAll(async () => {
@@ -96,9 +98,11 @@ describe("HTTP Integration tests", () => {
     }
     server.killAll();
 
-    // resetting polyfill
-    global.fetch = global.realFetch;
-    global.Headers = global.realHeaders;
+    if (typeof window == "undefined") {
+      // resetting polyfill
+      global.fetch = global.realFetch;
+      global.Headers = global.realHeaders;
+    }
   });
 
   function createClient(options: Partial<KintoClientOptions> = {}) {

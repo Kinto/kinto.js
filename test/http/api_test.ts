@@ -18,7 +18,7 @@ import {
   Mock,
   vitest,
 } from "vitest";
-import mitt, { Emitter } from 'mitt';
+import mitt, { Emitter } from "mitt";
 
 const FAKE_SERVER_URL = "http://fake-server/v1";
 

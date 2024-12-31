@@ -1,5 +1,5 @@
 /* eslint dot-notation: off */
-import mitt, { Emitter } from 'mitt';
+import mitt, { Emitter } from "mitt";
 import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
@@ -2775,6 +2775,10 @@ describe("Collection", () => {
             fixtures.map((fixture) => articles.create(fixture))
           );
           ids = res.map((r) => r.data.id);
+          // block cors/option requests from fetch
+          vitest
+            .spyOn(articles.api.http, "timedFetch")
+            .mockReturnValue(fakeServerResponse(200, { data: [] }, {}) as any);
         });
 
         it("should validate the remote option", async () => {

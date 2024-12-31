@@ -478,7 +478,8 @@ describe("HTTP class", () => {
     });
   }
 
-  if (typeof(window) == "undefined") { // don't run in browser
+  if (typeof window == "undefined") {
+    // don't run in browser
     const { EventEmitter } = require("events");
     runSuite("with EventEmitter", () => new EventEmitter());
   }

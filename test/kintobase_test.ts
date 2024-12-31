@@ -1,4 +1,4 @@
-import mitt from 'mitt';
+import mitt from "mitt";
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
 
