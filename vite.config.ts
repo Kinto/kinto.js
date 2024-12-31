@@ -31,6 +31,5 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    setupFiles: ["test/setup-globals.ts", "test/server.ts"]
   }
 })

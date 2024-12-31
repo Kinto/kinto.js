@@ -9,17 +9,15 @@ export default defineWorkspace([
   {
     extends: './vite.config.ts',
     test: {
-      name: 'parallel',
+      name: 'firefox',
       exclude: [ ...single_thread_files, 'node_modules/**' ],
       include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
-      setupFiles: ["test/setup-globals.ts", "test/server.ts"],
-    }
-  }, {
-    extends: './vite.config.ts',
-    test: {
-      name: 'sequential',
-      include: single_thread_files,
-      setupFiles: ["test/setup-globals.ts", "test/server.ts"],
+      browser: {
+        enabled: true,
+        name: 'firefox',
+        provider: 'playwright',
+        headless: true
+      },
       poolOptions: {
         forks: {
           singleFork: true
