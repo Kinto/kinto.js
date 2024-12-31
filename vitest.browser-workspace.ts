@@ -1,5 +1,4 @@
 import { defineWorkspace } from 'vitest/config';
-import { playwright } from '@vitest/browser/providers';
 
 const single_thread_files = [
   'test/integration_test.ts',
@@ -17,7 +16,7 @@ export default defineWorkspace([
         enabled: true,
         name: 'firefox',
         provider: 'playwright',
-        // headless: true,
+        headless: true,
         screenshotFailures: false,
       },
       poolOptions: {

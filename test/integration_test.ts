@@ -5,7 +5,7 @@ import {
   Collection as KintoClientCollection,
   KintoIdObject,
 } from "../src/http";
-import { EventEmitter } from "events";
+import mitt from "mitt";
 import Kinto from "../src";
 import Collection, {
   recordsEqual,
@@ -129,7 +129,7 @@ describe("Integration tests", () => {
     kinto = new Kinto({
       remote: TEST_KINTO_SERVER,
       headers: { Authorization: "Basic " + btoa("user:pass") },
-      events: new EventEmitter(),
+      events: mitt(),
     });
     tasks = kinto.collection("tasks");
     tasksTransformed = kinto.collection("tasks-transformer", {

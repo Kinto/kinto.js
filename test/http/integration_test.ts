@@ -1,6 +1,6 @@
 import Api from "../../src/http";
 import KintoClientBase, { KintoClientOptions } from "../../src/http/base";
-import { EventEmitter } from "events";
+import mitt from "mitt";
 import KintoServer from "kinto-node-test-server";
 import {
   delayedPromise,
@@ -31,7 +31,6 @@ import {
   vitest,
   Mock,
 } from "vitest";
-import fetch, { Headers } from "node-fetch";
 
 interface TitleRecord extends KintoObject {
   title: string;
@@ -76,10 +75,11 @@ describe("HTTP Integration tests", () => {
 
     if (typeof window == "undefined") {
       // need some polyfilling for integration tests to work properly
+      const fetch = require("node-fetch");
       global.realFetch = global.fetch;
       global.realHeaders = global.Headers;
       (global as any).fetch = fetch;
-      (global as any).Headers = Headers;
+      (global as any).Headers = fetch.Headers;
     }
   });
 
@@ -112,7 +112,7 @@ describe("HTTP Integration tests", () => {
   beforeEach(() => {
     vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
 
-    const events = new EventEmitter();
+    const events = mitt();
     api = createClient({
       events,
       headers: { Authorization: "Basic " + btoa("user:pass") },
