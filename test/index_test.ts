@@ -1,5 +1,5 @@
 /* eslint dot-notation: off */
-import { EventEmitter } from "events";
+import mitt from 'mitt';
 import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
 import Collection from "../src/collection";
@@ -46,7 +46,7 @@ describe("Kinto", () => {
   /** @test {Kinto#constructor} */
   describe("#constructor", () => {
     it("should expose a passed events instance", () => {
-      const events = new EventEmitter();
+      const events = mitt();
       expect(new Kinto({ events }).events).toBe(events);
     });
 
@@ -55,7 +55,7 @@ describe("Kinto", () => {
     });
 
     it("should propagate its events property to child dependencies", () => {
-      const events = new EventEmitter();
+      const events = mitt();
       const kinto = new Kinto({ events });
       expect(kinto.collection("x").events).eql(kinto.events);
       expect(kinto.collection("x").api.events).eql(kinto.events);

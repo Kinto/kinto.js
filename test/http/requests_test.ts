@@ -4,7 +4,9 @@ import { afterAll, beforeAll, describe, expect, it, vitest } from "vitest";
 
 describe("requests module", () => {
   beforeAll(() => {
-    vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+    if (typeof(global) !== "undefined") {
+      vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+    }
   });
 
   afterAll(() => {

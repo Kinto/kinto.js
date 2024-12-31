@@ -1,5 +1,4 @@
 /* eslint dot-notation: off */
-import { EventEmitter } from "events";
 import { fakeServerResponse, expectAsyncError } from "../test_utils";
 import KintoClient from "../../src/http";
 import KintoClientBase, {
@@ -19,15 +18,16 @@ import {
   Mock,
   vitest,
 } from "vitest";
+import mitt, { Emitter } from 'mitt';
 
 const FAKE_SERVER_URL = "http://fake-server/v1";
 
 /** @test {KintoClient} */
 describe("KintoClient", () => {
-  let api: KintoClient, events: EventEmitter;
+  let api: KintoClient, events: Emitter<any>;
 
   beforeEach(() => {
-    events = new EventEmitter();
+    events = mitt();
     api = new KintoClient(FAKE_SERVER_URL, { events });
   });
 
@@ -115,7 +115,7 @@ describe("KintoClient", () => {
     });
 
     it("should expose provided event emitter as a property", () => {
-      const events = new EventEmitter();
+      const events = mitt();
       expect(new KintoClient(sampleRemote, { events }).events).eql(events);
     });
 

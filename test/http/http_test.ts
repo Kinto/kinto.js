@@ -1,4 +1,3 @@
-import { EventEmitter } from "events";
 import mitt from "mitt";
 import { fakeServerResponse, expectAsyncError } from "../test_utils";
 import HTTP from "../../src/http/http";
@@ -479,7 +478,11 @@ describe("HTTP class", () => {
     });
   }
 
-  runSuite("with EventEmitter", () => new EventEmitter());
+  if (typeof(window) == "undefined") { // don't run in browser
+    const { EventEmitter } = require("events");
+    runSuite("with EventEmitter", () => new EventEmitter());
+  }
+
   runSuite("with mitt", () => mitt());
   runSuite("without EventEmitter");
 });

@@ -1,5 +1,5 @@
 /* eslint dot-notation: off */
-import { EventEmitter } from "events";
+import mitt, { Emitter } from 'mitt';
 import { v4 as uuid4 } from "uuid";
 
 import IDB from "../src/adapters/IDB";
@@ -46,12 +46,12 @@ describe("Collection", () => {
   ) {
     describe(label, () => {
       /*eslint-disable */
-      let events: EventEmitter, api: Api;
+      let events: Emitter<any>, api: Api;
       /*eslint-enable */
       const article = { title: "foo", url: "http://foo" };
 
       function testCollection(options: any = {}) {
-        events = new EventEmitter();
+        events = mitt();
         const opts = { adapter, events, ...options };
         api = new Api(FAKE_SERVER_URL, { events });
         return new Collection(
@@ -129,7 +129,7 @@ describe("Collection", () => {
       /** @test {Collection#constructor} */
       describe("#constructor", () => {
         it("should expose a passed events instance", () => {
-          const events = new EventEmitter();
+          const events = mitt();
           const api = new Api(FAKE_SERVER_URL, { events });
           const collection = new Collection(
             TEST_BUCKET_NAME,
@@ -141,7 +141,7 @@ describe("Collection", () => {
         });
 
         it("should propagate its events property to child dependencies", () => {
-          const events = new EventEmitter();
+          const events = mitt();
           const api = new Api(FAKE_SERVER_URL, { events });
           const collection = new Collection(
             TEST_BUCKET_NAME,
@@ -171,7 +171,7 @@ describe("Collection", () => {
         });
 
         it("should use the default adapter if not any is provided", () => {
-          const events = new EventEmitter();
+          const events = mitt();
           const api = new Api(FAKE_SERVER_URL, { events });
           const hooks = {};
           const collection = new Collection(
@@ -184,7 +184,7 @@ describe("Collection", () => {
         });
 
         it("should throw incompatible adapter options", () => {
-          const events = new EventEmitter();
+          const events = mitt();
           const api = new Api(FAKE_SERVER_URL, { events });
           expect(() => {
             new Collection(

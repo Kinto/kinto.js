@@ -1,5 +1,4 @@
-import { EventEmitter } from "events";
-
+import mitt from 'mitt';
 import KintoBase from "../src/KintoBase";
 import BaseAdapter from "../src/adapters/base";
 
@@ -31,7 +30,7 @@ describe("KintoBase", () => {
     beforeEach(() => {
       kinto = new KintoBase({
         adapter: () => new KintoBase.adapters.BaseAdapter(),
-        events: new EventEmitter(),
+        events: mitt(),
       });
     });
 

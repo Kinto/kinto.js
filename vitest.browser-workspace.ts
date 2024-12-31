@@ -16,7 +16,8 @@ export default defineWorkspace([
         enabled: true,
         name: 'firefox',
         provider: 'playwright',
-        headless: true
+        headless: true,
+        screenshotFailures: false,
       },
       poolOptions: {
         forks: {

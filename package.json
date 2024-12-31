@@ -33,7 +33,7 @@
     "test-cover": "vitest --coverage",
     "test-cover-html": "vitest --watch=false --coverage --reporter=html --outputFile=coverage/index.html",
     "test-nocover": "vitest --watch=false",
-    "test:firefox": "npm run build && npm run build:test-browser && vitest --workspace=vitest.browser-workspace.ts"
+    "test:firefox": "npm run build:test-browser && vitest --workspace=vitest.browser-workspace.ts --watch=false"
   },
   "repository": {
     "type": "git",
