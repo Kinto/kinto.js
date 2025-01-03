@@ -31,26 +31,41 @@ import {
   vitest,
   Mock,
 } from "vitest";
+import { commands as vitestCommands } from "@vitest/browser/context";
+
+vitestCommands.startServer();
 
 interface TitleRecord extends KintoObject {
   title: string;
 }
 
-const skipLocalServer = !!process.env.TEST_KINTO_SERVER;
+const skipLocalServer =
+  typeof process !== "undefined" && !!process.env.TEST_KINTO_SERVER;
 const TEST_KINTO_SERVER =
-  process.env.TEST_KINTO_SERVER || "http://0.0.0.0:8888/v1";
-const KINTO_PROXY_SERVER = process.env.KINTO_PROXY_SERVER || TEST_KINTO_SERVER;
+  (typeof process !== "undefined" && process.env.TEST_KINTO_SERVER) ||
+  "http://0.0.0.0:8888/v1";
+const KINTO_PROXY_SERVER =
+  (typeof process !== "undefined" && process.env.KINTO_PROXY_SERVER) ||
+  TEST_KINTO_SERVER;
 
 async function startServer(
   server: KintoServer,
   options: { [key: string]: string } = {}
 ) {
+  if (typeof window !== "undefined") {
+    return vitestCommands.startServer();
+  }
+
   if (!skipLocalServer) {
     await server.start(options);
   }
 }
 
 async function stopServer(server: KintoServer) {
+  if (typeof window !== "undefined") {
+    return vitestCommands.stopServer();
+  }
+
   if (!skipLocalServer) {
     await server.stop();
   }
@@ -63,17 +78,18 @@ describe("HTTP Integration tests", () => {
     if (skipLocalServer) {
       return;
     }
-    let kintoConfigPath = __dirname + "/kinto.ini";
-    if (process.env.SERVER && process.env.SERVER !== "master") {
-      kintoConfigPath = `${__dirname}/kinto-${process.env.SERVER}.ini`;
-    }
-    server = new KintoServer(KINTO_PROXY_SERVER, {
-      maxAttempts: 200,
-      kintoConfigPath,
-    });
-    await server.loadConfig(kintoConfigPath);
 
     if (typeof window == "undefined") {
+      let kintoConfigPath = __dirname + "/kinto.ini";
+      if (process.env.SERVER && process.env.SERVER !== "master") {
+        kintoConfigPath = `${__dirname}/kinto-${process.env.SERVER}.ini`;
+      }
+      server = new KintoServer(KINTO_PROXY_SERVER, {
+        maxAttempts: 200,
+        kintoConfigPath,
+      });
+      await server.loadConfig(kintoConfigPath);
+
       // need some polyfilling for integration tests to work properly
       const fetch = require("node-fetch");
       global.realFetch = global.fetch;
@@ -84,6 +100,11 @@ describe("HTTP Integration tests", () => {
   });
 
   afterAll(async () => {
+    if (typeof window !== "undefined") {
+      vitestCommands.startServer();
+      return;
+    }
+
     if (skipLocalServer) {
       return;
     }
@@ -110,7 +131,9 @@ describe("HTTP Integration tests", () => {
   }
 
   beforeEach(() => {
-    vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+    if (typeof window == "undefined") {
+      vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+    }
 
     const events = mitt();
     api = createClient({
@@ -133,6 +156,9 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
+      if (typeof window !== "undefined") {
+        return vitestCommands.flushServer();
+      }
       await server.flush();
     });
 
@@ -301,19 +327,6 @@ describe("HTTP Integration tests", () => {
     });
 
     describe("#listPermissions", () => {
-      // FIXME: this feature was introduced between 8.2 and 8.3, and
-      // these tests run against master as well as an older Kinto
-      // version (see .travis.yml). If we ever bump the older version
-      // up to one where it also has bucket:create, we can clean this
-      // up.
-      const shouldHaveCreatePermission =
-        // People developing don't always set SERVER. Let's assume
-        // that means "master".
-        !process.env.SERVER ||
-        // "master" is greater than 8.3 but let's just be explicit here.
-        process.env.SERVER == "master" ||
-        process.env.SERVER > "8.3" ||
-        (process.env.SERVER > "8.2" && process.env.SERVER.includes("dev"));
       describe("Single page of permissions", () => {
         beforeEach(async () => {
           await api.batch((batch: KintoClientBase) => {
@@ -324,16 +337,14 @@ describe("HTTP Integration tests", () => {
 
         it("should retrieve the list of permissions", async () => {
           let { data } = await api.listPermissions();
-          if (shouldHaveCreatePermission) {
-            // One element is for the root element which has
-            // `bucket:create` as well as `account:create`. Remove
-            // it.
-            const isBucketCreate = (p_1: PermissionData) =>
-              p_1.permissions.includes("bucket:create");
-            const bucketCreate = data.filter(isBucketCreate);
-            expect(bucketCreate.length).eql(1);
-            data = data.filter((p_2) => !isBucketCreate(p_2));
-          }
+          // One element is for the root element which has
+          // `bucket:create` as well as `account:create`. Remove
+          // it.
+          const isBucketCreate = (p_1: PermissionData) =>
+            p_1.permissions.includes("bucket:create");
+          const bucketCreate = data.filter(isBucketCreate);
+          expect(bucketCreate.length).eql(1);
+          data = data.filter((p_2) => !isBucketCreate(p_2));
           expect(data).to.have.lengthOf(2);
           expect(data.map((p_3) => p_3.id).sort()).eql(["b1", "c1"]);
         });
@@ -351,9 +362,7 @@ describe("HTTP Integration tests", () => {
         it("should retrieve the list of permissions", async () => {
           const results = await api.listPermissions({ pages: Infinity });
           let expectedRecords = 15;
-          if (shouldHaveCreatePermission) {
-            expectedRecords++;
-          }
+          expectedRecords++;
           expect(results.data).to.have.lengthOf(expectedRecords);
         });
       });
@@ -574,6 +583,9 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
+      if (typeof window !== "undefined") {
+        return vitestCommands.flushServer();
+      }
       await server.flush();
     });
 
@@ -586,6 +598,9 @@ describe("HTTP Integration tests", () => {
 
   describe("Deprecated protocol version", () => {
     beforeEach(async () => {
+      if (typeof window !== "undefined") {
+        return vitestCommands.flushServer();
+      }
       await server.flush();
     });
 
@@ -660,6 +675,9 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
+      if (typeof window !== "undefined") {
+        return vitestCommands.flushServer();
+      }
       await server.flush();
     });
 
@@ -696,6 +714,10 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
+      if (typeof window !== "undefined") {
+        await vitestCommands.flushServer();
+        return;
+      }
       await server.flush();
     });
 
@@ -1620,7 +1642,9 @@ describe("HTTP Integration tests", () => {
                   { permissions: { write: ["github:n1k0"] } }
                 );
 
-                vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+                if (typeof window == "undefined") {
+                  vitest.spyOn(global, "Blob").mockImplementation(fakeBlob);
+                }
               });
 
               it("should create a record with an attachment", () => {
