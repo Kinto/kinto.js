@@ -15,6 +15,7 @@
       {
         "vars": "all",
         "args": "none",
+        "caughtErrorsIgnorePattern": "(e|err)",
         "ignoreRestSiblings": false
       }
     ],
