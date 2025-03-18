@@ -25,7 +25,7 @@
     "dist:dev": "npx rollup -c && npm run dist:fx",
     "dist:fx": "npx ts-node --skip-project bin/dist-fx.ts",
     "dist:fx:format": "npx prettier --config fx-src/.prettierrc.js dist/ --write",
-    "lint": "eslint \"src/**/*.{js,ts}\" \"test/**/*.{js,ts}\"",
+    "lint": "eslint",
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
