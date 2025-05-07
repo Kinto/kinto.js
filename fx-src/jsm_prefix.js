@@ -15,4 +15,5 @@
  * This file is generated from kinto.js - do not modify directly.
  */
 
+/* eslint @typescript-eslint/no-unused-vars: off */
 import { setTimeout, clearTimeout } from "resource://gre/modules/Timer.sys.mjs";
