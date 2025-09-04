@@ -760,16 +760,64 @@ export default class Collection {
     return !!oldestHistoryEntry;
   }
 
-  /**
-   * @private
-   */
   @capable(["history"])
   async getSnapshot<T extends KintoObject>(
-    at: number
+    at: number,
+    max_tracked: number = 50
   ): Promise<PaginationResult<T>> {
     if (!at || !Number.isInteger(at) || at <= 0) {
       throw new Error("Invalid argument, expected a positive integer.");
     }
+
+    // First, we look at how many objects we would have to
+    // track down. It will contain tombstones and created/updated records.
+    const partialDiff = await this.listRecords({ since: `"${at}"` });
+    if (partialDiff.data.length > max_tracked) {
+      // Too many records were changed since this timestamp, fallback
+      // to collection reconstruction from its creation.
+      return await this.getSnapshotFromStart(at);
+    }
+
+    const allRecordsIds = partialDiff.data.map(({ id }) => id);
+
+    // Fetch history of the identified records.
+    const { data: history } = await this.bucket.listHistory<T>({
+      pages: Infinity, // all pages up to target timestamp are required
+      sort: "-last_modified", // chronological order
+      filters: {
+        resource_name: "record",
+        collection_id: this.name,
+        in_record_id: allRecordsIds.join(","),
+      },
+    });
+
+    const previousVersions: Record<string, T> = {};
+    for (const record of partialDiff.data) {
+      if (record.id in previousVersions) {
+        // We already have the most recent version, skip next.
+        continue;
+      }
+      previousVersions[record.id] = record as T;
+    }
+
+    // Now list all records of the collection, and replace the
+    // records with their previous versions.
+    const result: PaginationResult<T> = await this.listRecords({
+      pages: Infinity,
+    });
+    result.data = result.data.map((r) => {
+      return previousVersions[r.id] || r;
+    });
+    return result;
+  }
+
+  /**
+   * @private
+   */
+  @capable(["history"])
+  async getSnapshotFromStart<T extends KintoObject>(
+    at: number
+  ): Promise<PaginationResult<T>> {
     // Retrieve history and check it covers the required time range.
     // Ensure we have enough history data to retrieve the complete list of
     // changes.
