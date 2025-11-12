@@ -18,7 +18,7 @@ Dev and production ready assets are available in the [`gh-pages` branch of the r
 
 - Dev version, including source maps: [kinto.js](http://unpkg.com/kinto/dist/kinto.js)
 - Production version, minified, no source maps: [kinto.min.js](http://unpkg.com/kinto/dist/kinto.min.js)
-- Minimalist version, without polyfills [kinto.noshim.js](http://unpkg.com/kinto/dist/kinto.noshim.js)
+- Minimalist version, without polyfills [kinto.noshim.js](http://unpkg.com/kinto/dist/kinto.noshim.js) This version omits polyfills for `atob`, `FormData`, and `Blob`, which are **only required if you use attachment support.**
 
 > #### Notes
 >
