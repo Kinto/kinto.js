@@ -765,11 +765,50 @@ export default class Collection {
    */
   @capable(["history"])
   async getSnapshot<T extends KintoObject>(
-    at: number
+    at: number,
+    options: {
+      headers?: Record<string, string>;
+      retry?: number;
+    } = {}
   ): Promise<PaginationResult<T>> {
     if (!at || !Number.isInteger(at) || at <= 0) {
       throw new Error("Invalid argument, expected a positive integer.");
     }
+
+    const path = this._endpoints.snapshot(this.bucket.name, this.name, at);
+
+    const request: KintoRequest = {
+      headers: this._getHeaders(options),
+      path,
+      method: "GET",
+    };
+
+    let snapshot = null;
+    try {
+      const { json } = (await this.client.execute(request, {
+        raw: true,
+        retry: this._getRetry(options),
+      })) as HttpResponse<{}>;
+
+      snapshot = json as PaginationResult<T>;
+    } catch (error) {
+      if (!/404/.test(String(error))) {
+        throw error;
+      }
+    }
+
+    if (snapshot != null) {
+      return {
+        last_modified: String(at),
+        data: snapshot.data,
+        next: () => {
+          throw new Error("Snapshots don't support pagination");
+        },
+        hasNextPage: false,
+        totalRecords: snapshot.data.length,
+      } as PaginationResult<T>;
+    }
+
     // Retrieve history and check it covers the required time range.
     // Ensure we have enough history data to retrieve the complete list of
     // changes.
