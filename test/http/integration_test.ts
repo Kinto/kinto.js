@@ -33,7 +33,7 @@ import {
 } from "vitest";
 import { commands as vitestCommands } from "@vitest/browser/context";
 
-vitestCommands.startServer();
+// vitestCommands.startServer();
 
 interface TitleRecord extends KintoObject {
   title: string;

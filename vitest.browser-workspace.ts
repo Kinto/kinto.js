@@ -5,7 +5,7 @@ import { dirname } from "path";
 
 const single_thread_files = [
   'test/integration_test.ts',
-  // 'test/http/integration_test.ts'
+  'test/http/integration_test.ts'
 ];
 
 let kintoServer:KintoServer;
