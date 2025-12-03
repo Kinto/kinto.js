@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Install Python dependencies
-        run: pip install kinto kinto-attachment
+        run: pip install "kinto==19.6.0" "kinto-attachment==6.4.0"
 
       - name: Run unit tests
         run: npm test

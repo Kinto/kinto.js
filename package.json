@@ -25,7 +25,7 @@
     "dist:dev": "npx rollup -c && npm run dist:fx",
     "dist:fx": "npx ts-node --skip-project bin/dist-fx.ts",
     "dist:fx:format": "npx prettier --config fx-src/.prettierrc.js dist/ --write",
-    "lint": "eslint \"src/**/*.{js,ts}\" \"test/**/*.{js,ts}\"",
+    "lint": "eslint",
     "publish-demo": "npm run dist-prod && cp dist/kinto.js demo/kinto.js && gh-pages -d demo",
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
@@ -153,7 +153,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.0",
     "@rollup/plugin-multi-entry": "^6.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-terser": "^0.4.0",
     "@rollup/plugin-typescript": "^12.1.0",
@@ -161,9 +161,9 @@
     "@types/node-fetch": "^2.5.12",
     "@types/shelljs": "^0.8.9",
     "@types/uuid": "^10.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.4.0",
-    "@typescript-eslint/parser": "^7.4.0",
-    "@vitest/browser": "^2.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "@vitest/browser": "^3.2.4",
     "atob": "^2.1.2",
     "co-task": "^1.0.0",
     "coveralls": "^3.1.1",
@@ -177,8 +177,8 @@
     "esdoc-type-inference-plugin": "^1.0.2",
     "esdoc-undocumented-identifier-plugin": "^1.0.0",
     "esdoc-unexported-identifier-plugin": "^1.0.0",
-    "eslint": "^8.3.0",
-    "eslint-config-prettier": "^9.0.0",
+    "eslint": "^9.22.0",
+    "eslint-config-prettier": "^10.0.2",
     "estraverse-fb": "^1.3.2",
     "fake-indexeddb": "^6.0.0",
     "form-data": "^4.0.0",
@@ -199,7 +199,7 @@
     "tslib": "^2.3.1",
     "typescript": "^5.0.3",
     "uglifyify": "^5.0.2",
-    "vitest": "^2.0.4"
+    "vitest": "^3.2.4"
   },
   "overrides": {
     "ts-node": "$ts-node"
