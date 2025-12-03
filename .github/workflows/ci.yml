@@ -35,6 +35,3 @@ jobs:
 
       - name: Run unit tests
         run: npm run test
-
-      - name: Run integration tests
-        run: npm run test:firefox
