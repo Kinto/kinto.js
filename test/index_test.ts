@@ -1,6 +1,5 @@
 /* eslint dot-notation: off */
 import mitt from "mitt";
-import { SUPPORTED_PROTOCOL_VERSION as SPV } from "../src/http";
 
 import Collection from "../src/collection";
 import BaseAdapter from "../src/adapters/base";
@@ -120,19 +119,19 @@ describe("Kinto", () => {
       const db = new Kinto();
       const coll = db.collection("plop");
 
-      expect(coll.api.remote).eql(`http://localhost:8888/${SPV}`);
+      expect(coll.api.remote).eql(`http://localhost:8888/v1`);
     });
 
     it("should setup the Api cient using provided server URL", () => {
-      const db = new Kinto({ remote: `http://1.2.3.4:1234/${SPV}` });
+      const db = new Kinto({ remote: `http://1.2.3.4:1234/v1` });
       const coll = db.collection("plop");
 
-      expect(coll.api.remote).eql(`http://1.2.3.4:1234/${SPV}`);
+      expect(coll.api.remote).eql(`http://1.2.3.4:1234/v1`);
     });
 
     it("should pass option headers to the api", () => {
       const db = new Kinto({
-        remote: `http://1.2.3.4:1234/${SPV}`,
+        remote: `http://1.2.3.4:1234/v1`,
         headers: { Authorization: "Basic plop" },
       });
       const coll = db.collection("plop");
