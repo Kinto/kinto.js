@@ -1,7 +1,4 @@
-import KintoClientBase, {
-  KintoClientOptions,
-  SUPPORTED_PROTOCOL_VERSION,
-} from "./base";
+import KintoClientBase, { KintoClientOptions } from "./base";
 import type { AggregateResponse } from "./batch";
 import Collection from "./collection";
 import type {
@@ -28,5 +25,4 @@ export {
   KintoResponse,
   Permission,
   PermissionData,
-  SUPPORTED_PROTOCOL_VERSION,
 };
