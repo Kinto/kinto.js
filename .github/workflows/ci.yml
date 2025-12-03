@@ -34,7 +34,7 @@ jobs:
         run: pip install "kinto==19.6.0" "kinto-attachment==6.4.0"
 
       - name: Run unit tests
-        run: npm test
+        run: npm run test
 
       - name: Run integration tests
-        run: npm test:firefox
+        run: npm run test:firefox
