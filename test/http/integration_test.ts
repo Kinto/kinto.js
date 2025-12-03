@@ -31,14 +31,11 @@ import {
   vitest,
   Mock,
 } from "vitest";
-import { commands as vitestCommands } from "@vitest/browser/context";
 
 interface TitleRecord extends KintoObject {
   title: string;
 }
 
-const skipLocalServer =
-  typeof process !== "undefined" && !!process.env.TEST_KINTO_SERVER;
 const TEST_KINTO_SERVER =
   (typeof process !== "undefined" && process.env.TEST_KINTO_SERVER) ||
   "http://0.0.0.0:8888/v1";
@@ -50,33 +47,17 @@ async function startServer(
   server: KintoServer,
   options: { [key: string]: string } = {}
 ) {
-  if (typeof window !== "undefined") {
-    return vitestCommands.startServer();
-  }
-
-  if (!skipLocalServer) {
-    await server.start(options);
-  }
+  await server.start(options);
 }
 
 async function stopServer(server: KintoServer) {
-  if (typeof window !== "undefined") {
-    return vitestCommands.stopServer();
-  }
-
-  if (!skipLocalServer) {
-    await server.stop();
-  }
+  await server.stop();
 }
 
 describe("HTTP Integration tests", () => {
   let server: KintoServer, api: Api;
 
   beforeAll(async () => {
-    if (skipLocalServer) {
-      return;
-    }
-
     if (typeof window == "undefined") {
       let kintoConfigPath = __dirname + "/kinto.ini";
       if (process.env.SERVER && process.env.SERVER !== "master") {
@@ -98,14 +79,6 @@ describe("HTTP Integration tests", () => {
   });
 
   afterAll(async () => {
-    if (typeof window !== "undefined") {
-      vitestCommands.startServer();
-      return;
-    }
-
-    if (skipLocalServer) {
-      return;
-    }
     const logLines = server.logs.toString().split("\n");
     const serverDidCrash = logLines.some((l) => l.startsWith("Traceback"));
     if (serverDidCrash) {
@@ -154,9 +127,6 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
-      if (typeof window !== "undefined") {
-        return vitestCommands.flushServer();
-      }
       await server.flush();
     });
 
@@ -581,9 +551,6 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
-      if (typeof window !== "undefined") {
-        return vitestCommands.flushServer();
-      }
       await server.flush();
     });
 
@@ -596,9 +563,6 @@ describe("HTTP Integration tests", () => {
 
   describe("Deprecated protocol version", () => {
     beforeEach(async () => {
-      if (typeof window !== "undefined") {
-        return vitestCommands.flushServer();
-      }
       await server.flush();
     });
 
@@ -673,9 +637,6 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
-      if (typeof window !== "undefined") {
-        return vitestCommands.flushServer();
-      }
       await server.flush();
     });
 
@@ -712,10 +673,6 @@ describe("HTTP Integration tests", () => {
     });
 
     beforeEach(async () => {
-      if (typeof window !== "undefined") {
-        await vitestCommands.flushServer();
-        return;
-      }
       await server.flush();
     });
 
