@@ -14,17 +14,5 @@ export default defineWorkspace([
       include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
       setupFiles: ["test/setup-globals.ts", "test/server.ts"],
     }
-  }, {
-    extends: './vite.config.ts',
-    test: {
-      name: 'sequential',
-      include: single_thread_files,
-      setupFiles: ["test/setup-globals.ts", "test/server.ts"],
-      poolOptions: {
-        forks: {
-          singleFork: true
-        }
-      }
-    }
   }
 ])

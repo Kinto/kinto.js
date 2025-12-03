@@ -33,5 +33,8 @@ jobs:
       - name: Install Python dependencies
         run: pip install kinto kinto-attachment
 
-      - name: Run tests
+      - name: Run unit tests
         run: npm test
+
+      - name: Run integration tests
+        run: npm test:firefox
