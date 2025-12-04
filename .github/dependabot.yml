@@ -12,5 +12,8 @@ updates:
       rollup-plugins:
         patterns:
           - "@rollup/*"
+      vitest:
+        patterns:
+          - "*vitest*"
       minor-patch:
         update-types: ["minor", "patch"]
