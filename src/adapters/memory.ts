@@ -21,8 +21,8 @@ import { getDeepKey } from "../utils";
 // you need. Alternatively, you can copy/paste the BaseAdapter implementation
 // and adjust the methods there.
 export default class Memory<
-    B extends { id: string; last_modified?: number; _status?: RecordStatus },
-  >
+  B extends { id: string; last_modified?: number; _status?: RecordStatus },
+>
   extends BaseAdapter<B>
   implements AbstractBaseAdapter<B>
 {

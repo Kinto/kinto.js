@@ -175,8 +175,9 @@ export type UndefiendKintoRepresentation<T> = WithOptional<
   "data"
 >;
 
-export interface UpdateRepresentation<T = unknown>
-  extends KintoRepresentation<T> {
+export interface UpdateRepresentation<
+  T = unknown,
+> extends KintoRepresentation<T> {
   oldRecord: KintoIdObject & T;
 }
 
