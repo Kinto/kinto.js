@@ -148,7 +148,7 @@
   "dependencies": {
     "btoa": "^1.2.1",
     "playwright": "^1.49.1",
-    "uuid": "^11.0.2"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.0",
