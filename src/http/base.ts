@@ -34,12 +34,6 @@ import {
 } from "../types";
 import Collection from "./collection";
 
-/**
- * Currently supported protocol version.
- * @type {String}
- */
-export const SUPPORTED_PROTOCOL_VERSION = "v1";
-
 export interface KintoClientOptions {
   safe?: boolean;
   events?: Emitter;
@@ -177,9 +171,6 @@ export default class KintoClientBase {
       version = url.match(/\/(v\d+)\/?$/)![1];
     } catch (err) {
       throw new Error("The remote URL must contain the version: " + url);
-    }
-    if (version !== SUPPORTED_PROTOCOL_VERSION) {
-      throw new Error(`Unsupported protocol version: ${version}`);
     }
     this._remote = url;
     this._version = version;
