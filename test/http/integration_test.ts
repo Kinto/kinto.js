@@ -1784,7 +1784,7 @@ describe("HTTP Integration tests", () => {
                 expect(result.last_modified).eql(String(rec3.last_modified));
                 expect(result.hasNextPage).eql(false);
                 expect(result.totalRecords).eql(expectedSnapshot.length);
-                expect(() => result.next()).toThrowError(/pagination/);
+                expect(() => result.next()).toThrowError(/Snapshot/);
               });
 
               it("should handle creations", async () => {
