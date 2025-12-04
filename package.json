@@ -30,9 +30,9 @@
     "publish-to-npm": "npm run dist && npm run build && npm publish",
     "report-coverage": "npm run test-cover && ./node_modules/coveralls/bin/coveralls.js < ./coverage/lcov.info",
     "test": "npm run test-nocover",
-    "test-cover": "vitest --coverage",
-    "test-cover-html": "vitest --watch=false --coverage --reporter=html --outputFile=coverage/index.html",
-    "test-nocover": "vitest --watch=false",
+    "test-cover": "vitest --project parallel --coverage",
+    "test-cover-html": "vitest --project parallel --watch=false --coverage --reporter=html --outputFile=coverage/index.html",
+    "test-nocover": "vitest --project parallel --watch=false",
     "test:browser": "npm run build:test-browser && vitest --project browser --watch=false"
   },
   "repository": {
