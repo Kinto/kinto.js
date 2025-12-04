@@ -83,7 +83,7 @@ Once a new version is packaged and [published to npm](#publishing-to-npm), the [
 
 Docs are written in [Markdown](http://daringfireball.net/projects/markdown/syntax) using [mkdocs](http://www.mkdocs.org/), and are hosted on [readthedocs](https://readthedocs.org/).
 
-Document sources are versionned in the Kinto.js repository, under the [docs/ directory](https://github.com/Kinto/kinto.js/tree/master/docs). Updates are automatically deployed when pushed to `origin/master`. That means the docs site is automatically updated everytime a PR lands.
+Document sources are versionned in the Kinto.js repository, under the [docs/ directory](https://github.com/Kinto/kinto.js/tree/main/docs). Updates are automatically deployed when pushed to `origin/main`. That means the docs site is automatically updated everytime a PR lands.
 
 To build docs locally, ensure mkdocs is [properly installed](http://www.mkdocs.org/#installation), then run:
 

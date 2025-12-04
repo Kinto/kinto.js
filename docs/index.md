@@ -1,4 +1,4 @@
-# Kinto.js [![](https://travis-ci.org/Kinto/kinto.js.svg?branch=master)](https://travis-ci.org/Kinto/kinto.js) [![](https://coveralls.io/repos/Kinto/kinto.js/badge.svg?branch=master)](https://coveralls.io/r/Kinto/kinto.js?branch=master) [![](https://readthedocs.org/projects/kintojs/badge/?version=latest)](http://kintojs.readthedocs.io/) [![](https://doc.esdoc.org/github.com/Kinto/kinto.js/badge.svg)](https://doc.esdoc.org/github.com/Kinto/kinto.js)
+# Kinto.js [![](https://travis-ci.org/Kinto/kinto.js.svg?branch=main)](https://travis-ci.org/Kinto/kinto.js) [![](https://coveralls.io/repos/Kinto/kinto.js/badge.svg?branch=main)](https://coveralls.io/r/Kinto/kinto.js?branch=main) [![](https://readthedocs.org/projects/kintojs/badge/?version=latest)](http://kintojs.readthedocs.io/) [![](https://doc.esdoc.org/github.com/Kinto/kinto.js/badge.svg)](https://doc.esdoc.org/github.com/Kinto/kinto.js)
 
 *An offline-first JavaScript client leveraging the [Kinto API](http://kinto.readthedocs.io/).*
 

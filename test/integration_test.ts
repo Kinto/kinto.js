@@ -105,7 +105,7 @@ describe("Integration tests", () => {
 
   beforeAll(async () => {
     let kintoConfigPath = __dirname + "/kinto.ini";
-    if (process.env.SERVER && process.env.SERVER !== "master") {
+    if (process.env.SERVER && process.env.SERVER !== "main") {
       kintoConfigPath = `${__dirname}/kinto-${process.env.SERVER}.ini`;
     }
     server = new KintoServer(KINTO_PROXY_SERVER, { kintoConfigPath });

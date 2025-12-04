@@ -2,7 +2,7 @@
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/Kinto/kinto.js.svg)](https://greenkeeper.io/)
 
-[![Build Status](https://travis-ci.org/Kinto/kinto.js.svg?branch=master)](https://travis-ci.org/Kinto/kinto.js) [![Coverage Status](https://coveralls.io/repos/Kinto/kinto.js/badge.svg?branch=master&service=github)](https://coveralls.io/github/Kinto/kinto.js?branch=master) [![](https://readthedocs.org/projects/kintojs/badge/?version=latest)](http://kintojs.readthedocs.io/)
+[![Build Status](https://travis-ci.org/Kinto/kinto.js.svg?branch=main)](https://travis-ci.org/Kinto/kinto.js) [![Coverage Status](https://coveralls.io/repos/Kinto/kinto.js/badge.svg?branch=main&service=github)](https://coveralls.io/github/Kinto/kinto.js?branch=main) [![](https://readthedocs.org/projects/kintojs/badge/?version=latest)](http://kintojs.readthedocs.io/)
 
 An [Offline-First](http://offlinefirst.org/) JavaScript client for [Kinto](https://kinto.readthedocs.io/).
 
