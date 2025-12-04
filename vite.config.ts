@@ -11,6 +11,11 @@ import path from 'path'
  */
 const ASSET_PATH = process.env.ASSET_PATH || "/";
 
+const single_thread_files = [
+  'test/integration_test.ts',
+  'test/http/integration_test.ts'
+];
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
@@ -31,5 +36,30 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    projects: [
+      {
+        name: 'parallel',
+        exclude: [ ...single_thread_files, 'node_modules/**' ],
+        include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
+        setupFiles: ["test/setup-globals.ts", "test/server.ts"],
+      },
+      {
+        name: 'browser',
+        exclude: [ ...single_thread_files, 'node_modules/**' ],
+        include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
+        browser: {
+          enabled: true,
+          name: 'firefox',
+          provider: 'playwright',
+          headless: true,
+          screenshotFailures: false,
+        },
+        poolOptions: {
+          forks: {
+            singleFork: true
+          }
+        }
+      },
+    ]
   }
 })

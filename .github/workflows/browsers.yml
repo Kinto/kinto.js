@@ -9,9 +9,6 @@ jobs:
   chore:
     name: Browser Tests
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        browser: [firefox]
 
     steps:
       # Disabling IPv6 is necessary since Selenium doesn't listen on the IPv6
@@ -43,4 +40,4 @@ jobs:
         run: pip install "kinto==19.6.0" "kinto-attachment==6.4.0"
 
       - name: Run tests
-        run: npm run test:${{ matrix.browser }}
+        run: npm run test:browser
