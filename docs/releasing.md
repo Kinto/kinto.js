@@ -16,10 +16,10 @@ In order to prepare and publish a new release, the following steps are required.
 
 ### Merge the release branch, and push the tag
 
-    $ git checkout master
+    $ git checkout main
     $ git rebase prepare-X.Y.Z
     $ git tag vX.Y.Z
-    $ git push origin master
+    $ git push origin main
     $ git push origin vX.Y.Z
 
 ### Publish on NPM

@@ -37,7 +37,7 @@ const kinto = new Kinto({adapter: (storeName, options) => new MyAdapter(storeNam
 
 Each call to `kinto.collection(...)` will then call your provided function to instantiate a new `MyAdapter`.
 
-Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/master/src/adapters/base.ts) to figure out what needs to be implemented exactly. For guidance on writing a production-ready implementation, take a look at the [IDB](https://github.com/Kinto/kinto.js/blob/master/src/adapters/IDB.ts) adapter. For an easier-to-understand implementation (albeit with its own flaws), you can read the source for the [Memory](https://github.com/Kinto/kinto.js/blob/master/src/adapters/memory.ts) adapter.
+Read the `BaseAdapter` class [source code](https://github.com/Kinto/kinto.js/blob/main/src/adapters/base.ts) to figure out what needs to be implemented exactly. For guidance on writing a production-ready implementation, take a look at the [IDB](https://github.com/Kinto/kinto.js/blob/main/src/adapters/IDB.ts) adapter. For an easier-to-understand implementation (albeit with its own flaws), you can read the source for the [Memory](https://github.com/Kinto/kinto.js/blob/main/src/adapters/memory.ts) adapter.
 
 The `options` argument to the adapter constructor is taken from the `adapterOptions` given to the Kinto constructor. For example, if your adapter recognizes a `style` option:
 

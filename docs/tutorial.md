@@ -4,7 +4,7 @@ We'll create a super simple offline-first, remotely synchronized todo list appli
 
 ![](images/final.png)
 
-The final demo code is [available](https://github.com/Kinto/kinto.js/tree/master/demo) in the Kinto.js repository.
+The final demo code is [available](https://github.com/Kinto/kinto.js/tree/main/demo) in the Kinto.js repository.
 
 > #### Notes
 >

@@ -61,7 +61,7 @@ This version is the first version to ship with our official TypeScript types! If
 
 ## v13.0.0 (2020-05-09)
 
-This release is the culmination of almost ten months of work to migrate [kinto-http.js](https://github.com/Kinto/kinto-http.js) and [kinto.js](https://github.com/Kinto/kinto.js) to TypeScript! In the process, we've modernized the build system for both libraries. For more information on what this means for you, checkout the [migration guide](https://github.com/Kinto/kinto.js/blob/master/docs/upgrading.md#12x-to-13x).
+This release is the culmination of almost ten months of work to migrate [kinto-http.js](https://github.com/Kinto/kinto-http.js) and [kinto.js](https://github.com/Kinto/kinto.js) to TypeScript! In the process, we've modernized the build system for both libraries. For more information on what this means for you, checkout the [migration guide](https://github.com/Kinto/kinto.js/blob/main/docs/upgrading.md#12x-to-13x).
 
 **Breaking changes**
 
