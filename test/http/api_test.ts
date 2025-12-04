@@ -1,10 +1,7 @@
 /* eslint dot-notation: off */
 import { fakeServerResponse, expectAsyncError } from "../test_utils";
 import KintoClient from "../../src/http";
-import KintoClientBase, {
-  SUPPORTED_PROTOCOL_VERSION as SPV,
-  PaginationResult,
-} from "../../src/http/base";
+import KintoClientBase, { PaginationResult } from "../../src/http/base";
 import Bucket from "../../src/http/bucket";
 import { HelloResponse, OperationResponse } from "../../src/types";
 import { KintoBatchResponse, AggregateResponse } from "../../src/http/batch";
@@ -37,7 +34,7 @@ describe("KintoClient", () => {
 
   /** @test {KintoClient#constructor} */
   describe("#constructor", () => {
-    const sampleRemote = `http://test/${SPV}`;
+    const sampleRemote = `http://test/v1`;
 
     it("should check that `remote` is a string", () => {
       expect(
@@ -69,8 +66,8 @@ describe("KintoClient", () => {
     });
 
     it("should assign version value", () => {
-      expect(new KintoClient(sampleRemote).version).eql(SPV);
-      expect(new KintoClient(sampleRemote).version).eql(SPV);
+      expect(new KintoClient(sampleRemote).version).eql("v1");
+      expect(new KintoClient(sampleRemote).version).eql("v1");
     });
 
     it("should accept a headers option", () => {
@@ -79,13 +76,6 @@ describe("KintoClient", () => {
           headers: { Foo: "Bar" },
         })["_headers"]
       ).eql({ Foo: "Bar" });
-    });
-
-    it("should validate protocol version", () => {
-      expect(() => new KintoClient("http://test/v999")).to.Throw(
-        Error,
-        /^Unsupported protocol version/
-      );
     });
 
     it("should propagate the requestMode option to the child HTTP instance", () => {
@@ -377,7 +367,7 @@ describe("KintoClient", () => {
         });
 
         it("should call the batch endpoint", () => {
-          expect(fetch.mock.lastCall[0]).toMatch(`/${SPV}/batch`);
+          expect(fetch.mock.lastCall[0]).toMatch(`/v1/batch`);
         });
 
         it("should define main batch request default headers", () => {
@@ -427,7 +417,7 @@ describe("KintoClient", () => {
       describe("Retry", () => {
         const response = {
           status: 201,
-          path: `/${SPV}/buckets/blog/collections/articles/records`,
+          path: `/v1/buckets/blog/collections/articles/records`,
           body: { data: { id: 1, title: "art" } },
         };
 
@@ -487,12 +477,12 @@ describe("KintoClient", () => {
         const responses = [
           {
             status: 201,
-            path: `/${SPV}/buckets/blog/collections/articles/records`,
+            path: `/v1/buckets/blog/collections/articles/records`,
             body: { data: fixtures[0] },
           },
           {
             status: 201,
-            path: `/${SPV}/buckets/blog/collections/articles/records`,
+            path: `/v1/buckets/blog/collections/articles/records`,
             body: { data: fixtures[1] },
           },
         ];
@@ -508,7 +498,7 @@ describe("KintoClient", () => {
         const responses = [
           {
             status: 404,
-            path: `/${SPV}/buckets/blog/collections/articles/records/1`,
+            path: `/v1/buckets/blog/collections/articles/records/1`,
             body: missingRemotely,
           },
         ];
@@ -523,7 +513,7 @@ describe("KintoClient", () => {
         const responses = [
           {
             status: 500,
-            path: `/${SPV}/buckets/blog/collections/articles/records/1`,
+            path: `/v1/buckets/blog/collections/articles/records/1`,
             body: { 500: true },
           },
         ];
@@ -538,7 +528,7 @@ describe("KintoClient", () => {
         const responses = [
           {
             status: 412,
-            path: `/${SPV}/buckets/blog/collections/articles/records/1`,
+            path: `/v1/buckets/blog/collections/articles/records/1`,
             body: { details: { existing: { title: "foo" } } },
           },
         ];
