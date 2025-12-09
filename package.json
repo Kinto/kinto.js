@@ -147,10 +147,10 @@
   },
   "dependencies": {
     "btoa": "^1.2.1",
-    "playwright": "^1.49.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "playwright": "^1.49.1",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-multi-entry": "^7.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
