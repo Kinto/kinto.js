@@ -159,7 +159,7 @@
     "@rollup/plugin-typescript": "^12.1.0",
     "@types/btoa": "^1.2.3",
     "@types/node-fetch": "^2.5.12",
-    "@types/shelljs": "^0.8.9",
+    "@types/shelljs": "^0.10.0",
     "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
