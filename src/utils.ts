@@ -338,11 +338,13 @@ export function support(min: string, max: string): DecoratorReturn {
             .then((version: string) => checkVersion(version, min, max))
             .then(() => fn!.apply(this, args));
         };
-        Object.defineProperty(this, key, {
-          value: wrappedMethod,
-          configurable: true,
-          writable: true,
-        });
+        if (this != null) {
+          Object.defineProperty(this, key, {
+            value: wrappedMethod,
+            configurable: true,
+            writable: true,
+          });
+        }
         return wrappedMethod;
       },
     };
@@ -383,11 +385,13 @@ export function capable(capabilities: string[]): DecoratorReturn {
             })
             .then(() => fn!.apply(this, args));
         };
-        Object.defineProperty(this, key, {
-          value: wrappedMethod,
-          configurable: true,
-          writable: true,
-        });
+        if (this != null) {
+          Object.defineProperty(this, key, {
+            value: wrappedMethod,
+            configurable: true,
+            writable: true,
+          });
+        }
         return wrappedMethod;
       },
     };
@@ -419,11 +423,13 @@ export function nobatch(message: string): DecoratorReturn {
           }
           return fn!.apply(this, args);
         };
-        Object.defineProperty(this, key, {
-          value: wrappedMethod,
-          configurable: true,
-          writable: true,
-        });
+        if (this != null) {
+          Object.defineProperty(this, key, {
+            value: wrappedMethod,
+            configurable: true,
+            writable: true,
+          });
+        }
         return wrappedMethod;
       },
     };
