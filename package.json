@@ -150,7 +150,8 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "playwright": "^1.49.1",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-multi-entry": "^7.1.0",
     "@rollup/plugin-node-resolve": "^16.0.0",
@@ -190,6 +191,7 @@
     "node-fetch": "^2.6.6",
     "nyc": "^18.0.0",
     "open-cli": "^8.0.0",
+    "playwright": "^1.49.1",
     "prettier": "^3.7.4",
     "rollup": "^4.14.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
