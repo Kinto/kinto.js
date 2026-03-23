@@ -5,8 +5,6 @@
 // Original:
 // https://searchfox.org/mozilla-central/rev/fb55a4ee44a9a95d099aa806ca494eb988252ded/.prettierrc.js
 
-/* eslint-env node */
-
 module.exports = {
   arrowParens: "avoid",
   endOfLine: "lf",
