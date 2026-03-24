@@ -33,7 +33,7 @@
     "test-cover": "vitest --project parallel --coverage",
     "test-cover-html": "vitest --project parallel --watch=false --coverage --reporter=html --outputFile=coverage/index.html",
     "test-nocover": "vitest --project parallel --watch=false",
-    "test:browser": "npm run build:test-browser && vitest --project browser --watch=false"
+    "test:browser": "npm run build:test-browser && vitest --workspace=vitest.browser-workspace.ts --watch=false"
   },
   "repository": {
     "type": "git",
