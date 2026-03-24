@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import path from "path";
 import { playwright } from "@vitest/browser-playwright";
 
@@ -56,8 +56,12 @@ export default defineConfig({
           include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
           browser: {
             enabled: true,
-            name: "firefox",
             provider: playwright(),
+            instances: [
+              {
+                browser: "firefox",
+              },
+            ],
             headless: true,
             screenshotFailures: false,
           },
