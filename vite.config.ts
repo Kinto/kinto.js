@@ -39,18 +39,19 @@ export default defineConfig({
     globals: true,
     projects: [
       {
+        name: "parallel",
         extends: true,
         test: {
-          name: "parallel",
+
           exclude: [...single_thread_files, "node_modules/**"],
           include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
           setupFiles: ["test/setup-globals.ts", "test/server.ts"],
         },
       },
       {
+        name: "browser",
         extends: true,
         test: {
-          name: "browser",
           exclude: [...single_thread_files, "node_modules/**"],
           include: ["test/**/*_{test,spec}.?(c|m)[jt]s?(x)"],
           browser: {
