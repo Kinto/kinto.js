@@ -164,7 +164,8 @@
     "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
-    "@vitest/browser": "^3.2.4",
+    "@vitest/browser": "^4.0.18",
+    "@vitest/browser-playwright": "^4.0.18",
     "atob": "^2.1.2",
     "co-task": "^1.0.0",
     "coveralls": "^3.1.1",
@@ -201,7 +202,7 @@
     "tslib": "^2.3.1",
     "typescript": "^5.0.3",
     "uglifyify": "^5.0.2",
-    "vitest": "^3.2.4"
+    "vitest": "^4.0.18"
   },
   "overrides": {
     "ts-node": "$ts-node"

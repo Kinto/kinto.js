@@ -35,15 +35,15 @@ const handlers = [
   }),
 ];
 
-if (global.__vitest_environment__ == "node") {
+if (typeof window === "undefined") {
   fakeServer = setupServer(...handlers);
   fakeServer.listen();
 }
 
 beforeAll(async () => {
-  if (global.__vitest_environment__ != "node") {
+  if (typeof window !== "undefined") {
     kintoServer = new KintoProxyServer();
-    await server.startServer();
+    await kintoServer.startServer();
   }
 });
 
