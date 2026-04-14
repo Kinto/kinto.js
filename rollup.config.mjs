@@ -26,7 +26,7 @@ const geckoBuild = {
       preferBuiltins: true,
     }),
     typescript({
-      include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
+      include: ["*.{ts,tsx}", "**/*.{ts,tsx}", "*.js", "**/*.js"],
     }),
   ],
 };
@@ -55,7 +55,7 @@ const browserBuild = {
     }),
     typescript({
       target: "es2017",
-      include: ["*.ts+(|x)", "**/*.ts+(|x)", "*.js", "**/*.js"],
+      include: ["*.{ts,tsx}", "**/*.{ts,tsx}", "*.js", "**/*.js"],
     }),
     commonjs(),
   ],
