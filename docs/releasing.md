@@ -55,10 +55,6 @@ Obtain the new sub-resource integrity hashes with:
 
 Update the table in `docs/installation.md`.
 
-### Publish updated esdoc
-
-Submit new version of the js api docs at [doc.esdoc.org](https://doc.esdoc.org/-/generate.html), providing the git repo URL: `git@github.com:Kinto/kinto.js.git`.
-
 ### Check that the new tag is active on readthedocs
 
 Ensure the new version of the docs is available, eg. http://kintojs.readthedocs.io/en/vX.Y.Z/

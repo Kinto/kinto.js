@@ -116,15 +116,13 @@ your code and check that it's lint-free. To do so:
 
 ### Generating browsable API docs
 
-API docs are available [online](https://doc.esdoc.org/github.com/Kinto/kinto.js/).
-
-To generate them locally:
+Generate them locally with [TypeDoc](https://typedoc.org/):
 
 ```
-$ esdoc -c esdoc.json && open esdoc/index.html
+$ npm run docs:api && open docs/api/index.html
 ```
 
-Publication is done manually by submitting new versions to [doc.esdoc.org](https://doc.esdoc.org/-/generate.html).
+Output is written to `docs/api/` (gitignored).
 
 ## Publishing to npm
 
