@@ -3,6 +3,8 @@
     "module": "esnext",
     "target": "es2021",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["node"],
+    "rootDir": "./src",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -12,9 +14,7 @@
     "ignoreDeprecations": "6.0",
     "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "isolatedModules": true,
-    "rootDir": "./src",
-    "types": ["node"]
+    "isolatedModules": true
   },
   "ts-node": {
     "compilerOptions": {

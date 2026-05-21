@@ -70,11 +70,11 @@ describe("HTTP Integration tests", () => {
       await server.loadConfig(kintoConfigPath);
 
       // need some polyfilling for integration tests to work properly
-      const fetch = require("node-fetch");
+      const { default: fetch, Headers } = await import("node-fetch");
       global.realFetch = global.fetch;
       global.realHeaders = global.Headers;
       (global as any).fetch = fetch;
-      (global as any).Headers = fetch.Headers;
+      (global as any).Headers = Headers;
     }
   });
 

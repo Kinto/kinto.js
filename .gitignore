@@ -3,7 +3,7 @@
 /lib
 /npm-debug.log
 /coverage
-/esdoc
+/docs/api
 /node_modules
 /demo/kinto*
 .DS_Store

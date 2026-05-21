@@ -17,6 +17,9 @@ const compat = new FlatCompat({
 
 export default defineConfig([
   {
+    ignores: ["lib/**", "dist/**", "demo/**", "docs/api/**", ".venv/**"],
+  },
+  {
     extends: compat.extends("prettier"),
 
     plugins: {
