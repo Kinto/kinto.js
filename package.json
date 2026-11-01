@@ -165,7 +165,7 @@
     "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
-    "@vitest/browser": "^4.0.18",
+    "@vitest/browser": "^5.0.5",
     "@vitest/browser-playwright": "^4.0.18",
     "atob": "^2.1.2",
     "co-task": "^1.0.0",
