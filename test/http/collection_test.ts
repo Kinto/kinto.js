@@ -836,6 +836,122 @@ describe("HTTP Collection", () => {
     });
   });
 
+  /** @test {Collection#getSnapshot} */
+  describe("#getSnapshot()", () => {
+    const records = [
+      { id: "b", last_modified: 42 },
+      { id: "a", last_modified: 41 },
+    ];
+    let executeStub: Mock;
+
+    beforeEach(() => {
+      vitest
+        .spyOn(client, "fetchServerCapabilities")
+        .mockResolvedValue({ history: {} });
+      executeStub = vitest.spyOn(client, "execute") as unknown as Mock;
+    });
+
+    describe("Snapshot endpoint available", () => {
+      beforeEach(() => {
+        executeStub.mockResolvedValue({
+          status: 200,
+          headers: fakeHeaders(),
+          json: { data: records },
+        });
+      });
+
+      it("should request the snapshot endpoint", async () => {
+        await coll.getSnapshot(42);
+
+        expect(executeStub).toHaveBeenCalledWith(
+          {
+            headers: { Foo: "Bar", Baz: "Qux" },
+            path: "/buckets/blog/snapshot/collections/posts@42",
+            method: "GET",
+          },
+          { raw: true, retry: 0 }
+        );
+      });
+
+      it("should pass custom headers and retry option", async () => {
+        await coll.getSnapshot(42, {
+          headers: { "Another-Header": "Hello" },
+          retry: 3,
+        });
+
+        expect(executeStub).toHaveBeenCalledWith(
+          expect.objectContaining({
+            headers: { Foo: "Bar", Baz: "Qux", "Another-Header": "Hello" },
+          }),
+          { raw: true, retry: 3 }
+        );
+      });
+
+      it("should resolve with the snapshot records", async () => {
+        const result = await coll.getSnapshot(42);
+
+        expect(result.data).toEqual(records);
+        expect(result.last_modified).toBe("42");
+        expect(result.hasNextPage).toBe(false);
+        expect(result.totalRecords).toBe(2);
+        expect(() => result.next()).toThrow(
+          /Snapshots don't support pagination/
+        );
+      });
+
+      it("should not fetch the history", async () => {
+        const listHistoryStub = vitest.spyOn(coll.bucket, "listHistory");
+
+        await coll.getSnapshot(42);
+
+        expect(listHistoryStub).not.toHaveBeenCalled();
+      });
+
+      it("should be used by listRecords() with the `at` option", async () => {
+        const result = await coll.listRecords({ at: 42 });
+
+        expect(executeStub).toHaveBeenCalledWith(
+          expect.objectContaining({
+            path: "/buckets/blog/snapshot/collections/posts@42",
+          }),
+          expect.anything()
+        );
+        expect(result.data).toEqual(records);
+      });
+    });
+
+    describe("Snapshot endpoint unavailable", () => {
+      beforeEach(() => {
+        executeStub.mockRestore();
+      });
+
+      it("should fall back to history on 404", async () => {
+        vitest
+          .spyOn(client.http as any, "fetchFunc")
+          .mockReturnValue(fakeServerResponse(404, {}));
+        const isHistoryCompleteStub = vitest
+          .spyOn(coll, "isHistoryComplete")
+          .mockResolvedValue(false);
+
+        await expectAsyncError(
+          () => coll.getSnapshot(42),
+          /full history for a collection is available/
+        );
+        expect(isHistoryCompleteStub).toHaveBeenCalled();
+      });
+
+      it("should rethrow errors other than 404", async () => {
+        vitest
+          .spyOn(client.http as any, "fetchFunc")
+          .mockReturnValue(fakeServerResponse(500, {}));
+        const isHistoryCompleteStub = vitest.spyOn(coll, "isHistoryComplete");
+
+        await expectAsyncError(() => coll.getSnapshot(42), /HTTP 500/);
+        expect(isHistoryCompleteStub).not.toHaveBeenCalled();
+      });
+    });
+  });
+
   /** @test {Collection#batch} */
   describe("#batch()", () => {
     it("should batch operations", () => {
