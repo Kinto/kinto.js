@@ -180,7 +180,7 @@
     "http-server": "^14.0.0",
     "kinto-node-test-server": "^2.0.0",
     "mitt": "^3.0.0",
-    "msw": "^2.3.4",
+    "msw": "^3.0.3",
     "node-fetch": "^3.3.2",
     "open-cli": "^9.0.0",
     "playwright": "^1.49.1",
