@@ -99,6 +99,38 @@ describe("Utils", () => {
       expect(filterObjects({ missing: true }, [{ existing: true }])).eql([]);
     });
 
+    it("should match null values without treating them as nested filters", () => {
+      const records = [{ title: null }, { title: "a" }, {}];
+      expect(filterObjects({ title: null }, records)).eql([{ title: null }]);
+    });
+
+    it("should ignore missing, null, and primitive intermediate fields", () => {
+      const matching = { author: { address: { city: "Barcelona" } } };
+      const records = [
+        {},
+        { author: null },
+        { author: "Alice" },
+        { author: { address: null } },
+        { author: { address: false } },
+        matching,
+      ];
+      expect(
+        filterObjects({ author: { address: { city: "Barcelona" } } }, records)
+      ).eql([matching]);
+    });
+
+    it("should ignore missing intermediate fields for nested array filters", () => {
+      const matching = { author: { name: "Alice" } };
+      expect(
+        filterObjects({ author: { name: ["Alice", "Bob"] } }, [
+          {},
+          { author: null },
+          matching,
+          { author: { name: "Carol" } },
+        ])
+      ).eql([matching]);
+    });
+
     it("should filter on multiple field values", () => {
       expect(
         filterObjects({ title: ["a", "c"] }, [

@@ -1541,6 +1541,37 @@ describe("Collection", () => {
             ).toStrictEqual(["art3"]);
           });
 
+          it("should filter records with optional intermediate fields", async () => {
+            await articles.create({ title: "no-author" });
+            await articles.create({ title: "null-author", author: null });
+            await articles.create({
+              title: "no-book",
+              author: { name: "John" },
+            });
+            await articles.create({
+              title: "null-book",
+              author: { name: "John", otherBook: null },
+            });
+            const res = await articles.list({
+              filters: { "author.otherBook.title": "book3" },
+            });
+            expect(res.data.map((record) => record.title)).toStrictEqual([
+              "art3",
+            ]);
+          });
+
+          it("should combine nested filters with record status", async () => {
+            const res = await articles.list({
+              filters: {
+                _status: "created",
+                "author.otherBook.title": "book3",
+              },
+            });
+            expect(res.data.map((record) => record.title)).toStrictEqual([
+              "art3",
+            ]);
+          });
+
           it("should return empty array if missing subObject field", async () => {
             const res = await articles.list({
               filters: {
