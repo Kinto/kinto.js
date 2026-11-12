@@ -242,7 +242,9 @@ function createListRequest(
     return request;
   }
   // If `indexField` was used already, don't filter again.
-  const remainingFilters = omitKeys(filters, [indexField]);
+  const remainingFilters = transformSubObjectFilters(
+    omitKeys(filters, [indexField])
+  );
 
   // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
   const value = filters[indexField];

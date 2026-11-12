@@ -48,11 +48,14 @@ export function filterObject<T extends { [key: string]: any }>(
   filters: { [key: string]: any },
   entry: T
 ): boolean {
+  if (entry === null || typeof entry !== "object") {
+    return false;
+  }
   return Object.keys(filters).every((filter) => {
     const value = filters[filter];
     if (Array.isArray(value)) {
       return value.some((candidate) => candidate === entry[filter]);
-    } else if (typeof value === "object") {
+    } else if (value !== null && typeof value === "object") {
       return filterObject(value, entry[filter]);
     } else if (!Object.prototype.hasOwnProperty.call(entry, filter)) {
       console.error(`The property ${filter} does not exist`);
