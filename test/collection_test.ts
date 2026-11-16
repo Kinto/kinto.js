@@ -1560,6 +1560,38 @@ describe("Collection", () => {
             ]);
           });
 
+          it("should match explicit null fields consistently", async () => {
+            await articles.create({ title: "null-author", author: null });
+            await articles.create({ title: "no-author" });
+            for (const status of [undefined, "created", ["created"]]) {
+              const filters: { [key: string]: any } = { author: null };
+              if (status !== undefined) {
+                filters._status = status;
+              }
+              const res = await articles.list({ filters });
+              expect(res.data.map((record) => record.title)).toStrictEqual([
+                "null-author",
+              ]);
+            }
+          });
+
+          it("should not merge filters with shared prefixes", async () => {
+            await articles.create({ title: "null-author", author: null });
+            for (const status of [undefined, "created", ["created"]]) {
+              for (const fields of [
+                { author: null, "author.name": "John" },
+                { "author.name": "John", author: null },
+              ]) {
+                const filters: { [key: string]: any } = { ...fields };
+                if (status !== undefined) {
+                  filters._status = status;
+                }
+                const res = await articles.list({ filters });
+                expect(res.data).toStrictEqual([]);
+              }
+            }
+          });
+
           it("should combine nested filters with record status", async () => {
             const res = await articles.list({
               filters: {

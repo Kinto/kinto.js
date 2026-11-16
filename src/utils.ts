@@ -53,15 +53,23 @@ export function filterObject<T extends { [key: string]: any }>(
   }
   return Object.keys(filters).every((filter) => {
     const value = filters[filter];
+    const entryValue = getDeepKey(entry, filter);
     if (Array.isArray(value)) {
-      return value.some((candidate) => candidate === entry[filter]);
+      return value.some((candidate) => candidate === entryValue);
     } else if (value !== null && typeof value === "object") {
-      return filterObject(value, entry[filter]);
-    } else if (!Object.prototype.hasOwnProperty.call(entry, filter)) {
+      return (
+        entryValue !== null &&
+        typeof entryValue === "object" &&
+        filterObject(value, entryValue)
+      );
+    } else if (
+      !filter.includes(".") &&
+      !Object.prototype.hasOwnProperty.call(entry, filter)
+    ) {
       console.error(`The property ${filter} does not exist`);
       return false;
     }
-    return entry[filter] === value;
+    return entryValue === value;
   });
 }
 
@@ -197,7 +205,7 @@ export function getDeepKey(obj: any, key: string): unknown {
   for (let p = 0; p < segments.length; p++) {
     result = result ? result[segments[p]] : undefined;
   }
-  return result ?? undefined;
+  return result;
 }
 
 /**

@@ -1,11 +1,5 @@
 import BaseAdapter, { StorageProxy } from "./base";
-import {
-  filterObject,
-  omitKeys,
-  sortObjects,
-  arrayEqual,
-  transformSubObjectFilters,
-} from "../utils";
+import { filterObject, omitKeys, sortObjects, arrayEqual } from "../utils";
 import { RecordStatus } from "../types";
 import { KintoObject } from "../http";
 
@@ -229,22 +223,12 @@ function createListRequest(
 
   if (!indexField) {
     // Iterate on all records for this collection (ie. cid)
-    const isSubQuery = Object.keys(filters).some((key) => key.includes(".")); // (ie. filters: {"article.title": "hello"})
-    if (isSubQuery) {
-      const newFilter = transformSubObjectFilters(filters);
-      const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
-      request.onsuccess = cursorHandlers.all(newFilter, done);
-      return request;
-    }
-
     const request = store.index("cid").openCursor(IDBKeyRange.only(cid));
     request.onsuccess = cursorHandlers.all(filters, done);
     return request;
   }
   // If `indexField` was used already, don't filter again.
-  const remainingFilters = transformSubObjectFilters(
-    omitKeys(filters, [indexField])
-  );
+  const remainingFilters = omitKeys(filters, [indexField]);
 
   // value specified in the filter (eg. `filters: { _status: ["created", "updated"] }`)
   const value = filters[indexField];

@@ -131,6 +131,28 @@ describe("Utils", () => {
       ).eql([matching]);
     });
 
+    it("should retain independent filters with shared prefixes", () => {
+      const records = [{ author: null }, { author: { name: "x" } }];
+      expect(filterObjects({ author: null, "author.name": "x" }, records)).eql(
+        []
+      );
+      expect(filterObjects({ "author.name": "x", author: null }, records)).eql(
+        []
+      );
+    });
+
+    it("should filter null leaf values using dot notation", () => {
+      const matching = { author: { name: null } };
+      expect(
+        filterObjects({ "author.name": null }, [
+          {},
+          { author: null },
+          matching,
+          { author: { name: "x" } },
+        ])
+      ).eql([matching]);
+    });
+
     it("should filter on multiple field values", () => {
       expect(
         filterObjects({ title: ["a", "c"] }, [
@@ -289,6 +311,14 @@ describe("Utils", () => {
 
     it("should access properties", () => {
       expect(getDeepKey(record, "title")).to.equal("The Lusty Argonian Maid");
+    });
+
+    it("should preserve final null values but not null intermediate values", () => {
+      expect(getDeepKey({ author: null }, "author")).to.equal(null);
+      expect(getDeepKey({ author: { name: null } }, "author.name")).to.equal(
+        null
+      );
+      expect(getDeepKey({ author: null }, "author.name")).to.equal(undefined);
     });
 
     it("should return undefined for undefined properties", () => {
