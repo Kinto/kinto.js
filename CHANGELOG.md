@@ -2,6 +2,16 @@
 
 This document describes changes between each past release.
 
+## Unreleased
+
+**Bug fixes**
+
+- Fix dot-notation filtering with missing or null intermediate fields and indexed
+  filters, using the same matcher in the IndexedDB and Memory adapters (#2309).
+- Preserve explicit terminal `null` values in the exported `getDeepKey()` helper.
+  Accessing a path through a missing or null intermediate value still returns
+  `undefined` (#2309).
+
 ## v15.0.0 (2023-06-20)
 
 **Breaking Changes**

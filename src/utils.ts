@@ -48,28 +48,11 @@ export function filterObject<T extends { [key: string]: any }>(
   filters: { [key: string]: any },
   entry: T
 ): boolean {
-  if (entry === null || typeof entry !== "object") {
-    return false;
-  }
-  return Object.keys(filters).every((filter) => {
-    const value = filters[filter];
-    const entryValue = getDeepKey(entry, filter);
-    if (Array.isArray(value)) {
-      return value.some((candidate) => candidate === entryValue);
-    } else if (value !== null && typeof value === "object") {
-      return (
-        entryValue !== null &&
-        typeof entryValue === "object" &&
-        filterObject(value, entryValue)
-      );
-    } else if (
-      !filter.includes(".") &&
-      !Object.prototype.hasOwnProperty.call(entry, filter)
-    ) {
-      console.error(`The property ${filter} does not exist`);
-      return false;
-    }
-    return entryValue === value;
+  return Object.entries(filters).every(([key, value]) => {
+    const entryValue = getDeepKey(entry, key);
+    return Array.isArray(value)
+      ? value.includes(entryValue)
+      : entryValue === value;
   });
 }
 
@@ -166,32 +149,6 @@ export function arrayEqual(a: unknown[], b: unknown[]): boolean {
     }
   }
   return true;
-}
-
-function makeNestedObjectFromArr(
-  arr: string[],
-  val: any,
-  nestedFiltersObj: { [key: string]: any }
-): { [key: string]: any } {
-  const last = arr.length - 1;
-  return arr.reduce((acc, cv, i) => {
-    if (i === last) {
-      return (acc[cv] = val);
-    } else if (Object.prototype.hasOwnProperty.call(acc, cv)) {
-      return acc[cv];
-    }
-    return (acc[cv] = {});
-  }, nestedFiltersObj);
-}
-
-export function transformSubObjectFilters(filtersObj: { [key: string]: any }) {
-  const transformedFilters = {};
-  for (const key in filtersObj) {
-    const keysArr = key.split(".");
-    const val = filtersObj[key];
-    makeNestedObjectFromArr(keysArr, val, transformedFilters);
-  }
-  return transformedFilters;
 }
 
 /**

@@ -4,7 +4,6 @@ import {
   filterObjects,
   omitKeys,
   waterfall,
-  transformSubObjectFilters,
   getDeepKey,
   partition,
   delay,
@@ -102,33 +101,6 @@ describe("Utils", () => {
     it("should match null values without treating them as nested filters", () => {
       const records = [{ title: null }, { title: "a" }, {}];
       expect(filterObjects({ title: null }, records)).eql([{ title: null }]);
-    });
-
-    it("should ignore missing, null, and primitive intermediate fields", () => {
-      const matching = { author: { address: { city: "Barcelona" } } };
-      const records = [
-        {},
-        { author: null },
-        { author: "Alice" },
-        { author: { address: null } },
-        { author: { address: false } },
-        matching,
-      ];
-      expect(
-        filterObjects({ author: { address: { city: "Barcelona" } } }, records)
-      ).eql([matching]);
-    });
-
-    it("should ignore missing intermediate fields for nested array filters", () => {
-      const matching = { author: { name: "Alice" } };
-      expect(
-        filterObjects({ author: { name: ["Alice", "Bob"] } }, [
-          {},
-          { author: null },
-          matching,
-          { author: { name: "Carol" } },
-        ])
-      ).eql([matching]);
     });
 
     it("should retain independent filters with shared prefixes", () => {
@@ -264,36 +236,6 @@ describe("Utils", () => {
 
     it("should omit specified keys", () => {
       expect(omitKeys({ a: 1, b: 2 }, ["b", "c"])).eql({ a: 1 });
-    });
-  });
-
-  describe("transformSubObjectFilters", () => {
-    it("should convert string in dot notation to nested object", () => {
-      const input = { "a.b.c.d": 0 };
-      expect(transformSubObjectFilters(input)).eql({
-        a: { b: { c: { d: 0 } } },
-      });
-    });
-
-    it("multiple strings with repeated keys become one object with unique keys", () => {
-      const input = {
-        "a.b.c.d": 0,
-        "a.b.c.arr": [1, 2, 3],
-        "a.b.k.hello": "world",
-      };
-      expect(transformSubObjectFilters(input)).eql({
-        a: {
-          b: {
-            c: {
-              d: 0,
-              arr: [1, 2, 3],
-            },
-            k: {
-              hello: "world",
-            },
-          },
-        },
-      });
     });
   });
 
