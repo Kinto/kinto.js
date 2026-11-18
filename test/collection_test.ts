@@ -1541,6 +1541,69 @@ describe("Collection", () => {
             ).toStrictEqual(["art3"]);
           });
 
+          it("should filter records with optional intermediate fields", async () => {
+            await articles.create({ title: "no-author" });
+            await articles.create({ title: "null-author", author: null });
+            await articles.create({
+              title: "no-book",
+              author: { name: "John" },
+            });
+            await articles.create({
+              title: "null-book",
+              author: { name: "John", otherBook: null },
+            });
+            const res = await articles.list({
+              filters: { "author.otherBook.title": "book3" },
+            });
+            expect(res.data.map((record) => record.title)).toStrictEqual([
+              "art3",
+            ]);
+          });
+
+          it("should match explicit null fields consistently", async () => {
+            await articles.create({ title: "null-author", author: null });
+            await articles.create({ title: "no-author" });
+            for (const status of [undefined, "created", ["created"]]) {
+              const filters: { [key: string]: any } = { author: null };
+              if (status !== undefined) {
+                filters._status = status;
+              }
+              const res = await articles.list({ filters });
+              expect(res.data.map((record) => record.title)).toStrictEqual([
+                "null-author",
+              ]);
+            }
+          });
+
+          it("should not merge filters with shared prefixes", async () => {
+            await articles.create({ title: "null-author", author: null });
+            for (const status of [undefined, "created", ["created"]]) {
+              for (const fields of [
+                { author: null, "author.name": "John" },
+                { "author.name": "John", author: null },
+              ]) {
+                const filters: { [key: string]: any } = { ...fields };
+                if (status !== undefined) {
+                  filters._status = status;
+                }
+                const res = await articles.list({ filters });
+                expect(res.data).toStrictEqual([]);
+              }
+            }
+          });
+
+          it("should combine nested filters with record status", async () => {
+            const res = await articles.list({
+              filters: {
+                _status: "created",
+                "author.otherBook.title": "book3",
+              },
+            });
+            expect(res.data.map((record) => record.title)).toStrictEqual([
+              "art3",
+            ]);
+          });
+
           it("should return empty array if missing subObject field", async () => {
             const res = await articles.list({
               filters: {

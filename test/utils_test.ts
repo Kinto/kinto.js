@@ -4,7 +4,6 @@ import {
   filterObjects,
   omitKeys,
   waterfall,
-  transformSubObjectFilters,
   getDeepKey,
   partition,
   delay,
@@ -97,6 +96,33 @@ describe("Utils", () => {
 
     it("should filter list on missing field", () => {
       expect(filterObjects({ missing: true }, [{ existing: true }])).eql([]);
+    });
+
+    it("should match null values without treating them as nested filters", () => {
+      const records = [{ title: null }, { title: "a" }, {}];
+      expect(filterObjects({ title: null }, records)).eql([{ title: null }]);
+    });
+
+    it("should retain independent filters with shared prefixes", () => {
+      const records = [{ author: null }, { author: { name: "x" } }];
+      expect(filterObjects({ author: null, "author.name": "x" }, records)).eql(
+        []
+      );
+      expect(filterObjects({ "author.name": "x", author: null }, records)).eql(
+        []
+      );
+    });
+
+    it("should filter null leaf values using dot notation", () => {
+      const matching = { author: { name: null } };
+      expect(
+        filterObjects({ "author.name": null }, [
+          {},
+          { author: null },
+          matching,
+          { author: { name: "x" } },
+        ])
+      ).eql([matching]);
     });
 
     it("should filter on multiple field values", () => {
@@ -213,36 +239,6 @@ describe("Utils", () => {
     });
   });
 
-  describe("transformSubObjectFilters", () => {
-    it("should convert string in dot notation to nested object", () => {
-      const input = { "a.b.c.d": 0 };
-      expect(transformSubObjectFilters(input)).eql({
-        a: { b: { c: { d: 0 } } },
-      });
-    });
-
-    it("multiple strings with repeated keys become one object with unique keys", () => {
-      const input = {
-        "a.b.c.d": 0,
-        "a.b.c.arr": [1, 2, 3],
-        "a.b.k.hello": "world",
-      };
-      expect(transformSubObjectFilters(input)).eql({
-        a: {
-          b: {
-            c: {
-              d: 0,
-              arr: [1, 2, 3],
-            },
-            k: {
-              hello: "world",
-            },
-          },
-        },
-      });
-    });
-  });
-
   describe("getDeepKey", () => {
     const record = {
       title: "The Lusty Argonian Maid",
@@ -257,6 +253,14 @@ describe("Utils", () => {
 
     it("should access properties", () => {
       expect(getDeepKey(record, "title")).to.equal("The Lusty Argonian Maid");
+    });
+
+    it("should preserve final null values but not null intermediate values", () => {
+      expect(getDeepKey({ author: null }, "author")).to.equal(null);
+      expect(getDeepKey({ author: { name: null } }, "author.name")).to.equal(
+        null
+      );
+      expect(getDeepKey({ author: null }, "author.name")).to.equal(undefined);
     });
 
     it("should return undefined for undefined properties", () => {

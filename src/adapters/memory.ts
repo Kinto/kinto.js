@@ -1,6 +1,6 @@
 import BaseAdapter, { AbstractBaseAdapter, StorageProxy } from "./base";
 import { RecordStatus } from "../types";
-import { getDeepKey } from "../utils";
+import { filterObject } from "../utils";
 
 // The file contains a basic implementation of an in-memory store for Kinto.
 // The primary purpose of this adapter is to explain the methods required on
@@ -126,18 +126,7 @@ export default class Memory<
           return true;
         }
 
-        let matches = true;
-        Object.entries(params.filters).forEach(([key, value]) => {
-          const recordValue = getDeepKey(record, key);
-          if (Array.isArray(value)) {
-            if (!value.includes(recordValue)) {
-              matches = false;
-            }
-          } else if (recordValue !== value) {
-            matches = false;
-          }
-        });
-        return matches;
+        return filterObject(params.filters, record);
       })
       .sort((a, b) => {
         // By default, sory by last_modified in descending order.

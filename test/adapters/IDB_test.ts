@@ -360,6 +360,60 @@ describe("adapter.IDB", () => {
     });
 
     describe("Filters", () => {
+      describe("on nested fields", () => {
+        const matching = {
+          id: "nested-match",
+          _status: "created",
+          author: { address: { city: "Barcelona" } },
+        };
+
+        beforeEach(async () => {
+          await db.execute((transaction) => {
+            transaction.create(matching);
+            transaction.create({
+              id: "nested-other",
+              _status: "created",
+              author: { address: { city: "Paris" } },
+            });
+            transaction.create({ id: "nested-null", author: null });
+            transaction.create({
+              id: "nested-partial",
+              author: { address: null },
+            });
+          });
+        });
+
+        it("should skip records with missing or null intermediate fields", async () => {
+          expect(
+            await db.list({
+              filters: { "author.address.city": "Barcelona" },
+            })
+          ).toStrictEqual([matching]);
+        });
+
+        it.each([
+          { id: "nested-match" },
+          { id: ["nested-other", "nested-match"] },
+          { _status: "created" },
+          { _status: ["created", "updated"] },
+        ])(
+          "should combine nested filters with indexed filters %j",
+          async (indexed) => {
+            expect(
+              await db.list({
+                filters: { ...indexed, "author.address.city": "Barcelona" },
+              })
+            ).toStrictEqual([matching]);
+          }
+        );
+
+        it("should match null-valued non-indexed fields", async () => {
+          expect(await db.list({ filters: { author: null } })).toStrictEqual([
+            { id: "nested-null", author: null },
+          ]);
+        });
+      });
+
       describe("on non-indexed fields", () => {
         describe("single value", () => {
           it("should filter the list on a single pre-indexed column", async () => {
